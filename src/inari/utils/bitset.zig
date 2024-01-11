@@ -232,7 +232,5 @@ pub const BitSet = struct {
         try testing.expect(!bitset2.isSet(7));
         try testing.expect(bitset2.isSet(8));
         try testing.expect(!bitset2.isSet(9));
-
-        std.debug.print("\ncomptime fmt: []const u8\n", .{});
     }
 };
