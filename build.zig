@@ -15,6 +15,8 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
+    _ = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
+
     const exe = b.addExecutable(.{
         .name = "firefly-zig",
         // In this case the main source file is merely a path, however, in more
