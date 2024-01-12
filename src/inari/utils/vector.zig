@@ -1,182 +1,141 @@
 const std = @import("std");
 
 /// Two dimensional vector of i32 values
-pub const Vector2i = [2]i32;
+pub const Vector2i = @Vector(2, i32);
 /// Three dimensional vector of i32 values
-pub const Vector3i = [3]i32;
+pub const Vector3i = @Vector(3, i32);
 /// Four Two dimensional vector of i32 values
-pub const Vector4i = [4]i32;
-
-/// Two dimensional vector of u8 values
-pub const Vector2u8 = [2]u8;
-/// Three dimensional vector of u8 values
-pub const Vector3u8 = [3]u8;
-/// Four Two dimensional vector of u8 values
-pub const Vector4u8 = [4]u8;
+pub const Vector4i = @Vector(4, i32);
 
 /// Two dimensional vector of f32 values
-pub const Vector2f = [2]f32;
+pub const Vector2f = @Vector(2, f32);
 /// Three dimensional vector of f32 values
-pub const Vector3f = [3]f32;
+pub const Vector3f = @Vector(3, f32);
 /// Four Two dimensional vector of f32 values
-pub const Vector4f = [4]f32;
+pub const Vector4f = @Vector(4, f32);
 
-pub const vecmath = struct {
-
-    // Integer
-    pub inline fn i_add(dest: []i32, source: []i32) void {
-        for (0..dest.len) |i| {
-            if (source.len > i) {
-                dest[i] += source[i];
-            }
-        }
+pub const math = struct {
+    pub fn magnitude2i(v: *Vector2i) f32 {
+        return @sqrt(@as(f32, @floatFromInt(v[0] * v[0] + v[1] * v[1])));
     }
-    pub inline fn i_minus(dest: []i32, source: []i32) void {
-        for (0..dest.len) |i| {
-            if (source.len > i) {
-                dest[i] -= source[i];
-            }
-        }
+    pub fn magnitude3i(v: *Vector3i) f32 {
+        return @sqrt(@as(f32, @floatFromInt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])));
     }
-    pub inline fn i_times(dest: []i32, source: []i32) void {
-        for (0..dest.len) |i| {
-            if (source.len > i) {
-                dest[i] *= source[i];
-            }
-        }
+    pub fn magnitude4i(v: *Vector4i) f32 {
+        return @sqrt(@as(f32, @floatFromInt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3])));
     }
-    pub inline fn i_div(dest: []i32, source: []i32) void {
-        for (0..dest.len) |i| {
-            if (source.len > i) {
-                dest[i] = @divTrunc(dest[i], source[i]);
-            }
-        }
+    pub fn magnitude2f(v: *Vector2f) f32 {
+        return @sqrt(v[0] * v[0] + v[1] * v[1]);
+    }
+    pub fn magnitude3f(v: *Vector3f) f32 {
+        return @sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    }
+    pub fn magnitude4f(v: *Vector4f) f32 {
+        return @sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3]);
     }
 
-    pub inline fn i_addScalar(dest: []i32, scalar: i32) void {
-        for (0..dest.len) |i| {
-            dest[i] += scalar;
+    pub fn normalize2i(v: *Vector2i) void {
+        var m: i32 = @intFromFloat(magnitude2i(v));
+        if (m == 0) {
+            v[0] = 0;
+            v[1] = 0;
+        } else {
+            v[0] = @divTrunc(v[0], m);
+            v[1] = @divTrunc(v[1], m);
         }
     }
-    pub inline fn i_minusScalar(dest: []i32, scalar: i32) void {
-        for (0..dest.len) |i| {
-            dest[i] -= scalar;
+    pub fn normalize3i(v: *Vector3i) void {
+        var m: i32 = @intFromFloat(magnitude3i(v));
+        if (m == 0) {
+            v[0] = 0;
+            v[1] = 0;
+            v[2] = 0;
+        } else {
+            v[0] = @divTrunc(v[0], m);
+            v[1] = @divTrunc(v[1], m);
+            v[2] = @divTrunc(v[2], m);
         }
     }
-    pub inline fn i_timesScalar(dest: []i32, scalar: i32) void {
-        for (0..dest.len) |i| {
-            dest[i] *= scalar;
-        }
-    }
-    pub inline fn i_divScalar(dest: []i32, scalar: i32) void {
-        for (0..dest.len) |i| {
-            dest[i] = @divTrunc(dest[i], scalar);
-        }
-    }
-
-    // Float
-    pub inline fn f_add(dest: []f32, source: []f32) void {
-        for (0..dest.len) |i| {
-            if (source.len > i) {
-                dest[i] += source[i];
-            }
-        }
-    }
-    pub inline fn f_minus(dest: []f32, source: []f32) void {
-        for (0..dest.len) |i| {
-            if (source.len > i) {
-                dest[i] -= source[i];
-            }
-        }
-    }
-    pub inline fn f_times(dest: []f32, source: []f32) void {
-        for (0..dest.len) |i| {
-            if (source.len > i) {
-                dest[i] *= source[i];
-            }
-        }
-    }
-    pub inline fn f_div(dest: []f32, source: []f32) void {
-        for (0..dest.len) |i| {
-            if (source.len > i) {
-                dest[i] = @divTrunc(dest[i], source[i]);
-            }
+    pub fn normalize4i(v: *Vector4i) void {
+        var m: i32 = @intFromFloat(magnitude4i(v));
+        if (m == 0) {
+            v[0] = 0;
+            v[1] = 0;
+            v[2] = 0;
+            v[3] = 0;
+        } else {
+            v[0] = @divTrunc(v[0], m);
+            v[1] = @divTrunc(v[1], m);
+            v[2] = @divTrunc(v[2], m);
+            v[3] = @divTrunc(v[3], m);
         }
     }
 
-    // Float int scalar
-    pub inline fn f_addScalar(dest: []f32, scalar: i32) void {
-        for (0..dest.len) |i| {
-            dest[i] += scalar;
-        }
-    }
-    pub inline fn f_minusScalar(dest: []f32, scalar: i32) void {
-        for (0..dest.len) |i| {
-            dest[i] -= scalar;
-        }
-    }
-    pub inline fn f_timesScalar(dest: []f32, scalar: i32) void {
-        for (0..dest.len) |i| {
-            dest[i] *= scalar;
-        }
-    }
-    pub inline fn f_divScalar(dest: []f32, scalar: i32) void {
-        for (0..dest.len) |i| {
-            dest[i] = @divTrunc(dest[i], scalar);
+    pub fn normalize2f(v: *Vector2f) void {
+        var m = magnitude2f(v);
+        if (m == 0) {
+            v[0] = 0;
+            v[1] = 0;
+        } else {
+            v[0] = v[0] / m;
+            v[1] = v[1] / m;
         }
     }
 
-    // Float float scalar
-    pub inline fn f_addScalarf(dest: []f32, scalar: f32) void {
-        for (0..dest.len) |i| {
-            dest[i] += scalar;
+    pub fn normalize3f(v: *Vector3f) void {
+        var m = magnitude2f(v);
+        if (m == 0) {
+            v[0] = 0;
+            v[1] = 0;
+            v[2] = 0;
+        } else {
+            v[0] = v[0] / m;
+            v[1] = v[1] / m;
+            v[2] = v[2] / m;
         }
     }
-    pub inline fn f_minusScalarf(dest: []f32, scalar: f32) void {
-        for (0..dest.len) |i| {
-            dest[i] -= scalar;
+    pub fn normalize4f(v: *Vector4f) void {
+        var m = magnitude2f(v);
+        if (m == 0) {
+            v[0] = 0;
+            v[1] = 0;
+            v[2] = 0;
+            v[3] = 0;
+        } else {
+            v[0] = v[0] / m;
+            v[1] = v[1] / m;
+            v[2] = v[2] / m;
+            v[3] = v[3] / m;
         }
     }
-    pub inline fn f_timesScalarf(dest: []f32, scalar: f32) void {
-        for (0..dest.len) |i| {
-            dest[i] *= scalar;
-        }
+
+    pub fn distance2i(p1: *Vector2i, p2: *Vector2i) f32 {
+        var dx = p2[0] - p1[0];
+        var dy = p2[1] - p1[1];
+
+        return @sqrt(@as(f32, @floatFromInt(dx * dx + dy * dy)));
     }
-    pub inline fn f_divScalarf(dest: []f32, scalar: f32) void {
-        for (0..dest.len) |i| {
-            dest[i] = @divTrunc(dest[i], scalar);
-        }
+
+    pub fn distance2f(p1: *Vector2f, p2: *Vector2f) f32 {
+        var d = p2 - p1;
+        return @sqrt(d[0] * d[0] + d[1] * d[1]);
     }
 };
 
-test "add integer" {
-    var v1i = Vector2i{ 0, 0 };
-    var v2i = Vector3i{ 1, 2, 1 };
-    var v3i = Vector4i{ 2, 2, 2, 2 };
+test "vec math" {
+    var v1 = Vector2i{ 2, 3 };
+    math.normalize2i(&v1);
+    try std.testing.expect(v1[0] == 0);
+    try std.testing.expect(v1[1] == 1);
 
-    vecmath.i_add(&v1i, &v2i);
-    vecmath.i_add(&v2i, &v1i);
+    var v2 = Vector2f{ 2, 3 };
+    math.normalize2f(&v2);
+    try std.testing.expect(v2[0] == 0.554700195);
+    try std.testing.expect(v2[1] == 0.832050323);
 
-    try std.testing.expect(v1i[0] == 1);
-    try std.testing.expect(v1i[1] == 2);
-
-    try std.testing.expect(v2i[0] == 2);
-    try std.testing.expect(v2i[1] == 4);
-    try std.testing.expect(v2i[2] == 1);
-
-    vecmath.i_add(&v3i, &v2i);
-
-    try std.testing.expect(v3i[0] == 4);
-    try std.testing.expect(v3i[1] == 6);
-    try std.testing.expect(v3i[2] == 3);
-    try std.testing.expect(v3i[3] == 2);
-}
-
-test "float add int scalar" {
-    var v1 = Vector3f{ 1, 2, 3 };
-    vecmath.f_addScalar(&v1, 2);
-
-    try std.testing.expect(v1[0] == 3);
-    try std.testing.expect(v1[1] == 4);
-    try std.testing.expect(v1[2] == 5);
+    // distance
+    var p1 = Vector2i{ 1, 1 };
+    var p2 = Vector2i{ 2, 2 };
+    var dp1p2 = math.distance2i(&p1, &p2);
+    try std.testing.expect(dp1p2 == 1.4142135381698608);
 }
