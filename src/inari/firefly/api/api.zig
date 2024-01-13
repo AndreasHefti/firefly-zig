@@ -1,17 +1,23 @@
 const std = @import("std");
-pub const graphics = @import("graphics.zig");
+const graphics = @import("graphics.zig");
 const utils = @import("../../utils/utils.zig"); // TODO better way for import package?
-const RectI = utils.geom.RectI;
-const Color = utils.geom.Color;
-const Vector2f = utils.vec.Vector2f;
-const String = utils.String;
-const NO_NAME = utils.NO_NAME;
-pub const BindingIndex = usize;
-pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
+
+pub const String = utils.String;
+pub const NO_NAME = utils.NO_NAME;
+
 pub const Int = utils.Int;
 pub const UNDEF_INT = utils.UNDEF_INT;
+
 pub const Float = utils.Float;
+
+pub const PosI = utils.geom.PosI;
 pub const PosF = utils.geom.PosF;
+pub const RectI = utils.geom.RectI;
+pub const RectF = utils.geom.RectF;
+pub const Color = utils.geom.Color;
+
+pub const BindingIndex = usize;
+pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
 pub const FFAPIError = error{
     GenericError,
@@ -39,24 +45,17 @@ pub const BlendMode = enum(Int) {
 };
 
 pub const ViewData = struct {
-    bindingIndex: BindingIndex = NO_BINDING,
-    isBaseView: bool,
-    shaderIndex: BindingIndex = NO_BINDING,
+    id: BindingIndex = NO_BINDING,
+    renderTarget: BindingIndex = NO_BINDING,
+    renderShader: BindingIndex = NO_BINDING,
     bounds: RectI = RectI{ 0, 0, 0, 0 },
-    worldPosition: Vector2f = Vector2f{ 0, 0 },
+    worldPosition: PosF = PosF{ 0, 0 },
     clearColor: Color = Color{ 0, 0, 0, 255 },
     clearBeforeStartRendering: bool = true,
     tintColor: Color = Color{ 255, 255, 255, 255 },
     blendMode: BlendMode = BlendMode.BLEND_ALPHA,
     zoom: Float = 1,
     fboScale: Float = 1,
-
-    // val renderTargetOf1: BindingIndex
-    // val renderTargetOf2: BindingIndex
-    // val renderTargetOf3: BindingIndex
-    //val isRenderTarget: Boolean
-    //    get() = renderTargetOf1 >= 0 || renderTargetOf2 >= 0 || renderTargetOf3 >= 0
-    //val renderToBase: Boolean
 };
 
 pub const TextureData = struct {
@@ -82,6 +81,7 @@ pub const TextureData = struct {
 // }
 
 pub const ShaderData = struct {
+    bindingIndex: BindingIndex = NO_BINDING,
     vertexShaderResourceName: String = NO_NAME,
     vertexShaderProgram: String = NO_NAME,
     fragmentShaderResourceName: String = NO_NAME,
@@ -104,3 +104,20 @@ pub const TransformData = struct {
         return self.scale[0] != 1 or self.scale[2] != 1;
     }
 };
+
+pub const RenderData = struct {
+    tintColor: Color = Color{ 255, 255, 255, 255 },
+    blendMode: BlendMode = BlendMode.BLEND_ALPHA,
+};
+
+pub const SpriteData = struct {
+    textureIndex: BindingIndex = NO_BINDING,
+    textureBounds: RectF = RectF{ 0, 0, 0, 0 },
+    hFlip: bool = false,
+    vFlip: bool = false,
+    renderData: ?RenderData = null,
+};
+
+test {
+    std.testing.refAllDecls(@import("graphics.zig"));
+}

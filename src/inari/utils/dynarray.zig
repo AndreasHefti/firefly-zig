@@ -3,15 +3,20 @@ const Allocator = std.mem.Allocator;
 
 const DynArrayError = error{IllegalSlotAccess};
 
+pub fn DynArrayUndefined(comptime T: type) type {
+    return DynArray(T, undefined);
+}
+
 pub fn DynArray(comptime T: type) type {
     return struct {
         const Self = @This();
         const SliceOfSlice = [][]T;
 
+        /// The empty value is used to fill up new allocated arrays or reset slot values
+        var _voidval: ?T = null;
+
         /// The register of a DynArray is a slice of slices(T) pointing to the used arrays
         register: SliceOfSlice,
-        /// The empty value is used to fill up new allocated arrays or reset slot values
-        empty_value: T = undefined,
         /// Defines the size of the array that will be allocated when running out of capacity
         /// Note: This shall not be changed after initialization
         array_size: usize = 100,
@@ -23,21 +28,20 @@ pub fn DynArray(comptime T: type) type {
         /// Do not change this value from outside.
         _allocator: Allocator,
 
-        /// Initialization with allocator and an 'empty_value' that is used to fill and delete slots.
+        /// Initialization with allocator and an 'empty' that is used to fill and delete slots.
         /// Deinitialize with `deinit`
-        pub fn init(allocator: Allocator, empty_value: T) Self {
+        pub fn init(allocator: Allocator, comptime void_value: ?T) Self {
+            Self._voidval = void_value;
             return Self{
                 .register = undefined,
-                .empty_value = empty_value,
                 ._allocator = allocator,
             };
         }
 
         /// Deinitialize with `deinit` or use `toOwnedSlice`.
-        pub fn initArraySize(allocator: Allocator, empty_value: T, array_size: usize) Self {
+        pub fn initArraySize(allocator: Allocator, array_size: usize) Self {
             return Self{
                 .register = undefined,
-                .empty_value = empty_value,
                 .array_size = array_size,
                 ._allocator = allocator,
             };
@@ -61,17 +65,27 @@ pub fn DynArray(comptime T: type) type {
             self.register[index / self.array_size][index % self.array_size] = t;
         }
 
-        pub fn getUnchecked(self: *Self, index: usize) *T {
-            return &self.register[index / self.array_size][index % self.array_size];
-        }
-
-        pub fn get(self: *Self, index: usize) !*T {
+        pub fn inBounds(self: *Self, index: usize) bool {
             const y = index / self.array_size;
             const x = index % self.array_size;
-            if (y >= self.register.len or x >= self.register[y].len) {
-                return error.IllegalSlotAccess;
+            return y < self.register.len and x < self.register[y].len;
+        }
+
+        pub fn exists(self: *Self, index: usize) bool {
+            const y = index / self.array_size;
+            const x = index % self.array_size;
+            if (y < self.register.len and
+                x < self.register[y].len and
+                Self._voidval != null and
+                self.register[y][x] != Self._voidval)
+            {
+                return true;
             }
-            return &self.register[y][x];
+            return false;
+        }
+
+        pub fn get(self: *Self, index: usize) *T {
+            return &self.register[index / self.array_size][index % self.array_size];
         }
 
         pub fn reset(self: *Self, index: usize) void {
@@ -109,8 +123,10 @@ pub fn DynArray(comptime T: type) type {
             // allocate new array and refer slice within new slot
             const new_array = try self._allocator.alloc(T, self.array_size);
             // fill up new array with empty values
-            for (0..new_array.len) |i| {
-                new_array[i] = self.empty_value;
+            if (Self._voidval != null) {
+                for (0..new_array.len) |i| {
+                    new_array[i] = Self._voidval.?;
+                }
             }
             new_register[self._num_arrays] = new_array;
 
@@ -130,19 +146,22 @@ test "initialize" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = DynArray(i32).init(allocator, undefined);
+    var dyn_array = DynArray(i32).init(allocator, -1);
     defer dyn_array.deinit();
 
     try testing.expect(dyn_array.size() == 0);
     dyn_array.set(1, 0);
     try testing.expect(dyn_array.size() == dyn_array.array_size);
+    try testing.expect(dyn_array.get(0).* == 1);
+    try testing.expect(dyn_array.get(1).* == -1);
+    try testing.expect(dyn_array.get(2).* == -1);
 }
 
 test "scale up" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = DynArray(i32).init(allocator, 0);
+    var dyn_array = DynArray(i32).init(allocator, -1);
     defer dyn_array.deinit();
 
     dyn_array.set(100, 0);
@@ -152,16 +171,23 @@ test "scale up" {
     dyn_array.set(200, 200000);
 
     try testing.expect(dyn_array.size() == 200000 + dyn_array.array_size);
-    try testing.expect(200 == (dyn_array.get(200000) catch unreachable).*);
-    try testing.expect(0 == (dyn_array.get(200001) catch unreachable).*);
+    try testing.expect(200 == dyn_array.get(200000).*);
+    try testing.expect(-1 == dyn_array.get(200001).*);
 }
 
 test "consistency checks" {
+    const testing = std.testing;
     const allocator = std.testing.allocator;
 
-    var dyn_array = DynArray(i32).init(allocator, 0);
+    const List = DynArray(i32);
+    var dyn_array = List.init(allocator, -1);
     defer dyn_array.deinit();
 
+    try testing.expect(-1 == List._voidval);
     dyn_array.set(100, 0);
-    try std.testing.expectError(error.IllegalSlotAccess, dyn_array.get(200));
+    dyn_array.set(100, 100);
+    try testing.expect(dyn_array.exists(0));
+    try testing.expect(dyn_array.exists(100));
+    try testing.expect(!dyn_array.exists(101));
+    try testing.expect(!dyn_array.exists(2000));
 }
