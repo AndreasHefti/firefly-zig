@@ -21,6 +21,7 @@ pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
 pub const FFAPIError = error{
     GenericError,
+    GraphicsInitError,
     GraphicsError,
 };
 
@@ -44,19 +45,19 @@ pub const BlendMode = enum(Int) {
     BLEND_CUSTOM_SEPARATE = 7,
 };
 
-pub const ViewData = struct {
-    id: BindingIndex = NO_BINDING,
-    renderTarget: BindingIndex = NO_BINDING,
-    renderShader: BindingIndex = NO_BINDING,
-    bounds: RectI = RectI{ 0, 0, 0, 0 },
-    worldPosition: PosF = PosF{ 0, 0 },
-    clearColor: Color = Color{ 0, 0, 0, 255 },
-    clearBeforeStartRendering: bool = true,
-    tintColor: Color = Color{ 255, 255, 255, 255 },
-    blendMode: BlendMode = BlendMode.BLEND_ALPHA,
-    zoom: Float = 1,
-    fboScale: Float = 1,
-};
+// pub const ViewData = struct {
+//     id: BindingIndex = NO_BINDING,
+//     renderTarget: BindingIndex = NO_BINDING,
+//     renderShader: BindingIndex = NO_BINDING,
+//     bounds: RectI = RectI{ 0, 0, 0, 0 },
+//     worldPosition: PosF = PosF{ 0, 0 },
+//     clearColor: Color = Color{ 0, 0, 0, 255 },
+//     clearBeforeStartRendering: bool = true,
+//     tintColor: Color = Color{ 255, 255, 255, 255 },
+//     blendMode: BlendMode = BlendMode.BLEND_ALPHA,
+//     zoom: Float = 1,
+//     fboScale: Float = 1,
+// };
 
 pub const TextureData = struct {
     resourceName: String = NO_NAME,
@@ -68,6 +69,7 @@ pub const TextureData = struct {
     wrapT: Int = UNDEF_INT,
     minFilter: Int = UNDEF_INT,
     magFilter: Int = UNDEF_INT,
+    fboScale: Float = 1,
 };
 
 // TODO
@@ -106,6 +108,8 @@ pub const TransformData = struct {
 };
 
 pub const RenderData = struct {
+    clear: bool = true,
+    clearColor: Color = Color{ 0, 0, 0, 255 },
     tintColor: Color = Color{ 255, 255, 255, 255 },
     blendMode: BlendMode = BlendMode.BLEND_ALPHA,
 };
@@ -115,7 +119,6 @@ pub const SpriteData = struct {
     textureBounds: RectF = RectF{ 0, 0, 0, 0 },
     hFlip: bool = false,
     vFlip: bool = false,
-    renderData: ?RenderData = null,
 };
 
 test {

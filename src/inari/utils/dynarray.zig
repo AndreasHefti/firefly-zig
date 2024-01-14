@@ -1,5 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const BitSet = @import("bitset.zig").BitSet;
 
 const DynArrayError = error{IllegalSlotAccess};
 
@@ -10,13 +11,77 @@ pub fn DynArrayUndefined(comptime T: type) type {
 pub fn DynArray(comptime T: type) type {
     return struct {
         const Self = @This();
+
+        null_value: ?T = undefined,
+        register: Register(T) = undefined,
+        slots: BitSet = undefined,
+
+        pub fn init(allocator: Allocator, comptime null_value: ?T) !Self {
+            return Self{
+                .null_value = null_value,
+                .register = Register(T).init(allocator),
+                .slots = try BitSet.initEmpty(allocator, 128),
+            };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.register.deinit();
+            self.slots.deinit();
+        }
+
+        pub fn size(self: Self) usize {
+            return self.register.size();
+        }
+
+        pub fn nextFreeSlot(self: *Self) usize {
+            return self.slots.nextClearBit(0);
+        }
+
+        pub fn add(self: *Self, t: T) usize {
+            const index = self.slots.nextClearBit(0);
+            self.register.set(t, index);
+            self.slots.set(index);
+            return index;
+        }
+
+        pub fn set(self: *Self, t: T, index: usize) void {
+            self.register.set(t, index);
+            self.slots.set(index);
+        }
+
+        pub fn inBounds(self: *Self, index: usize) bool {
+            return index < self.slots.unmanaged.bit_length and self.register.inBounds(index);
+        }
+
+        pub fn exists(self: *Self, index: usize) bool {
+            return inBounds(self, index) and self.slots.isSet(index);
+        }
+
+        pub fn get(self: *Self, index: usize) *T {
+            if (exists(self, index)) {
+                return self.register.get(index);
+            } else if (self.null_value != null) {
+                return &self.null_value.?;
+            } else {
+                @panic("Illegal array access");
+            }
+        }
+
+        pub fn reset(self: *Self, index: usize) void {
+            if (exists(self, index)) {
+                self.slots.setValue(index, false);
+            }
+        }
+    };
+}
+
+pub fn Register(comptime T: type) type {
+    return struct {
+        const Self = @This();
         const SliceOfSlice = [][]T;
 
-        /// The empty value is used to fill up new allocated arrays or reset slot values
-        var _voidval: ?T = null;
-
         /// The register of a DynArray is a slice of slices(T) pointing to the used arrays
-        register: SliceOfSlice,
+        register: SliceOfSlice = undefined,
         /// Defines the size of the array that will be allocated when running out of capacity
         /// Note: This shall not be changed after initialization
         array_size: usize = 100,
@@ -30,10 +95,8 @@ pub fn DynArray(comptime T: type) type {
 
         /// Initialization with allocator and an 'empty' that is used to fill and delete slots.
         /// Deinitialize with `deinit`
-        pub fn init(allocator: Allocator, comptime void_value: ?T) Self {
-            Self._voidval = void_value;
+        pub fn init(allocator: Allocator) Self {
             return Self{
-                .register = undefined,
                 ._allocator = allocator,
             };
         }
@@ -41,7 +104,6 @@ pub fn DynArray(comptime T: type) type {
         /// Deinitialize with `deinit` or use `toOwnedSlice`.
         pub fn initArraySize(allocator: Allocator, array_size: usize) Self {
             return Self{
-                .register = undefined,
                 .array_size = array_size,
                 ._allocator = allocator,
             };
@@ -122,12 +184,6 @@ pub fn DynArray(comptime T: type) type {
 
             // allocate new array and refer slice within new slot
             const new_array = try self._allocator.alloc(T, self.array_size);
-            // fill up new array with empty values
-            if (Self._voidval != null) {
-                for (0..new_array.len) |i| {
-                    new_array[i] = Self._voidval.?;
-                }
-            }
             new_register[self._num_arrays] = new_array;
 
             // free old slot slice
@@ -146,12 +202,11 @@ test "initialize" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = DynArray(i32).init(allocator, -1);
+    var dyn_array = try DynArray(i32).init(allocator, -1);
     defer dyn_array.deinit();
-
     try testing.expect(dyn_array.size() == 0);
     dyn_array.set(1, 0);
-    try testing.expect(dyn_array.size() == dyn_array.array_size);
+    try testing.expect(dyn_array.size() == dyn_array.register.array_size);
     try testing.expect(dyn_array.get(0).* == 1);
     try testing.expect(dyn_array.get(1).* == -1);
     try testing.expect(dyn_array.get(2).* == -1);
@@ -161,16 +216,16 @@ test "scale up" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = DynArray(i32).init(allocator, -1);
+    var dyn_array = try DynArray(i32).init(allocator, -1);
     defer dyn_array.deinit();
 
     dyn_array.set(100, 0);
 
-    try testing.expect(dyn_array.size() == dyn_array.array_size);
+    try testing.expect(dyn_array.size() == dyn_array.register.array_size);
 
     dyn_array.set(200, 200000);
 
-    try testing.expect(dyn_array.size() == 200000 + dyn_array.array_size);
+    try testing.expect(dyn_array.size() == 200000 + dyn_array.register.array_size);
     try testing.expect(200 == dyn_array.get(200000).*);
     try testing.expect(-1 == dyn_array.get(200001).*);
 }
@@ -179,11 +234,10 @@ test "consistency checks" {
     const testing = std.testing;
     const allocator = std.testing.allocator;
 
-    const List = DynArray(i32);
-    var dyn_array = List.init(allocator, -1);
+    var dyn_array = try DynArray(i32).init(allocator, -1);
     defer dyn_array.deinit();
 
-    try testing.expect(-1 == List._voidval);
+    try testing.expect(-1 == dyn_array.null_value);
     dyn_array.set(100, 0);
     dyn_array.set(100, 100);
     try testing.expect(dyn_array.exists(0));

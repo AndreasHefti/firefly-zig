@@ -3,7 +3,7 @@ pub const bitset = @import("bitset.zig");
 pub const dynarray = @import("dynarray.zig");
 pub const geom = @import("geom.zig");
 
-pub const String = []u8;
+pub const String = []const u8;
 pub const EMPTY_STRING: String = "";
 pub const NO_NAME: String = EMPTY_STRING;
 
@@ -16,4 +16,5 @@ test {
     std.testing.refAllDecls(@import("bitset.zig"));
     std.testing.refAllDecls(@import("dynarray.zig"));
     std.testing.refAllDecls(@import("geom.zig"));
+    std.testing.refAllDecls(@import("event.zig"));
 }
