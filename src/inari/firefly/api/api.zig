@@ -19,12 +19,6 @@ pub const Color = utils.geom.Color;
 pub const BindingIndex = usize;
 pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
-pub const FFAPIError = error{
-    GenericError,
-    GraphicsInitError,
-    GraphicsError,
-};
-
 /// Color blending modes
 pub const BlendMode = enum(Int) {
     /// Blend textures considering alpha (default)

@@ -1,6 +1,10 @@
 const std = @import("std");
 const api = @import("api.zig");
+const firefly = @import("../firefly.zig"); // TODO better way for import package?
 const utils = @import("../../utils/utils.zig"); // TODO better way for import package?
+
+const FFAPIError = firefly.FFAPIError;
+
 const DynArray = utils.dynarray.DynArray;
 const BindingIndex = api.BindingIndex;
 const NO_BINDING = api.NO_BINDING;
@@ -11,7 +15,6 @@ const ShaderData = api.ShaderData;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const SpriteData = api.SpriteData;
-const FFAPIError = api.FFAPIError;
 const PosI = api.PosI;
 const Int = utils.Int;
 const Vector2f = utils.geom.Vector2f;
