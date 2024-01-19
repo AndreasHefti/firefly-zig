@@ -6,6 +6,8 @@ const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const String = utils.String;
 
+// TODO system namespace init and deinit
+
 const SystemInfo = struct {
     name: String = undefined,
 };

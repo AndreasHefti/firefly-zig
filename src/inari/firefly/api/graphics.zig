@@ -16,16 +16,16 @@ const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const SpriteData = api.SpriteData;
 const PosI = api.PosI;
-const Int = utils.Int;
+const CInt = utils.CInt;
 const Vector2f = utils.geom.Vector2f;
 
 pub fn GraphicsAPI() type {
     return struct {
         const Self = @This();
         /// return the actual screen width
-        screenWidth: *const fn () Int = undefined,
+        screenWidth: *const fn () CInt = undefined,
         /// return the actual screen height
-        screenHeight: *const fn () Int = undefined,
+        screenHeight: *const fn () CInt = undefined,
         /// Show actual frame rate per second at given position on the screen
         showFPS: *const fn (*PosI) void = undefined,
 
@@ -83,8 +83,8 @@ pub fn createDebugGraphics(allocator: std.mem.Allocator) !GraphicsAPI() {
 /// or
 /// var graphics = GraphicsAPI().init(DebugGraphicsAPI.initScreen(800, 600).initImpl);
 const DebugGraphicsAPI = struct {
-    pub var screen_width: Int = 800;
-    pub var screen_height: Int = 600;
+    pub var screen_width: CInt = 800;
+    pub var screen_height: CInt = 600;
     var alloc: std.mem.Allocator = undefined;
     var initialized = false;
 
@@ -134,11 +134,11 @@ const DebugGraphicsAPI = struct {
         initialized = false;
     }
 
-    pub fn screenWidth() Int {
+    pub fn screenWidth() CInt {
         return screen_width;
     }
 
-    pub fn screenHeight() Int {
+    pub fn screenHeight() CInt {
         return screen_height;
     }
 

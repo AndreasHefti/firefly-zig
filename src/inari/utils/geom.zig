@@ -1,15 +1,15 @@
 const std = @import("std");
 const utils = @import("utils.zig");
-const Int = utils.Int;
+const CInt = utils.CInt;
 const Float = utils.Float;
 const Byte = utils.Byte;
 
 /// Two dimensional vector of i32 values
-pub const Vector2i = @Vector(2, Int);
+pub const Vector2i = @Vector(2, CInt);
 /// Three dimensional vector of i32 values
-pub const Vector3i = @Vector(3, Int);
+pub const Vector3i = @Vector(3, CInt);
 /// Four Two dimensional vector of i32 values
-pub const Vector4i = @Vector(4, Int);
+pub const Vector4i = @Vector(4, CInt);
 
 /// Two dimensional vector of f32 values
 pub const Vector2f = @Vector(2, Float);

@@ -60,6 +60,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = .{ .path = "src/inari/libtest.zig" },
         .target = target,
         .optimize = optimize,
+        .single_threaded = true,
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);

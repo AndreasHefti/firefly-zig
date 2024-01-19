@@ -5,9 +5,7 @@ const utils = @import("../../utils/utils.zig"); // TODO better way for import pa
 pub const String = utils.String;
 pub const NO_NAME = utils.NO_NAME;
 
-pub const Int = utils.Int;
-pub const UNDEF_INT = utils.UNDEF_INT;
-
+pub const CInt = utils.CInt;
 pub const Float = utils.Float;
 
 pub const PosI = utils.geom.PosI;
@@ -20,7 +18,7 @@ pub const BindingIndex = usize;
 pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
 /// Color blending modes
-pub const BlendMode = enum(Int) {
+pub const BlendMode = enum(CInt) {
     /// Blend textures considering alpha (default)
     BLEND_ALPHA = 0,
     /// Blend textures adding colors
@@ -56,13 +54,13 @@ pub const BlendMode = enum(Int) {
 pub const TextureData = struct {
     resourceName: String = NO_NAME,
     bindingIndex: BindingIndex = NO_BINDING,
-    width: Int = UNDEF_INT,
-    height: Int = UNDEF_INT,
+    width: CInt = 0,
+    height: CInt = 0,
     isMipmap: bool = false,
-    wrapS: Int = UNDEF_INT,
-    wrapT: Int = UNDEF_INT,
-    minFilter: Int = UNDEF_INT,
-    magFilter: Int = UNDEF_INT,
+    wrapS: CInt = -1,
+    wrapT: CInt = -1,
+    minFilter: CInt = -1,
+    magFilter: CInt = -1,
     fboScale: Float = 1,
 };
 
