@@ -63,7 +63,7 @@ pub fn clear(self: *ExampleComponent) void {
 // Testing
 test "initialization" {
     std.debug.print("\n", .{});
-    try firefly.moduleInit(std.testing.allocator);
+    try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
 
     ExampleComponent.init();
@@ -71,7 +71,7 @@ test "initialization" {
 
 test "auto-initialization" {
     std.debug.print("\n", .{});
-    try firefly.moduleInit(std.testing.allocator);
+    try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
 
     // not initialized yet... gives null values every time
@@ -91,7 +91,7 @@ test "auto-initialization" {
 test "create/dispose component" {
     std.debug.print("\n", .{});
 
-    try firefly.moduleInit(std.testing.allocator);
+    try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
 
     var cPtr = ExampleComponent.new(.{

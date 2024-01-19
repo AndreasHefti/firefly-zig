@@ -45,15 +45,11 @@ pub fn componentDeinit() void {
     COMPONENT_ASPECT_GROUP = undefined;
 }
 
-pub fn registerDeinit(deinit: *const fn () void) void {
-    POOL_REFERENCES.append(CompTypeInit{ .deinit = deinit }) catch unreachable;
-}
-
 pub fn registerComponentType(comptime cType: anytype) void {
     comptime {
         if (!trait.isPtrTo(.Type)(@TypeOf(cType))) @compileError("Expects cType to be pointer type.");
-        //if (!trait.(cType.*, "pool")) @compileError("Expects cType to be pointer type.");
-        //if (!trait.hasFn("initIt")(@TypeOf(cType.*))) @compileError("Expects component to have field 'pool'.");
+        if (!trait.hasDecls(cType.*, .{ "pool", "null_value", "deinit" }))
+            @compileError("Expects component to have declared 'pool' and 'null_value' and fn 'deinit'.");
     }
     cType.*.pool.init(cType.*.null_value);
     POOL_REFERENCES.append(CompTypeInit{ .deinit = cType.*.deinit }) catch unreachable;

@@ -2,6 +2,8 @@ const std = @import("std");
 pub const utils = @import("../utils/utils.zig"); // TODO better way for import package?
 pub const component = @import("component.zig");
 pub const system = @import("system.zig");
+pub const graphics = @import("api/graphics.zig");
+
 pub const Allocator = std.mem.Allocator;
 
 pub const FFAPIError = error{
@@ -25,7 +27,9 @@ pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
 
-pub fn moduleInit(allocator: Allocator) !void {
+pub var GRAPHICS: graphics.GraphicsAPI() = undefined;
+
+pub fn moduleInitDebug(allocator: Allocator) !void {
     defer INIT = true;
     if (INIT) {
         return;
@@ -33,7 +37,9 @@ pub fn moduleInit(allocator: Allocator) !void {
     COMPONENT_ALLOC = allocator;
     ENTITY_ALLOC = allocator;
     ALLOC = allocator;
+    GRAPHICS = try graphics.createDebugGraphics(ALLOC);
     try utils.aspect.aspectInit(allocator);
+    system.System.init();
     try component.componentInit(allocator);
 }
 
@@ -45,7 +51,10 @@ pub fn moduleInitAlloc(component_allocator: Allocator, entity_allocator: Allocat
     COMPONENT_ALLOC = component_allocator;
     ENTITY_ALLOC = entity_allocator;
     ALLOC = allocator;
+    // TODO init default graphics impl here when available
+    GRAPHICS = try graphics.createDebugGraphics(ALLOC);
     try utils.aspect.aspectInit(allocator);
+    system.System.init();
     try component.componentInit(allocator);
 }
 
@@ -54,8 +63,10 @@ pub fn moduleDeinit() void {
     if (!INIT) {
         return;
     }
-    utils.aspect.aspectDeinit();
+    GRAPHICS.deinit();
+    system.System.deinit();
     component.componentDeinit();
+    utils.aspect.aspectDeinit();
 }
 
 test {

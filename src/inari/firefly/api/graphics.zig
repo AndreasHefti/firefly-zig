@@ -70,11 +70,14 @@ pub fn GraphicsAPI() type {
     };
 }
 
+// singleton DebugGraphics
+var singletonDebugGraphics: GraphicsAPI() = undefined;
 pub fn createDebugGraphics(allocator: std.mem.Allocator) !GraphicsAPI() {
     if (DebugGraphicsAPI.initialized) {
-        return FFAPIError.GraphicsInitError;
+        return singletonDebugGraphics;
     }
-    return try GraphicsAPI().init(DebugGraphicsAPI.initImpl, allocator);
+    singletonDebugGraphics = try GraphicsAPI().init(DebugGraphicsAPI.initImpl, allocator);
+    return singletonDebugGraphics;
 }
 
 /// This implementation of GraphicsAPI can be used for debugging
@@ -246,23 +249,18 @@ const DebugGraphicsAPI = struct {
 };
 
 test "debug init" {
-    var debugGraphics = try createDebugGraphics(std.testing.allocator);
-    defer debugGraphics.deinit();
+    try firefly.moduleInitDebug(std.testing.allocator);
+    defer firefly.moduleDeinit();
 
-    var width = debugGraphics.screenWidth();
-    var height = debugGraphics.screenHeight();
+    var width = firefly.GRAPHICS.screenWidth();
+    var height = firefly.GRAPHICS.screenHeight();
 
     try std.testing.expect(width == 800);
     try std.testing.expect(height == 600);
 
-    try std.testing.expectError(
-        FFAPIError.GraphicsInitError,
-        createDebugGraphics(std.testing.allocator),
-    );
-
     var fpsPos = PosI{ 10, 10 };
     std.debug.print("\n", .{});
-    debugGraphics.showFPS(&fpsPos);
+    firefly.GRAPHICS.showFPS(&fpsPos);
 
     var t1 = TextureData{ .resourceName = "t1" };
     var t2 = TextureData{ .resourceName = "t2" };
@@ -273,12 +271,17 @@ test "debug init" {
     transform.position[1] = 100;
 
     try std.testing.expect(t1.bindingIndex == NO_BINDING);
-    try debugGraphics.loadTexture(&t1);
+    try firefly.GRAPHICS.loadTexture(&t1);
     try std.testing.expect(t1.bindingIndex != NO_BINDING);
     try std.testing.expect(t2.bindingIndex == NO_BINDING);
-    try debugGraphics.createRenderTexture(&t2);
+    try firefly.GRAPHICS.createRenderTexture(&t2);
     try std.testing.expect(t2.bindingIndex != NO_BINDING);
 
     sprite.textureIndex = t1.bindingIndex;
-    debugGraphics.renderSprite(&sprite, &transform, &renderData, null);
+    firefly.GRAPHICS.renderSprite(&sprite, &transform, &renderData, null);
+
+    // test creating another DebugGraphics will get the same instance back
+    var debugGraphics2 = try createDebugGraphics(std.testing.allocator);
+    try std.testing.expectEqual(firefly.GRAPHICS, debugGraphics2);
+    debugGraphics2.renderSprite(&sprite, &transform, &renderData, null);
 }

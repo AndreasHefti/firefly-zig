@@ -1,31 +1,28 @@
 const std = @import("std");
-const utils = @import("../utils/utils.zig"); // TODO better way for import package?
+const firefly = @import("firefly.zig");
+const utils = firefly.utils;
 const trait = std.meta.trait;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const String = utils.String;
 
-// TODO system namespace init and deinit
-
 const SystemInfo = struct {
     name: String = undefined,
 };
 
-const System = struct {
+pub const System = struct {
     var systems: StringHashMap(System) = undefined;
-    var _allocator: Allocator = undefined;
     var initialized = false;
 
     activate: *const fn (bool) void = undefined,
     getInfo: *const fn () SystemInfo = undefined,
     deinit: *const fn () void = undefined,
 
-    pub fn init(allocator: Allocator) void {
+    pub fn init() void {
+        defer initialized = true;
         if (!initialized) {
-            systems = StringHashMap(System).init(allocator);
-            _allocator = allocator;
-            initialized = true;
+            systems = StringHashMap(System).init(firefly.ALLOC);
         }
     }
 
@@ -41,7 +38,7 @@ const System = struct {
             if (!trait.hasFn("activate")(systemType)) @compileError("Expects System to have fn 'activate'.");
             if (!trait.hasFn("deinit")(systemType)) @compileError("Expects System to have fn 'deinit'.");
         }
-        systemType.init(_allocator);
+        systemType.init();
         var system = System{
             .activate = systemType.activate,
             .getInfo = systemType.getInfo,
@@ -86,24 +83,23 @@ const ExampleSystem = struct {
         return info;
     }
 
-    pub fn init(allocator: Allocator) void {
-        _ = allocator;
+    pub fn init() void {
         std.debug.print("ExampleSystem init called\n", .{});
-    }
-
-    pub fn activate(active: bool) void {
-        std.debug.print("ExampleSystem activate {any} called\n", .{active});
     }
 
     pub fn deinit() void {
         std.debug.print("ExampleSystem deinit called\n", .{});
     }
+
+    pub fn activate(active: bool) void {
+        std.debug.print("ExampleSystem activate {any} called\n", .{active});
+    }
 };
 
 test "initialization" {
     std.debug.print("\n", .{});
-    System.init(std.testing.allocator);
-    defer System.deinit();
+    try firefly.moduleInitDebug(std.testing.allocator);
+    defer firefly.moduleDeinit();
 
     var exampleSystem = try System.initSystem(ExampleSystem);
     try std.testing.expectEqualStrings("ExampleSystem", exampleSystem.getInfo().name);
