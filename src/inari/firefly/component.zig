@@ -107,6 +107,7 @@ pub fn ComponentPool(comptime T: type) type {
         var active_mapping: BitSet = undefined;
         var name_mapping: ?StringHashMap(usize) = null;
         // ... events
+        const e_type = CompLifecycleEvent(T);
         var event: ?CompLifecycleEvent(T) = null;
         //var eventDispatch: ?EventDispatch(CompLifecycleEvent(T)) = null;
 
@@ -141,9 +142,7 @@ pub fn ComponentPool(comptime T: type) type {
 
             if (withEventPropagation) {
                 event = CompLifecycleEvent(T).create();
-                std.debug.print("\n%%%%%%%%%%%%%%%% T: {*}\n", .{&EventDispatch(CompLifecycleEvent(T))});
-                std.debug.print("\n%%%%%%%%%%%%% T: {*}\n", .{&CompLifecycleEvent(T)});
-                EventDispatch(CompLifecycleEvent(T)).init(firefly.COMPONENT_ALLOC);
+                EventDispatch(e_type).init(firefly.COMPONENT_ALLOC);
             }
 
             return &selfRef;
@@ -185,14 +184,13 @@ pub fn ComponentPool(comptime T: type) type {
 
         pub fn subscribe(_: *Self, listener: *const fn (CompLifecycleEvent(T)) void) void {
             if (event) |_| {
-                std.debug.print("\n%%%%%%%%%%%%%%%% subscribe T: {any}\n", .{&EventDispatch(CompLifecycleEvent(T))});
-                EventDispatch(CompLifecycleEvent(T)).register(listener);
+                EventDispatch(e_type).register(listener);
             }
         }
 
         pub fn unsubscribe(_: *Self, listener: *const fn (CompLifecycleEvent(T)) void) void {
             if (event) |_| {
-                EventDispatch(CompLifecycleEvent(T)).unregister(listener);
+                EventDispatch(e_type).unregister(listener);
             }
         }
 

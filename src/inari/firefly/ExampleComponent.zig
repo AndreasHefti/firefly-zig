@@ -182,11 +182,20 @@ test "event propagation" {
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
 
+    // TODO subscribe directly
+    ExampleComponent.init();
     ExampleComponent.pool.subscribe(listener);
+
+    var c1 = ExampleComponent.new(.{
+        .color = Color{ 0, 0, 0, 255 },
+        .position = PosF{ 10, 10 },
+    });
+    c1.activate(true);
+    c1.activate(false);
 }
 
 fn listener(event: component.CompLifecycleEvent(ExampleComponent)) void {
-    std.debug.print("\n event: {any}", .{event});
+    std.debug.print("\n %%%%%%%%%% event: {any}\n", .{event});
 }
 
 test "get poll and process" {

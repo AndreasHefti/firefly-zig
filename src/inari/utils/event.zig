@@ -16,7 +16,6 @@ pub fn EventDispatch(comptime E: type) type {
 
         pub fn init(allocator: Allocator) void {
             defer initialized = true;
-            std.debug.print("\n%%%%%%%%%%%%%%%% init : {any}\n", .{&Self});
             if (!initialized) {
                 listeners = ArrayList(Listener).init(allocator);
             }
