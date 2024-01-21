@@ -156,6 +156,39 @@ test "create/dispose component" {
     try std.testing.expect(ExampleComponent.pool.activeCount() == 0);
 }
 
+test "name mapping" {
+    try firefly.moduleInitDebug(std.testing.allocator);
+    defer firefly.moduleDeinit();
+    var c1 = ExampleComponent.new(.{
+        .color = Color{ 0, 0, 0, 255 },
+        .position = PosF{ 10, 10 },
+    });
+
+    var c2 = ExampleComponent.new(.{
+        .name = "c2",
+        .color = Color{ 2, 0, 0, 255 },
+        .position = PosF{ 20, 20 },
+    });
+
+    var _c2 = ExampleComponent.pool.getByName("c2");
+    var _c1_ = ExampleComponent.pool.getByName(c1.name);
+
+    try std.testing.expect(_c2 != null);
+    try std.testing.expectEqual(c2, _c2.?);
+    try std.testing.expect(_c1_ == null);
+}
+
+test "event propagation" {
+    try firefly.moduleInitDebug(std.testing.allocator);
+    defer firefly.moduleDeinit();
+
+    ExampleComponent.pool.subscribe(listener);
+}
+
+fn listener(event: component.CompLifecycleEvent(ExampleComponent)) void {
+    std.debug.print("\n event: {any}", .{event});
+}
+
 test "get poll and process" {
     std.debug.print("\n", .{});
 

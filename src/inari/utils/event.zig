@@ -16,7 +16,7 @@ pub fn EventDispatch(comptime E: type) type {
 
         pub fn init(allocator: Allocator) void {
             defer initialized = true;
-
+            std.debug.print("\n%%%%%%%%%%%%%%%% init : {any}\n", .{&Self});
             if (!initialized) {
                 listeners = ArrayList(Listener).init(allocator);
             }
@@ -33,9 +33,9 @@ pub fn EventDispatch(comptime E: type) type {
             }
         }
 
-        pub fn register(listener: Listener) !void {
+        pub fn register(listener: Listener) void {
             checkInit();
-            try listeners.append(listener);
+            listeners.append(listener) catch @panic("Failed to append listener");
         }
 
         pub fn unregister(listener: Listener) void {
@@ -68,8 +68,8 @@ test "Events and Listeners" {
     ED.init(std.testing.allocator);
     defer ED.deinit();
 
-    try ED.register(testlistener1);
-    try ED.register(testlistener2);
+    ED.register(testlistener1);
+    ED.register(testlistener2);
     ED.notify("hallo1");
     ED.notify("hallo2");
 

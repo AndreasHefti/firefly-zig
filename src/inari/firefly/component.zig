@@ -118,11 +118,11 @@ pub fn ComponentPool(comptime T: type) type {
                 return &selfRef;
             }
 
+            errdefer deinit();
             defer {
                 DEINIT_REFERENCES.append(CompTypeDeinit{ .deinit = T.deinit }) catch @panic("Register Deinit failed");
                 initialized = true;
             }
-            errdefer deinit();
 
             items = DynArray(T).init(firefly.COMPONENT_ALLOC, emptyValue) catch @panic("Init items failed");
             active_mapping = BitSet.initEmpty(firefly.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
@@ -141,6 +141,8 @@ pub fn ComponentPool(comptime T: type) type {
 
             if (withEventPropagation) {
                 event = CompLifecycleEvent(T).create();
+                std.debug.print("\n%%%%%%%%%%%%%%%% T: {*}\n", .{&EventDispatch(CompLifecycleEvent(T))});
+                std.debug.print("\n%%%%%%%%%%%%% T: {*}\n", .{&CompLifecycleEvent(T)});
                 EventDispatch(CompLifecycleEvent(T)).init(firefly.COMPONENT_ALLOC);
             }
 
@@ -148,26 +150,24 @@ pub fn ComponentPool(comptime T: type) type {
         }
 
         pub fn typeCheck(a: *Aspect) bool {
-            if (!initialized) {
+            if (!initialized)
                 return false;
-            }
+
             return selfRef.c_aspect.index == a.index;
         }
 
         /// Release all allocated memory.
         pub fn deinit(self: *Self) void {
             defer initialized = false;
-            if (!initialized) {
+            if (!initialized)
                 return;
-            }
 
             self.c_aspect = undefined;
             items.deinit();
             active_mapping.deinit();
 
-            if (name_mapping) |*nm| {
+            if (name_mapping) |*nm|
                 nm.deinit();
-            }
 
             if (event) |_| {
                 EventDispatch(CompLifecycleEvent(T)).deinit();
@@ -183,6 +183,19 @@ pub fn ComponentPool(comptime T: type) type {
             return active_mapping.count();
         }
 
+        pub fn subscribe(_: *Self, listener: *const fn (CompLifecycleEvent(T)) void) void {
+            if (event) |_| {
+                std.debug.print("\n%%%%%%%%%%%%%%%% subscribe T: {any}\n", .{&EventDispatch(CompLifecycleEvent(T))});
+                EventDispatch(CompLifecycleEvent(T)).register(listener);
+            }
+        }
+
+        pub fn unsubscribe(_: *Self, listener: *const fn (CompLifecycleEvent(T)) void) void {
+            if (event) |_| {
+                EventDispatch(CompLifecycleEvent(T)).unregister(listener);
+            }
+        }
+
         pub fn reg(_: *Self, c: T) *T {
             checkComponentTrait(c);
 
@@ -191,9 +204,8 @@ pub fn ComponentPool(comptime T: type) type {
             result.index = index;
 
             if (name_mapping) |*nm| {
-                if (std.mem.eql(u8, c.name, NO_NAME)) {
+                if (!std.mem.eql(u8, c.name, NO_NAME))
                     nm.put(result.name, index) catch unreachable;
-                }
             }
 
             notify(CompEventType.Created, index);
@@ -202,6 +214,15 @@ pub fn ComponentPool(comptime T: type) type {
 
         pub fn get(_: *Self, index: usize) *T {
             return items.get(index);
+        }
+
+        pub fn getByName(_: *Self, name: String) ?*T {
+            if (name_mapping) |*nm| {
+                if (nm.get(name)) |index| {
+                    return items.get(index);
+                }
+            }
+            return null;
         }
 
         pub fn activate(_: *Self, index: usize, a: bool) void {
