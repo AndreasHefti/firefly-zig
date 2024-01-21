@@ -8,17 +8,20 @@ const FFAPIError = firefly.FFAPIError;
 const Color = firefly.utils.geom.Color;
 const PosF = firefly.utils.geom.PosF;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const NO_NAME = firefly.utils.NO_NAME;
 
 // private type fields
 var initialized: bool = false;
+const ExampleComponent = @This();
 
 // type fields
-pub const ExampleComponent = @This();
+pub const ExampleComponentEvent = struct {};
 pub const null_value = ExampleComponent{};
-pub const pool = ComponentPool(ExampleComponent);
+pub var pool: *ComponentPool(ExampleComponent) = undefined;
 
 // struct fields
 index: usize = UNDEF_INDEX,
+name: String = NO_NAME,
 color: Color = Color{ 0, 0, 0, 255 },
 position: PosF = PosF{ 0, 0 },
 
@@ -26,7 +29,7 @@ position: PosF = PosF{ 0, 0 },
 fn init() void {
     defer initialized = true;
     if (initialized) return;
-    component.registerComponentType(&ExampleComponent);
+    pool = component.ComponentPool(ExampleComponent).init(null_value, true, true);
 }
 
 pub fn deinit() void {
@@ -36,7 +39,7 @@ pub fn deinit() void {
 
 // type functions
 pub fn get(index: usize) *ExampleComponent {
-    return pool.items.get(index);
+    return pool.get(index);
 }
 
 pub fn new(c: ExampleComponent) *ExampleComponent {
@@ -46,11 +49,7 @@ pub fn new(c: ExampleComponent) *ExampleComponent {
 
 // methods
 pub fn activate(self: ExampleComponent, active: bool) void {
-    if (active) {
-        pool.activate(self.index);
-    } else {
-        pool.deactivate(self.index);
-    }
+    pool.activate(self.index, active);
 }
 
 pub fn clear(self: *ExampleComponent) void {
@@ -155,4 +154,58 @@ test "create/dispose component" {
 
     try std.testing.expect(ExampleComponent.pool.count() == 0);
     try std.testing.expect(ExampleComponent.pool.activeCount() == 0);
+}
+
+test "get poll and process" {
+    std.debug.print("\n", .{});
+
+    try firefly.moduleInitDebug(std.testing.allocator);
+    defer firefly.moduleDeinit();
+
+    var c1 = ExampleComponent.new(.{
+        .color = Color{ 0, 0, 0, 255 },
+        .position = PosF{ 10, 10 },
+    });
+    c1.activate(true);
+
+    var c2 = ExampleComponent.new(.{
+        .color = Color{ 2, 0, 0, 255 },
+        .position = PosF{ 20, 20 },
+    });
+    _ = c2;
+
+    var c3 = ExampleComponent.new(.{
+        .color = Color{ 0, 5, 0, 255 },
+        .position = PosF{ 40, 70 },
+    });
+
+    process();
+
+    var ptr = component.CompPoolPtr{
+        .aspect = ExampleComponent.pool.c_aspect,
+        .address = @intFromPtr(ExampleComponent.pool),
+    };
+    _ = ptr;
+
+    var compId = component.ComponentId{
+        .cTypePtr = ComponentPool(ExampleComponent).typeErasedPtr,
+        .cIndex = c3.index,
+    };
+
+    processViaIdCast(compId);
+}
+
+fn processViaIdCast(id: component.ComponentId) void {
+    if (ComponentPool(ExampleComponent).typeCheck(id.cTypePtr.aspect)) {
+        var arr = [1]usize{id.cIndex};
+        id.cTypePtr.cast(ComponentPool(ExampleComponent)).processIndexed(&arr, processOne);
+    }
+}
+
+fn process() void {
+    ExampleComponent.pool.processAllActive(processOne);
+}
+
+fn processOne(c: *ExampleComponent) void {
+    std.debug.print("\n process ExampleComponent {any}\n", .{c});
 }

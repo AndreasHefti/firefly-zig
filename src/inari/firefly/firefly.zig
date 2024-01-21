@@ -1,5 +1,6 @@
 const std = @import("std");
 pub const utils = @import("../utils/utils.zig"); // TODO better way for import package?
+pub const api = @import("api/api.zig");
 pub const component = @import("component.zig");
 pub const system = @import("system.zig");
 pub const graphics = @import("api/graphics.zig");

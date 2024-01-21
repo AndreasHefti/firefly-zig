@@ -7,12 +7,13 @@ const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const String = utils.String;
 
+var SYSTEMS: StringHashMap(System) = undefined;
+
 const SystemInfo = struct {
     name: String = undefined,
 };
 
 pub const System = struct {
-    var systems: StringHashMap(System) = undefined;
     var initialized = false;
 
     activate: *const fn (bool) void = undefined,
@@ -22,7 +23,7 @@ pub const System = struct {
     pub fn init() void {
         defer initialized = true;
         if (!initialized) {
-            systems = StringHashMap(System).init(firefly.ALLOC);
+            SYSTEMS = StringHashMap(System).init(firefly.ALLOC);
         }
     }
 
@@ -45,8 +46,8 @@ pub const System = struct {
             .deinit = systemType.deinit,
         };
         var name: String = systemType.getInfo().name;
-        try systems.put(name, system);
-        return systems.getPtr(name).?;
+        try SYSTEMS.put(name, system);
+        return SYSTEMS.getPtr(name).?;
     }
 
     pub fn activate(name: String, active: bool) void {
@@ -55,7 +56,7 @@ pub const System = struct {
     }
 
     pub fn getSystem(name: String) ?*System {
-        var it = systems.valueIterator();
+        var it = SYSTEMS.valueIterator();
         while (it.next()) |system| {
             if (std.mem.eql(u8, system.getInfo().name, name)) {
                 return system;
@@ -66,11 +67,11 @@ pub const System = struct {
 
     pub fn deinit() void {
         if (initialized) {
-            var it = systems.valueIterator();
+            var it = SYSTEMS.valueIterator();
             while (it.next()) |system| {
                 system.deinit();
             }
-            systems.deinit();
+            SYSTEMS.deinit();
             initialized = false;
         }
     }

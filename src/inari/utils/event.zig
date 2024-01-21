@@ -3,27 +3,33 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
 /// Event dispatcher implemented as type based singleton
-fn EventDispatch(comptime E: type) type {
+pub fn EventDispatch(comptime E: type) type {
     return struct {
         const Self = @This();
+        // ensure type based singleton
         var initialized = false;
+        var selfRef: Self = undefined;
 
         const Listener = *const fn (E) void;
 
         var listeners: ArrayList(Listener) = undefined;
 
         pub fn init(allocator: Allocator) void {
+            defer initialized = true;
+
             if (!initialized) {
                 listeners = ArrayList(Listener).init(allocator);
-                initialized = true;
             }
+
+            selfRef = Self{};
         }
 
         pub fn deinit() void {
+            defer initialized = false;
             if (initialized) {
                 listeners.deinit();
                 listeners = undefined;
-                initialized = false;
+                selfRef = undefined;
             }
         }
 
@@ -36,7 +42,7 @@ fn EventDispatch(comptime E: type) type {
             checkInit();
             for (0..listeners.items.len) |i| {
                 if (listeners.items[i] == listener) {
-                    listeners.swapRemove(i);
+                    _ = listeners.swapRemove(i);
                     return;
                 }
             }
@@ -58,15 +64,18 @@ fn EventDispatch(comptime E: type) type {
 }
 
 test "Events and Listeners" {
-    EventDispatch([]const u8).init(std.testing.allocator);
-    defer EventDispatch([]const u8).deinit();
+    const ED = EventDispatch([]const u8);
+    ED.init(std.testing.allocator);
+    defer ED.deinit();
 
-    try EventDispatch([]const u8).register(testlistener1);
-    try EventDispatch([]const u8).register(testlistener2);
+    try ED.register(testlistener1);
+    try ED.register(testlistener2);
+    ED.notify("hallo1");
+    ED.notify("hallo2");
 
-    EventDispatch([]const u8).notify("hallo1");
+    ED.unregister(testlistener1);
 
-    EventDispatch([]const u8).notify("hallo2");
+    ED.notify("hallo3");
 }
 
 fn testlistener1(event: []const u8) void {
