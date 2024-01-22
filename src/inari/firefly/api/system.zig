@@ -1,10 +1,12 @@
 const std = @import("std");
-const firefly = @import("firefly.zig");
-const utils = firefly.utils;
+const firefly = @import("api.zig").firefly;
+
 const trait = std.meta.trait;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
+
+const utils = firefly.utils;
 const String = utils.String;
 
 var SYSTEMS: StringHashMap(System) = undefined;

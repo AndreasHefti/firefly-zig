@@ -1,14 +1,14 @@
 const std = @import("std");
-const firefly = @import("firefly.zig");
-const ExampleComponent = @import("ExampleComponent.zig");
+const firefly = @import("api.zig").firefly;
+
+const trait = std.meta.trait;
+const Allocator = std.mem.Allocator;
+const StringHashMap = std.StringHashMap;
 
 const AspectGroup = firefly.utils.aspect.AspectGroup;
-const StringHashMap = std.StringHashMap;
 const EventDispatch = firefly.utils.event.EventDispatch;
 const aspect = firefly.utils.aspect;
 const Aspect = aspect.Aspect;
-const trait = std.meta.trait;
-const Allocator = std.mem.Allocator;
 const DynArray = firefly.utils.dynarray.DynArray;
 const BitSet = firefly.utils.bitset.BitSet;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;

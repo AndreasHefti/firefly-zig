@@ -1,8 +1,8 @@
 const std = @import("std");
 pub const utils = @import("../utils/utils.zig"); // TODO better way for import package?
 pub const api = @import("api/api.zig");
-pub const component = @import("component.zig");
-pub const system = @import("system.zig");
+pub const component = @import("api/component.zig");
+pub const system = @import("api/system.zig");
 pub const graphics = @import("api/graphics.zig");
 
 pub const Allocator = std.mem.Allocator;
@@ -72,7 +72,5 @@ pub fn moduleDeinit() void {
 
 test {
     std.testing.refAllDecls(@import("api/api.zig"));
-    std.testing.refAllDecls(@import("system.zig"));
-    std.testing.refAllDecls(@import("component.zig"));
     std.testing.refAllDecls(@import("ExampleComponent.zig"));
 }

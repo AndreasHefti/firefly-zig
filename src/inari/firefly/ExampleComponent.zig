@@ -1,8 +1,8 @@
 const std = @import("std");
 const firefly = @import("firefly.zig");
 
-const component = firefly.component;
-const ComponentPool = firefly.component.ComponentPool;
+const component = firefly.api.component;
+const ComponentPool = firefly.api.component.ComponentPool;
 const String = firefly.utils.String;
 const FFAPIError = firefly.FFAPIError;
 const Color = firefly.utils.geom.Color;
@@ -15,7 +15,9 @@ var initialized: bool = false;
 const ExampleComponent = @This();
 
 // type fields
-pub const ExampleComponentEvent = struct {};
+//pub const ExampleComponentEvent = struct {};
+pub const EventType = component.CompLifecycleEvent(ExampleComponent);
+pub const EventListener = *const fn (EventType) void;
 pub const null_value = ExampleComponent{};
 pub var pool: *ComponentPool(ExampleComponent) = undefined;
 
@@ -35,6 +37,14 @@ fn init() void {
 pub fn deinit() void {
     defer initialized = false;
     if (initialized) pool.deinit();
+}
+
+pub fn subscribe(listener: EventListener) void {
+    pool.subscribe(listener);
+}
+
+pub fn unsubscribe(listener: EventListener) void {
+    pool.unsubscribe(listener);
 }
 
 // type functions
@@ -182,9 +192,8 @@ test "event propagation" {
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
 
-    // TODO subscribe directly
     ExampleComponent.init();
-    ExampleComponent.pool.subscribe(listener);
+    ExampleComponent.subscribe(testListener);
 
     var c1 = ExampleComponent.new(.{
         .color = Color{ 0, 0, 0, 255 },
@@ -194,7 +203,7 @@ test "event propagation" {
     c1.activate(false);
 }
 
-fn listener(event: component.CompLifecycleEvent(ExampleComponent)) void {
+fn testListener(event: EventType) void {
     std.debug.print("\n %%%%%%%%%% event: {any}\n", .{event});
 }
 

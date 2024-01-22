@@ -1,6 +1,9 @@
 const std = @import("std");
-const graphics = @import("graphics.zig");
-const utils = @import("../../utils/utils.zig"); // TODO better way for import package?
+pub const firefly = @import("../firefly.zig"); // TODO better way for import package?
+pub const utils = @import("../../utils/utils.zig"); // TODO better way for import package?
+pub const graphics = @import("graphics.zig");
+pub const component = @import("component.zig");
+pub const system = @import("system.zig");
 
 pub const String = utils.String;
 pub const NO_NAME = utils.NO_NAME;
@@ -115,4 +118,6 @@ pub const SpriteData = struct {
 
 test {
     std.testing.refAllDecls(@import("graphics.zig"));
+    std.testing.refAllDecls(@import("system.zig"));
+    std.testing.refAllDecls(@import("component.zig"));
 }
