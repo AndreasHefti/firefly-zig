@@ -4,6 +4,7 @@ pub const utils = @import("../../utils/utils.zig"); // TODO better way for impor
 pub const graphics = @import("graphics.zig");
 pub const component = @import("component.zig");
 pub const system = @import("system.zig");
+pub const asset = @import("asset.zig");
 
 pub const String = utils.String;
 pub const NO_NAME = utils.NO_NAME;

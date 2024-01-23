@@ -1,9 +1,10 @@
 const std = @import("std");
 pub const utils = @import("../utils/utils.zig"); // TODO better way for import package?
 pub const api = @import("api/api.zig");
-pub const component = @import("api/component.zig");
-pub const system = @import("api/system.zig");
-pub const graphics = @import("api/graphics.zig");
+pub const component = api.component;
+pub const system = api.system;
+pub const asset = api.asset;
+pub const graphics = api.graphics;
 
 pub const Allocator = std.mem.Allocator;
 
@@ -39,9 +40,7 @@ pub fn moduleInitDebug(allocator: Allocator) !void {
     ENTITY_ALLOC = allocator;
     ALLOC = allocator;
     GRAPHICS = try graphics.createDebugGraphics(ALLOC);
-    try utils.aspect.aspectInit(allocator);
-    system.System.init();
-    try component.componentInit(allocator);
+    try initModules();
 }
 
 pub fn moduleInitAlloc(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
@@ -54,9 +53,14 @@ pub fn moduleInitAlloc(component_allocator: Allocator, entity_allocator: Allocat
     ALLOC = allocator;
     // TODO init default graphics impl here when available
     GRAPHICS = try graphics.createDebugGraphics(ALLOC);
-    try utils.aspect.aspectInit(allocator);
+    try initModules();
+}
+
+fn initModules() !void {
+    try utils.aspect.init(ALLOC);
     system.System.init();
-    try component.componentInit(allocator);
+    try component.init();
+    try asset.init();
 }
 
 pub fn moduleDeinit() void {
@@ -66,11 +70,17 @@ pub fn moduleDeinit() void {
     }
     GRAPHICS.deinit();
     system.System.deinit();
-    component.componentDeinit();
-    utils.aspect.aspectDeinit();
+    component.deinit();
+    utils.aspect.deinit();
 }
 
 test {
     std.testing.refAllDecls(@import("api/api.zig"));
     std.testing.refAllDecls(@import("ExampleComponent.zig"));
+}
+
+test "init" {
+    try moduleInitDebug(std.testing.allocator);
+    defer moduleDeinit();
+    try utils.aspect.print(std.io.getStdErr().writer());
 }

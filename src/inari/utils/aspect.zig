@@ -6,7 +6,7 @@ const Allocator = std.mem.Allocator;
 const Writer = std.io.Writer;
 
 const AspectError = error{
-    NotInitialized,
+    Notinitializedialized,
     AspectGroupMismatch,
     NoAspectGroupFound,
 };
@@ -18,22 +18,22 @@ const MaxIndex = 128;
 /// The integer type used to shift a bit mask
 const ShiftInt = std.math.Log2Int(MaskInt);
 // aspect namespace variables and state
-var INIT = false;
+var initialized = false;
 var ASPECT_GROUPS: ArrayList(AspectGroup) = undefined;
 var ALLOCATOR: Allocator = undefined;
 
-pub fn aspectInit(_allocator: Allocator) !void {
-    defer INIT = true;
-    if (!INIT) {
+pub fn init(_allocator: Allocator) !void {
+    defer initialized = true;
+    if (!initialized) {
         ALLOCATOR = _allocator;
         ASPECT_GROUPS = try ArrayList(AspectGroup).initCapacity(ALLOCATOR, 10);
-        errdefer aspectDeinit();
+        errdefer deinit();
     }
 }
 
-pub fn aspectDeinit() void {
-    defer INIT = false;
-    if (INIT) {
+pub fn deinit() void {
+    defer initialized = false;
+    if (initialized) {
         ASPECT_GROUPS.deinit();
         ASPECT_GROUPS = undefined;
         ALLOCATOR = undefined;
@@ -146,7 +146,6 @@ pub const Kind = struct {
 
 pub fn newAspectGroup(name: String) !*AspectGroup {
     try checkInitialized();
-
     var new_group = AspectGroup{
         .name = name,
         .aspects = [_]Aspect{undefined} ** MaxIndex,
@@ -167,6 +166,22 @@ pub fn getAspectGroup(name: String) !*AspectGroup {
     return AspectError.NoAspectGroupFound;
 }
 
+pub fn disposeAspectGroup(name: String) void {
+    if (!initialized)
+        return;
+
+    var index: usize = utils.UNDEF_INDEX;
+    for (ASPECT_GROUPS.items, 0..) |*group, i| {
+        if (std.mem.eql(u8, name, group.name)) {
+            index = i;
+            break;
+        }
+    }
+    if (index != utils.UNDEF_INDEX) {
+        _ = ASPECT_GROUPS.swapRemove(index);
+    }
+}
+
 pub fn getAspect(groupName: []const u8, aspectName: []const u8) !*Aspect {
     const group = try findOrCreateAspectGroup(groupName);
     return group.getAspect(aspectName);
@@ -183,14 +198,14 @@ fn findOrCreateAspectGroup(name: []const u8) !*AspectGroup {
 }
 
 fn checkInitialized() !void {
-    if (!INIT) {
-        return AspectError.NotInitialized;
+    if (!initialized) {
+        return AspectError.Notinitializedialized;
     }
 }
 
 pub fn print(writer: std.fs.File.Writer) !void {
-    if (!INIT) {
-        _ = try writer.write("Aspects: [ NOT INITIALIZED ]\n");
+    if (!initialized) {
+        _ = try writer.write("Aspects: [ NOT initializedIALIZED ]\n");
         return;
     }
 
@@ -209,8 +224,8 @@ pub fn print(writer: std.fs.File.Writer) !void {
 }
 
 test "initialize" {
-    try aspectInit(std.testing.allocator);
-    defer aspectDeinit();
+    try init(std.testing.allocator);
+    defer deinit();
 
     var groupPtr = try newAspectGroup("TestGroup");
     try std.testing.expectEqualStrings("TestGroup", groupPtr.name);
@@ -230,8 +245,8 @@ test "initialize" {
 }
 
 test "kind" {
-    try aspectInit(std.testing.allocator);
-    defer aspectDeinit();
+    try init(std.testing.allocator);
+    defer deinit();
 
     var groupPtr = try newAspectGroup("TestGroup");
     var aspect1Ptr = groupPtr.getAspect("aspect1");

@@ -48,19 +48,23 @@ pub const ComponentId = struct {
 // component global variables and state
 var INIT = false;
 var DEINIT_REFERENCES: std.ArrayList(CompTypeDeinit) = undefined;
-var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 var COMPONENT_POOL_POINTER: DynArray(CompPoolPtr) = undefined;
 
-pub fn componentInit(allocator: Allocator) !void {
+// public aspect groups
+pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
+pub var ENTITY_COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
+
+pub fn init() !void {
     defer INIT = true;
     if (INIT) {
         return;
     }
-    DEINIT_REFERENCES = std.ArrayList(CompTypeDeinit).init(allocator);
+    DEINIT_REFERENCES = std.ArrayList(CompTypeDeinit).init(firefly.COMPONENT_ALLOC);
     COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("COMPONENT_ASPECT_GROUP");
+    ENTITY_COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("ENTITY_COMPONENT_ASPECT_GROUP");
 }
 
-pub fn componentDeinit() void {
+pub fn deinit() void {
     defer INIT = false;
     if (!INIT) {
         return;
@@ -70,7 +74,10 @@ pub fn componentDeinit() void {
     }
     DEINIT_REFERENCES.deinit();
     DEINIT_REFERENCES = undefined;
+    aspect.disposeAspectGroup("COMPONENT_ASPECT_GROUP");
     COMPONENT_ASPECT_GROUP = undefined;
+    aspect.disposeAspectGroup("ENTITY_COMPONENT_TYPE_ASPECT_GROUP");
+    ENTITY_COMPONENT_ASPECT_GROUP = undefined;
 }
 
 pub fn CompLifecycleEvent(comptime T: type) type {
@@ -109,17 +116,16 @@ pub fn ComponentPool(comptime T: type) type {
         // ... events
         const e_type = CompLifecycleEvent(T);
         var event: ?CompLifecycleEvent(T) = null;
-        //var eventDispatch: ?EventDispatch(CompLifecycleEvent(T)) = null;
 
         // external state
         c_aspect: *Aspect = undefined,
 
-        pub fn init(comptime emptyValue: T, withNameMapping: bool, withEventPropagation: bool) *Self {
+        pub fn init(comptime emptyValue: T, name: String, withNameMapping: bool, withEventPropagation: bool) *Self {
             if (initialized) {
                 return &selfRef;
             }
 
-            errdefer deinit();
+            errdefer Self.deinit();
             defer {
                 DEINIT_REFERENCES.append(CompTypeDeinit{ .deinit = T.deinit }) catch @panic("Register Deinit failed");
                 initialized = true;
@@ -128,7 +134,7 @@ pub fn ComponentPool(comptime T: type) type {
             items = DynArray(T).init(firefly.COMPONENT_ALLOC, emptyValue) catch @panic("Init items failed");
             active_mapping = BitSet.initEmpty(firefly.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
             selfRef = Self{
-                .c_aspect = COMPONENT_ASPECT_GROUP.getAspect(@typeName(T)),
+                .c_aspect = COMPONENT_ASPECT_GROUP.getAspect(name),
             };
 
             typeErasedPtr = CompPoolPtr{
@@ -228,6 +234,10 @@ pub fn ComponentPool(comptime T: type) type {
             notify(if (a) CompEventType.Activated else CompEventType.Deactivated, index);
         }
 
+        pub fn isActive(_: *Self, index: usize) bool {
+            return active_mapping.isSet(index);
+        }
+
         pub fn clearAll(_: *Self) void {
             var i: usize = 0;
             while (items.slots.nextSetBit(i)) |next| {
@@ -278,7 +288,91 @@ pub fn ComponentPool(comptime T: type) type {
             comptime {
                 if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
                 if (!trait.hasField("index")(@TypeOf(c))) @compileError("Expects component to have field 'index'.");
-                if (!trait.hasFn("clear")(@TypeOf(c))) @compileError("Expects component to have fn 'clear'.");
+            }
+        }
+    };
+}
+
+pub fn EntityComponentPool(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        // ensure type based singleton
+        var initialized = false;
+        var selfRef: Self = undefined;
+
+        // internal state
+        var items: DynArray(T) = undefined;
+        // external state
+        c_aspect: *Aspect = undefined,
+
+        pub fn init(comptime emptyValue: T) *Self {
+            if (initialized) {
+                return &selfRef;
+            }
+
+            errdefer Self.deinit();
+            defer {
+                DEINIT_REFERENCES.append(CompTypeDeinit{ .deinit = T.deinit }) catch @panic("Register Deinit failed");
+                initialized = true;
+            }
+
+            items = DynArray(T).init(firefly.COMPONENT_ALLOC, emptyValue) catch @panic("Init items failed");
+            selfRef = Self{
+                .c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(@typeName(T)),
+            };
+
+            return &selfRef;
+        }
+
+        pub fn typeCheck(a: *Aspect) bool {
+            if (!initialized)
+                return false;
+
+            return selfRef.c_aspect.index == a.index;
+        }
+
+        /// Release all allocated memory.
+        pub fn deinit(self: *Self) void {
+            defer initialized = false;
+            if (!initialized)
+                return;
+
+            self.c_aspect = undefined;
+            items.deinit();
+        }
+
+        pub fn count(_: *Self) usize {
+            return items.slots.count();
+        }
+
+        pub fn reg(_: *Self, c: T) *T {
+            checkComponentTrait(c);
+            var index = items.add(c);
+            var result = items.get(index);
+            result.index = index;
+        }
+
+        pub fn get(_: *Self, index: usize) *T {
+            return items.get(index);
+        }
+
+        pub fn clearAll(_: *Self) void {
+            var i: usize = 0;
+            while (items.slots.nextSetBit(i)) |next| {
+                clear(i);
+                i = next + 1;
+            }
+        }
+
+        pub fn clear(_: *Self, index: usize) void {
+            items.reset(index);
+        }
+
+        fn checkComponentTrait(c: T) void {
+            comptime {
+                if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
+                if (!trait.hasField("index")(@TypeOf(c))) @compileError("Expects component to have field 'index'.");
             }
         }
     };

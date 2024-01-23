@@ -69,6 +69,9 @@ pub fn DynArray(comptime T: type) type {
 
         pub fn reset(self: *Self, index: usize) void {
             if (exists(self, index)) {
+                if (self.null_value) |nv| {
+                    self.register.set(nv, index);
+                }
                 self.slots.setValue(index, false);
             }
         }

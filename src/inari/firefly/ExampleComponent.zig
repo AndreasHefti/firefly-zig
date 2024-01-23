@@ -15,7 +15,6 @@ var initialized: bool = false;
 const ExampleComponent = @This();
 
 // type fields
-//pub const ExampleComponentEvent = struct {};
 pub const EventType = component.CompLifecycleEvent(ExampleComponent);
 pub const EventListener = *const fn (EventType) void;
 pub const null_value = ExampleComponent{};
@@ -30,8 +29,9 @@ position: PosF = PosF{ 0, 0 },
 // constructor destructor
 fn init() void {
     defer initialized = true;
-    if (initialized) return;
-    pool = component.ComponentPool(ExampleComponent).init(null_value, true, true);
+    if (initialized)
+        return;
+    pool = component.ComponentPool(ExampleComponent).init(null_value, "ExampleComponent", true, true);
 }
 
 pub fn deinit() void {
@@ -62,11 +62,8 @@ pub fn activate(self: ExampleComponent, active: bool) void {
     pool.activate(self.index, active);
 }
 
-pub fn clear(self: *ExampleComponent) void {
+pub fn clear(self: ExampleComponent) void {
     pool.clear(self.index);
-    self.index = UNDEF_INDEX;
-    self.color = Color{ 0, 0, 0, 255 };
-    self.position = PosF{ 0, 0 };
 }
 
 // Testing
@@ -76,6 +73,8 @@ test "initialization" {
     defer firefly.moduleDeinit();
 
     ExampleComponent.init();
+
+    try std.testing.expectEqual(@as(String, "ExampleComponent"), ExampleComponent.pool.c_aspect.name);
 }
 
 test "auto-initialization" {

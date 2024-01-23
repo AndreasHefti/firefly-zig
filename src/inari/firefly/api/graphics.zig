@@ -149,11 +149,11 @@ const DebugGraphicsAPI = struct {
     pub fn loadTexture(textureData: *TextureData) FFAPIError!void {
         textureData.bindingIndex = textures.add(textureData.*);
         textures.get(textureData.bindingIndex).bindingIndex = textureData.bindingIndex;
-        std.debug.print("loadTexture: {any}\n", .{textureData.*});
+        //std.debug.print("loadTexture: {any}\n", .{textureData.*});
     }
 
     pub fn disposeTexture(textureData: *TextureData) FFAPIError!void {
-        std.debug.print("disposeTexture: {any}\n", .{textureData.*});
+        //std.debug.print("disposeTexture: {any}\n", .{textureData.*});
         if (textureData.bindingIndex != NO_BINDING) {
             textures.reset(textureData.bindingIndex);
             textureData.bindingIndex = NO_BINDING;
@@ -163,11 +163,11 @@ const DebugGraphicsAPI = struct {
     pub fn createRenderTexture(textureData: *TextureData) FFAPIError!void {
         textureData.bindingIndex = renderTextures.add(textureData.*);
         renderTextures.get(textureData.bindingIndex).bindingIndex = textureData.bindingIndex;
-        std.debug.print("createRenderTexture: {any}\n", .{textureData.*});
+        //std.debug.print("createRenderTexture: {any}\n", .{textureData.*});
     }
 
     pub fn disposeRenderTexture(textureData: *TextureData) FFAPIError!void {
-        std.debug.print("disposeRenderTexture: {any}\n", .{textureData.*});
+        //std.debug.print("disposeRenderTexture: {any}\n", .{textureData.*});
         if (textureData.bindingIndex != NO_BINDING) {
             renderTextures.reset(textureData.bindingIndex);
             textureData.bindingIndex = NO_BINDING;
@@ -177,11 +177,11 @@ const DebugGraphicsAPI = struct {
     pub fn createShader(shaderData: *ShaderData) FFAPIError!void {
         shaderData.bindingIndex = shaders.add(shaderData.*);
         shaders.get(shaderData.bindingIndex).bindingIndex = shaderData.bindingIndex;
-        std.debug.print("createShader: {any}\n", .{shaderData.*});
+        //std.debug.print("createShader: {any}\n", .{shaderData.*});
     }
 
     pub fn disposeShader(shaderData: *ShaderData) FFAPIError!void {
-        std.debug.print("disposeShader: {any}\n", .{shaderData.*});
+        //std.debug.print("disposeShader: {any}\n", .{shaderData.*});
         if (shaderData.bindingIndex != NO_BINDING) {
             shaders.reset(shaderData.bindingIndex);
             shaderData.bindingIndex = NO_BINDING;
@@ -189,14 +189,14 @@ const DebugGraphicsAPI = struct {
     }
 
     pub fn startRendering(textureId: ?BindingIndex) void {
-        std.debug.print("startRendering: {any}\n", .{textureId});
+        //std.debug.print("startRendering: {any}\n", .{textureId});
         if (textureId) |id| {
             currentRenderTexture = id;
         }
     }
 
     pub fn setActiveShader(shaderId: BindingIndex) FFAPIError!void {
-        std.debug.print("setActiveShader: {any}\n", .{shaderId});
+        //std.debug.print("setActiveShader: {any}\n", .{shaderId});
         currentShader = shaderId;
     }
 
