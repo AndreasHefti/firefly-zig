@@ -5,32 +5,31 @@ const ArrayList = std.ArrayList;
 const api = firefly.api;
 const Aspect = firefly.utils.aspect.Aspect;
 const Asset = firefly.Asset;
-const GRAPHICS = firefly.GRAPHICS;
 const TextureData = api.TextureData;
 const String = firefly.utils.String;
 const NO_NAME = firefly.utils.NO_NAME;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const NO_BINDING = firefly.utils.NO_BINDING;
+const NO_BINDING = firefly.api.NO_BINDING;
 const CInt = api.CInt;
 
 var initialized = false;
 var resources: ArrayList(TextureData) = undefined;
 
-pub var assetType: *Aspect = undefined;
+pub var asset_type: *Aspect = undefined;
 
-pub fn init() void {
+pub fn init() !void {
     defer initialized = true;
     if (initialized) return;
 
-    assetType = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
-    resources = ArrayList(TextureData).init(firefly.COMPONENT_ALLOC) catch unreachable;
+    asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
+    resources = ArrayList(TextureData).init(firefly.COMPONENT_ALLOC);
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized) return;
 
-    assetType = undefined;
+    asset_type = undefined;
     resources.deinit();
     resources = undefined;
 }
@@ -49,14 +48,14 @@ pub fn new(data: Texture) *Asset {
     if (!initialized) @panic("Firefly module not initialized");
 
     var asset: *Asset = Asset.new(Asset{
-        .asset_type = assetType,
+        .asset_type = asset_type,
         .name = data.asset_name,
         .load = loadFunction,
         .dispose = disposeFunction,
         .resource_id = resources.items.len,
     });
 
-    try resources.append(TextureData{
+    resources.append(TextureData{
         .resource = data.resource_path,
         .is_mipmap = data.is_mipmap,
         .s_wrap = data.s_wrap,
@@ -73,7 +72,7 @@ fn loadFunction(asset: *Asset) bool {
 
     var tex_data = &resources.items[asset.resource_id];
 
-    GRAPHICS.loadTexture(tex_data) catch {
+    firefly.RENDER_API.loadTexture(tex_data) catch {
         std.log.err("Failed to load texture resource: {s}", .{tex_data.resource});
         return false;
     };
@@ -88,17 +87,20 @@ fn disposeFunction(asset: *Asset) void {
     var tex_data: *TextureData = &resources.items[asset.resource_id];
     if (tex_data.binding == NO_BINDING) return;
 
-    GRAPHICS.disposeTexture(tex_data) catch {
+    firefly.RENDER_API.disposeTexture(tex_data) catch {
         std.log.err("Failed to dispose texture resource: {s}", .{tex_data.resource});
         return;
     };
 
-    asset(tex_data.binding == NO_BINDING);
+    assert(tex_data.binding == NO_BINDING);
     assert(tex_data.width == -1);
     assert(tex_data.height == -1);
 }
 
-test "init/deinit" {
+test "TextureAsset init/deinit" {
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
+
+    try std.testing.expectEqual(@as(String, "Texture"), asset_type.name);
+    try std.testing.expect(resources.items.len == 0);
 }

@@ -1,6 +1,7 @@
 const std = @import("std");
 pub const utils = @import("../utils/utils.zig"); // TODO better way for import package?
 pub const api = @import("api/api.zig");
+pub const graphics = @import("graphics/graphics.zig");
 pub const component = api.component;
 pub const system = api.system;
 pub const rendering_api = api.rendering_api;
@@ -62,6 +63,7 @@ fn initModules() !void {
     // init modules
     try utils.aspect.init(ALLOC);
     try api.init();
+    try graphics.init();
 
     // register default components and entity components
     component.registerComponent(Asset);
@@ -74,12 +76,14 @@ pub fn moduleDeinit() void {
         return;
     }
     RENDER_API.deinit();
+    graphics.deinit();
     api.deinit();
     utils.aspect.deinit();
 }
 
 test {
     std.testing.refAllDecls(@import("api/api.zig"));
+    std.testing.refAllDecls(@import("graphics/graphics.zig"));
     std.testing.refAllDecls(@import("ExampleComponent.zig"));
 }
 
