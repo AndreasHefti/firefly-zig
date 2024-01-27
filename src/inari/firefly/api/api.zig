@@ -4,7 +4,6 @@ pub const utils = @import("../../utils/utils.zig"); // TODO better way for impor
 pub const graphics = @import("graphics.zig");
 pub const component = @import("component.zig");
 pub const system = @import("system.zig");
-pub const asset = @import("asset.zig");
 
 pub const String = utils.String;
 pub const NO_NAME = utils.NO_NAME;
@@ -24,21 +23,39 @@ pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 /// Color blending modes
 pub const BlendMode = enum(CInt) {
     /// Blend textures considering alpha (default)
-    BLEND_ALPHA = 0,
+    ALPHA = 0,
     /// Blend textures adding colors
-    BLEND_ADDITIVE = 1,
+    ADDITIVE = 1,
     /// Blend textures multiplying colors
-    BLEND_MULTIPLIED = 2,
+    MULTIPLIED = 2,
     /// Blend textures adding colors (alternative)
-    BLEND_ADD_COLORS = 3,
+    ADD_COLORS = 3,
     /// Blend textures subtracting colors (alternative)
-    BLEND_SUBTRACT_COLORS = 4,
+    SUBTRACT_COLORS = 4,
     /// Blend premultiplied textures considering alpha
-    BLEND_ALPHA_PREMULTIPLY = 5,
+    ALPHA_PREMULTIPLY = 5,
     /// Blend textures using custom src/dst factors (use rlSetBlendFactors())
-    BLEND_CUSTOM = 6,
+    CUSTOM = 6,
     /// Blend textures using custom rgb/alpha separate src/dst factors (use rlSetBlendFactorsSeparate())
-    BLEND_CUSTOM_SEPARATE = 7,
+    CUSTOM_SEPARATE = 7,
+
+    pub fn format(
+        self: BlendMode,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.writeAll(switch (self) {
+            .ALPHA => "ALPHA",
+            .ADDITIVE => "ADDITIVE",
+            .MULTIPLIED => "MULTIPLIED",
+            .ADD_COLORS => "ADD_COLORS",
+            .SUBTRACT_COLORS => "SUBTRACT_COLORS",
+            .ALPHA_PREMULTIPLY => "ALPHA_PREMULTIPLY",
+            .CUSTOM => "CUSTOM",
+            .CUSTOM_SEPARATE => "CUSTOM_SEPARATE",
+        });
+    }
 };
 
 // pub const ViewData = struct {
@@ -107,7 +124,7 @@ pub const RenderData = struct {
     clear: bool = true,
     clearColor: Color = Color{ 0, 0, 0, 255 },
     tintColor: Color = Color{ 255, 255, 255, 255 },
-    blendMode: BlendMode = BlendMode.BLEND_ALPHA,
+    blendMode: BlendMode = BlendMode.ALPHA,
 };
 
 pub const SpriteData = struct {

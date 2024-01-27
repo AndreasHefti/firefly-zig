@@ -80,6 +80,12 @@ pub const Kind = struct {
     /// The bitmask to store indices of owned aspects of this kind
     _mask: MaskInt = 0,
 
+    pub fn ofGroup(g: *AspectGroup) Kind {
+        return Kind{
+            .group = g,
+        };
+    }
+
     pub fn of(aspect: *Aspect) Kind {
         return Kind{
             .group = aspect.group,
@@ -137,6 +143,21 @@ pub const Kind = struct {
 
     pub fn isNotKindOf(self: *Kind, other: *Kind) bool {
         return other._mask & self._mask == 0;
+    }
+
+    pub fn format(
+        self: Kind,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("Kind[ group: {s}, aspects: ", .{self.group.name});
+        for (0..self.group._size) |i| {
+            if (self._mask & maskBit(self.group.aspects[i] > 0)) {
+                try writer.print("{s} ", .{self.group.aspects[i].name});
+            }
+        }
+        try writer.writeAll("]");
     }
 
     fn maskBit(index: u8) MaskInt {
@@ -213,11 +234,13 @@ pub fn print(writer: std.fs.File.Writer) !void {
     if (ASPECT_GROUPS.items.len == 0) {
         _ = try writer.write("EMPTY");
     } else {
+        var gi: usize = 0;
         for (ASPECT_GROUPS.items) |item| {
-            try writer.print("\n  Group[{s}|{}]: ", .{ item.name, item._size });
+            try writer.print("\n  Group[{s}|{}]: ", .{ item.name, gi });
             for (0..item._size) |i| {
                 try writer.print("\n    Aspect[{s}|{d}]", .{ item.aspects[i].name, item.aspects[i].index });
             }
+            gi += 1;
         }
     }
     _ = try writer.write("\n");

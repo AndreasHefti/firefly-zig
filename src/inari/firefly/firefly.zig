@@ -3,8 +3,10 @@ pub const utils = @import("../utils/utils.zig"); // TODO better way for import p
 pub const api = @import("api/api.zig");
 pub const component = api.component;
 pub const system = api.system;
-pub const asset = api.asset;
 pub const graphics = api.graphics;
+
+pub const Asset = @import("Asset.zig");
+pub const Entity = @import("Entity.zig");
 
 pub const Allocator = std.mem.Allocator;
 
@@ -60,7 +62,8 @@ fn initModules() !void {
     try utils.aspect.init(ALLOC);
     system.System.init();
     try component.init();
-    try asset.init();
+    component.registerComponent(Asset);
+    component.registerComponent(Entity);
 }
 
 pub fn moduleDeinit() void {

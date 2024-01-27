@@ -4,7 +4,6 @@ const firefly = @import("api.zig").firefly;
 const trait = std.meta.trait;
 const Allocator = std.mem.Allocator;
 const StringHashMap = std.StringHashMap;
-
 const AspectGroup = firefly.utils.aspect.AspectGroup;
 const EventDispatch = firefly.utils.event.EventDispatch;
 const aspect = firefly.utils.aspect;
@@ -15,192 +14,254 @@ const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const NO_NAME = firefly.utils.NO_NAME;
 const String = firefly.utils.String;
 
-pub const CompEventType = enum {
-    NONE,
-    Created,
-    Activated,
-    Deactivated,
-    Disposing,
-};
-
-const CompTypeDeinit = struct {
-    deinit: *const fn () void,
-};
-
-pub const CompPoolPtr = struct {
-    address: usize = undefined,
-    aspect: *Aspect = undefined,
-
-    pub fn cast(self: CompPoolPtr, comptime T: type) *T {
-        if (T.typeCheck(self.aspect)) {
-            return @as(*T, @ptrFromInt(self.address));
-        } else {
-            std.debug.panic("Type mismatch: Expected {s}, but got <unknown>!", .{@typeName(*T)});
-        }
-    }
-};
-
-pub const ComponentId = struct {
-    cTypePtr: CompPoolPtr = undefined,
-    cIndex: usize = undefined,
-};
-
 // component global variables and state
 var INIT = false;
-var DEINIT_REFERENCES: std.ArrayList(CompTypeDeinit) = undefined;
-var COMPONENT_POOL_POINTER: DynArray(CompPoolPtr) = undefined;
+var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
+var ENTITY_COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
 
 // public aspect groups
 pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 pub var ENTITY_COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
+// module init
 pub fn init() !void {
     defer INIT = true;
-    if (INIT) {
+    if (INIT)
         return;
-    }
-    DEINIT_REFERENCES = std.ArrayList(CompTypeDeinit).init(firefly.COMPONENT_ALLOC);
+
+    COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(firefly.COMPONENT_ALLOC, null);
+    ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(firefly.COMPONENT_ALLOC, null);
     COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("COMPONENT_ASPECT_GROUP");
     ENTITY_COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("ENTITY_COMPONENT_ASPECT_GROUP");
 }
 
+// module deinit
 pub fn deinit() void {
     defer INIT = false;
-    if (!INIT) {
+    if (!INIT)
         return;
+
+    // deinit all registered component pools via aspect interface mapping
+    for (0..COMPONENT_ASPECT_GROUP._size) |i| {
+        COMPONENT_INTERFACE_TABLE.get(COMPONENT_ASPECT_GROUP.aspects[i].index).deinit();
     }
-    for (DEINIT_REFERENCES.items) |ref| {
-        ref.deinit();
+    COMPONENT_INTERFACE_TABLE.deinit();
+    COMPONENT_INTERFACE_TABLE = undefined;
+
+    // deinit all registered entity component pools via aspect interface mapping
+    for (0..ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
+        ENTITY_COMPONENT_INTERFACE_TABLE.get(ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).deinit();
     }
-    DEINIT_REFERENCES.deinit();
-    DEINIT_REFERENCES = undefined;
+    ENTITY_COMPONENT_INTERFACE_TABLE.deinit();
+    ENTITY_COMPONENT_INTERFACE_TABLE = undefined;
+
     aspect.disposeAspectGroup("COMPONENT_ASPECT_GROUP");
     COMPONENT_ASPECT_GROUP = undefined;
     aspect.disposeAspectGroup("ENTITY_COMPONENT_TYPE_ASPECT_GROUP");
     ENTITY_COMPONENT_ASPECT_GROUP = undefined;
 }
 
-pub fn CompLifecycleEvent(comptime T: type) type {
-    return struct {
-        const Self = @This();
-        const c_type = T;
+pub const ComponentId = struct {
+    aspect: *Aspect = undefined,
+    index: usize = undefined,
+};
 
-        event_type: CompEventType = CompEventType.NONE,
-        c_index: usize = UNDEF_INDEX,
+pub const ComponentTypeInterface = struct {
+    clear: *const fn (usize) void,
+    deinit: *const fn () void,
+    _address: usize = undefined,
+};
 
-        fn create() Self {
-            return Self{};
-        }
+// Component Event Handling
+pub const ActionType = enum {
+    NONE,
+    Created,
+    Activated,
+    Deactivated,
+    Disposing,
 
-        pub fn getCType(self: *Self) T {
-            _ = self;
-            return c_type;
-        }
-    };
+    pub fn format(
+        self: ActionType,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.writeAll(switch (self) {
+            .NONE => "NONE",
+            .Created => "Created",
+            .Activated => "Activated",
+            .Deactivated => "Deactivated",
+            .Disposing => "Disposing",
+        });
+    }
+};
+
+pub const Event = struct {
+    event_type: ActionType = ActionType.NONE,
+    c_index: usize = UNDEF_INDEX,
+
+    pub fn format(
+        self: Event,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("Event[ type: {any}, index: {d}]", .{ self.event_type, self.c_index });
+    }
+};
+
+pub const EventListener = *const fn (Event) void;
+
+pub fn registerComponent(comptime T: type) void {
+    ComponentPool(T).init();
+}
+
+pub fn registerEntityComponent(comptime T: type) void {
+    EntityComponentPool(T).init();
 }
 
 pub fn ComponentPool(comptime T: type) type {
+    // check component type constraints and function refs
+    comptime var has_aspect: bool = false;
+    comptime var has_new: bool = false;
+    comptime var has_dispose: bool = false;
+    comptime var has_byId: bool = false;
+    comptime var has_byName: bool = false;
+    comptime var has_activateById: bool = false;
+    comptime var has_activateByName: bool = false;
+    comptime var has_subscribe: bool = false;
+    comptime var has_name_mapping: bool = false;
+    comptime var has_deinit: bool = false;
+    // component function interceptors
+    comptime var has_onNew: bool = false;
+    comptime var has_onActivation: bool = false;
+    comptime var has_onDispose: bool = false;
+    comptime {
+        if (!trait.is(.Struct)(T)) @compileError("Expects component type is a struct.");
+        if (!trait.hasDecls(T, .{"null_value"})) @compileError("Expects component type to have member named 'null_value' that is the types null value.");
+        if (!trait.hasDecls(T, .{"component_name"})) @compileError("Expects component type to have member named 'component_name' that defines a unique name of the component type.");
+        has_name_mapping = trait.hasField("name")(T);
+        has_aspect = trait.hasDecls(T, .{"type_aspect"});
+        has_new = trait.hasDecls(T, .{"new"});
+        has_dispose = trait.hasDecls(T, .{"dispose"});
+        has_byId = trait.hasDecls(T, .{"byId"});
+        has_byName = has_name_mapping and trait.hasDecls(T, .{"byName"});
+        has_activateById = trait.hasDecls(T, .{"activateById"});
+        has_activateByName = has_name_mapping and trait.hasDecls(T, .{"activateByName"});
+        has_subscribe = trait.hasDecls(T, .{"subscribe"});
+        if (has_subscribe) {
+            if (!trait.hasDecls(T, .{"unsubscribe"})) @compileError("Expects component type to have member named 'unsubscribe' when there is subscribe.");
+        }
+
+        has_deinit = trait.hasDecls(T, .{"deinit"});
+        has_onNew = trait.hasDecls(T, .{"onNew"});
+        has_onActivation = trait.hasDecls(T, .{"onActivation"});
+        has_onDispose = trait.hasDecls(T, .{"onDispose"});
+    }
+
     return struct {
         const Self = @This();
-        pub var typeErasedPtr: CompPoolPtr = undefined;
-
         // ensure type based singleton
         var initialized = false;
-        var selfRef: Self = undefined;
-
         // internal state
         var items: DynArray(T) = undefined;
-        // ... mappings
+        // mappings
         var active_mapping: BitSet = undefined;
         var name_mapping: ?StringHashMap(usize) = null;
-        // ... events
-        const e_type = CompLifecycleEvent(T);
-        var event: ?CompLifecycleEvent(T) = null;
-
+        // events
+        var event: ?Event = null;
+        var eventDispatch: ?EventDispatch(Event) = null;
         // external state
-        c_aspect: *Aspect = undefined,
+        pub var c_aspect: *Aspect = undefined;
 
-        pub fn init(comptime emptyValue: T, name: String, withNameMapping: bool, withEventPropagation: bool) *Self {
-            if (initialized) {
-                return &selfRef;
-            }
+        pub fn init() void {
+            if (initialized)
+                return;
 
             errdefer Self.deinit();
             defer {
-                DEINIT_REFERENCES.append(CompTypeDeinit{ .deinit = T.deinit }) catch @panic("Register Deinit failed");
+                COMPONENT_INTERFACE_TABLE.set(
+                    ComponentTypeInterface{
+                        .clear = Self.clear,
+                        .deinit = if (has_deinit) T.deinit else Self.deinit,
+                        ._address = @intFromPtr(&Self),
+                    },
+                    c_aspect.index,
+                );
                 initialized = true;
             }
 
-            items = DynArray(T).init(firefly.COMPONENT_ALLOC, emptyValue) catch @panic("Init items failed");
+            items = DynArray(T).init(firefly.COMPONENT_ALLOC, T.null_value) catch @panic("Init items failed");
             active_mapping = BitSet.initEmpty(firefly.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
-            selfRef = Self{
-                .c_aspect = COMPONENT_ASPECT_GROUP.getAspect(name),
-            };
+            c_aspect = COMPONENT_ASPECT_GROUP.getAspect(T.component_name);
 
-            typeErasedPtr = CompPoolPtr{
-                .aspect = selfRef.c_aspect,
-                .address = @intFromPtr(&selfRef),
-            };
-
-            if (withNameMapping) {
-                name_mapping = StringHashMap(usize).init(firefly.COMPONENT_ALLOC);
+            if (has_subscribe) {
+                event = Event{};
+                eventDispatch = EventDispatch(Event).init(firefly.COMPONENT_ALLOC);
+                T.subscribe = Self.subscribe;
+                T.unsubscribe = Self.unsubscribe;
             }
 
-            if (withEventPropagation) {
-                event = CompLifecycleEvent(T).create();
-                EventDispatch(e_type).init(firefly.COMPONENT_ALLOC);
+            if (has_name_mapping) name_mapping = StringHashMap(usize).init(firefly.COMPONENT_ALLOC);
+            if (has_aspect) T.type_aspect = c_aspect;
+            if (has_new) T.new = Self.register;
+            if (has_dispose) T.dispose = Self.clear;
+            if (has_byId) T.byId = Self.byId;
+            if (has_byName) T.byName = Self.byName;
+            if (has_activateById) T.activateById = Self.activate;
+            if (has_activateByName) T.activateByName = Self.activateByName;
+        }
+
+        /// Release all allocated memory.
+        pub fn deinit() void {
+            defer initialized = false;
+            if (!initialized)
+                return;
+
+            c_aspect = undefined;
+            items.deinit();
+            active_mapping.deinit();
+
+            if (eventDispatch) |*ed| {
+                ed.deinit();
+                eventDispatch = null;
+                event = null;
             }
 
-            return &selfRef;
+            if (name_mapping) |*nm| nm.deinit();
+            if (has_aspect) T.type_aspect = undefined;
+            if (has_new) T.new = undefined;
+            if (has_dispose) T.dispose = undefined;
+            if (has_byId) T.byId = undefined;
+            if (has_byName) T.byName = undefined;
+            if (has_activateById) T.activateById = undefined;
+            if (has_activateByName) T.activateByName = undefined;
         }
 
         pub fn typeCheck(a: *Aspect) bool {
             if (!initialized)
                 return false;
 
-            return selfRef.c_aspect.index == a.index;
+            return c_aspect.index == a.index;
         }
 
-        /// Release all allocated memory.
-        pub fn deinit(self: *Self) void {
-            defer initialized = false;
-            if (!initialized)
-                return;
-
-            self.c_aspect = undefined;
-            items.deinit();
-            active_mapping.deinit();
-
-            if (name_mapping) |*nm|
-                nm.deinit();
-
-            if (event) |_| {
-                EventDispatch(CompLifecycleEvent(T)).deinit();
-                event = undefined;
-            }
-        }
-
-        pub fn count(_: *Self) usize {
+        pub fn count() usize {
             return items.slots.count();
         }
 
-        pub fn activeCount(_: *Self) usize {
+        pub fn activeCount() usize {
             return active_mapping.count();
         }
 
-        pub fn subscribe(_: *Self, listener: *const fn (CompLifecycleEvent(T)) void) void {
-            if (event) |_| {
-                EventDispatch(e_type).register(listener);
-            }
+        pub fn subscribe(listener: *const fn (Event) void) void {
+            if (eventDispatch) |*ed| ed.register(listener);
         }
 
-        pub fn unsubscribe(_: *Self, listener: *const fn (CompLifecycleEvent(T)) void) void {
-            if (event) |_| {
-                EventDispatch(e_type).unregister(listener);
-            }
+        pub fn unsubscribe(listener: *const fn (Event) void) void {
+            if (eventDispatch) |*ed| ed.unregister(listener);
         }
 
-        pub fn reg(_: *Self, c: T) *T {
+        pub fn register(c: T) *T {
             checkComponentTrait(c);
 
             var index = items.add(c);
@@ -212,15 +273,16 @@ pub fn ComponentPool(comptime T: type) type {
                     nm.put(result.name, index) catch unreachable;
             }
 
-            notify(CompEventType.Created, index);
+            if (has_onNew) T.onNew(index);
+            notify(ActionType.Created, index);
             return result;
         }
 
-        pub fn get(_: *Self, index: usize) *T {
+        pub fn byId(index: usize) *T {
             return items.get(index);
         }
 
-        pub fn getByName(_: *Self, name: String) ?*T {
+        pub fn byName(name: String) ?*T {
             if (name_mapping) |*nm| {
                 if (nm.get(name)) |index| {
                     return items.get(index);
@@ -229,16 +291,25 @@ pub fn ComponentPool(comptime T: type) type {
             return null;
         }
 
-        pub fn activate(_: *Self, index: usize, a: bool) void {
+        pub fn activate(index: usize, a: bool) void {
             active_mapping.setValue(index, a);
-            notify(if (a) CompEventType.Activated else CompEventType.Deactivated, index);
+            if (has_onActivation) T.onActivation(index, a);
+            notify(if (a) ActionType.Activated else ActionType.Deactivated, index);
         }
 
-        pub fn isActive(_: *Self, index: usize) bool {
+        pub fn activateByName(name: String, a: bool) void {
+            if (name_mapping) |*nm| {
+                if (nm.get(name)) |index| {
+                    activate(index, a);
+                }
+            }
+        }
+
+        pub fn isActive(index: usize) bool {
             return active_mapping.isSet(index);
         }
 
-        pub fn clearAll(_: *Self) void {
+        pub fn clearAll() void {
             var i: usize = 0;
             while (items.slots.nextSetBit(i)) |next| {
                 clear(i);
@@ -246,13 +317,14 @@ pub fn ComponentPool(comptime T: type) type {
             }
         }
 
-        pub fn clear(_: *Self, index: usize) void {
-            notify(CompEventType.Disposing, index);
+        pub fn clear(index: usize) void {
+            notify(ActionType.Disposing, index);
+            if (has_onDispose) T.onDispose(index);
             active_mapping.setValue(index, false);
             items.reset(index);
         }
 
-        pub fn processAllActive(_: *Self, f: *const fn (*T) void) void {
+        pub fn processActive(f: *const fn (*T) void) void {
             var i: usize = 0;
             while (active_mapping.nextSetBit(i)) |next| {
                 f(items.get(i));
@@ -260,7 +332,7 @@ pub fn ComponentPool(comptime T: type) type {
             }
         }
 
-        pub fn processBitSet(_: *Self, indices: *BitSet, f: *const fn (*T) void) void {
+        pub fn processBitSet(indices: *BitSet, f: *const fn (*T) void) void {
             var i: usize = 0;
             while (indices.nextSetBit(i)) |next| {
                 f(items.get(i));
@@ -268,19 +340,19 @@ pub fn ComponentPool(comptime T: type) type {
             }
         }
 
-        pub fn processIndexed(_: *Self, indices: []usize, f: *const fn (*T) void) void {
+        pub fn processIndexed(indices: []usize, f: *const fn (*T) void) void {
             for (indices) |i| {
                 f(items.get(i));
             }
         }
 
-        fn notify(event_type: CompEventType, index: usize) void {
+        fn notify(event_type: ActionType, index: usize) void {
             if (event) |*e| {
                 // Test if copy here affects performance (but it thread safe?)
                 var ce = e.*;
                 ce.event_type = event_type;
                 ce.c_index = index;
-                EventDispatch(CompLifecycleEvent(T)).notify(ce);
+                eventDispatch.?.notify(ce);
             }
         }
 
@@ -293,71 +365,100 @@ pub fn ComponentPool(comptime T: type) type {
     };
 }
 
+// Entity Components
+pub fn clearAllEntityComponentsAt(index: usize) void {
+    for (0..ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
+        ENTITY_COMPONENT_INTERFACE_TABLE.get(ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).clear(index);
+    }
+}
+
 pub fn EntityComponentPool(comptime T: type) type {
+
+    // check component type constraints
+    comptime var has_aspect: bool = false;
+    comptime var has_byId: bool = false;
+    // component function interceptors
+    comptime var has_onNew: bool = false;
+    comptime var has_onDispose: bool = false;
+    comptime {
+        if (!trait.is(.Struct)(T)) @compileError("Expects component type is a struct.");
+        if (!trait.hasDecls(T, .{"null_value"})) @compileError("Expects component type to have member named 'null_value' that is the types null value.");
+        if (!trait.hasDecls(T, .{"component_name"})) @compileError("Expects component type to have member named 'component_name' that defines a unique name of the component type.");
+        has_aspect = trait.hasDecls(T, .{"type_aspect"});
+        has_byId = trait.hasDecls(T, .{"byId"});
+        has_onNew = trait.hasDecls(T, .{"onNew"});
+        has_onDispose = trait.hasDecls(T, .{"onDispose"});
+    }
+
     return struct {
         const Self = @This();
-
         // ensure type based singleton
         var initialized = false;
-        var selfRef: Self = undefined;
-
         // internal state
         var items: DynArray(T) = undefined;
         // external state
-        c_aspect: *Aspect = undefined,
+        pub var c_aspect: *Aspect = undefined;
 
-        pub fn init(comptime emptyValue: T) *Self {
-            if (initialized) {
-                return &selfRef;
-            }
+        pub fn init() void {
+            if (initialized)
+                return;
 
             errdefer Self.deinit();
             defer {
-                DEINIT_REFERENCES.append(CompTypeDeinit{ .deinit = T.deinit }) catch @panic("Register Deinit failed");
+                ENTITY_COMPONENT_INTERFACE_TABLE.set(
+                    ComponentTypeInterface{
+                        .clear = Self.i_clear,
+                        .deinit = T.deinit,
+                        ._address = @intFromPtr(&Self),
+                    },
+                    c_aspect.index,
+                );
                 initialized = true;
             }
 
-            items = DynArray(T).init(firefly.COMPONENT_ALLOC, emptyValue) catch @panic("Init items failed");
-            selfRef = Self{
-                .c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(@typeName(T)),
-            };
+            items = DynArray(T).init(firefly.COMPONENT_ALLOC, T.null_value) catch @panic("Init items failed");
+            c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(@typeName(T));
 
-            return &selfRef;
+            if (has_aspect) T.type_aspect = c_aspect;
+            if (has_byId) T.byId = Self.byId;
+        }
+
+        pub fn deinit() void {
+            defer initialized = false;
+            if (!initialized)
+                return;
+
+            c_aspect = undefined;
+            items.deinit();
+
+            if (has_aspect) T.type_aspect = undefined;
+            if (has_byId) T.byId = undefined;
         }
 
         pub fn typeCheck(a: *Aspect) bool {
             if (!initialized)
                 return false;
 
-            return selfRef.c_aspect.index == a.index;
+            return c_aspect.index == a.index;
         }
 
-        /// Release all allocated memory.
-        pub fn deinit(self: *Self) void {
-            defer initialized = false;
-            if (!initialized)
-                return;
-
-            self.c_aspect = undefined;
-            items.deinit();
-        }
-
-        pub fn count(_: *Self) usize {
+        pub fn count() usize {
             return items.slots.count();
         }
 
-        pub fn reg(_: *Self, c: T) *T {
+        pub fn register(c: *T, index: usize) *T {
             checkComponentTrait(c);
-            var index = items.add(c);
-            var result = items.get(index);
-            result.index = index;
-        }
-
-        pub fn get(_: *Self, index: usize) *T {
+            c.index = index;
+            items.set(c, index);
+            if (has_onNew) T.onNew(index);
             return items.get(index);
         }
 
-        pub fn clearAll(_: *Self) void {
+        pub fn get(index: usize) *T {
+            return items.get(index);
+        }
+
+        pub fn clearAll() void {
             var i: usize = 0;
             while (items.slots.nextSetBit(i)) |next| {
                 clear(i);
@@ -365,7 +466,8 @@ pub fn EntityComponentPool(comptime T: type) type {
             }
         }
 
-        pub fn clear(_: *Self, index: usize) void {
+        pub fn clear(index: usize) void {
+            if (has_onDispose) T.onDispose(index);
             items.reset(index);
         }
 

@@ -6,65 +6,43 @@ const ArrayList = std.ArrayList;
 pub fn EventDispatch(comptime E: type) type {
     return struct {
         const Self = @This();
-        // ensure type based singleton
-        var initialized = false;
-        var selfRef: Self = undefined;
-
         const Listener = *const fn (E) void;
 
-        var listeners: ArrayList(Listener) = undefined;
+        listeners: ArrayList(Listener) = undefined,
 
-        pub fn init(allocator: Allocator) void {
-            defer initialized = true;
-            if (!initialized) {
-                listeners = ArrayList(Listener).init(allocator);
-            }
-
-            selfRef = Self{};
+        pub fn init(allocator: Allocator) Self {
+            return Self{
+                .listeners = ArrayList(Listener).init(allocator),
+            };
         }
 
-        pub fn deinit() void {
-            defer initialized = false;
-            if (initialized) {
-                listeners.deinit();
-                listeners = undefined;
-                selfRef = undefined;
-            }
+        pub fn deinit(self: *Self) void {
+            self.listeners.deinit();
         }
 
-        pub fn register(listener: Listener) void {
-            checkInit();
-            listeners.append(listener) catch @panic("Failed to append listener");
+        pub fn register(self: *Self, listener: Listener) void {
+            self.listeners.append(listener) catch @panic("Failed to append listener");
         }
 
-        pub fn unregister(listener: Listener) void {
-            checkInit();
-            for (0..listeners.items.len) |i| {
-                if (listeners.items[i] == listener) {
-                    _ = listeners.swapRemove(i);
+        pub fn unregister(self: *Self, listener: Listener) void {
+            for (0..self.listeners.items.len) |i| {
+                if (self.listeners.items[i] == listener) {
+                    _ = self.listeners.swapRemove(i);
                     return;
                 }
             }
         }
 
-        pub fn notify(event: E) void {
-            checkInit();
-            for (0..listeners.items.len) |i| {
-                listeners.items[i](event);
-            }
-        }
-
-        fn checkInit() void {
-            if (!initialized) {
-                @panic("EventDispatch of type not initialized.");
+        pub fn notify(self: *Self, event: E) void {
+            for (0..self.listeners.items.len) |i| {
+                self.listeners.items[i](event);
             }
         }
     };
 }
 
 test "Events and Listeners" {
-    const ED = EventDispatch([]const u8);
-    ED.init(std.testing.allocator);
+    var ED = EventDispatch([]const u8).init(std.testing.allocator);
     defer ED.deinit();
 
     ED.register(testlistener1);

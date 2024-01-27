@@ -3,22 +3,30 @@ const firefly = @import("firefly.zig");
 
 const component = firefly.api.component;
 const ComponentPool = firefly.api.component.ComponentPool;
+const CompLifecycleEvent = component.CompLifecycleEvent;
+const Aspect = firefly.utils.aspect.Aspect;
 const String = firefly.utils.String;
 const FFAPIError = firefly.FFAPIError;
 const Color = firefly.utils.geom.Color;
 const PosF = firefly.utils.geom.PosF;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const NO_NAME = firefly.utils.NO_NAME;
-
-// private type fields
-var initialized: bool = false;
 const ExampleComponent = @This();
 
-// type fields
-pub const EventType = component.CompLifecycleEvent(ExampleComponent);
-pub const EventListener = *const fn (EventType) void;
+// component type fields
 pub const null_value = ExampleComponent{};
-pub var pool: *ComponentPool(ExampleComponent) = undefined;
+pub const component_name = "ExampleComponent";
+pub const pool = ComponentPool(ExampleComponent);
+// component type pool references
+pub var type_aspect: *Aspect = undefined;
+pub var new: *const fn (ExampleComponent) *ExampleComponent = undefined;
+pub var dispose: *const fn (usize) void = undefined;
+pub var byId: *const fn (usize) *ExampleComponent = undefined;
+pub var byName: *const fn (String) ?*ExampleComponent = undefined;
+pub var activateById: *const fn (usize, bool) void = undefined;
+pub var activateByName: *const fn (String, bool) void = undefined;
+pub var subscribe: *const fn (component.EventListener) void = undefined;
+pub var unsubscribe: *const fn (component.EventListener) void = undefined;
 
 // struct fields
 index: usize = UNDEF_INDEX,
@@ -26,44 +34,13 @@ name: String = NO_NAME,
 color: Color = Color{ 0, 0, 0, 255 },
 position: PosF = PosF{ 0, 0 },
 
-// constructor destructor
-fn init() void {
-    defer initialized = true;
-    if (initialized)
-        return;
-    pool = component.ComponentPool(ExampleComponent).init(null_value, "ExampleComponent", true, true);
-}
-
-pub fn deinit() void {
-    defer initialized = false;
-    if (initialized) pool.deinit();
-}
-
-pub fn subscribe(listener: EventListener) void {
-    pool.subscribe(listener);
-}
-
-pub fn unsubscribe(listener: EventListener) void {
-    pool.unsubscribe(listener);
-}
-
-// type functions
-pub fn get(index: usize) *ExampleComponent {
-    return pool.get(index);
-}
-
-pub fn new(c: ExampleComponent) *ExampleComponent {
-    if (!initialized) init();
-    return pool.reg(c);
-}
-
 // methods
 pub fn activate(self: ExampleComponent, active: bool) void {
     pool.activate(self.index, active);
 }
 
-pub fn clear(self: ExampleComponent) void {
-    pool.clear(self.index);
+pub fn onDispose(index: usize) void {
+    std.debug.print("\n**************** onDispose: {d}\n", .{index});
 }
 
 // Testing
@@ -71,29 +48,16 @@ test "initialization" {
     std.debug.print("\n", .{});
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
+    component.registerComponent(ExampleComponent);
 
-    ExampleComponent.init();
-
-    try std.testing.expectEqual(@as(String, "ExampleComponent"), ExampleComponent.pool.c_aspect.name);
-}
-
-test "auto-initialization" {
-    std.debug.print("\n", .{});
-    try firefly.moduleInitDebug(std.testing.allocator);
-    defer firefly.moduleDeinit();
-
-    // not initialized yet... gives null values every time
-    var c = ExampleComponent.get(100);
-    try std.testing.expectEqual(null_value, c.*);
-
-    // new triggers auto initialization
     var newC = ExampleComponent.new(ExampleComponent{
         .color = Color{ 1, 2, 3, 255 },
         .position = PosF{ 10, 20 },
     });
-    var newCPtr = ExampleComponent.get(newC.index);
+    var newCPtr = ExampleComponent.byId(newC.index);
     try std.testing.expectEqual(newC, newCPtr);
     try std.testing.expectEqual(newC.*, newCPtr.*);
+    try std.testing.expectEqual(@as(String, "ExampleComponent"), ExampleComponent.pool.c_aspect.name);
 }
 
 test "create/dispose component" {
@@ -101,6 +65,7 @@ test "create/dispose component" {
 
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
+    component.registerComponent(ExampleComponent);
 
     var cPtr = ExampleComponent.new(.{
         .color = Color{ 0, 0, 0, 255 },
@@ -133,7 +98,7 @@ test "create/dispose component" {
     try std.testing.expect(ExampleComponent.pool.count() == 1);
     try std.testing.expect(ExampleComponent.pool.activeCount() == 1);
 
-    var otherCPtr = ExampleComponent.get(cPtr.index);
+    var otherCPtr = ExampleComponent.byId(cPtr.index);
 
     try std.testing.expect(otherCPtr.index == 0);
     try std.testing.expect(otherCPtr.color[0] == 0);
@@ -152,7 +117,7 @@ test "create/dispose component" {
     try std.testing.expect(cPtr.position[0] == 111);
     try std.testing.expect(cPtr.position[1] == 10);
 
-    otherCPtr.clear();
+    ExampleComponent.dispose(otherCPtr.index);
 
     try std.testing.expect(cPtr.color[0] == 0);
     try std.testing.expect(cPtr.color[1] == 0);
@@ -168,6 +133,8 @@ test "create/dispose component" {
 test "name mapping" {
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
+    component.registerComponent(ExampleComponent);
+
     var c1 = ExampleComponent.new(.{
         .color = Color{ 0, 0, 0, 255 },
         .position = PosF{ 10, 10 },
@@ -179,8 +146,8 @@ test "name mapping" {
         .position = PosF{ 20, 20 },
     });
 
-    var _c2 = ExampleComponent.pool.getByName("c2");
-    var _c1_ = ExampleComponent.pool.getByName(c1.name);
+    var _c2 = ExampleComponent.pool.byName("c2");
+    var _c1_ = ExampleComponent.pool.byName(c1.name);
 
     try std.testing.expect(_c2 != null);
     try std.testing.expectEqual(c2, _c2.?);
@@ -190,8 +157,9 @@ test "name mapping" {
 test "event propagation" {
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
+    component.registerComponent(ExampleComponent);
 
-    ExampleComponent.init();
+    // also triggers auto init
     ExampleComponent.subscribe(testListener);
 
     var c1 = ExampleComponent.new(.{
@@ -202,8 +170,8 @@ test "event propagation" {
     c1.activate(false);
 }
 
-fn testListener(event: EventType) void {
-    std.debug.print("\n %%%%%%%%%% event: {any}\n", .{event});
+fn testListener(event: component.Event) void {
+    std.debug.print("\n received: {any}\n", .{event});
 }
 
 test "get poll and process" {
@@ -211,6 +179,7 @@ test "get poll and process" {
 
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
+    component.registerComponent(ExampleComponent);
 
     var c1 = ExampleComponent.new(.{
         .color = Color{ 0, 0, 0, 255 },
@@ -231,31 +200,58 @@ test "get poll and process" {
 
     process();
 
-    var ptr = component.CompPoolPtr{
-        .aspect = ExampleComponent.pool.c_aspect,
-        .address = @intFromPtr(ExampleComponent.pool),
-    };
-    _ = ptr;
+    // var ptr = component.CompPoolPtr{
+    //     .aspect = ExampleComponent.pool.c_aspect,
+    //     .address = @intFromPtr(ExampleComponent.pool),
+    // };
+    // _ = ptr;
 
     var compId = component.ComponentId{
-        .cTypePtr = ComponentPool(ExampleComponent).typeErasedPtr,
-        .cIndex = c3.index,
+        .aspect = ExampleComponent.type_aspect,
+        .index = c3.index,
     };
+    _ = compId;
 
-    processViaIdCast(compId);
+    //component.processById(ExampleComponent, &compId, processOne);
+
+    //processViaIdCast(compId);
 }
 
-fn processViaIdCast(id: component.ComponentId) void {
-    if (ComponentPool(ExampleComponent).typeCheck(id.cTypePtr.aspect)) {
-        var arr = [1]usize{id.cIndex};
-        id.cTypePtr.cast(ComponentPool(ExampleComponent)).processIndexed(&arr, processOne);
-    }
-}
+// fn processViaIdCast(id: component.ComponentId) void {
+//     if (ComponentPool(ExampleComponent).typeCheck(id.aspect)) {
+//         var arr = [1]usize{id.cIndex};
+//         id.cTypePtr.cast(ComponentPool(ExampleComponent)).processIndexed(&arr, processOne);
+//     }
+// }
 
 fn process() void {
-    ExampleComponent.pool.processAllActive(processOne);
+    ExampleComponent.pool.processActive(processOne);
 }
 
 fn processOne(c: *ExampleComponent) void {
-    std.debug.print("\n process ExampleComponent {any}\n", .{c});
+    std.debug.print("\n process {any}\n", .{c});
 }
+
+fn processOneUnknown(c: anytype) void {
+    std.debug.print("\n process {any}\n", .{c});
+}
+
+// test "generic pool access" {
+//     std.debug.print("\n", .{});
+
+//     try firefly.moduleInitDebug(std.testing.allocator);
+//     defer firefly.moduleDeinit();
+//     ExampleComponent.init();
+
+//     var aspect = with(ExampleComponent{
+//         .color = Color{ 0, 5, 0, 255 },
+//         .position = PosF{ 40, 70 },
+//     });
+//     _ = aspect;
+// }
+
+// pub fn with(c: anytype) *Aspect {
+//     const T = @TypeOf(c);
+//     _ = component.ComponentPool(T).register(@as(T, c));
+//     return T.pool.c_aspect;
+// }
