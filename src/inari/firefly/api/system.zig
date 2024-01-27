@@ -10,24 +10,34 @@ const utils = firefly.utils;
 const String = utils.String;
 
 var SYSTEMS: StringHashMap(System) = undefined;
+var initialized = false;
+
+pub fn init() void {
+    defer initialized = true;
+    if (!initialized) {
+        SYSTEMS = StringHashMap(System).init(firefly.ALLOC);
+    }
+}
+
+pub fn deinit() void {
+    if (initialized) {
+        var it = SYSTEMS.valueIterator();
+        while (it.next()) |system| {
+            system.deinit();
+        }
+        SYSTEMS.deinit();
+        initialized = false;
+    }
+}
 
 const SystemInfo = struct {
     name: String = undefined,
 };
 
 pub const System = struct {
-    var initialized = false;
-
     activate: *const fn (bool) void = undefined,
     getInfo: *const fn () SystemInfo = undefined,
     deinit: *const fn () void = undefined,
-
-    pub fn init() void {
-        defer initialized = true;
-        if (!initialized) {
-            SYSTEMS = StringHashMap(System).init(firefly.ALLOC);
-        }
-    }
 
     pub fn initSystem(comptime systemType: type) !*System {
         // check init
@@ -65,17 +75,6 @@ pub const System = struct {
             }
         }
         return null;
-    }
-
-    pub fn deinit() void {
-        if (initialized) {
-            var it = SYSTEMS.valueIterator();
-            while (it.next()) |system| {
-                system.deinit();
-            }
-            SYSTEMS.deinit();
-            initialized = false;
-        }
     }
 };
 

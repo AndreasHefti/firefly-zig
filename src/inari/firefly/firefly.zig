@@ -3,7 +3,7 @@ pub const utils = @import("../utils/utils.zig"); // TODO better way for import p
 pub const api = @import("api/api.zig");
 pub const component = api.component;
 pub const system = api.system;
-pub const graphics = api.graphics;
+pub const rendering_api = api.rendering_api;
 
 pub const Asset = @import("Asset.zig");
 pub const Entity = @import("Entity.zig");
@@ -14,8 +14,8 @@ pub const FFAPIError = error{
     GenericError,
     SingletonAlreadyInitialized,
     ComponentInitError,
-    GraphicsInitError,
-    GraphicsError,
+    RenderingInitError,
+    RenderingError,
 };
 
 pub const ActionType = enum {
@@ -31,7 +31,7 @@ pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
 
-pub var GRAPHICS: graphics.GraphicsAPI() = undefined;
+pub var RENDER_API: rendering_api.RenderAPI() = undefined;
 
 pub fn moduleInitDebug(allocator: Allocator) !void {
     defer INIT = true;
@@ -41,7 +41,7 @@ pub fn moduleInitDebug(allocator: Allocator) !void {
     COMPONENT_ALLOC = allocator;
     ENTITY_ALLOC = allocator;
     ALLOC = allocator;
-    GRAPHICS = try graphics.createDebugGraphics(ALLOC);
+    RENDER_API = try rendering_api.createDebugRenderAPI(ALLOC);
     try initModules();
 }
 
@@ -53,15 +53,17 @@ pub fn moduleInitAlloc(component_allocator: Allocator, entity_allocator: Allocat
     COMPONENT_ALLOC = component_allocator;
     ENTITY_ALLOC = entity_allocator;
     ALLOC = allocator;
-    // TODO init default graphics impl here when available
-    GRAPHICS = try graphics.createDebugGraphics(ALLOC);
+    // TODO init default rendering_api impl here when available
+    RENDER_API = try rendering_api.createDebugRenderAPI(ALLOC);
     try initModules();
 }
 
 fn initModules() !void {
+    // init modules
     try utils.aspect.init(ALLOC);
-    system.System.init();
-    try component.init();
+    try api.init();
+
+    // register default components and entity components
     component.registerComponent(Asset);
     component.registerComponent(Entity);
 }
@@ -71,9 +73,8 @@ pub fn moduleDeinit() void {
     if (!INIT) {
         return;
     }
-    GRAPHICS.deinit();
-    system.System.deinit();
-    component.deinit();
+    RENDER_API.deinit();
+    api.deinit();
     utils.aspect.deinit();
 }
 

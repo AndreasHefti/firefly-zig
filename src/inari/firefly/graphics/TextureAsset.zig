@@ -1,0 +1,104 @@
+const std = @import("std");
+const firefly = @import("../firefly.zig"); // TODO better way for import package?
+const assert = std.debug.assert;
+const ArrayList = std.ArrayList;
+const api = firefly.api;
+const Aspect = firefly.utils.aspect.Aspect;
+const Asset = firefly.Asset;
+const GRAPHICS = firefly.GRAPHICS;
+const TextureData = api.TextureData;
+const String = firefly.utils.String;
+const NO_NAME = firefly.utils.NO_NAME;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const NO_BINDING = firefly.utils.NO_BINDING;
+const CInt = api.CInt;
+
+var initialized = false;
+var resources: ArrayList(TextureData) = undefined;
+
+pub var assetType: *Aspect = undefined;
+
+pub fn init() void {
+    defer initialized = true;
+    if (initialized) return;
+
+    assetType = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
+    resources = ArrayList(TextureData).init(firefly.COMPONENT_ALLOC) catch unreachable;
+}
+
+pub fn deinit() void {
+    defer initialized = false;
+    if (!initialized) return;
+
+    assetType = undefined;
+    resources.deinit();
+    resources = undefined;
+}
+
+pub const Texture = struct {
+    asset_name: String = NO_NAME,
+    resource_path: String,
+    is_mipmap: bool = false,
+    s_wrap: CInt = -1,
+    t_wrap: CInt = -1,
+    min_filter: CInt = -1,
+    mag_filter: CInt = -1,
+};
+
+pub fn new(data: Texture) *Asset {
+    if (!initialized) @panic("Firefly module not initialized");
+
+    var asset: *Asset = Asset.new(Asset{
+        .asset_type = assetType,
+        .name = data.asset_name,
+        .load = loadFunction,
+        .dispose = disposeFunction,
+        .resource_id = resources.items.len,
+    });
+
+    try resources.append(TextureData{
+        .resource = data.resource_path,
+        .is_mipmap = data.is_mipmap,
+        .s_wrap = data.s_wrap,
+        .t_wrap = data.t_wrap,
+        .min_filter = data.min_filter,
+        .mag_filter = data.mag_filter,
+    }) catch unreachable;
+
+    return asset;
+}
+
+fn loadFunction(asset: *Asset) bool {
+    if (!initialized) @panic("Firefly module not initialized");
+
+    var tex_data = &resources.items[asset.resource_id];
+
+    GRAPHICS.loadTexture(tex_data) catch {
+        std.log.err("Failed to load texture resource: {s}", .{tex_data.resource});
+        return false;
+    };
+
+    return true;
+}
+
+fn disposeFunction(asset: *Asset) void {
+    if (!initialized) @panic("Firefly module not initialized");
+
+    if (asset.resource_id == UNDEF_INDEX) return;
+    var tex_data: *TextureData = &resources.items[asset.resource_id];
+    if (tex_data.binding == NO_BINDING) return;
+
+    GRAPHICS.disposeTexture(tex_data) catch {
+        std.log.err("Failed to dispose texture resource: {s}", .{tex_data.resource});
+        return;
+    };
+
+    asset(tex_data.binding == NO_BINDING);
+    assert(tex_data.width == -1);
+    assert(tex_data.height == -1);
+}
+
+test "init/deinit" {
+    try firefly.moduleInitDebug(std.testing.allocator);
+    defer firefly.moduleDeinit();
+}

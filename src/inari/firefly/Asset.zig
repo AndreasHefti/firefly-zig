@@ -32,10 +32,17 @@ pub var unsubscribe: *const fn (component.EventListener) void = undefined;
 
 // struct fields
 index: usize = UNDEF_INDEX,
-name: String = NO_NAME,
-resource: String = NO_NAME,
-resource_id: usize = UNDEF_INDEX,
 asset_type: *Aspect = undefined,
-asset_id: usize = UNDEF_INDEX,
+name: String = NO_NAME,
+resource_id: usize = UNDEF_INDEX,
 load: *const fn (*Asset) bool = undefined,
 dispose: *const fn (*Asset) void = undefined,
+
+pub fn onActivation(index: usize, a: bool) void {
+    const asset: *Asset = Asset.byId(index);
+    if (a) {
+        _ = asset.load(asset);
+    } else {
+        asset.dispose(asset);
+    }
+}

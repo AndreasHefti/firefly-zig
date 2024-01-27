@@ -1,7 +1,7 @@
 const std = @import("std");
 pub const firefly = @import("../firefly.zig"); // TODO better way for import package?
 pub const utils = @import("../../utils/utils.zig"); // TODO better way for import package?
-pub const graphics = @import("graphics.zig");
+pub const rendering_api = @import("rendering_api.zig");
 pub const component = @import("component.zig");
 pub const system = @import("system.zig");
 
@@ -19,6 +19,24 @@ pub const Color = utils.geom.Color;
 
 pub const BindingIndex = usize;
 pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
+
+var initialized = false;
+
+pub fn init() !void {
+    defer initialized = true;
+    if (initialized) return;
+
+    system.init();
+    try component.init();
+}
+
+pub fn deinit() void {
+    defer initialized = false;
+    if (!initialized) return;
+
+    system.deinit();
+    component.deinit();
+}
 
 /// Color blending modes
 pub const BlendMode = enum(CInt) {
@@ -73,16 +91,16 @@ pub const BlendMode = enum(CInt) {
 // };
 
 pub const TextureData = struct {
-    resourceName: String = NO_NAME,
-    bindingIndex: BindingIndex = NO_BINDING,
+    resource: String = NO_NAME,
+    binding: BindingIndex = NO_BINDING,
     width: CInt = 0,
     height: CInt = 0,
-    isMipmap: bool = false,
-    wrapS: CInt = -1,
-    wrapT: CInt = -1,
-    minFilter: CInt = -1,
-    magFilter: CInt = -1,
-    fboScale: Float = 1,
+    is_mipmap: bool = false,
+    s_wrap: CInt = -1,
+    t_wrap: CInt = -1,
+    min_filter: CInt = -1,
+    mag_filter: CInt = -1,
+    fbo_scale: Float = 1,
 };
 
 // TODO
@@ -96,11 +114,11 @@ pub const TextureData = struct {
 // }
 
 pub const ShaderData = struct {
-    bindingIndex: BindingIndex = NO_BINDING,
-    vertexShaderResourceName: String = NO_NAME,
-    vertexShaderProgram: String = NO_NAME,
-    fragmentShaderResourceName: String = NO_NAME,
-    fragmentShaderProgram: String = NO_NAME,
+    binding: BindingIndex = NO_BINDING,
+    vertex_shader_resource: String = NO_NAME,
+    vertex_shader_program: String = NO_NAME,
+    fragment_shader_resource: String = NO_NAME,
+    fragment_shader_program: String = NO_NAME,
     // TODO
     //shaderUpdate: (ShaderUpdate) -> Unit = VOID_CONSUMER_1
 };
@@ -122,20 +140,20 @@ pub const TransformData = struct {
 
 pub const RenderData = struct {
     clear: bool = true,
-    clearColor: Color = Color{ 0, 0, 0, 255 },
-    tintColor: Color = Color{ 255, 255, 255, 255 },
-    blendMode: BlendMode = BlendMode.ALPHA,
+    clear_color: Color = Color{ 0, 0, 0, 255 },
+    tint_color: Color = Color{ 255, 255, 255, 255 },
+    blend_mode: BlendMode = BlendMode.ALPHA,
 };
 
 pub const SpriteData = struct {
-    textureIndex: BindingIndex = NO_BINDING,
-    textureBounds: RectF = RectF{ 0, 0, 0, 0 },
-    hFlip: bool = false,
-    vFlip: bool = false,
+    texture_binding: BindingIndex = NO_BINDING,
+    texture_bounds: RectF = RectF{ 0, 0, 0, 0 },
+    h_flip: bool = false,
+    v_flip: bool = false,
 };
 
 test {
-    std.testing.refAllDecls(@import("graphics.zig"));
+    std.testing.refAllDecls(@import("rendering_api.zig"));
     std.testing.refAllDecls(@import("system.zig"));
     std.testing.refAllDecls(@import("component.zig"));
 }

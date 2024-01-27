@@ -16,7 +16,7 @@ const PosI = firefly.api.PosI;
 const CInt = firefly.utils.CInt;
 const Vector2f = firefly.utils.geom.Vector2f;
 
-pub fn GraphicsAPI() type {
+pub fn RenderAPI() type {
     return struct {
         const Self = @This();
         /// return the actual screen width
@@ -27,7 +27,7 @@ pub fn GraphicsAPI() type {
         showFPS: *const fn (*PosI) void = undefined,
 
         /// Loads image data from file system and create new texture data loaded into GPU
-        /// @param textureData The texture DAO. Sets bindingIndex, width and height to the DAO
+        /// @param textureData The texture DAO. Sets binding, width and height to the DAO
         loadTexture: *const fn (*TextureData) FFAPIError!void = undefined,
         /// Disposes the texture with given texture binding id from GPU memory
         /// @param textureId binding identifier of the texture to dispose.
@@ -57,7 +57,7 @@ pub fn GraphicsAPI() type {
         deinit: *const fn () void = undefined,
 
         pub fn init(
-            initImpl: *const fn (*GraphicsAPI(), std.mem.Allocator) anyerror!void,
+            initImpl: *const fn (*RenderAPI(), std.mem.Allocator) anyerror!void,
             allocator: std.mem.Allocator,
         ) !Self {
             var self = Self{};
@@ -67,22 +67,22 @@ pub fn GraphicsAPI() type {
     };
 }
 
-// singleton DebugGraphics
-var singletonDebugGraphics: GraphicsAPI() = undefined;
-pub fn createDebugGraphics(allocator: std.mem.Allocator) !GraphicsAPI() {
-    if (DebugGraphicsAPI.initialized) {
-        return singletonDebugGraphics;
+// Singleton Debug RenderAPI
+var singletonDebugRenderAPI: RenderAPI() = undefined;
+pub fn createDebugRenderAPI(allocator: std.mem.Allocator) !RenderAPI() {
+    if (DebugRenderAPI.initialized) {
+        return singletonDebugRenderAPI;
     }
-    singletonDebugGraphics = try GraphicsAPI().init(DebugGraphicsAPI.initImpl, allocator);
-    return singletonDebugGraphics;
+    singletonDebugRenderAPI = try RenderAPI().init(DebugRenderAPI.initImpl, allocator);
+    return singletonDebugRenderAPI;
 }
 
-/// This implementation of GraphicsAPI can be used for debugging
+/// This implementation of RenderAPI can be used for debugging
 ///
-/// var graphics = GraphicsAPI().init(DebugGraphicsAPI.initImpl);
+/// var render_api = RenderAPI().init(RenderAPI.initImpl);
 /// or
-/// var graphics = GraphicsAPI().init(DebugGraphicsAPI.initScreen(800, 600).initImpl);
-const DebugGraphicsAPI = struct {
+/// var render_api = RenderAPI().init(RenderAPI.initScreen(800, 600).initImpl);
+const DebugRenderAPI = struct {
     pub var screen_width: CInt = 800;
     pub var screen_height: CInt = 600;
     var alloc: std.mem.Allocator = undefined;
@@ -100,7 +100,7 @@ const DebugGraphicsAPI = struct {
     var currentOffset: *const Vector2f = &defaultOffset;
     var currentRenderData: *const RenderData = &defaultRenderData;
 
-    fn initImpl(interface: *GraphicsAPI(), allocator: std.mem.Allocator) !void {
+    fn initImpl(interface: *RenderAPI(), allocator: std.mem.Allocator) !void {
         alloc = allocator;
         textures = try DynArray(TextureData).init(allocator, null);
         renderTextures = try DynArray(TextureData).init(allocator, null);
@@ -147,44 +147,44 @@ const DebugGraphicsAPI = struct {
     }
 
     pub fn loadTexture(textureData: *TextureData) FFAPIError!void {
-        textureData.bindingIndex = textures.add(textureData.*);
-        textures.get(textureData.bindingIndex).bindingIndex = textureData.bindingIndex;
+        textureData.binding = textures.add(textureData.*);
+        textures.get(textureData.binding).binding = textureData.binding;
         //std.debug.print("loadTexture: {any}\n", .{textureData.*});
     }
 
     pub fn disposeTexture(textureData: *TextureData) FFAPIError!void {
         //std.debug.print("disposeTexture: {any}\n", .{textureData.*});
-        if (textureData.bindingIndex != NO_BINDING) {
-            textures.reset(textureData.bindingIndex);
-            textureData.bindingIndex = NO_BINDING;
+        if (textureData.binding != NO_BINDING) {
+            textures.reset(textureData.binding);
+            textureData.binding = NO_BINDING;
         }
     }
 
     pub fn createRenderTexture(textureData: *TextureData) FFAPIError!void {
-        textureData.bindingIndex = renderTextures.add(textureData.*);
-        renderTextures.get(textureData.bindingIndex).bindingIndex = textureData.bindingIndex;
+        textureData.binding = renderTextures.add(textureData.*);
+        renderTextures.get(textureData.binding).binding = textureData.binding;
         //std.debug.print("createRenderTexture: {any}\n", .{textureData.*});
     }
 
     pub fn disposeRenderTexture(textureData: *TextureData) FFAPIError!void {
         //std.debug.print("disposeRenderTexture: {any}\n", .{textureData.*});
-        if (textureData.bindingIndex != NO_BINDING) {
-            renderTextures.reset(textureData.bindingIndex);
-            textureData.bindingIndex = NO_BINDING;
+        if (textureData.binding != NO_BINDING) {
+            renderTextures.reset(textureData.binding);
+            textureData.binding = NO_BINDING;
         }
     }
 
     pub fn createShader(shaderData: *ShaderData) FFAPIError!void {
-        shaderData.bindingIndex = shaders.add(shaderData.*);
-        shaders.get(shaderData.bindingIndex).bindingIndex = shaderData.bindingIndex;
+        shaderData.binding = shaders.add(shaderData.*);
+        shaders.get(shaderData.binding).binding = shaderData.binding;
         //std.debug.print("createShader: {any}\n", .{shaderData.*});
     }
 
     pub fn disposeShader(shaderData: *ShaderData) FFAPIError!void {
         //std.debug.print("disposeShader: {any}\n", .{shaderData.*});
-        if (shaderData.bindingIndex != NO_BINDING) {
-            shaders.reset(shaderData.bindingIndex);
-            shaderData.bindingIndex = NO_BINDING;
+        if (shaderData.binding != NO_BINDING) {
+            shaders.reset(shaderData.binding);
+            shaderData.binding = NO_BINDING;
         }
     }
 
@@ -221,7 +221,7 @@ const DebugGraphicsAPI = struct {
 
     pub fn renderSprite(spriteData: *SpriteData, transform: *TransformData, renderData: ?*RenderData, offset: ?*Vector2f) void {
         std.debug.print("renderSprite: {any}\n", .{spriteData.*});
-        var textureData = textures.get(spriteData.textureIndex);
+        var textureData = textures.get(spriteData.texture_binding);
         std.debug.print("  texture: {any}\n", .{textureData.*});
         if (currentRenderTexture) |rti| {
             std.debug.print("  render to: {any}\n", .{textures.get(rti)});
@@ -249,36 +249,36 @@ test "debug init" {
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
 
-    var width = firefly.GRAPHICS.screenWidth();
-    var height = firefly.GRAPHICS.screenHeight();
+    var width = firefly.RENDER_API.screenWidth();
+    var height = firefly.RENDER_API.screenHeight();
 
     try std.testing.expect(width == 800);
     try std.testing.expect(height == 600);
 
     var fpsPos = PosI{ 10, 10 };
     std.debug.print("\n", .{});
-    firefly.GRAPHICS.showFPS(&fpsPos);
+    firefly.RENDER_API.showFPS(&fpsPos);
 
-    var t1 = TextureData{ .resourceName = "t1" };
-    var t2 = TextureData{ .resourceName = "t2" };
+    var t1 = TextureData{ .resource = "t1" };
+    var t2 = TextureData{ .resource = "t2" };
     var sprite = SpriteData{};
     var transform = TransformData{};
     var renderData = RenderData{};
     transform.position[0] = 10;
     transform.position[1] = 100;
 
-    try std.testing.expect(t1.bindingIndex == NO_BINDING);
-    try firefly.GRAPHICS.loadTexture(&t1);
-    try std.testing.expect(t1.bindingIndex != NO_BINDING);
-    try std.testing.expect(t2.bindingIndex == NO_BINDING);
-    try firefly.GRAPHICS.createRenderTexture(&t2);
-    try std.testing.expect(t2.bindingIndex != NO_BINDING);
+    try std.testing.expect(t1.binding == NO_BINDING);
+    try firefly.RENDER_API.loadTexture(&t1);
+    try std.testing.expect(t1.binding != NO_BINDING);
+    try std.testing.expect(t2.binding == NO_BINDING);
+    try firefly.RENDER_API.createRenderTexture(&t2);
+    try std.testing.expect(t2.binding != NO_BINDING);
 
-    sprite.textureIndex = t1.bindingIndex;
-    firefly.GRAPHICS.renderSprite(&sprite, &transform, &renderData, null);
+    sprite.texture_binding = t1.binding;
+    firefly.RENDER_API.renderSprite(&sprite, &transform, &renderData, null);
 
     // test creating another DebugGraphics will get the same instance back
-    var debugGraphics2 = try createDebugGraphics(std.testing.allocator);
-    try std.testing.expectEqual(firefly.GRAPHICS, debugGraphics2);
+    var debugGraphics2 = try createDebugRenderAPI(std.testing.allocator);
+    try std.testing.expectEqual(firefly.RENDER_API, debugGraphics2);
     debugGraphics2.renderSprite(&sprite, &transform, &renderData, null);
 }
