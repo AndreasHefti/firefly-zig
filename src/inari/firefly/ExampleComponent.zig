@@ -40,7 +40,7 @@ pub fn activate(self: ExampleComponent, active: bool) void {
 }
 
 pub fn onDispose(index: usize) void {
-    std.debug.print("\n**************** onDispose: {d}\n", .{index});
+    std.testing.expect(index != UNDEF_INDEX) catch unreachable;
 }
 
 // Testing
@@ -235,23 +235,3 @@ fn processOne(c: *ExampleComponent) void {
 fn processOneUnknown(c: anytype) void {
     std.debug.print("\n process {any}\n", .{c});
 }
-
-// test "generic pool access" {
-//     std.debug.print("\n", .{});
-
-//     try firefly.moduleInitDebug(std.testing.allocator);
-//     defer firefly.moduleDeinit();
-//     ExampleComponent.init();
-
-//     var aspect = with(ExampleComponent{
-//         .color = Color{ 0, 5, 0, 255 },
-//         .position = PosF{ 40, 70 },
-//     });
-//     _ = aspect;
-// }
-
-// pub fn with(c: anytype) *Aspect {
-//     const T = @TypeOf(c);
-//     _ = component.ComponentPool(T).register(@as(T, c));
-//     return T.pool.c_aspect;
-// }

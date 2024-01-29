@@ -60,23 +60,27 @@ pub fn moduleInitAlloc(component_allocator: Allocator, entity_allocator: Allocat
 }
 
 fn initModules() !void {
-    // init modules
+    // init root modules
     try utils.aspect.init(ALLOC);
     try api.init();
-    try graphics.init();
+    try Asset.init();
 
     // register default components and entity components
     component.registerComponent(Asset);
     component.registerComponent(Entity);
+
+    // init depending modules
+    try graphics.init();
 }
 
 pub fn moduleDeinit() void {
     defer INIT = false;
-    if (!INIT) {
+    if (!INIT)
         return;
-    }
-    RENDER_API.deinit();
+
     graphics.deinit();
+    RENDER_API.deinit();
+    Asset.deinit();
     api.deinit();
     utils.aspect.deinit();
 }
@@ -90,5 +94,29 @@ test {
 test "init" {
     try moduleInitDebug(std.testing.allocator);
     defer moduleDeinit();
-    try utils.aspect.print(std.io.getStdErr().writer());
+    var sb = utils.StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    //sb.append("\n");
+    utils.aspect.print(&sb);
+    api.component.print(&sb);
+
+    //try std.io.getStdErr().writer().writeAll(sb.toString());
+
+    var output: utils.String =
+        \\Aspects:
+        \\  Group[COMPONENT_ASPECT_GROUP|0]:
+        \\    Aspect[Asset|0]
+        \\    Aspect[Entity|1]
+        \\  Group[ENTITY_COMPONENT_ASPECT_GROUP|1]:
+        \\  Group[Asset|2]:
+        \\    Aspect[Texture|0]
+        \\
+        \\Components:
+        \\  Asset size: 0
+        \\  Entity size: 0
+    ;
+    //try std.io.getStdErr().writer().writeAll(output);
+
+    try std.testing.expectEqualStrings(output, sb.toString());
 }

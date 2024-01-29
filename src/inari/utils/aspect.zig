@@ -153,7 +153,7 @@ pub const Kind = struct {
     ) !void {
         try writer.print("Kind[ group: {s}, aspects: ", .{self.group.name});
         for (0..self.group._size) |i| {
-            if (self._mask & maskBit(self.group.aspects[i] > 0)) {
+            if (self._mask & maskBit(self.group.aspects[i].index) > 0) {
                 try writer.print("{s} ", .{self.group.aspects[i].name});
             }
         }
@@ -224,26 +224,26 @@ fn checkInitialized() !void {
     }
 }
 
-pub fn print(writer: std.fs.File.Writer) !void {
+pub fn print(string_buffer: *utils.StringBuffer) void {
     if (!initialized) {
-        _ = try writer.write("Aspects: [ NOT initializedIALIZED ]\n");
+        string_buffer.append("Aspects: [ NOT initialized ]\n");
         return;
     }
 
-    _ = try writer.write("Aspects:");
+    string_buffer.append("Aspects:");
     if (ASPECT_GROUPS.items.len == 0) {
-        _ = try writer.write("EMPTY");
+        string_buffer.append("EMPTY");
     } else {
         var gi: usize = 0;
         for (ASPECT_GROUPS.items) |item| {
-            try writer.print("\n  Group[{s}|{}]: ", .{ item.name, gi });
+            string_buffer.print("\n  Group[{s}|{}]:", .{ item.name, gi });
             for (0..item._size) |i| {
-                try writer.print("\n    Aspect[{s}|{d}]", .{ item.aspects[i].name, item.aspects[i].index });
+                string_buffer.print("\n    Aspect[{s}|{d}]", .{ item.aspects[i].name, item.aspects[i].index });
             }
             gi += 1;
         }
     }
-    _ = try writer.write("\n");
+    _ = string_buffer.append("\n");
 }
 
 test "initialize" {

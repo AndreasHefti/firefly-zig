@@ -147,6 +147,8 @@ const DebugRenderAPI = struct {
     }
 
     pub fn loadTexture(textureData: *TextureData) FFAPIError!void {
+        textureData.width = 1;
+        textureData.height = 1;
         textureData.binding = textures.add(textureData.*);
         textures.get(textureData.binding).binding = textureData.binding;
         //std.debug.print("loadTexture: {any}\n", .{textureData.*});
@@ -157,6 +159,8 @@ const DebugRenderAPI = struct {
         if (textureData.binding != NO_BINDING) {
             textures.reset(textureData.binding);
             textureData.binding = NO_BINDING;
+            textureData.width = -1;
+            textureData.height = -1;
         }
     }
 

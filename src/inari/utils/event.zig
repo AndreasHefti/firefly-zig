@@ -56,9 +56,36 @@ test "Events and Listeners" {
 }
 
 fn testlistener1(event: []const u8) void {
-    std.debug.print("\n  testlistener1 event: {s}\n", .{event});
+    const state = struct {
+        var count: i8 = 0;
+    };
+    if (state.count == 0) {
+        std.testing.expectEqualStrings("hallo1", event) catch unreachable;
+        state.count += 1;
+        return;
+    }
+    if (state.count == 1) {
+        std.testing.expectEqualStrings("hallo2", event) catch unreachable;
+        return;
+    }
 }
 
 fn testlistener2(event: []const u8) void {
-    std.debug.print("  testlistener2 event: {s}\n", .{event});
+    const state = struct {
+        var count: i8 = 0;
+    };
+    if (state.count == 0) {
+        std.testing.expectEqualStrings("hallo1", event) catch unreachable;
+        state.count += 1;
+        return;
+    }
+    if (state.count == 1) {
+        std.testing.expectEqualStrings("hallo2", event) catch unreachable;
+        state.count += 1;
+        return;
+    }
+    if (state.count == 2) {
+        std.testing.expectEqualStrings("hallo3", event) catch unreachable;
+        return;
+    }
 }

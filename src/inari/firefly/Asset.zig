@@ -13,7 +13,25 @@ const NO_NAME = firefly.utils.NO_NAME;
 const Asset = @This();
 
 // type aspects
+var initialized = false;
 pub var ASSET_TYPE_ASPECT_GROUP: *AspectGroup = undefined;
+
+pub fn init() !void {
+    defer initialized = true;
+    if (initialized) return;
+
+    ASSET_TYPE_ASPECT_GROUP = try aspect.newAspectGroup(component_name);
+}
+
+pub fn deinit() void {
+    defer initialized = false;
+    if (!initialized) return;
+
+    aspect.disposeAspectGroup(component_name);
+    ASSET_TYPE_ASPECT_GROUP = undefined;
+    pool.deinit();
+}
+
 // type fields
 pub const null_value = Asset{};
 pub const component_name = "Asset";

@@ -71,6 +71,7 @@ fn loadFunction(asset: *Asset) bool {
     if (!initialized) @panic("Firefly module not initialized");
 
     var tex_data = &resources.items[asset.resource_id];
+    if (tex_data.binding != NO_BINDING) return false; // already loaded
 
     firefly.RENDER_API.loadTexture(tex_data) catch {
         std.log.err("Failed to load texture resource: {s}", .{tex_data.resource});
@@ -103,4 +104,46 @@ test "TextureAsset init/deinit" {
 
     try std.testing.expectEqual(@as(String, "Texture"), asset_type.name);
     try std.testing.expect(resources.items.len == 0);
+}
+
+test "TextureAsset load/dispose" {
+    try firefly.moduleInitDebug(std.testing.allocator);
+    defer firefly.moduleDeinit();
+
+    var texture_asset: *Asset = new(Texture{
+        .asset_name = "TestTexture",
+        .resource_path = "path/TestTexture",
+        .is_mipmap = false,
+    });
+
+    try std.testing.expect(texture_asset.index != UNDEF_INDEX);
+    try std.testing.expect(texture_asset.asset_type.index == asset_type.index);
+    try std.testing.expect(texture_asset.resource_id != UNDEF_INDEX);
+    try std.testing.expectEqualStrings("TestTexture", texture_asset.name);
+
+    var res: *TextureData = &resources.items[texture_asset.resource_id];
+    try std.testing.expectEqualStrings("path/TestTexture", res.resource);
+    try std.testing.expect(res.binding == NO_BINDING); // not loaded yet
+
+    // load the texture... by name
+    Asset.activateByName("TestTexture", true);
+    try std.testing.expect(res.binding == 0); // now loaded
+    try std.testing.expect(res.width > 0);
+    try std.testing.expect(res.height > 0);
+    // dispose texture
+    Asset.activateByName("TestTexture", false);
+    try std.testing.expect(res.binding == NO_BINDING); // not loaded
+    try std.testing.expect(res.width == -1);
+    try std.testing.expect(res.height == -1);
+
+    // load the texture... by id
+    Asset.activateById(texture_asset.index, true);
+    try std.testing.expect(res.binding == 0); // now loaded
+    try std.testing.expect(res.width > 0);
+    try std.testing.expect(res.height > 0);
+    // dispose texture
+    Asset.activateById(texture_asset.index, false);
+    try std.testing.expect(res.binding == NO_BINDING); // not loaded
+    try std.testing.expect(res.width == -1);
+    try std.testing.expect(res.height == -1);
 }

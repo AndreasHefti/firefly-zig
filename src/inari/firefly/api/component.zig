@@ -1,8 +1,10 @@
 const std = @import("std");
 const firefly = @import("api.zig").firefly;
 
+const StringBuffer = firefly.utils.StringBuffer;
 const trait = std.meta.trait;
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const AspectGroup = firefly.utils.aspect.AspectGroup;
 const EventDispatch = firefly.utils.event.EventDispatch;
@@ -69,7 +71,7 @@ pub const ComponentId = struct {
 pub const ComponentTypeInterface = struct {
     clear: *const fn (usize) void,
     deinit: *const fn () void,
-    _address: usize = undefined,
+    to_string: *const fn (*StringBuffer) void,
 };
 
 // Component Event Handling
@@ -184,7 +186,7 @@ pub fn ComponentPool(comptime T: type) type {
                     ComponentTypeInterface{
                         .clear = Self.clear,
                         .deinit = if (has_deinit) T.deinit else Self.deinit,
-                        ._address = @intFromPtr(&Self),
+                        .to_string = toString,
                     },
                     c_aspect.index,
                 );
@@ -346,6 +348,18 @@ pub fn ComponentPool(comptime T: type) type {
             }
         }
 
+        fn toString(string_buffer: *StringBuffer) void {
+            string_buffer.print("\n  {s} size: {d}", .{ c_aspect.name, items.slots.count() });
+            var next = items.slots.nextSetBit(0);
+            while (next) |i| {
+                string_buffer.print("\n    {s} {any}", .{
+                    if (active_mapping.isSet(i)) "a" else "x",
+                    items.get(i),
+                });
+                next = items.slots.nextSetBit(i + 1);
+            }
+        }
+
         fn notify(event_type: ActionType, index: usize) void {
             if (event) |*e| {
                 // Test if copy here affects performance (but it thread safe?)
@@ -409,7 +423,7 @@ pub fn EntityComponentPool(comptime T: type) type {
                     ComponentTypeInterface{
                         .clear = Self.i_clear,
                         .deinit = T.deinit,
-                        ._address = @intFromPtr(&Self),
+                        .to_string = toString,
                     },
                     c_aspect.index,
                 );
@@ -471,6 +485,21 @@ pub fn EntityComponentPool(comptime T: type) type {
             items.reset(index);
         }
 
+        fn toString() String {
+            var string_builder = ArrayList(u8).init(firefly.ALLOC);
+            defer string_builder.deinit();
+
+            var writer = string_builder.writer();
+            writer.print("\n  {s} size: {d}", .{ c_aspect.name, items.size() }) catch unreachable;
+            var next = items.slots.nextSetBit(0);
+            while (next) |i| {
+                writer.print("\n   {any}", .{ "", items.get(i) }) catch unreachable;
+                next = items.slots.nextSetBit(i + 1);
+            }
+
+            return string_builder.toOwnedSlice() catch unreachable;
+        }
+
         fn checkComponentTrait(c: T) void {
             comptime {
                 if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
@@ -478,4 +507,13 @@ pub fn EntityComponentPool(comptime T: type) type {
             }
         }
     };
+}
+
+pub fn print(string_buffer: *StringBuffer) void {
+    string_buffer.print("\nComponents:", .{});
+    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    while (next) |i| {
+        COMPONENT_INTERFACE_TABLE.get(i).to_string(string_buffer);
+        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+    }
 }
