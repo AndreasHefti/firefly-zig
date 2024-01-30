@@ -12,7 +12,7 @@ const ShaderData = firefly.api.ShaderData;
 const TransformData = firefly.api.TransformData;
 const RenderData = firefly.api.RenderData;
 const SpriteData = firefly.api.SpriteData;
-const PosI = firefly.api.PosI;
+const PosI = firefly.utils.geom.PosI;
 const CInt = firefly.utils.CInt;
 const Vector2f = firefly.utils.geom.Vector2f;
 
@@ -32,6 +32,7 @@ pub fn RenderAPI() type {
         /// Disposes the texture with given texture binding id from GPU memory
         /// @param textureId binding identifier of the texture to dispose.
         disposeTexture: *const fn (*TextureData) FFAPIError!void = undefined,
+
         createRenderTexture: *const fn (*TextureData) FFAPIError!void = undefined,
         disposeRenderTexture: *const fn (*TextureData) FFAPIError!void = undefined,
         /// create new shader from given shader data and load it to GPU

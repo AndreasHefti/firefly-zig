@@ -20,11 +20,12 @@ pub const pool = ComponentPool(ExampleComponent);
 // component type pool references
 pub var type_aspect: *Aspect = undefined;
 pub var new: *const fn (ExampleComponent) *ExampleComponent = undefined;
-pub var dispose: *const fn (usize) void = undefined;
 pub var byId: *const fn (usize) *ExampleComponent = undefined;
 pub var byName: *const fn (String) ?*ExampleComponent = undefined;
 pub var activateById: *const fn (usize, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
+pub var disposeById: *const fn (usize) void = undefined;
+pub var disposeByName: *const fn (String) void = undefined;
 pub var subscribe: *const fn (component.EventListener) void = undefined;
 pub var unsubscribe: *const fn (component.EventListener) void = undefined;
 
@@ -117,7 +118,7 @@ test "create/dispose component" {
     try std.testing.expect(cPtr.position[0] == 111);
     try std.testing.expect(cPtr.position[1] == 10);
 
-    ExampleComponent.dispose(otherCPtr.index);
+    ExampleComponent.disposeById(otherCPtr.index);
 
     try std.testing.expect(cPtr.color[0] == 0);
     try std.testing.expect(cPtr.color[1] == 0);

@@ -126,11 +126,12 @@ pub fn ComponentPool(comptime T: type) type {
     // check component type constraints and function refs
     comptime var has_aspect: bool = false;
     comptime var has_new: bool = false;
-    comptime var has_dispose: bool = false;
     comptime var has_byId: bool = false;
     comptime var has_byName: bool = false;
     comptime var has_activateById: bool = false;
     comptime var has_activateByName: bool = false;
+    comptime var has_disposeById: bool = false;
+    comptime var has_disposeByName: bool = false;
     comptime var has_subscribe: bool = false;
     comptime var has_name_mapping: bool = false;
     comptime var has_deinit: bool = false;
@@ -145,7 +146,8 @@ pub fn ComponentPool(comptime T: type) type {
         has_name_mapping = trait.hasField("name")(T);
         has_aspect = trait.hasDecls(T, .{"type_aspect"});
         has_new = trait.hasDecls(T, .{"new"});
-        has_dispose = trait.hasDecls(T, .{"dispose"});
+        has_disposeById = trait.hasDecls(T, .{"disposeById"});
+        has_disposeByName = trait.hasDecls(T, .{"disposeByName"});
         has_byId = trait.hasDecls(T, .{"byId"});
         has_byName = has_name_mapping and trait.hasDecls(T, .{"byName"});
         has_activateById = trait.hasDecls(T, .{"activateById"});
@@ -207,11 +209,12 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_name_mapping) name_mapping = StringHashMap(usize).init(firefly.COMPONENT_ALLOC);
             if (has_aspect) T.type_aspect = c_aspect;
             if (has_new) T.new = Self.register;
-            if (has_dispose) T.dispose = Self.clear;
+            if (has_disposeById) T.disposeById = Self.clear;
+            if (has_name_mapping and has_disposeByName) T.disposeByName = Self.clearByName;
             if (has_byId) T.byId = Self.byId;
-            if (has_byName) T.byName = Self.byName;
+            if (has_name_mapping and has_byName) T.byName = Self.byName;
             if (has_activateById) T.activateById = Self.activate;
-            if (has_activateByName) T.activateByName = Self.activateByName;
+            if (has_name_mapping and has_activateByName) T.activateByName = Self.activateByName;
         }
 
         /// Release all allocated memory.
@@ -233,11 +236,12 @@ pub fn ComponentPool(comptime T: type) type {
             if (name_mapping) |*nm| nm.deinit();
             if (has_aspect) T.type_aspect = undefined;
             if (has_new) T.new = undefined;
-            if (has_dispose) T.dispose = undefined;
+            if (has_disposeById) T.disposeById = undefined;
+            if (has_name_mapping and has_disposeByName) T.disposeByName = undefined;
             if (has_byId) T.byId = undefined;
-            if (has_byName) T.byName = undefined;
+            if (has_name_mapping and has_byName) T.byName = undefined;
             if (has_activateById) T.activateById = undefined;
-            if (has_activateByName) T.activateByName = undefined;
+            if (has_name_mapping and has_activateByName) T.activateByName = undefined;
         }
 
         pub fn typeCheck(a: *Aspect) bool {
@@ -324,6 +328,12 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_onDispose) T.onDispose(index);
             active_mapping.setValue(index, false);
             items.reset(index);
+        }
+
+        pub fn clearByName(name: String) void {
+            if (name_mapping) |*nm| {
+                if (nm.get(name)) |index| clear(index);
+            }
         }
 
         pub fn processActive(f: *const fn (*T) void) void {

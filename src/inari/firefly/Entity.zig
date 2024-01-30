@@ -21,11 +21,12 @@ pub const pool = ComponentPool(Entity);
 // component type pool references
 pub var type_aspect: *Aspect = undefined;
 pub var new: *const fn (Entity) *Entity = undefined;
-pub var dispose: *const fn (usize) void = undefined;
 pub var byId: *const fn (usize) *Entity = undefined;
 pub var byName: *const fn (String) ?*Entity = undefined;
 pub var activateById: *const fn (usize, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
+pub var disposeById: *const fn (usize) void = undefined;
+pub var disposeByName: *const fn (String) void = undefined;
 pub var subscribe: *const fn (component.EventListener) void = undefined;
 pub var unsubscribe: *const fn (component.EventListener) void = undefined;
 

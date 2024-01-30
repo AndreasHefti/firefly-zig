@@ -1,22 +1,20 @@
 const std = @import("std");
+
+const String = utils.String;
+const NO_NAME = utils.NO_NAME;
+const CInt = utils.CInt;
+const Float = utils.Float;
+const PosI = utils.geom.PosI;
+const PosF = utils.geom.PosF;
+const RectI = utils.geom.RectI;
+const RectF = utils.geom.RectF;
+const Color = utils.geom.Color;
+
 pub const firefly = @import("../firefly.zig"); // TODO better way for import package?
 pub const utils = @import("../../utils/utils.zig"); // TODO better way for import package?
 pub const rendering_api = @import("rendering_api.zig");
 pub const component = @import("component.zig");
 pub const system = @import("system.zig");
-
-pub const String = utils.String;
-pub const NO_NAME = utils.NO_NAME;
-
-pub const CInt = utils.CInt;
-pub const Float = utils.Float;
-
-pub const PosI = utils.geom.PosI;
-pub const PosF = utils.geom.PosF;
-pub const RectI = utils.geom.RectI;
-pub const RectF = utils.geom.RectF;
-pub const Color = utils.geom.Color;
-
 pub const BindingIndex = usize;
 pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
@@ -148,8 +146,18 @@ pub const RenderData = struct {
 pub const SpriteData = struct {
     texture_binding: BindingIndex = NO_BINDING,
     texture_bounds: RectF = RectF{ 0, 0, 0, 0 },
-    h_flip: bool = false,
-    v_flip: bool = false,
+
+    // x = x + width / width = -width
+    pub fn flip_x(self: *SpriteData) void {
+        self.texture_bounds[0] = self.texture_bounds[0] + self.texture_bounds[2];
+        self.texture_bounds[2] = -self.texture_bounds[2];
+    }
+
+    // y = y + height / height = -height
+    pub fn flip_y(self: *SpriteData) void {
+        self.texture_bounds[1] = self.texture_bounds[1] + self.texture_bounds[3];
+        self.texture_bounds[3] = -self.texture_bounds[3];
+    }
 };
 
 test {
