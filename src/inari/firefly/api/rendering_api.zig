@@ -1,20 +1,21 @@
 const std = @import("std");
-const firefly = @import("../firefly.zig"); // TODO better way for import package?
+const utils = @import("../../utils/utils.zig");
+const api = @import("api.zig");
 
-const FFAPIError = firefly.FFAPIError;
-const DynArray = firefly.utils.dynarray.DynArray;
-const BindingIndex = firefly.api.BindingIndex;
-const NO_BINDING = firefly.api.NO_BINDING;
-const BlendMode = firefly.api.BlendMode;
-const ViewData = firefly.api.ViewData;
-const TextureData = firefly.api.TextureData;
-const ShaderData = firefly.api.ShaderData;
-const TransformData = firefly.api.TransformData;
-const RenderData = firefly.api.RenderData;
-const SpriteData = firefly.api.SpriteData;
-const PosI = firefly.utils.geom.PosI;
-const CInt = firefly.utils.CInt;
-const Vector2f = firefly.utils.geom.Vector2f;
+const FFAPIError = api.FFAPIError;
+const DynArray = utils.dynarray.DynArray;
+const BindingIndex = api.BindingIndex;
+const NO_BINDING = api.NO_BINDING;
+const BlendMode = api.BlendMode;
+const ViewData = api.ViewData;
+const TextureData = api.TextureData;
+const ShaderData = api.ShaderData;
+const TransformData = api.TransformData;
+const RenderData = api.RenderData;
+const SpriteData = api.SpriteData;
+const PosI = utils.geom.PosI;
+const CInt = utils.CInt;
+const Vector2f = utils.geom.Vector2f;
 
 pub fn RenderAPI() type {
     return struct {
@@ -251,18 +252,18 @@ const DebugRenderAPI = struct {
 };
 
 test "debug init" {
-    try firefly.moduleInitDebug(std.testing.allocator);
-    defer firefly.moduleDeinit();
+    try api.init(std.testing.allocator, std.testing.allocator, std.testing.allocator);
+    defer api.deinit();
 
-    var width = firefly.RENDER_API.screenWidth();
-    var height = firefly.RENDER_API.screenHeight();
+    var width = api.RENDERING_API.screenWidth();
+    var height = api.RENDERING_API.screenHeight();
 
     try std.testing.expect(width == 800);
     try std.testing.expect(height == 600);
 
     var fpsPos = PosI{ 10, 10 };
-    std.debug.print("\n", .{});
-    firefly.RENDER_API.showFPS(&fpsPos);
+
+    api.RENDERING_API.showFPS(&fpsPos);
 
     var t1 = TextureData{ .resource = "t1" };
     var t2 = TextureData{ .resource = "t2" };
@@ -273,17 +274,17 @@ test "debug init" {
     transform.position[1] = 100;
 
     try std.testing.expect(t1.binding == NO_BINDING);
-    try firefly.RENDER_API.loadTexture(&t1);
+    try api.RENDERING_API.loadTexture(&t1);
     try std.testing.expect(t1.binding != NO_BINDING);
     try std.testing.expect(t2.binding == NO_BINDING);
-    try firefly.RENDER_API.createRenderTexture(&t2);
+    try api.RENDERING_API.createRenderTexture(&t2);
     try std.testing.expect(t2.binding != NO_BINDING);
 
     sprite.texture_binding = t1.binding;
-    firefly.RENDER_API.renderSprite(&sprite, &transform, &renderData, null);
+    api.RENDERING_API.renderSprite(&sprite, &transform, &renderData, null);
 
     // test creating another DebugGraphics will get the same instance back
     var debugGraphics2 = try createDebugRenderAPI(std.testing.allocator);
-    try std.testing.expectEqual(firefly.RENDER_API, debugGraphics2);
+    try std.testing.expectEqual(api.RENDERING_API, debugGraphics2);
     debugGraphics2.renderSprite(&sprite, &transform, &renderData, null);
 }

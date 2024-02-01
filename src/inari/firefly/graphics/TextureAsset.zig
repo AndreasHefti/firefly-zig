@@ -1,17 +1,20 @@
 const std = @import("std");
-const firefly = @import("../firefly.zig"); // TODO better way for import package?
 const assert = std.debug.assert;
-const DynArray = firefly.utils.dynarray.DynArray;
-const api = firefly.api;
-const Aspect = firefly.utils.aspect.Aspect;
-const Asset = firefly.Asset;
+
+const api = @import("../api/api.zig"); // TODO module
+const utils = @import("../../utils/utils.zig");
+const graphics = @import("graphics.zig");
+
+const DynArray = utils.dynarray.DynArray;
+const Aspect = utils.aspect.Aspect;
+const Asset = api.Asset;
 const TextureData = api.TextureData;
-const String = firefly.utils.String;
-const NO_NAME = firefly.utils.NO_NAME;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const NO_BINDING = firefly.api.NO_BINDING;
-const BindingIndex = firefly.api.BindingIndex;
-const CInt = firefly.utils.CInt;
+const String = utils.String;
+const NO_NAME = utils.NO_NAME;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
+const NO_BINDING = api.NO_BINDING;
+const BindingIndex = api.BindingIndex;
+const CInt = utils.CInt;
 const Event = api.component.Event;
 const ActionType = api.component.ActionType;
 
@@ -19,13 +22,14 @@ var initialized = false;
 var resources: DynArray(TextureData) = undefined;
 
 pub var asset_type: *Aspect = undefined;
+pub const NULL_VALUE = TextureData{};
 
 pub fn init() !void {
     defer initialized = true;
     if (initialized) return;
 
     asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
-    resources = try DynArray(TextureData).init(firefly.COMPONENT_ALLOC, TextureData{});
+    resources = try DynArray(TextureData).init(api.COMPONENT_ALLOC, NULL_VALUE);
     Asset.subscribe(listener);
 }
 
@@ -55,8 +59,6 @@ pub fn new(data: Texture) *Asset {
     return Asset.new(Asset{
         .asset_type = asset_type,
         .name = data.asset_name,
-        .binding_by_index = bindingByAsset,
-        .binding_by_name = bindingByName,
         .resource_id = resources.add(
             TextureData{
                 .resource = data.resource_path,
@@ -70,23 +72,27 @@ pub fn new(data: Texture) *Asset {
     });
 }
 
-pub fn get(binding: BindingIndex) *TextureData {
-    return resources.register.get(binding);
+pub fn getResource(res_index: usize) *const TextureData {
+    return resources.get(res_index);
 }
 
-pub fn bindingByAsset(asset: *Asset, _: usize) BindingIndex {
-    return resources.register.get(asset.resource_id).binding;
+pub fn getResourceForIndex(res_index: usize, _: usize) *const TextureData {
+    return resources.get(res_index);
 }
 
-pub fn bindingByName(asset: *Asset, _: String) BindingIndex {
-    return resources.register.get(asset.resource_id).binding;
+pub fn getResourceForName(res_index: usize, _: String) *const TextureData {
+    return resources.get(res_index);
 }
 
 fn listener(e: Event) void {
+    var asset: *Asset = Asset.pool.byId(e.c_index);
+    if (asset_type.index != asset.asset_type.index)
+        return;
+
     switch (e.event_type) {
-        ActionType.Activated => load(Asset.pool.byId(e.c_index)),
-        ActionType.Deactivated => unload(Asset.pool.byId(e.c_index)),
-        ActionType.Disposing => delete(Asset.pool.byId(e.c_index)),
+        ActionType.Activated => load(asset),
+        ActionType.Deactivated => unload(asset),
+        ActionType.Disposing => delete(asset),
         else => {},
     }
 }
@@ -97,7 +103,7 @@ fn load(asset: *Asset) void {
     var tex_data = resources.get(asset.resource_id);
     if (tex_data.binding != NO_BINDING) return; // already loaded
 
-    firefly.RENDER_API.loadTexture(tex_data) catch {
+    api.RENDERING_API.loadTexture(tex_data) catch {
         std.log.err("Failed to load texture resource: {s}", .{tex_data.resource});
     };
 }
@@ -109,7 +115,7 @@ fn unload(asset: *Asset) void {
     var tex_data: *TextureData = resources.get(asset.resource_id);
     if (tex_data.binding == NO_BINDING) return;
 
-    firefly.RENDER_API.disposeTexture(tex_data) catch {
+    api.RENDERING_API.disposeTexture(tex_data) catch {
         std.log.err("Failed to dispose texture resource: {s}", .{tex_data.resource});
         return;
     };
@@ -125,16 +131,16 @@ fn delete(asset: *Asset) void {
 }
 
 test "TextureAsset init/deinit" {
-    try firefly.moduleInitDebug(std.testing.allocator);
-    defer firefly.moduleDeinit();
+    try graphics.init(std.testing.allocator, std.testing.allocator, std.testing.allocator);
+    defer graphics.deinit();
 
     try std.testing.expectEqual(@as(String, "Texture"), asset_type.name);
     try std.testing.expect(resources.size() == 0);
 }
 
 test "TextureAsset load/unload" {
-    try firefly.moduleInitDebug(std.testing.allocator);
-    defer firefly.moduleDeinit();
+    try graphics.init(std.testing.allocator, std.testing.allocator, std.testing.allocator);
+    defer graphics.deinit();
 
     var texture_asset: *Asset = new(Texture{
         .asset_name = "TestTexture",
@@ -150,12 +156,13 @@ test "TextureAsset load/unload" {
     var res: *TextureData = resources.get(texture_asset.resource_id);
     try std.testing.expectEqualStrings("path/TestTexture", res.resource);
     try std.testing.expect(res.binding == NO_BINDING); // not loaded yet
-    try std.testing.expect(texture_asset.binding() == NO_BINDING);
+    try std.testing.expect(texture_asset.getResource(@This()).binding == NO_BINDING);
 
     // load the texture... by name
     Asset.activateByName("TestTexture", true);
     try std.testing.expect(res.binding == 0); // now loaded
-    try std.testing.expect(texture_asset.binding() == 0);
+    try std.testing.expect(texture_asset.getResource(@This()).binding == 0);
+
     try std.testing.expect(res.width > 0);
     try std.testing.expect(res.height > 0);
     // dispose texture
@@ -177,8 +184,8 @@ test "TextureAsset load/unload" {
 }
 
 test "TextureAsset dispose" {
-    try firefly.moduleInitDebug(std.testing.allocator);
-    defer firefly.moduleDeinit();
+    try graphics.init(std.testing.allocator, std.testing.allocator, std.testing.allocator);
+    defer graphics.deinit();
 
     var texture_asset: *Asset = new(Texture{
         .asset_name = "TestTexture",
@@ -191,7 +198,6 @@ test "TextureAsset dispose" {
     var res: *TextureData = resources.get(texture_asset.resource_id);
     try std.testing.expectEqualStrings("path/TestTexture", res.resource);
     try std.testing.expect(res.binding != NO_BINDING); //  loaded yet
-    try std.testing.expect(texture_asset.binding() != NO_BINDING);
 
     // should also deactivate first
     Asset.disposeByName("TestTexture");
@@ -200,4 +206,21 @@ test "TextureAsset dispose" {
     // asset ref has been reset
     try std.testing.expect(texture_asset.index == UNDEF_INDEX);
     try std.testing.expectEqualStrings(texture_asset.name, NO_NAME);
+}
+
+test "get resources is const" {
+    try graphics.init(std.testing.allocator, std.testing.allocator, std.testing.allocator);
+    defer graphics.deinit();
+
+    var texture_asset: *Asset = new(Texture{
+        .asset_name = "TestTexture",
+        .resource_path = "path/TestTexture",
+        .is_mipmap = false,
+    });
+
+    // this shall get the NULL_VALUE since the asset is not loaded yet
+    var res = texture_asset.getResource(@This());
+    try std.testing.expect(res.binding == NO_BINDING);
+    // this is not possible at compile time: error: cannot assign to constant
+    //res.binding = 1;
 }

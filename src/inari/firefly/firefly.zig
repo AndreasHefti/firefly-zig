@@ -1,86 +1,51 @@
 const std = @import("std");
-pub const utils = @import("../utils/utils.zig"); // TODO better way for import package?
+const Allocator = std.mem.Allocator;
+pub const utils = @import("../utils/utils.zig");
+// TODO make modules
 pub const api = @import("api/api.zig");
 pub const graphics = @import("graphics/graphics.zig");
-pub const component = api.component;
-pub const system = api.system;
-pub const rendering_api = api.rendering_api;
 
-pub const Asset = @import("Asset.zig");
-pub const Entity = @import("Entity.zig");
+// pub const component = api.component;
+// pub const system = api.system;
+// pub const rendering_api = api.rendering_api;
 
-pub const Allocator = std.mem.Allocator;
+//pub const Asset = @import("Asset.zig");
+//pub const Entity = @import("Entity.zig");
 
-pub const FFAPIError = error{
-    GenericError,
-    SingletonAlreadyInitialized,
-    ComponentInitError,
-    RenderingInitError,
-    RenderingError,
-};
-
-pub const ActionType = enum {
-    CREATED,
-    ACTIVATED,
-    DEACTIVATED,
-    DISPOSED,
-};
-
-// module initialization
-var INIT = false;
-pub var COMPONENT_ALLOC: Allocator = undefined;
-pub var ENTITY_ALLOC: Allocator = undefined;
-pub var ALLOC: Allocator = undefined;
-
-pub var RENDER_API: rendering_api.RenderAPI() = undefined;
-
+//pub var RENDER_API: rendering_api.RenderAPI() = undefined;
+var initialized = false;
 pub fn moduleInitDebug(allocator: Allocator) !void {
-    defer INIT = true;
-    if (INIT) {
+    defer initialized = true;
+    if (initialized)
         return;
-    }
-    COMPONENT_ALLOC = allocator;
-    ENTITY_ALLOC = allocator;
-    ALLOC = allocator;
-    RENDER_API = try rendering_api.createDebugRenderAPI(ALLOC);
-    try initModules();
+
+    //RENDER_API = try rendering_api.createDebugRenderAPI(ALLOC);
+    try initModules(allocator, allocator, allocator);
 }
 
 pub fn moduleInitAlloc(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
-    defer INIT = true;
-    if (INIT) {
+    defer initialized = true;
+    if (initialized)
         return;
-    }
-    COMPONENT_ALLOC = component_allocator;
-    ENTITY_ALLOC = entity_allocator;
-    ALLOC = allocator;
+
     // TODO init default rendering_api impl here when available
-    RENDER_API = try rendering_api.createDebugRenderAPI(ALLOC);
-    try initModules();
+    //RENDER_API = try rendering_api.createDebugRenderAPI(ALLOC);
+    try initModules(component_allocator, entity_allocator, allocator);
 }
 
-fn initModules() !void {
+fn initModules(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
     // init root modules
-    try utils.aspect.init(ALLOC);
-    try api.init();
-    try Asset.init();
-
-    // register default components and entity components
-    component.registerComponent(Asset);
-    component.registerComponent(Entity);
-
-    // init depending modules
-    try graphics.init();
+    try utils.aspect.init(allocator);
+    try api.init(component_allocator, entity_allocator, allocator);
+    try graphics.init(component_allocator, entity_allocator, allocator);
 }
 
 pub fn moduleDeinit() void {
-    defer INIT = false;
-    if (!INIT)
+    defer initialized = false;
+    if (!initialized)
         return;
 
     graphics.deinit();
-    RENDER_API.deinit();
-    Asset.deinit();
     api.deinit();
     utils.aspect.deinit();
 }
@@ -97,11 +62,8 @@ test "init" {
     var sb = utils.StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    //sb.append("\n");
     utils.aspect.print(&sb);
     api.component.print(&sb);
-
-    //try std.io.getStdErr().writer().writeAll(sb.toString());
 
     var output: utils.String =
         \\Aspects:

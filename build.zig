@@ -1,4 +1,5 @@
 const std = @import("std");
+const Module = std.build.Module;
 
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
@@ -15,7 +16,8 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    _ = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
+    // modules
+    const utils = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
 
     const exe = b.addExecutable(.{
         .name = "firefly-zig",
@@ -62,6 +64,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .single_threaded = true,
     });
+    unit_tests.addModule("utils", utils);
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
 

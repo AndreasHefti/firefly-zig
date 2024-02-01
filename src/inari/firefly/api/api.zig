@@ -1,5 +1,7 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 
+const utils = @import("../../utils/utils.zig");
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
@@ -9,32 +11,76 @@ const PosF = utils.geom.PosF;
 const RectI = utils.geom.RectI;
 const RectF = utils.geom.RectF;
 const Color = utils.geom.Color;
+const rendering = @import("rendering_api.zig");
 
-pub const firefly = @import("../firefly.zig"); // TODO better way for import package?
-pub const utils = @import("../../utils/utils.zig"); // TODO better way for import package?
-pub const rendering_api = @import("rendering_api.zig");
-pub const component = @import("component.zig");
-pub const system = @import("system.zig");
-pub const BindingIndex = usize;
-pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
+//pub const RenderingAPI = @import("rendering_api.zig");
+pub const Component = @import("component.zig");
+pub const System = @import("system.zig");
+pub const Timer = @import("timer.zig");
+pub const Entity = @import("Entity.zig");
+pub const Asset = @import("Asset.zig");
 
+// module initialization
 var initialized = false;
 
-pub fn init() !void {
+pub var COMPONENT_ALLOC: Allocator = undefined;
+pub var ENTITY_ALLOC: Allocator = undefined;
+pub var ALLOC: Allocator = undefined;
+pub var RENDERING_API: rendering.RenderAPI() = undefined;
+
+pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
     defer initialized = true;
     if (initialized) return;
 
-    system.init();
-    try component.init();
+    COMPONENT_ALLOC = component_allocator;
+    ENTITY_ALLOC = entity_allocator;
+    ALLOC = allocator;
+
+    try utils.aspect.init(allocator);
+
+    // TODO make this configurable
+    RENDERING_API = try rendering.createDebugRenderAPI(allocator);
+
+    System.init();
+    try Component.init();
+    try Asset.init();
+
+    // register api based components and entity components
+    component.registerComponent(Asset);
+    component.registerComponent(Entity);
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized) return;
 
-    system.deinit();
-    component.deinit();
+    Asset.deinit();
+    System.deinit();
+    Component.deinit();
+    RENDERING_API.deinit();
+    utils.aspect.deinit();
 }
+
+pub const rendering_api = @import("rendering_api.zig");
+pub const component = @import("component.zig");
+pub const system = @import("system.zig");
+pub const BindingIndex = usize;
+pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
+
+pub const FFAPIError = error{
+    GenericError,
+    SingletonAlreadyInitialized,
+    ComponentInitError,
+    RenderingInitError,
+    RenderingError,
+};
+
+pub const ActionType = enum {
+    CREATED,
+    ACTIVATED,
+    DEACTIVATED,
+    DISPOSED,
+};
 
 /// Color blending modes
 pub const BlendMode = enum(CInt) {

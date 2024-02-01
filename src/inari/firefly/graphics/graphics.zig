@@ -1,15 +1,18 @@
 const std = @import("std");
-pub const firefly = @import("../firefly.zig"); // TODO better way for import package?
-pub const utils = @import("../../utils/utils.zig"); // TODO better way for import pack
+const Allocator = std.mem.Allocator;
+
+const api = @import("../api/api.zig");
+const utils = @import("../../utils/utils.zig");
 
 pub const TextureAsset = @import("TextureAsset.zig");
 
 var initialized = false;
 
-pub fn init() !void {
+pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
     defer initialized = true;
     if (initialized) return;
 
+    try api.init(component_allocator, entity_allocator, allocator);
     try TextureAsset.init();
 }
 
@@ -18,6 +21,7 @@ pub fn deinit() void {
     if (!initialized) return;
 
     TextureAsset.deinit();
+    api.deinit();
 }
 
 test {

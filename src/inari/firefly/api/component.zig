@@ -1,20 +1,21 @@
 const std = @import("std");
-const firefly = @import("api.zig").firefly;
-
-const StringBuffer = firefly.utils.StringBuffer;
 const trait = std.meta.trait;
-const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
-const AspectGroup = firefly.utils.aspect.AspectGroup;
-const EventDispatch = firefly.utils.event.EventDispatch;
-const aspect = firefly.utils.aspect;
+
+const utils = @import("../../utils/utils.zig");
+const api = @import("api.zig"); // TODO module
+
+const StringBuffer = utils.StringBuffer;
+const aspect = utils.aspect;
 const Aspect = aspect.Aspect;
-const DynArray = firefly.utils.dynarray.DynArray;
-const BitSet = firefly.utils.bitset.BitSet;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const NO_NAME = firefly.utils.NO_NAME;
-const String = firefly.utils.String;
+const AspectGroup = aspect.AspectGroup;
+const EventDispatch = utils.event.EventDispatch;
+const DynArray = utils.dynarray.DynArray;
+const BitSet = utils.bitset.BitSet;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
+const NO_NAME = utils.NO_NAME;
+const String = utils.String;
 
 // component global variables and state
 var INIT = false;
@@ -31,8 +32,8 @@ pub fn init() !void {
     if (INIT)
         return;
 
-    COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(firefly.COMPONENT_ALLOC, null);
-    ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(firefly.COMPONENT_ALLOC, null);
+    COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(api.COMPONENT_ALLOC, null);
+    ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(api.COMPONENT_ALLOC, null);
     COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("COMPONENT_ASPECT_GROUP");
     ENTITY_COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("ENTITY_COMPONENT_ASPECT_GROUP");
 }
@@ -195,18 +196,18 @@ pub fn ComponentPool(comptime T: type) type {
                 initialized = true;
             }
 
-            items = DynArray(T).init(firefly.COMPONENT_ALLOC, T.null_value) catch @panic("Init items failed");
-            active_mapping = BitSet.initEmpty(firefly.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
+            items = DynArray(T).init(api.COMPONENT_ALLOC, T.null_value) catch @panic("Init items failed");
+            active_mapping = BitSet.initEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
             c_aspect = COMPONENT_ASPECT_GROUP.getAspect(T.component_name);
 
             if (has_subscribe) {
                 event = Event{};
-                eventDispatch = EventDispatch(Event).init(firefly.COMPONENT_ALLOC);
+                eventDispatch = EventDispatch(Event).init(api.COMPONENT_ALLOC);
                 T.subscribe = Self.subscribe;
                 T.unsubscribe = Self.unsubscribe;
             }
 
-            if (has_name_mapping) name_mapping = StringHashMap(usize).init(firefly.COMPONENT_ALLOC);
+            if (has_name_mapping) name_mapping = StringHashMap(usize).init(api.COMPONENT_ALLOC);
             if (has_aspect) T.type_aspect = c_aspect;
             if (has_new) T.new = Self.register;
             if (has_disposeById) T.disposeById = Self.clear;
@@ -282,6 +283,10 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_onNew) T.onNew(index);
             notify(ActionType.Created, index);
             return result;
+        }
+
+        pub fn exists(index: usize) bool {
+            return items.exists(index);
         }
 
         pub fn byId(index: usize) *T {
@@ -440,7 +445,7 @@ pub fn EntityComponentPool(comptime T: type) type {
                 initialized = true;
             }
 
-            items = DynArray(T).init(firefly.COMPONENT_ALLOC, T.null_value) catch @panic("Init items failed");
+            items = DynArray(T).init(api.COMPONENT_ALLOC, T.null_value) catch @panic("Init items failed");
             c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(@typeName(T));
 
             if (has_aspect) T.type_aspect = c_aspect;
@@ -496,7 +501,7 @@ pub fn EntityComponentPool(comptime T: type) type {
         }
 
         fn toString() String {
-            var string_builder = ArrayList(u8).init(firefly.ALLOC);
+            var string_builder = ArrayList(u8).init(api.ALLOC);
             defer string_builder.deinit();
 
             var writer = string_builder.writer();

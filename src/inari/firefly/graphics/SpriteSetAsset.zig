@@ -1,43 +1,43 @@
 const std = @import("std");
-const firefly = @import("../firefly.zig"); // TODO better way for import package?
-const assert = std.debug.assert;
+const firefly = @import("graphics.zig").firefly;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const api = firefly.api;
 const Aspect = firefly.utils.aspect.Aspect;
 const Asset = firefly.Asset;
 const DynArray = firefly.utils.dynarray.DynArray;
-
 const SpriteData = api.SpriteData;
 const BindingIndex = api.BindingIndex;
 const String = firefly.utils.String;
-const NO_NAME = firefly.utils.NO_NAME;
-const NO_BINDING = firefly.api.NO_BINDING;
-const RectF = firefly.utils.geom.RectF;
-const Vec2f = firefly.utils.geom.Vector2f;
 const Event = api.component.Event;
 const ActionType = api.component.ActionType;
+const TextureData = firefly.api.TextureData;
+const NO_NAME = firefly.utils.NO_NAME;
+const NO_BINDING = firefly.api.NO_BINDING;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const RectF = firefly.utils.geom.RectF;
+const Vec2f = firefly.utils.geom.Vector2f;
 
 const SpriteSet = struct {
-    const NULL = SpriteData{};
-
-    texture_asset: BindingIndex,
     sprites: ArrayList(SpriteData) = undefined,
     name_mapping: StringHashMap(usize) = undefined,
+
+    fn byListIndex(self: *SpriteSet, index: usize) *SpriteData {
+        return &self.sprites.items[index];
+    }
 
     fn byName(self: *SpriteSet, name: String) *SpriteData {
         if (self.name_mapping.get(name)) |index| {
             return &self.sprites.items[index];
         } else {
             std.log.err("No sprite with name: {s} found", .{name});
-            return &NULL;
+            @panic("not found");
         }
     }
 };
 
 var initialized = false;
 var resources: DynArray(SpriteSet) = undefined;
-
 pub var asset_type: *Aspect = undefined;
 
 pub fn init() !void {
@@ -67,7 +67,7 @@ pub const SpriteStamp = struct {
 };
 
 pub const SpriteSetData = struct {
-    texture_asset: BindingIndex,
+    texture_asset_id: UNDEF_INDEX,
     stamp_region: RectF,
     sprite_dim: Vec2f,
     stamps: ?[]?SpriteStamp = null,
@@ -84,20 +84,22 @@ pub const SpriteSetData = struct {
 };
 
 pub fn new(data: SpriteSetData) *Asset {
-    if (!initialized) @panic("Firefly module not initialized");
+    if (!initialized)
+        @panic("Firefly module not initialized");
+
+    if (data.texture_asset_id != UNDEF_INDEX and Asset.pool.exists(data.texture_asset_id))
+        @panic("SpriteSetData has invalid TextureAsset reference id");
 
     var asset: *Asset = Asset.new(Asset{
         .asset_type = asset_type,
         .name = data.asset_name,
-        .binding_by_index = bindingByAsset,
-        .binding_by_name = bindingByName,
         .resource_id = resources.add(
             SpriteSet{
-                .texture_asset = data.texture_asset,
                 .sprites = ArrayList(SpriteData).init(firefly.COMPONENT_ALLOC),
                 .name_mapping = StringHashMap(usize).init(firefly.COMPONENT_ALLOC),
             },
         ),
+        .parent_asset_id = data.texture_asset_id,
     });
 
     const ss: *SpriteSet = resources.get(asset.resource_id);
@@ -126,27 +128,27 @@ pub fn new(data: SpriteSetData) *Asset {
     }
 }
 
-pub fn get(binding: BindingIndex, index: usize) *SpriteData {
-    return &resources.register.get(binding).sprites[index];
+pub fn getResource(res_index: usize) *SpriteSet {
+    return &resources.get(res_index).byListIndex(0);
 }
 
-pub fn getByName(binding: BindingIndex, name: String) *SpriteData {
-    &resources.register.get(binding).byName(name);
+pub fn getResourceForIndex(res_index: usize, list_index: usize) *SpriteSet {
+    return &resources.get(res_index).byListIndex(list_index);
 }
 
-pub fn bindingByAsset(_: *Asset, index: usize) BindingIndex {
-    return index;
-}
-
-pub fn bindingByName(asset: *Asset, name: String) BindingIndex {
-    return resources.register.get(asset.resource_id).name_mapping.get(name).? orelse NO_BINDING;
+pub fn getResourceForName(res_index: usize, name: String) *SpriteSet {
+    return resources.get(res_index).byName(name);
 }
 
 fn listener(e: Event) void {
+    var asset: *Asset = Asset.pool.byId(e.c_index);
+    if (asset_type.index != asset.asset_type.index)
+        return;
+
     switch (e.event_type) {
-        ActionType.Activated => load(Asset.pool.byId(e.c_index)),
-        ActionType.Deactivated => unload(Asset.pool.byId(e.c_index)),
-        ActionType.Disposing => delete(Asset.pool.byId(e.c_index)),
+        ActionType.Activated => load(asset),
+        ActionType.Deactivated => unload(asset),
+        ActionType.Disposing => delete(asset),
         else => {},
     }
 }
@@ -154,20 +156,19 @@ fn listener(e: Event) void {
 fn load(asset: *Asset) void {
     if (!initialized) @panic("Firefly module not initialized");
 
-    var data: *SpriteSet = resources.get(asset.resource_id);
-    if (Asset.byId(data.texture_asset).binding() == NO_BINDING) {
-        // load dependent texture asset first
-        Asset.activateById(data.texture_asset, true);
-        if (Asset.byId(data.texture_asset).binding() == NO_BINDING) {
-            std.log.err("Failed to load/activate dependent TextureAsset: {any}", .{Asset.byId(data.texture_asset)});
+    // check if texture asset is loaded, if not try to load
+    const texData: *const TextureData = Asset.byId(asset.parent_asset_id).getResource(TextureData);
+    if (texData.binding == NO_BINDING) {
+        Asset.activateById(asset.parent_asset_id, true);
+        if (texData.binding == NO_BINDING) {
+            std.log.err("Failed to load/activate dependent TextureAsset: {any}", .{Asset.byId(asset.parent_asset_id)});
             return;
         }
     }
 
-    const tex_binding_id = Asset.byId(data.texture_asset).binding();
-
+    var data: *SpriteSet = resources.get(asset.resource_id);
     for (data.sprites) |*s| {
-        s.texture_binding = tex_binding_id;
+        s.texture_binding = texData.binding;
     }
 }
 

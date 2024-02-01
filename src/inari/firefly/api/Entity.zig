@@ -1,17 +1,19 @@
 const std = @import("std");
-const firefly = @import("firefly.zig");
-
 const Allocator = std.mem.Allocator;
-const component = firefly.api.component;
-const CompLifecycleEvent = component.CompLifecycleEvent;
-const ComponentPool = firefly.api.component.ComponentPool;
-const AspectGroup = firefly.utils.aspect.AspectGroup;
-const aspect = firefly.utils.aspect;
+
+const api = @import("api.zig"); // TODO module
+const utils = @import("../../utils/utils.zig");
+
+const Component = api.Component;
+const CompLifecycleEvent = Component.CompLifecycleEvent;
+const ComponentPool = api.component.ComponentPool;
+const AspectGroup = utils.aspect.AspectGroup;
+const aspect = utils.aspect;
 const Kind = aspect.Kind;
 const Aspect = aspect.Aspect;
-const String = firefly.utils.String;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const NO_NAME = firefly.utils.NO_NAME;
+const String = utils.String;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
+const NO_NAME = utils.NO_NAME;
 const Entity = @This();
 
 // component type fields
@@ -27,8 +29,8 @@ pub var activateById: *const fn (usize, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
 pub var disposeById: *const fn (usize) void = undefined;
 pub var disposeByName: *const fn (String) void = undefined;
-pub var subscribe: *const fn (component.EventListener) void = undefined;
-pub var unsubscribe: *const fn (component.EventListener) void = undefined;
+pub var subscribe: *const fn (Component.EventListener) void = undefined;
+pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
 
 // struct fields
 index: usize = UNDEF_INDEX,
@@ -39,11 +41,11 @@ c_index: usize = UNDEF_INDEX,
 
 pub fn with(self: *Entity, c: anytype) *Entity {
     const T = @TypeOf(c);
-    _ = component.EntityComponentPool(T).register(@as(T, c));
+    _ = Component.EntityComponentPool(T).register(@as(T, c));
     self.kind.with(T.type_aspect);
     return self;
 }
 
 pub fn onDispose(index: usize) void {
-    component.clearAllEntityComponentsAt(index);
+    Component.clearAllEntityComponentsAt(index);
 }

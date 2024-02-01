@@ -1,8 +1,10 @@
 const std = @import("std");
-const firefly = @import("../firefly.zig"); // TODO better way for import package?
-
 const ArrayList = std.ArrayList;
-const Float = firefly.utils.Float;
+
+const utils = @import("../../utils/utils.zig");
+const api = @import("api.zig");
+
+const Float = utils.Float;
 
 const UpdateScheduler = struct {
     resolution: Float = 60,
@@ -25,7 +27,7 @@ var scheduler: ArrayList(UpdateScheduler) = undefined;
 pub fn init() void {
     defer initialized = true;
     if (initialized) return;
-    scheduler = ArrayList(UpdateScheduler).init(firefly.ALLOC);
+    scheduler = ArrayList(UpdateScheduler).init(api.ALLOC);
 }
 
 pub fn deinit() void {

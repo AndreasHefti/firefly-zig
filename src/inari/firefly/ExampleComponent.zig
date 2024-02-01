@@ -1,16 +1,19 @@
 const std = @import("std");
-const firefly = @import("firefly.zig");
+const firefly = @import("firefly.zig"); // TODO get rid of this?
 
-const component = firefly.api.component;
-const ComponentPool = firefly.api.component.ComponentPool;
-const CompLifecycleEvent = component.CompLifecycleEvent;
-const Aspect = firefly.utils.aspect.Aspect;
-const String = firefly.utils.String;
-const FFAPIError = firefly.FFAPIError;
-const Color = firefly.utils.geom.Color;
-const PosF = firefly.utils.geom.PosF;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const NO_NAME = firefly.utils.NO_NAME;
+const api = @import("api/api.zig"); // TODO module
+const utils = @import("../utils/utils.zig");
+
+const Component = api.Component;
+const ComponentPool = api.component.ComponentPool;
+const CompLifecycleEvent = Component.CompLifecycleEvent;
+const Aspect = utils.aspect.Aspect;
+const String = utils.String;
+const FFAPIError = FFAPIError;
+const Color = utils.geom.Color;
+const PosF = utils.geom.PosF;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
+const NO_NAME = utils.NO_NAME;
 const ExampleComponent = @This();
 
 // component type fields
@@ -26,8 +29,8 @@ pub var activateById: *const fn (usize, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
 pub var disposeById: *const fn (usize) void = undefined;
 pub var disposeByName: *const fn (String) void = undefined;
-pub var subscribe: *const fn (component.EventListener) void = undefined;
-pub var unsubscribe: *const fn (component.EventListener) void = undefined;
+pub var subscribe: *const fn (Component.EventListener) void = undefined;
+pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
 
 // struct fields
 index: usize = UNDEF_INDEX,
@@ -46,10 +49,9 @@ pub fn onDispose(index: usize) void {
 
 // Testing
 test "initialization" {
-    std.debug.print("\n", .{});
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
-    component.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var newC = ExampleComponent.new(ExampleComponent{
         .color = Color{ 1, 2, 3, 255 },
@@ -62,11 +64,9 @@ test "initialization" {
 }
 
 test "create/dispose component" {
-    std.debug.print("\n", .{});
-
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
-    component.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var cPtr = ExampleComponent.new(.{
         .color = Color{ 0, 0, 0, 255 },
@@ -134,7 +134,7 @@ test "create/dispose component" {
 test "name mapping" {
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
-    component.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var c1 = ExampleComponent.new(.{
         .color = Color{ 0, 0, 0, 255 },
@@ -158,7 +158,7 @@ test "name mapping" {
 test "event propagation" {
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
-    component.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     // also triggers auto init
     ExampleComponent.subscribe(testListener);
@@ -171,16 +171,14 @@ test "event propagation" {
     c1.activate(false);
 }
 
-fn testListener(event: component.Event) void {
-    std.debug.print("\n received: {any}\n", .{event});
+fn testListener(event: Component.Event) void {
+    std.debug.print("received: {any}\n", .{event});
 }
 
 test "get poll and process" {
-    std.debug.print("\n", .{});
-
     try firefly.moduleInitDebug(std.testing.allocator);
     defer firefly.moduleDeinit();
-    component.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var c1 = ExampleComponent.new(.{
         .color = Color{ 0, 0, 0, 255 },
@@ -207,7 +205,7 @@ test "get poll and process" {
     // };
     // _ = ptr;
 
-    var compId = component.ComponentId{
+    var compId = Component.ComponentId{
         .aspect = ExampleComponent.type_aspect,
         .index = c3.index,
     };
@@ -230,9 +228,9 @@ fn process() void {
 }
 
 fn processOne(c: *ExampleComponent) void {
-    std.debug.print("\n process {any}\n", .{c});
+    std.debug.print("process {any}\n", .{c});
 }
 
 fn processOneUnknown(c: anytype) void {
-    std.debug.print("\n process {any}\n", .{c});
+    std.debug.print("process {any}\n", .{c});
 }
