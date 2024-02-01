@@ -1,11 +1,12 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-pub const utils = @import("utils");
+
 // TODO make modules
+pub const utils = @import("../utils/utils.zig");
 pub const api = @import("api/api.zig");
 pub const graphics = @import("graphics/graphics.zig");
 
-// pub const component = api.component;
+// pub const component = api.Component;
 // pub const system = api.system;
 // pub const rendering_api = api.rendering_api;
 
@@ -51,19 +52,18 @@ pub fn moduleDeinit() void {
 }
 
 test {
-    std.testing.refAllDecls(@import("api/api.zig"));
-    std.testing.refAllDecls(@import("graphics/graphics.zig"));
+    std.testing.refAllDecls(@This());
     std.testing.refAllDecls(@import("ExampleComponent.zig"));
 }
 
-test "init" {
+test "Firefly init" {
     try moduleInitDebug(std.testing.allocator);
     defer moduleDeinit();
     var sb = utils.StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
     utils.aspect.print(&sb);
-    api.component.print(&sb);
+    api.Component.print(&sb);
 
     var output: utils.String =
         \\Aspects:
@@ -78,7 +78,6 @@ test "init" {
         \\  Asset size: 0
         \\  Entity size: 0
     ;
-    //try std.io.getStdErr().writer().writeAll(output);
 
     try std.testing.expectEqualStrings(output, sb.toString());
 }

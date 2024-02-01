@@ -1,9 +1,8 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
-
-const utils = @import("utils");
 const api = @import("api.zig");
 
+const utils = api.utils;
 const Float = utils.Float;
 
 const UpdateScheduler = struct {

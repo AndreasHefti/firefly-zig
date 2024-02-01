@@ -1,7 +1,7 @@
 const std = @import("std");
-const utils = @import("utils");
 const api = @import("api.zig");
 
+const utils = api.utils;
 const FFAPIError = api.FFAPIError;
 const DynArray = utils.dynarray.DynArray;
 const BindingIndex = api.BindingIndex;

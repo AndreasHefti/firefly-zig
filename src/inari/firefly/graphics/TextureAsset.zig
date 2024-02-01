@@ -2,8 +2,10 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const api = @import("../api/api.zig"); // TODO module
-const utils = @import("utils");
+
 const graphics = @import("graphics.zig");
+
+const utils = graphics.utils;
 
 const DynArray = utils.dynarray.DynArray;
 const Aspect = utils.aspect.Aspect;
@@ -15,8 +17,8 @@ const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_BINDING = api.NO_BINDING;
 const BindingIndex = api.BindingIndex;
 const CInt = utils.CInt;
-const Event = api.component.Event;
-const ActionType = api.component.ActionType;
+const Event = api.Component.Event;
+const ActionType = api.Component.ActionType;
 
 var initialized = false;
 var resources: DynArray(TextureData) = undefined;

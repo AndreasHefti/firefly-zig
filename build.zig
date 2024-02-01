@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // modules
-    const utils = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
+    //const utils = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
 
     const exe = b.addExecutable(.{
         .name = "firefly-zig",
@@ -27,6 +27,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    //exe.addModule("utils", utils);
+    //exe.addModule("utils", utils);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
@@ -59,14 +62,17 @@ pub fn build(b: *std.Build) void {
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const unit_tests = b.addTest(.{
+        .name = "firefly_test",
         .root_source_file = .{ .path = "src/inari/libtest.zig" },
         .target = target,
         .optimize = optimize,
         .single_threaded = true,
     });
-    unit_tests.addModule("utils", utils);
+    b.installArtifact(unit_tests);
+    //unit_tests.addModule("utils", utils);
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
+    run_unit_tests.has_side_effects = true;
 
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request

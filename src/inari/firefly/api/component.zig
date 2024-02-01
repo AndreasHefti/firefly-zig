@@ -3,9 +3,9 @@ const trait = std.meta.trait;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 
-const utils = @import("utils");
 const api = @import("api.zig"); // TODO module
 
+const utils = api.utils;
 const StringBuffer = utils.StringBuffer;
 const aspect = utils.aspect;
 const Aspect = aspect.Aspect;

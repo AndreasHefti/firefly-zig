@@ -61,9 +61,5 @@ test "StringBuffer" {
 }
 
 test {
-    std.testing.refAllDecls(@import("bitset.zig"));
-    std.testing.refAllDecls(@import("dynarray.zig"));
-    std.testing.refAllDecls(@import("geom.zig"));
-    std.testing.refAllDecls(@import("event.zig"));
-    std.testing.refAllDecls(@import("aspect.zig"));
+    std.testing.refAllDecls(@This());
 }

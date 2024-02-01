@@ -1,7 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const utils = @import("utils");
+pub const utils = @import("../../utils/utils.zig");
+
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
@@ -46,8 +47,8 @@ pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocat
     try Asset.init();
 
     // register api based components and entity components
-    component.registerComponent(Asset);
-    component.registerComponent(Entity);
+    Component.registerComponent(Asset);
+    Component.registerComponent(Entity);
 }
 
 pub fn deinit() void {
@@ -62,7 +63,6 @@ pub fn deinit() void {
 }
 
 pub const rendering_api = @import("rendering_api.zig");
-pub const component = @import("component.zig");
 pub const system = @import("system.zig");
 pub const BindingIndex = usize;
 pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);

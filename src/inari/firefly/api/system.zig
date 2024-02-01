@@ -1,7 +1,7 @@
 const std = @import("std");
-const utils = @import("utils");
 const api = @import("api.zig");
 
+const utils = api.utils;
 const trait = std.meta.trait;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;

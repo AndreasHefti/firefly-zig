@@ -2,11 +2,11 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const api = @import("api.zig"); // TODO module
-const utils = @import("utils");
 
+const utils = api.utils;
 const Component = api.Component;
 const CompLifecycleEvent = Component.CompLifecycleEvent;
-const ComponentPool = api.component.ComponentPool;
+const ComponentPool = Component.ComponentPool;
 const AspectGroup = utils.aspect.AspectGroup;
 const aspect = utils.aspect;
 const Kind = aspect.Kind;
