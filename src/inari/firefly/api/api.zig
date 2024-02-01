@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const utils = @import("../../utils/utils.zig");
+const utils = @import("utils");
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
@@ -14,9 +14,9 @@ const Color = utils.geom.Color;
 const rendering = @import("rendering_api.zig");
 
 //pub const RenderingAPI = @import("rendering_api.zig");
-pub const Component = @import("component.zig");
-pub const System = @import("system.zig");
-pub const Timer = @import("timer.zig");
+pub const Component = @import("Component.zig");
+pub const System = @import("System.zig");
+pub const Timer = @import("Timer.zig");
 pub const Entity = @import("Entity.zig");
 pub const Asset = @import("Asset.zig");
 

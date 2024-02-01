@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const api = @import("api.zig"); // TODO module
-const utils = @import("../../utils/utils.zig");
+const utils = @import("utils");
 
 const Component = api.Component;
 const ComponentPool = api.Component.ComponentPool;

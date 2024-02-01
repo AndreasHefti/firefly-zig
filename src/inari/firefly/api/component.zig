@@ -3,7 +3,7 @@ const trait = std.meta.trait;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 
-const utils = @import("../../utils/utils.zig");
+const utils = @import("utils");
 const api = @import("api.zig"); // TODO module
 
 const StringBuffer = utils.StringBuffer;

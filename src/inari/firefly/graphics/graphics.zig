@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const api = @import("../api/api.zig");
-const utils = @import("../../utils/utils.zig");
+const utils = @import("utils");
 
 pub const TextureAsset = @import("TextureAsset.zig");
 

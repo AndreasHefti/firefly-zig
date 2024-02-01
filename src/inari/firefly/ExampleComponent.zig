@@ -2,7 +2,7 @@ const std = @import("std");
 const firefly = @import("firefly.zig"); // TODO get rid of this?
 
 const api = @import("api/api.zig"); // TODO module
-const utils = @import("../utils/utils.zig");
+const utils = @import("utils");
 
 const Component = api.Component;
 const ComponentPool = api.component.ComponentPool;
