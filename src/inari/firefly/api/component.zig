@@ -122,6 +122,15 @@ pub fn registerEntityComponent(comptime T: type) void {
     EntityComponentPool(T).init();
 }
 
+pub inline fn checkValid(any_component: anytype) void {
+    if (!@hasField(any_component, "index")) {
+        @panic("No valid component. No index field");
+    }
+    if (any_component.index == utils.UNDEF_INDEX) {
+        @panic("No valid component. Undefined index");
+    }
+}
+
 pub fn ComponentPool(comptime T: type) type {
     // check component type constraints and function refs
     comptime var has_aspect: bool = false;
@@ -141,8 +150,8 @@ pub fn ComponentPool(comptime T: type) type {
     comptime var has_onDispose: bool = false;
     comptime {
         if (!trait.is(.Struct)(T)) @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"null_value"})) @compileError("Expects component type to have member named 'null_value' that is the types null value.");
-        if (!trait.hasDecls(T, .{"component_name"})) @compileError("Expects component type to have member named 'component_name' that defines a unique name of the component type.");
+        if (!trait.hasDecls(T, .{"NULL_VALUE"})) @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
+        if (!trait.hasDecls(T, .{"COMPONENT_NAME"})) @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
         has_name_mapping = trait.hasField("name")(T);
         has_aspect = trait.hasDecls(T, .{"type_aspect"});
         has_new = trait.hasDecls(T, .{"new"});
@@ -195,9 +204,9 @@ pub fn ComponentPool(comptime T: type) type {
                 initialized = true;
             }
 
-            items = DynArray(T).init(api.COMPONENT_ALLOC, T.null_value) catch @panic("Init items failed");
+            items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
             active_mapping = BitSet.initEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
-            c_aspect = COMPONENT_ASPECT_GROUP.getAspect(T.component_name);
+            c_aspect = COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_NAME);
 
             if (has_subscribe) {
                 event = Event{};
@@ -303,7 +312,8 @@ pub fn ComponentPool(comptime T: type) type {
 
         pub fn activate(index: usize, a: bool) void {
             active_mapping.setValue(index, a);
-            if (has_onActivation) T.onActivation(index, a);
+            if (has_onActivation)
+                T.onActivation(index, a);
             notify(if (a) ActionType.Activated else ActionType.Deactivated, index);
         }
 
@@ -410,8 +420,8 @@ pub fn EntityComponentPool(comptime T: type) type {
     comptime var has_onDispose: bool = false;
     comptime {
         if (!trait.is(.Struct)(T)) @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"null_value"})) @compileError("Expects component type to have member named 'null_value' that is the types null value.");
-        if (!trait.hasDecls(T, .{"component_name"})) @compileError("Expects component type to have member named 'component_name' that defines a unique name of the component type.");
+        if (!trait.hasDecls(T, .{"NULL_VALUE"})) @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
+        if (!trait.hasDecls(T, .{"COMPONENT_NAME"})) @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
         has_aspect = trait.hasDecls(T, .{"type_aspect"});
         has_byId = trait.hasDecls(T, .{"byId"});
         has_onNew = trait.hasDecls(T, .{"onNew"});
@@ -444,7 +454,7 @@ pub fn EntityComponentPool(comptime T: type) type {
                 initialized = true;
             }
 
-            items = DynArray(T).init(api.COMPONENT_ALLOC, T.null_value) catch @panic("Init items failed");
+            items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
             c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(@typeName(T));
 
             if (has_aspect) T.type_aspect = c_aspect;

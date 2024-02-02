@@ -139,6 +139,12 @@ pub const TextureData = struct {
     t_wrap: CInt = -1,
     min_filter: CInt = -1,
     mag_filter: CInt = -1,
+};
+
+pub const RenderTextureData = struct {
+    binding: BindingIndex = NO_BINDING,
+    width: CInt = 0,
+    height: CInt = 0,
     fbo_scale: Float = 1,
 };
 

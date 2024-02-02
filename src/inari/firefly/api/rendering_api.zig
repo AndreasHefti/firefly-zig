@@ -9,6 +9,7 @@ const NO_BINDING = api.NO_BINDING;
 const BlendMode = api.BlendMode;
 const ViewData = api.ViewData;
 const TextureData = api.TextureData;
+const RenderTextureData = api.RenderTextureData;
 const ShaderData = api.ShaderData;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
@@ -34,27 +35,27 @@ pub fn RenderAPI() type {
         /// @param textureId binding identifier of the texture to dispose.
         disposeTexture: *const fn (*TextureData) FFAPIError!void = undefined,
 
-        createRenderTexture: *const fn (*TextureData) FFAPIError!void = undefined,
-        disposeRenderTexture: *const fn (*TextureData) FFAPIError!void = undefined,
+        createRenderTexture: *const fn (*RenderTextureData) FFAPIError!void = undefined,
+        disposeRenderTexture: *const fn (*RenderTextureData) FFAPIError!void = undefined,
         /// create new shader from given shader data and load it to GPU
         createShader: *const fn (*ShaderData) FFAPIError!void = undefined,
         /// Dispose the shader with the given binding identifier (shaderId) from GPU
         /// @param shaderId identifier of the shader to dispose.
         disposeShader: *const fn (*ShaderData) FFAPIError!void = undefined,
 
-        /// Start rendering to the given render texture or to the screen if no binding index is given
+        /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
         /// Use given render data as default rendering attributes
         startRendering: *const fn (?BindingIndex) void = undefined,
         /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
         /// @param shaderId The instance identifier of the shader.
         setActiveShader: *const fn (BindingIndex) FFAPIError!void = undefined,
-        // TODO
+        /// This renders a given RenderTextureData (BindingIndex) to the actual render target that can be
+        /// rendering texture or the screen
         renderTexture: *const fn (BindingIndex, *TransformData, ?*RenderData, ?*Vector2f) void = undefined,
         // TODO
         renderSprite: *const fn (*SpriteData, *TransformData, ?*RenderData, ?*Vector2f) void = undefined,
-        /// This is called form the firefly API to notify the end of rendering for a specified [ViewData].
-        /// @param view [ViewData] that is ending to be rendered
-        endRendering: *const fn (?BindingIndex) void = undefined,
+        /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
+        endRendering: *const fn () void = undefined,
 
         deinit: *const fn () void = undefined,
 
@@ -81,9 +82,9 @@ pub fn createDebugRenderAPI(allocator: std.mem.Allocator) !RenderAPI() {
 
 /// This implementation of RenderAPI can be used for debugging
 ///
-/// var render_api = RenderAPI().init(RenderAPI.initImpl);
+/// var render_api = RenderAPI().init(DebugRenderAPI.initImpl);
 /// or
-/// var render_api = RenderAPI().init(RenderAPI.initScreen(800, 600).initImpl);
+/// var render_api = RenderAPI().init(DebugRenderAPI.initScreen(800, 600).initImpl);
 const DebugRenderAPI = struct {
     pub var screen_width: CInt = 800;
     pub var screen_height: CInt = 600;
@@ -93,9 +94,19 @@ const DebugRenderAPI = struct {
     const defaultOffset = Vector2f{ 0, 0 };
     const defaultRenderData = RenderData{};
 
+    const RenderAction = struct {
+        render_texture: ?BindingIndex = null,
+        render_sprite: ?SpriteData = null,
+        transform: TransformData,
+        render: RenderData,
+        offset: Vector2f,
+    };
+
     var textures: DynArray(TextureData) = undefined;
-    var renderTextures: DynArray(TextureData) = undefined;
+    var renderTextures: DynArray(RenderTextureData) = undefined;
     var shaders: DynArray(ShaderData) = undefined;
+
+    var renderActionQueue: DynArray(RenderAction) = undefined;
 
     var currentRenderTexture: ?BindingIndex = null;
     var currentShader: ?BindingIndex = null;
@@ -105,8 +116,9 @@ const DebugRenderAPI = struct {
     fn initImpl(interface: *RenderAPI(), allocator: std.mem.Allocator) !void {
         alloc = allocator;
         textures = try DynArray(TextureData).init(allocator, null);
-        renderTextures = try DynArray(TextureData).init(allocator, null);
+        renderTextures = try DynArray(RenderTextureData).init(allocator, null);
         shaders = try DynArray(ShaderData).init(allocator, null);
+        renderActionQueue = try DynArray(RenderAction).init(allocator, null);
 
         interface.deinit = deinit;
 
@@ -153,11 +165,9 @@ const DebugRenderAPI = struct {
         textureData.height = 1;
         textureData.binding = textures.add(textureData.*);
         textures.get(textureData.binding).binding = textureData.binding;
-        //std.debug.print("loadTexture: {any}\n", .{textureData.*});
     }
 
     pub fn disposeTexture(textureData: *TextureData) FFAPIError!void {
-        //std.debug.print("disposeTexture: {any}\n", .{textureData.*});
         if (textureData.binding != NO_BINDING) {
             textures.reset(textureData.binding);
             textureData.binding = NO_BINDING;
@@ -166,14 +176,12 @@ const DebugRenderAPI = struct {
         }
     }
 
-    pub fn createRenderTexture(textureData: *TextureData) FFAPIError!void {
+    pub fn createRenderTexture(textureData: *RenderTextureData) FFAPIError!void {
         textureData.binding = renderTextures.add(textureData.*);
         renderTextures.get(textureData.binding).binding = textureData.binding;
-        //std.debug.print("createRenderTexture: {any}\n", .{textureData.*});
     }
 
-    pub fn disposeRenderTexture(textureData: *TextureData) FFAPIError!void {
-        //std.debug.print("disposeRenderTexture: {any}\n", .{textureData.*});
+    pub fn disposeRenderTexture(textureData: *RenderTextureData) FFAPIError!void {
         if (textureData.binding != NO_BINDING) {
             renderTextures.reset(textureData.binding);
             textureData.binding = NO_BINDING;
@@ -183,11 +191,9 @@ const DebugRenderAPI = struct {
     pub fn createShader(shaderData: *ShaderData) FFAPIError!void {
         shaderData.binding = shaders.add(shaderData.*);
         shaders.get(shaderData.binding).binding = shaderData.binding;
-        //std.debug.print("createShader: {any}\n", .{shaderData.*});
     }
 
     pub fn disposeShader(shaderData: *ShaderData) FFAPIError!void {
-        //std.debug.print("disposeShader: {any}\n", .{shaderData.*});
         if (shaderData.binding != NO_BINDING) {
             shaders.reset(shaderData.binding);
             shaderData.binding = NO_BINDING;
@@ -195,32 +201,30 @@ const DebugRenderAPI = struct {
     }
 
     pub fn startRendering(textureId: ?BindingIndex) void {
-        //std.debug.print("startRendering: {any}\n", .{textureId});
         if (textureId) |id| {
             currentRenderTexture = id;
         }
     }
 
     pub fn setActiveShader(shaderId: BindingIndex) FFAPIError!void {
-        //std.debug.print("setActiveShader: {any}\n", .{shaderId});
         currentShader = shaderId;
     }
 
     pub fn renderTexture(textureId: BindingIndex, transform: *TransformData, renderData: ?*RenderData, offset: ?*Vector2f) void {
+        _ = transform;
         var textureData = textures.get(textureId);
-        std.debug.print("renderTexture: {any}\n", .{textureData.*});
-        if (currentRenderTexture) |rti| {
-            std.debug.print("  render to: {any}\n", .{textures.get(rti)});
-        } else {
-            std.debug.print("  render to: screen\n", .{});
-        }
-        std.debug.print("  with TransformData: {any}\n", .{transform.*});
+        _ = textureData;
+        // std.debug.print("renderTexture: {any}\n", .{textureData.*});
+        // if (currentRenderTexture) |rti| {
+        //     std.debug.print("  render to: {any}\n", .{textures.get(rti)});
+        // } else {
+        //     std.debug.print("  render to: screen\n", .{});
+        // }
+        // std.debug.print("  with TransformData: {any}\n", .{transform.*});
         if (renderData) |rd| {
-            std.debug.print("  with RenderData: {any}\n", .{rd.*});
             currentRenderData = rd;
         }
         if (offset) |o| {
-            std.debug.print("  with render offset: {any}\n", .{o.*});
             currentOffset = o;
         }
     }
@@ -245,8 +249,8 @@ const DebugRenderAPI = struct {
         }
     }
 
-    pub fn endRendering(textureId: ?BindingIndex) void {
-        std.debug.print("endRendering: {any}\n", .{textureId});
+    pub fn endRendering() void {
+        std.debug.print("endRendering: {any}\n", .{currentRenderTexture});
         currentRenderTexture = null;
     }
 };
@@ -266,7 +270,7 @@ test "debug init" {
     api.RENDERING_API.showFPS(&fpsPos);
 
     var t1 = TextureData{ .resource = "t1" };
-    var t2 = TextureData{ .resource = "t2" };
+    var t2 = RenderTextureData{};
     var sprite = SpriteData{};
     var transform = TransformData{};
     var renderData = RenderData{};

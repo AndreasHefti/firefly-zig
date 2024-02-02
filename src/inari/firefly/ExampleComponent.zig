@@ -16,8 +16,8 @@ const NO_NAME = utils.NO_NAME;
 const ExampleComponent = @This();
 
 // component type fields
-pub const null_value = ExampleComponent{};
-pub const component_name = "ExampleComponent";
+pub const NULL_VALUE = ExampleComponent{};
+pub const COMPONENT_NAME = "ExampleComponent";
 pub const pool = ComponentPool(ExampleComponent);
 // component type pool references
 pub var type_aspect: *Aspect = undefined;
