@@ -27,8 +27,6 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-
-    //exe.addModule("utils", utils);
     //exe.addModule("utils", utils);
 
     // This declares intent for the executable to be installed into the
@@ -68,7 +66,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .single_threaded = true,
     });
-    b.installArtifact(unit_tests);
     //unit_tests.addModule("utils", utils);
 
     const run_unit_tests = b.addRunArtifact(unit_tests);

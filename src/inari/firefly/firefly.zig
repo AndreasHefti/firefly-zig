@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 
 // TODO make modules
 pub const utils = @import("../utils/utils.zig");
+//pub const utils = @import("utils");
 pub const api = @import("api/api.zig");
 pub const graphics = @import("graphics/graphics.zig");
 

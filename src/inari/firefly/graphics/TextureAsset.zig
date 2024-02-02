@@ -1,24 +1,26 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-const api = @import("../api/api.zig"); // TODO module
-
 const graphics = @import("graphics.zig");
-
+const api = graphics.api;
 const utils = graphics.utils;
 
-const DynArray = utils.dynarray.DynArray;
 const Aspect = utils.aspect.Aspect;
 const Asset = api.Asset;
-const TextureData = api.TextureData;
-const String = utils.String;
-const NO_NAME = utils.NO_NAME;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
-const NO_BINDING = api.NO_BINDING;
+const DynArray = utils.dynarray.DynArray;
+const SpriteData = api.SpriteData;
 const BindingIndex = api.BindingIndex;
-const CInt = utils.CInt;
+const String = utils.String;
 const Event = api.Component.Event;
 const ActionType = api.Component.ActionType;
+const TextureData = api.TextureData;
+const RectF = utils.geom.RectF;
+const Vec2f = utils.geom.Vector2f;
+const CInt = utils.CInt;
+
+const NO_NAME = utils.NO_NAME;
+const NO_BINDING = api.NO_BINDING;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 var initialized = false;
 var resources: DynArray(TextureData) = undefined;

@@ -1,12 +1,11 @@
 const std = @import("std");
-const api = @import("api.zig");
 
+const api = @import("api.zig");
 const utils = api.utils;
 const trait = std.meta.trait;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
-
 const String = utils.String;
 
 var SYSTEMS: StringHashMap(System) = undefined;

@@ -1,22 +1,26 @@
 const std = @import("std");
-const firefly = @import("graphics.zig").firefly;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
-const api = firefly.api;
-const Aspect = firefly.utils.aspect.Aspect;
-const Asset = firefly.Asset;
-const DynArray = firefly.utils.dynarray.DynArray;
+
+const graphics = @import("graphics.zig");
+const api = graphics.api;
+const utils = graphics.utils;
+
+const Aspect = utils.aspect.Aspect;
+const Asset = api.Asset;
+const DynArray = utils.dynarray.DynArray;
 const SpriteData = api.SpriteData;
 const BindingIndex = api.BindingIndex;
-const String = firefly.utils.String;
+const String = utils.String;
 const Event = api.Component.Event;
 const ActionType = api.Component.ActionType;
-const TextureData = firefly.api.TextureData;
-const NO_NAME = firefly.utils.NO_NAME;
-const NO_BINDING = firefly.api.NO_BINDING;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const RectF = firefly.utils.geom.RectF;
-const Vec2f = firefly.utils.geom.Vector2f;
+const TextureData = api.TextureData;
+
+const NO_NAME = utils.NO_NAME;
+const NO_BINDING = api.NO_BINDING;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
+const RectF = utils.geom.RectF;
+const Vec2f = utils.geom.Vector2f;
 
 const SpriteSet = struct {
     sprites: ArrayList(SpriteData) = undefined,
@@ -45,7 +49,7 @@ pub fn init() !void {
     if (initialized) return;
 
     asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("SpriteSet");
-    resources = DynArray(SpriteSet).init(firefly.COMPONENT_ALLOC, SpriteSet{});
+    resources = DynArray(SpriteSet).init(api.COMPONENT_ALLOC, SpriteSet{});
     Asset.subscribe(listener);
 }
 
@@ -95,8 +99,8 @@ pub fn new(data: SpriteSetData) *Asset {
         .name = data.asset_name,
         .resource_id = resources.add(
             SpriteSet{
-                .sprites = ArrayList(SpriteData).init(firefly.COMPONENT_ALLOC),
-                .name_mapping = StringHashMap(usize).init(firefly.COMPONENT_ALLOC),
+                .sprites = ArrayList(SpriteData).init(api.COMPONENT_ALLOC),
+                .name_mapping = StringHashMap(usize).init(api.COMPONENT_ALLOC),
             },
         ),
         .parent_asset_id = data.texture_asset_id,

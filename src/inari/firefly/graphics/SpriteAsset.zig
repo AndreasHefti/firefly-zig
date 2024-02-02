@@ -1,34 +1,39 @@
 const std = @import("std");
-const firefly = @import("graphics.zig").firefly;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
-const api = firefly.api;
-const Aspect = firefly.utils.aspect.Aspect;
-const Asset = firefly.Asset;
-const DynArray = firefly.utils.dynarray.DynArray;
+
+const graphics = @import("graphics.zig");
+const api = graphics.api;
+const utils = graphics.utils;
+
+const Aspect = utils.aspect.Aspect;
+const Asset = api.Asset;
+const DynArray = utils.dynarray.DynArray;
 const SpriteData = api.SpriteData;
 const BindingIndex = api.BindingIndex;
-const String = firefly.utils.String;
+const String = utils.String;
 const Event = api.Component.Event;
 const ActionType = api.Component.ActionType;
 const TextureData = api.TextureData;
-const NO_NAME = firefly.utils.NO_NAME;
-const NO_BINDING = firefly.api.NO_BINDING;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const RectF = firefly.utils.geom.RectF;
-const Vec2f = firefly.utils.geom.Vector2f;
+
+const NO_NAME = utils.NO_NAME;
+const NO_BINDING = api.NO_BINDING;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
+const RectF = utils.geom.RectF;
+const Vec2f = utils.geom.Vector2f;
+
+pub var asset_type: *Aspect = undefined;
+pub const NULL_VALUE = SpriteData{};
 
 var initialized = false;
 var resources: DynArray(SpriteData) = undefined;
-pub var asset_type: *Aspect = undefined;
-pub const NULL_VALUE = SpriteData{};
 
 pub fn init() !void {
     defer initialized = true;
     if (initialized) return;
 
     asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Sprite");
-    resources = DynArray(SpriteData).init(firefly.COMPONENT_ALLOC, NULL_VALUE);
+    resources = DynArray(SpriteData).init(api.COMPONENT_ALLOC, NULL_VALUE);
     Asset.subscribe(listener);
 }
 

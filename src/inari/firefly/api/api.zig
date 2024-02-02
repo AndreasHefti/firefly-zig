@@ -1,8 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-pub const utils = @import("../../utils/utils.zig");
-
+const rendering = @import("rendering_api.zig");
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
@@ -12,23 +11,24 @@ const PosF = utils.geom.PosF;
 const RectI = utils.geom.RectI;
 const RectF = utils.geom.RectF;
 const Color = utils.geom.Color;
-const rendering = @import("rendering_api.zig");
 
-//pub const RenderingAPI = @import("rendering_api.zig");
+pub const utils = @import("../../utils/utils.zig");
+//pub const utils = @import("utils");
 pub const Component = @import("Component.zig");
 pub const System = @import("System.zig");
 pub const Timer = @import("Timer.zig");
 pub const Entity = @import("Entity.zig");
 pub const Asset = @import("Asset.zig");
-
-// module initialization
-var initialized = false;
+pub const BindingIndex = usize;
+pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
 pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
 pub var RENDERING_API: rendering.RenderAPI() = undefined;
 
+// module initialization
+var initialized = false;
 pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
     defer initialized = true;
     if (initialized) return;
@@ -61,11 +61,6 @@ pub fn deinit() void {
     RENDERING_API.deinit();
     utils.aspect.deinit();
 }
-
-pub const rendering_api = @import("rendering_api.zig");
-pub const system = @import("system.zig");
-pub const BindingIndex = usize;
-pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
 pub const FFAPIError = error{
     GenericError,

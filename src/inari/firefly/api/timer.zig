@@ -1,7 +1,7 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
-const api = @import("api.zig");
 
+const api = @import("api.zig");
 const utils = api.utils;
 const Float = utils.Float;
 

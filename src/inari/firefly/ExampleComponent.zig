@@ -1,9 +1,8 @@
 const std = @import("std");
-const firefly = @import("firefly.zig"); // TODO get rid of this?
 
+const firefly = @import("firefly.zig");
 const api = @import("api/api.zig"); // TODO module
-const utils = firefly.utils;
-
+const utils = api.utils;
 const Component = api.Component;
 const ComponentPool = api.Component.ComponentPool;
 const CompLifecycleEvent = Component.CompLifecycleEvent;
