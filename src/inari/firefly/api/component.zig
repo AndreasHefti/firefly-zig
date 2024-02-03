@@ -135,6 +135,9 @@ pub fn ComponentPool(comptime T: type) type {
     // check component type constraints and function refs
     comptime var has_aspect: bool = false;
     comptime var has_new: bool = false;
+    comptime var has_exists: bool = false;
+    comptime var has_existsName: bool = false;
+    comptime var has_get: bool = false;
     comptime var has_byId: bool = false;
     comptime var has_byName: bool = false;
     comptime var has_activateById: bool = false;
@@ -154,7 +157,11 @@ pub fn ComponentPool(comptime T: type) type {
         if (!trait.hasDecls(T, .{"COMPONENT_NAME"})) @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
         has_name_mapping = trait.hasField("name")(T);
         has_aspect = trait.hasDecls(T, .{"type_aspect"});
+
         has_new = trait.hasDecls(T, .{"new"});
+        has_exists = trait.hasDecls(T, .{"exists"});
+        has_existsName = trait.hasDecls(T, .{"existsName"});
+        has_get = trait.hasDecls(T, .{"get"});
         has_disposeById = trait.hasDecls(T, .{"disposeById"});
         has_disposeByName = trait.hasDecls(T, .{"disposeByName"});
         has_byId = trait.hasDecls(T, .{"byId"});
@@ -218,6 +225,9 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_name_mapping) name_mapping = StringHashMap(usize).init(api.COMPONENT_ALLOC);
             if (has_aspect) T.type_aspect = c_aspect;
             if (has_new) T.new = Self.register;
+            if (has_exists) T.exists = Self.exists;
+            if (has_existsName) T.existsName = Self.existsName;
+            if (has_get) T.get = Self.get;
             if (has_disposeById) T.disposeById = Self.clear;
             if (has_name_mapping and has_disposeByName) T.disposeByName = Self.clearByName;
             if (has_byId) T.byId = Self.byId;
@@ -297,17 +307,33 @@ pub fn ComponentPool(comptime T: type) type {
             return items.exists(index);
         }
 
-        pub fn byId(index: usize) *T {
+        pub fn get(index: usize) *T {
+            const ret = items.get(index);
+            if (ret.index == UNDEF_INDEX) {
+                std.log.err("No Component with index: {d} of type: {s}", .{ index, T.COMPONENT_NAME });
+                @panic("Component does not exist");
+            }
+            return ret;
+        }
+
+        pub fn byId(index: usize) *const T {
             return items.get(index);
         }
 
-        pub fn byName(name: String) ?*T {
+        pub fn existsName(name: String) bool {
+            if (name_mapping) |*nm| {
+                return nm.contains(name);
+            }
+            return false;
+        }
+
+        pub fn byName(name: String) *const T {
             if (name_mapping) |*nm| {
                 if (nm.get(name)) |index| {
                     return items.get(index);
                 }
             }
-            return null;
+            return &T.NULL_VALUE;
         }
 
         pub fn activate(index: usize, a: bool) void {

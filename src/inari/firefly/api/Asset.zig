@@ -39,8 +39,11 @@ pub const pool = Component.ComponentPool(Asset);
 // component type pool references
 pub var type_aspect: *Aspect = undefined;
 pub var new: *const fn (Asset) *Asset = undefined;
-pub var byId: *const fn (usize) *Asset = undefined;
-pub var byName: *const fn (String) ?*Asset = undefined;
+pub var exists: *const fn (usize) bool = undefined;
+pub var existsName: *const fn (String) bool = undefined;
+pub var get: *const fn (usize) *Asset = undefined;
+pub var byId: *const fn (usize) *const Asset = undefined;
+pub var byName: *const fn (String) *const Asset = undefined;
 pub var activateById: *const fn (usize, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
 pub var disposeById: *const fn (usize) void = undefined;

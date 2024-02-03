@@ -89,7 +89,7 @@ pub fn getResourceForName(res_index: usize, _: String) *const TextureData {
 }
 
 fn listener(e: Event) void {
-    var asset: *Asset = Asset.pool.byId(e.c_index);
+    var asset: *Asset = Asset.pool.get(e.c_index);
     if (asset_type.index != asset.asset_type.index)
         return;
 

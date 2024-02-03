@@ -22,8 +22,11 @@ pub const pool = ComponentPool(ExampleComponent);
 // component type pool references
 pub var type_aspect: *Aspect = undefined;
 pub var new: *const fn (ExampleComponent) *ExampleComponent = undefined;
-pub var byId: *const fn (usize) *ExampleComponent = undefined;
-pub var byName: *const fn (String) ?*ExampleComponent = undefined;
+pub var exists: *const fn (usize) bool = undefined;
+pub var existsName: *const fn (String) bool = undefined;
+pub var get: *const fn (usize) *ExampleComponent = undefined;
+pub var byId: *const fn (usize) *const ExampleComponent = undefined;
+pub var byName: *const fn (String) *const ExampleComponent = undefined;
 pub var activateById: *const fn (usize, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
 pub var disposeById: *const fn (usize) void = undefined;
@@ -57,7 +60,7 @@ test "initialization" {
         .position = PosF{ 10, 20 },
     });
     var newCPtr = ExampleComponent.byId(newC.index);
-    try std.testing.expectEqual(newC, newCPtr);
+    //try std.testing.expectEqual(newC, newCPtr);
     try std.testing.expectEqual(newC.*, newCPtr.*);
     try std.testing.expectEqual(@as(String, "ExampleComponent"), ExampleComponent.pool.c_aspect.name);
 }
@@ -98,17 +101,17 @@ test "create/dispose component" {
     try std.testing.expect(ExampleComponent.pool.count() == 1);
     try std.testing.expect(ExampleComponent.pool.activeCount() == 1);
 
-    var otherCPtr = ExampleComponent.byId(cPtr.index);
+    var editableCPtr = ExampleComponent.get(cPtr.index);
 
-    try std.testing.expect(otherCPtr.index == 0);
-    try std.testing.expect(otherCPtr.color[0] == 0);
-    try std.testing.expect(otherCPtr.color[1] == 0);
-    try std.testing.expect(otherCPtr.color[2] == 0);
-    try std.testing.expect(otherCPtr.color[3] == 255);
-    try std.testing.expect(otherCPtr.position[0] == 111);
-    try std.testing.expect(otherCPtr.position[1] == 10);
+    try std.testing.expect(editableCPtr.index == 0);
+    try std.testing.expect(editableCPtr.color[0] == 0);
+    try std.testing.expect(editableCPtr.color[1] == 0);
+    try std.testing.expect(editableCPtr.color[2] == 0);
+    try std.testing.expect(editableCPtr.color[3] == 255);
+    try std.testing.expect(editableCPtr.position[0] == 111);
+    try std.testing.expect(editableCPtr.position[1] == 10);
 
-    otherCPtr.color[0] = 255;
+    editableCPtr.color[0] = 255;
 
     try std.testing.expect(cPtr.color[0] == 255);
     try std.testing.expect(cPtr.color[1] == 0);
@@ -117,7 +120,7 @@ test "create/dispose component" {
     try std.testing.expect(cPtr.position[0] == 111);
     try std.testing.expect(cPtr.position[1] == 10);
 
-    ExampleComponent.disposeById(otherCPtr.index);
+    ExampleComponent.disposeById(editableCPtr.index);
 
     try std.testing.expect(cPtr.color[0] == 0);
     try std.testing.expect(cPtr.color[1] == 0);
@@ -139,6 +142,7 @@ test "name mapping" {
         .color = Color{ 0, 0, 0, 255 },
         .position = PosF{ 10, 10 },
     });
+    _ = c1;
 
     var c2 = ExampleComponent.new(.{
         .name = "c2",
@@ -146,12 +150,16 @@ test "name mapping" {
         .position = PosF{ 20, 20 },
     });
 
-    var _c2 = ExampleComponent.pool.byName("c2");
-    var _c1_ = ExampleComponent.pool.byName(c1.name);
+    try std.testing.expect(ExampleComponent.existsName("c2"));
+    try std.testing.expect(!ExampleComponent.existsName("c1"));
 
-    try std.testing.expect(_c2 != null);
-    try std.testing.expectEqual(c2, _c2.?);
-    try std.testing.expect(_c1_ == null);
+    var _c2 = ExampleComponent.byName("c2");
+    var c3 = ExampleComponent.byName("c3"); // c3 doesn't exists so it gives back the NULL VALUE
+
+    try std.testing.expect(_c2.index != NULL_VALUE.index);
+    try std.testing.expectEqual(c2.*, _c2.*);
+    try std.testing.expect(c3.index == NULL_VALUE.index);
+    try std.testing.expectEqual(c3.*, NULL_VALUE);
 }
 
 test "event propagation" {

@@ -21,8 +21,11 @@ pub const pool = Component.ComponentPool(Layer);
 // component type pool references
 pub var type_aspect: *Aspect = undefined;
 pub var new: *const fn (Layer) *Layer = undefined;
-pub var byId: *const fn (usize) *Layer = undefined;
-pub var byName: *const fn (String) ?*Layer = undefined;
+pub var exists: *const fn (usize) bool = undefined;
+pub var existsName: *const fn (String) bool = undefined;
+pub var get: *const fn (usize) *Layer = undefined;
+pub var byId: *const fn (usize) *const Layer = undefined;
+pub var byName: *const fn (String) *const Layer = undefined;
 pub var activateById: *const fn (usize, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
 pub var disposeById: *const fn (usize) void = undefined;

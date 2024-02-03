@@ -60,6 +60,20 @@ test "StringBuffer" {
     try std.testing.expectEqualStrings("Test12Test34Test56", str);
 }
 
+test "repl test" {
+    var v = getReadwrite();
+    v[0] = 0;
+}
+
+var v1: geom.Vector2f = geom.Vector2f{ 0, 0 };
+pub fn getReadonly() *const geom.Vector2f {
+    return &v1;
+}
+
+pub fn getReadwrite() *geom.Vector2f {
+    return &v1;
+}
+
 test {
     std.testing.refAllDecls(@This());
 }
