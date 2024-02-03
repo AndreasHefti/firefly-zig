@@ -2,6 +2,8 @@ const std = @import("std");
 const api = @import("api.zig");
 
 const utils = api.utils;
+const StringBuffer = utils.StringBuffer;
+const String = utils.String;
 const FFAPIError = api.FFAPIError;
 const DynArray = utils.dynarray.DynArray;
 const BindingIndex = api.BindingIndex;
@@ -98,8 +100,28 @@ const DebugRenderAPI = struct {
         render_texture: ?BindingIndex = null,
         render_sprite: ?SpriteData = null,
         transform: TransformData,
-        render: RenderData,
-        offset: Vector2f,
+        render: ?RenderData,
+        offset: ?Vector2f,
+
+        pub fn format(
+            self: RenderAction,
+            comptime _: []const u8,
+            _: std.fmt.FormatOptions,
+            writer: anytype,
+        ) !void {
+            if (self.render_texture) |rt| {
+                _ = rt;
+                try writer.print(
+                    "render texture {any} -->\n     {any},\n     {any},\n     offset:{any}",
+                    .{ self.render_texture, self.transform, self.render, self.offset },
+                );
+            } else {
+                try writer.print(
+                    "render {any} -->\n     {any},\n     {any},\n     offset:{any}",
+                    .{ self.render_sprite, self.transform, self.render, self.offset },
+                );
+            }
+        }
     };
 
     var textures: DynArray(TextureData) = undefined;
@@ -142,6 +164,7 @@ const DebugRenderAPI = struct {
     }
 
     fn deinit() void {
+        renderActionQueue.deinit();
         textures.deinit();
         renderTextures.deinit();
         shaders.deinit();
@@ -211,47 +234,72 @@ const DebugRenderAPI = struct {
     }
 
     pub fn renderTexture(textureId: BindingIndex, transform: *TransformData, renderData: ?*RenderData, offset: ?*Vector2f) void {
-        _ = transform;
-        var textureData = textures.get(textureId);
-        _ = textureData;
-        // std.debug.print("renderTexture: {any}\n", .{textureData.*});
-        // if (currentRenderTexture) |rti| {
-        //     std.debug.print("  render to: {any}\n", .{textures.get(rti)});
-        // } else {
-        //     std.debug.print("  render to: screen\n", .{});
-        // }
-        // std.debug.print("  with TransformData: {any}\n", .{transform.*});
         if (renderData) |rd| {
             currentRenderData = rd;
         }
         if (offset) |o| {
             currentOffset = o;
         }
+        _ = renderActionQueue.add(RenderAction{
+            .render_texture = textureId,
+            .transform = transform.*,
+            .render = if (renderData) |sd| sd.* else null,
+            .offset = if (offset) |sd| sd.* else null,
+        });
     }
 
     pub fn renderSprite(spriteData: *SpriteData, transform: *TransformData, renderData: ?*RenderData, offset: ?*Vector2f) void {
-        std.debug.print("renderSprite: {any}\n", .{spriteData.*});
-        var textureData = textures.get(spriteData.texture_binding);
-        std.debug.print("  texture: {any}\n", .{textureData.*});
-        if (currentRenderTexture) |rti| {
-            std.debug.print("  render to: {any}\n", .{textures.get(rti)});
-        } else {
-            std.debug.print("  render to: screen\n", .{});
-        }
-        std.debug.print("  with TransformData: {any}\n", .{transform.*});
         if (renderData) |rd| {
-            std.debug.print("  with RenderData: {any}\n", .{rd.*});
             currentRenderData = rd;
         }
         if (offset) |o| {
-            std.debug.print("  with render offset: {any}\n", .{o.*});
             currentOffset = o;
         }
+        _ = renderActionQueue.add(RenderAction{
+            .render_sprite = spriteData.*,
+            .transform = transform.*,
+            .render = if (renderData) |sd| sd.* else null,
+            .offset = if (offset) |sd| sd.* else null,
+        });
     }
 
     pub fn endRendering() void {
-        std.debug.print("endRendering: {any}\n", .{currentRenderTexture});
         currentRenderTexture = null;
+    }
+
+    pub fn printDebugRendering(buffer: *StringBuffer) void {
+        buffer.append("\n******************************\n");
+        buffer.append("Debug Rendering API State:\n");
+
+        buffer.append(" loaded textures:\n");
+        var texitr = DebugRenderAPI.textures.iterator();
+        while (texitr.next()) |tex| {
+            buffer.print("   {any}\n", .{tex});
+        }
+
+        buffer.append(" loaded render textures:\n");
+        var rtexitr = DebugRenderAPI.renderTextures.iterator();
+        while (rtexitr.next()) |tex| {
+            buffer.print("   {any}\n", .{tex});
+        }
+
+        buffer.append(" loaded shaders:\n");
+        var sitr = DebugRenderAPI.shaders.iterator();
+        while (sitr.next()) |s| {
+            buffer.print("   {any}\n", .{s});
+        }
+
+        buffer.append(" current state:\n");
+        buffer.print("   RenderTexture: {any}\n", .{DebugRenderAPI.currentRenderTexture});
+        buffer.print("   RenderData: {any}\n", .{DebugRenderAPI.currentRenderData});
+        buffer.print("   Shader: {any}\n", .{DebugRenderAPI.currentShader});
+        buffer.print("   Offset: {any}\n", .{DebugRenderAPI.currentOffset.*});
+
+        buffer.append(" render actions:\n");
+        var aitr = DebugRenderAPI.renderActionQueue.iterator();
+        while (aitr.next()) |a| {
+            buffer.print("   {any}\n", .{a});
+        }
     }
 };
 
@@ -290,5 +338,38 @@ test "debug init" {
     // test creating another DebugGraphics will get the same instance back
     var debugGraphics2 = try createDebugRenderAPI(std.testing.allocator);
     try std.testing.expectEqual(api.RENDERING_API, debugGraphics2);
-    debugGraphics2.renderSprite(&sprite, &transform, &renderData, null);
+    var offset = Vector2f{ 10, 10 };
+    debugGraphics2.renderSprite(&sprite, &transform, &renderData, &offset);
+
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    const api_out: String =
+        \\
+        \\******************************
+        \\Debug Rendering API State:
+        \\ loaded textures:
+        \\   TextureData[ res:t1, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
+        \\ loaded render textures:
+        \\   RenderTextureData[ bind:0, w:0, h:0, fbo:1 ]
+        \\ loaded shaders:
+        \\ current state:
+        \\   RenderTexture: null
+        \\   RenderData: RenderData[ clear:true, ccolor:{ 0, 0, 0, 255 }, tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
+        \\   Shader: null
+        \\   Offset: { 1.0e+01, 1.0e+01 }
+        \\ render actions:
+        \\   render SpriteData[ bind:0, bounds:{ 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00 } ] -->
+        \\     TransformData[ pos:{ 1.0e+01, 1.0e+02 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
+        \\     RenderData[ clear:true, ccolor:{ 0, 0, 0, 255 }, tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
+        \\     offset:null
+        \\   render SpriteData[ bind:0, bounds:{ 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00 } ] -->
+        \\     TransformData[ pos:{ 1.0e+01, 1.0e+02 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
+        \\     RenderData[ clear:true, ccolor:{ 0, 0, 0, 255 }, tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
+        \\     offset:{ 1.0e+01, 1.0e+01 }
+        \\
+    ;
+    DebugRenderAPI.printDebugRendering(&sb);
+    //std.debug.print("\n{s}", .{sb.toString()});
+    try std.testing.expectEqualStrings(api_out, sb.toString());
 }

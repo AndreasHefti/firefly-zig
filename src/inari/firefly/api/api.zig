@@ -139,6 +139,18 @@ pub const TextureData = struct {
     t_wrap: CInt = -1,
     min_filter: CInt = -1,
     mag_filter: CInt = -1,
+
+    pub fn format(
+        self: TextureData,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "TextureData[ res:{s}, bind:{d}, w:{d}, h:{d}, mipmap:{}, wrap:{}|{}, minmag:{}|{}]",
+            self,
+        );
+    }
 };
 
 pub const RenderTextureData = struct {
@@ -146,6 +158,18 @@ pub const RenderTextureData = struct {
     width: CInt = 0,
     height: CInt = 0,
     fbo_scale: Float = 1,
+
+    pub fn format(
+        self: RenderTextureData,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "RenderTextureData[ bind:{d}, w:{d}, h:{d}, fbo:{d} ]",
+            self,
+        );
+    }
 };
 
 // TODO
@@ -181,6 +205,18 @@ pub const TransformData = struct {
     pub fn hasScale(self: *TransformData) bool {
         return self.scale[0] != 1 or self.scale[2] != 1;
     }
+
+    pub fn format(
+        self: TransformData,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "TransformData[ pos:{any}, pivot:{any}, scale:{any}, rot:{d} ]",
+            self,
+        );
+    }
 };
 
 pub const RenderData = struct {
@@ -188,6 +224,18 @@ pub const RenderData = struct {
     clear_color: Color = Color{ 0, 0, 0, 255 },
     tint_color: Color = Color{ 255, 255, 255, 255 },
     blend_mode: BlendMode = BlendMode.ALPHA,
+
+    pub fn format(
+        self: RenderData,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "RenderData[ clear:{}, ccolor:{any}, tint:{any}, blend:{} ]",
+            self,
+        );
+    }
 };
 
 pub const SpriteData = struct {
@@ -204,6 +252,18 @@ pub const SpriteData = struct {
     pub fn flip_y(self: *SpriteData) void {
         self.texture_bounds[1] = self.texture_bounds[1] + self.texture_bounds[3];
         self.texture_bounds[3] = -self.texture_bounds[3];
+    }
+
+    pub fn format(
+        self: SpriteData,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "SpriteData[ bind:{d}, bounds:{any} ]",
+            self,
+        );
     }
 };
 

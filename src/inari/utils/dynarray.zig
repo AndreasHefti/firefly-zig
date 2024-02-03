@@ -1,6 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const BitSet = @import("bitset.zig").BitSet;
+const utils = @import("utils.zig");
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 const DynArrayError = error{IllegalSlotAccess};
 
@@ -11,6 +13,20 @@ pub fn DynArrayUndefined(comptime T: type) type {
 pub fn DynArray(comptime T: type) type {
     return struct {
         const Self = @This();
+
+        pub const Iterator = struct {
+            array: *DynArray(T) = undefined,
+            index: usize = UNDEF_INDEX,
+
+            pub fn next(self: *Iterator) ?*T {
+                if (self.index == UNDEF_INDEX)
+                    return null;
+
+                var n = self.array.get(self.index);
+                self.index = self.array.slots.nextSetBit(self.index + 1) orelse UNDEF_INDEX;
+                return n;
+            }
+        };
 
         null_value: ?T = undefined,
         register: Register(T) = undefined,
@@ -74,6 +90,13 @@ pub fn DynArray(comptime T: type) type {
                 }
                 self.slots.setValue(index, false);
             }
+        }
+
+        pub fn iterator(self: *Self) Iterator {
+            return Iterator{
+                .array = self,
+                .index = self.slots.nextSetBit(0) orelse UNDEF_INDEX,
+            };
         }
     };
 }
