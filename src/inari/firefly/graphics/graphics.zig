@@ -10,6 +10,7 @@ pub const SpriteSetAsset = @import("SpriteSetAsset.zig");
 pub const ShaderAsset = @import("ShaderAsset.zig");
 pub const Layer = @import("view/Layer.zig");
 pub const View = @import("view/View.zig");
+pub const ETransform = @import("view/ETransform.zig");
 
 var initialized = false;
 

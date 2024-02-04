@@ -5,7 +5,6 @@ const api = @import("../../api/api.zig"); // TODO module
 const graphics = @import("../graphics.zig");
 
 const Component = api.Component;
-const Kind = api.utils.aspect.Kind;
 const Aspect = api.utils.aspect.Aspect;
 const String = api.utils.String;
 const Vec2f = api.utils.geom.Vector2f;
@@ -43,7 +42,7 @@ view_id: Index,
 shader_binding: api.BindingIndex = api.NO_BINDING,
 
 pub fn setViewByName(self: *Layer, view_name: String) void {
-    self.view_ref = View.byName(view_name).id;
+    self.view_id = View.byName(view_name).id;
 }
 
 pub fn withShader(self: *Layer, id: Index) void {

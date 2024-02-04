@@ -43,8 +43,10 @@ kind: Kind = undefined,
 parent_id: Index = UNDEF_INDEX,
 
 pub fn withComponent(self: *Entity, c: anytype) *Entity {
+    checkValid(c);
+
     const T = @TypeOf(c);
-    _ = Component.EntityComponentPool(T).register(@as(T, c));
+    _ = EntityComponentPool(T).register(@as(T, c), self.id);
     self.kind.with(T.type_aspect);
     return self;
 }
@@ -95,6 +97,40 @@ pub fn deinit() void {
 
 pub fn registerEntityComponent(comptime T: type) void {
     EntityComponentPool(T).init();
+}
+
+pub inline fn checkValid(any_component: anytype) void {
+    if (!isValid(any_component))
+        @panic("Invalid Entity Component");
+}
+
+pub fn isValid(any_component: anytype) bool {
+    const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
+    const c_type = switch (info) {
+        .Pointer => @TypeOf(any_component.*),
+        .Struct => @TypeOf(any_component),
+        else => {
+            std.log.err("No valid type entity component: {any}", .{any_component});
+            return false;
+        },
+    };
+
+    if (!@hasField(c_type, "id")) {
+        std.log.err("No valid entity component. No id field: {any}", .{any_component});
+        return false;
+    }
+
+    if (!EntityComponentPool(c_type).c_aspect.isOfGroup(ENTITY_COMPONENT_ASPECT_GROUP)) {
+        std.log.err("No valid entity component. AspectGroup mismatch: {any}", .{any_component});
+        return false;
+    }
+
+    if (any_component.id == api.UNDEF_INDEX) {
+        std.log.err("No valid entity component. Undefined id: {any}", .{any_component});
+        return false;
+    }
+
+    return true;
 }
 
 pub fn EntityComponentPool(comptime T: type) type {

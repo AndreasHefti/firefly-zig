@@ -105,32 +105,35 @@ pub fn registerComponent(comptime T: type) void {
 
 pub inline fn checkValid(any_component: anytype) void {
     if (!isValid(any_component))
-        @panic("No valid component");
+        @panic("Invalid component type");
 }
 
 pub fn isValid(any_component: anytype) bool {
     const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
-    switch (info) {
-        .Pointer => {
-            if (!@hasField(@TypeOf(any_component.*), "id")) {
-                std.log.err("No valid component. No id field: {any}", .{any_component});
-                return false;
-            }
-        },
-        .Struct => {
-            if (!@hasField(@TypeOf(any_component), "id")) {
-                std.log.err("No valid component. No id field: {any}", .{any_component});
-                return false;
-            }
-        },
+    const c_type = switch (info) {
+        .Pointer => @TypeOf(any_component.*),
+        .Struct => @TypeOf(any_component),
         else => {
-            std.log.err("No valid type component: {any}", .{any_component});
+            std.log.err("Invalid type component: {any}", .{any_component});
             return false;
         },
+    };
+
+    if (!@hasField(c_type, "id")) {
+        std.log.err("Invalid component. No id field: {any}", .{any_component});
+        return false;
+    }
+
+    if (@intFromPtr(c_type.type_aspect) == 0) {
+        std.log.err("Invalid component. aspect not initialized: {any}", .{any_component});
+        return false;
+    } else if (!c_type.type_aspect.isOfGroup(COMPONENT_ASPECT_GROUP)) {
+        std.log.err("Invalid component. AspectGroup mismatch: {any}", .{any_component});
+        return false;
     }
 
     if (any_component.id == api.UNDEF_INDEX) {
-        std.log.err("No valid component. Undefined id: {any}", .{any_component});
+        std.log.err("Invalid component. Undefined id: {any}", .{any_component});
         return false;
     }
 

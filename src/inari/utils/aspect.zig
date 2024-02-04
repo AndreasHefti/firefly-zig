@@ -44,6 +44,14 @@ pub const Aspect = struct {
     group: *AspectGroup,
     name: String,
     index: u8,
+
+    pub fn sameGroup(self: *Aspect, other: *const Aspect) bool {
+        return std.mem.eql(u8, self.group.name, other.group.name);
+    }
+
+    pub fn isOfGroup(self: *Aspect, group: *const AspectGroup) bool {
+        return std.mem.eql(u8, self.group.name, group.name);
+    }
 };
 
 pub const AspectGroup = struct {

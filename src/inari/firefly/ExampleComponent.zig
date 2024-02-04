@@ -94,14 +94,16 @@ test "valid component" {
     });
     var newCPtr = ExampleComponent.byId(newC.id);
 
-    var invalid = ExampleComponent{
+    var invalid1 = ExampleComponent{
+        .id = 0,
         .color = Color{ 1, 2, 3, 255 },
         .position = PosF{ 10, 20 },
     };
 
     try std.testing.expect(Component.isValid(newC));
     try std.testing.expect(Component.isValid(newCPtr));
-    try std.testing.expect(!Component.isValid(invalid));
+    try std.testing.expect(!Component.isValid(invalid1));
+    try std.testing.expect(!Component.isValid(firefly.graphics.ETransform{}));
 }
 
 test "create/dispose component" {

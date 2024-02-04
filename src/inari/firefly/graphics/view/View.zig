@@ -7,7 +7,6 @@ const graphics = @import("../graphics.zig");
 
 const Layer = graphics.Layer;
 const Component = api.Component;
-const Kind = api.utils.aspect.Kind;
 const Aspect = api.utils.aspect.Aspect;
 const String = api.utils.String;
 const TransformData = api.TransformData;
