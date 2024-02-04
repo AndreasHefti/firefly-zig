@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const BitSet = @import("bitset.zig").BitSet;
 const utils = @import("utils.zig");
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const UNDEF_INDEX = std.math.maxInt(usize);
 
 const DynArrayError = error{IllegalSlotAccess};
 
@@ -257,17 +257,23 @@ test "scale up" {
 }
 
 test "consistency checks" {
-    const testing = std.testing;
-    const allocator = std.testing.allocator;
-
-    var dyn_array = try DynArray(i32).init(allocator, -1);
+    var dyn_array = try DynArray(i32).init(std.testing.allocator, -1);
     defer dyn_array.deinit();
 
-    try testing.expect(-1 == dyn_array.null_value);
+    try std.testing.expect(-1 == dyn_array.null_value);
     dyn_array.set(100, 0);
     dyn_array.set(100, 100);
-    try testing.expect(dyn_array.exists(0));
-    try testing.expect(dyn_array.exists(100));
-    try testing.expect(!dyn_array.exists(101));
-    try testing.expect(!dyn_array.exists(2000));
+    try std.testing.expect(dyn_array.exists(0));
+    try std.testing.expect(dyn_array.exists(100));
+    try std.testing.expect(!dyn_array.exists(101));
+    try std.testing.expect(!dyn_array.exists(2000));
+}
+
+test "use u16 as index" {
+    var dyn_array = try DynArray(i32).init(std.testing.allocator, -1);
+    defer dyn_array.deinit();
+
+    const index1: u16 = 0;
+
+    dyn_array.set(0, index1);
 }

@@ -12,32 +12,26 @@ const AspectGroup = aspect.AspectGroup;
 const EventDispatch = utils.event.EventDispatch;
 const DynArray = utils.dynarray.DynArray;
 const BitSet = utils.bitset.BitSet;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Index = api.Index;
+const UNDEF_INDEX = api.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 const String = utils.String;
 
 // component global variables and state
 var INIT = false;
 var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
-var ENTITY_COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
-
 // public aspect groups
 pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
-pub var ENTITY_COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
-// module init
 pub fn init() !void {
     defer INIT = true;
     if (INIT)
         return;
 
     COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(api.COMPONENT_ALLOC, null);
-    ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(api.COMPONENT_ALLOC, null);
     COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("COMPONENT_ASPECT_GROUP");
-    ENTITY_COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("ENTITY_COMPONENT_ASPECT_GROUP");
 }
 
-// module deinit
 pub fn deinit() void {
     defer INIT = false;
     if (!INIT)
@@ -50,26 +44,17 @@ pub fn deinit() void {
     COMPONENT_INTERFACE_TABLE.deinit();
     COMPONENT_INTERFACE_TABLE = undefined;
 
-    // deinit all registered entity component pools via aspect interface mapping
-    for (0..ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
-        ENTITY_COMPONENT_INTERFACE_TABLE.get(ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).deinit();
-    }
-    ENTITY_COMPONENT_INTERFACE_TABLE.deinit();
-    ENTITY_COMPONENT_INTERFACE_TABLE = undefined;
-
     aspect.disposeAspectGroup("COMPONENT_ASPECT_GROUP");
     COMPONENT_ASPECT_GROUP = undefined;
-    aspect.disposeAspectGroup("ENTITY_COMPONENT_TYPE_ASPECT_GROUP");
-    ENTITY_COMPONENT_ASPECT_GROUP = undefined;
 }
 
 pub const ComponentId = struct {
     aspect: *Aspect = undefined,
-    index: usize = undefined,
+    id: Index = undefined,
 };
 
 pub const ComponentTypeInterface = struct {
-    clear: *const fn (usize) void,
+    clear: *const fn (Index) void,
     deinit: *const fn () void,
     to_string: *const fn (*StringBuffer) void,
 };
@@ -100,7 +85,7 @@ pub const ActionType = enum {
 
 pub const Event = struct {
     event_type: ActionType = ActionType.NONE,
-    c_index: usize = UNDEF_INDEX,
+    c_id: Index = UNDEF_INDEX,
 
     pub fn format(
         self: Event,
@@ -108,7 +93,7 @@ pub const Event = struct {
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.print("Event[ type: {any}, index: {d}]", .{ self.event_type, self.c_index });
+        try writer.print("Event[ type: {any}, id: {d}]", .{ self.event_type, self.c_id });
     }
 };
 
@@ -118,20 +103,42 @@ pub fn registerComponent(comptime T: type) void {
     ComponentPool(T).init();
 }
 
-pub fn registerEntityComponent(comptime T: type) void {
-    EntityComponentPool(T).init();
+pub inline fn checkValid(any_component: anytype) void {
+    if (!isValid(any_component))
+        @panic("No valid component");
 }
 
-pub inline fn checkValid(any_component: anytype) void {
-    if (!@hasField(any_component, "index")) {
-        @panic("No valid component. No index field");
+pub fn isValid(any_component: anytype) bool {
+    const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
+    switch (info) {
+        .Pointer => {
+            if (!@hasField(@TypeOf(any_component.*), "id")) {
+                std.log.err("No valid component. No id field: {any}", .{any_component});
+                return false;
+            }
+        },
+        .Struct => {
+            if (!@hasField(@TypeOf(any_component), "id")) {
+                std.log.err("No valid component. No id field: {any}", .{any_component});
+                return false;
+            }
+        },
+        else => {
+            std.log.err("No valid type component: {any}", .{any_component});
+            return false;
+        },
     }
-    if (any_component.index == utils.UNDEF_INDEX) {
-        @panic("No valid component. Undefined index");
+
+    if (any_component.id == api.UNDEF_INDEX) {
+        std.log.err("No valid component. Undefined id: {any}", .{any_component});
+        return false;
     }
+
+    return true;
 }
 
 pub fn ComponentPool(comptime T: type) type {
+
     // check component type constraints and function refs
     comptime var has_aspect: bool = false;
     comptime var has_new: bool = false;
@@ -146,18 +153,27 @@ pub fn ComponentPool(comptime T: type) type {
     comptime var has_disposeByName: bool = false;
     comptime var has_subscribe: bool = false;
     comptime var has_name_mapping: bool = false;
+
+    comptime var has_init: bool = false;
     comptime var has_deinit: bool = false;
+
     // component function interceptors
     comptime var has_onNew: bool = false;
     comptime var has_onActivation: bool = false;
     comptime var has_onDispose: bool = false;
+
     comptime {
-        if (!trait.is(.Struct)(T)) @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"NULL_VALUE"})) @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
-        if (!trait.hasDecls(T, .{"COMPONENT_NAME"})) @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
+        if (!trait.is(.Struct)(T))
+            @compileError("Expects component type is a struct.");
+        if (!trait.hasDecls(T, .{"NULL_VALUE"}))
+            @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
+        if (!trait.hasDecls(T, .{"COMPONENT_NAME"}))
+            @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
+        if (!trait.hasField("id")(T))
+            @compileError("Expects component type to have field named id");
+
         has_name_mapping = trait.hasField("name")(T);
         has_aspect = trait.hasDecls(T, .{"type_aspect"});
-
         has_new = trait.hasDecls(T, .{"new"});
         has_exists = trait.hasDecls(T, .{"exists"});
         has_existsName = trait.hasDecls(T, .{"existsName"});
@@ -173,6 +189,7 @@ pub fn ComponentPool(comptime T: type) type {
             if (!trait.hasDecls(T, .{"unsubscribe"})) @compileError("Expects component type to have member named 'unsubscribe' when there is subscribe.");
         }
 
+        has_init = trait.hasDecls(T, .{"init"});
         has_deinit = trait.hasDecls(T, .{"deinit"});
         has_onNew = trait.hasDecls(T, .{"onNew"});
         has_onActivation = trait.hasDecls(T, .{"onActivation"});
@@ -187,7 +204,7 @@ pub fn ComponentPool(comptime T: type) type {
         var items: DynArray(T) = undefined;
         // mappings
         var active_mapping: BitSet = undefined;
-        var name_mapping: ?StringHashMap(usize) = null;
+        var name_mapping: ?StringHashMap(Index) = null;
         // events
         var event: ?Event = null;
         var eventDispatch: ?EventDispatch(Event) = null;
@@ -203,7 +220,7 @@ pub fn ComponentPool(comptime T: type) type {
                 COMPONENT_INTERFACE_TABLE.set(
                     ComponentTypeInterface{
                         .clear = Self.clear,
-                        .deinit = if (has_deinit) T.deinit else Self.deinit,
+                        .deinit = Self.deinit,
                         .to_string = toString,
                     },
                     c_aspect.index,
@@ -222,7 +239,7 @@ pub fn ComponentPool(comptime T: type) type {
                 T.unsubscribe = Self.unsubscribe;
             }
 
-            if (has_name_mapping) name_mapping = StringHashMap(usize).init(api.COMPONENT_ALLOC);
+            if (has_name_mapping) name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
             if (has_aspect) T.type_aspect = c_aspect;
             if (has_new) T.new = Self.register;
             if (has_exists) T.exists = Self.exists;
@@ -234,6 +251,10 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_name_mapping and has_byName) T.byName = Self.byName;
             if (has_activateById) T.activateById = Self.activate;
             if (has_name_mapping and has_activateByName) T.activateByName = Self.activateByName;
+
+            if (has_init) T.init() catch {
+                std.log.err("Failed to initialize component of type: {any}", .{T});
+            };
         }
 
         /// Release all allocated memory.
@@ -241,6 +262,8 @@ pub fn ComponentPool(comptime T: type) type {
             defer initialized = false;
             if (!initialized)
                 return;
+
+            if (has_deinit) T.deinit();
 
             c_aspect = undefined;
             items.deinit();
@@ -289,35 +312,37 @@ pub fn ComponentPool(comptime T: type) type {
         pub fn register(c: T) *T {
             checkComponentTrait(c);
 
-            var index = items.add(c);
-            var result = items.get(index);
-            result.index = index;
+            var id = items.add(c);
+            var result = items.get(id);
+            result.id = id;
 
             if (name_mapping) |*nm| {
                 if (!std.mem.eql(u8, c.name, NO_NAME))
-                    nm.put(result.name, index) catch unreachable;
+                    nm.put(result.name, id) catch unreachable;
             }
 
-            if (has_onNew) T.onNew(index);
-            notify(ActionType.Created, index);
+            if (has_onNew)
+                T.onNew(id);
+
+            notify(ActionType.Created, id);
             return result;
         }
 
-        pub fn exists(index: usize) bool {
-            return items.exists(index);
+        pub fn exists(id: Index) bool {
+            return items.exists(id);
         }
 
-        pub fn get(index: usize) *T {
-            const ret = items.get(index);
-            if (ret.index == UNDEF_INDEX) {
-                std.log.err("No Component with index: {d} of type: {s}", .{ index, T.COMPONENT_NAME });
+        pub fn get(id: Index) *T {
+            const ret = items.get(id);
+            if (ret.id == UNDEF_INDEX) {
+                std.log.err("No Component with id: {d} of type: {s}", .{ id, T.COMPONENT_NAME });
                 @panic("Component does not exist");
             }
             return ret;
         }
 
-        pub fn byId(index: usize) *const T {
-            return items.get(index);
+        pub fn byId(id: Index) *const T {
+            return items.get(id);
         }
 
         pub fn existsName(name: String) bool {
@@ -329,70 +354,73 @@ pub fn ComponentPool(comptime T: type) type {
 
         pub fn byName(name: String) *const T {
             if (name_mapping) |*nm| {
-                if (nm.get(name)) |index| {
-                    return items.get(index);
+                if (nm.get(name)) |id| {
+                    return items.get(id);
                 }
             }
             return &T.NULL_VALUE;
         }
 
-        pub fn activate(index: usize, a: bool) void {
-            active_mapping.setValue(index, a);
+        pub fn activate(id: Index, a: bool) void {
+            active_mapping.setValue(id, a);
             if (has_onActivation)
-                T.onActivation(index, a);
-            notify(if (a) ActionType.Activated else ActionType.Deactivated, index);
+                T.onActivation(id, a);
+            notify(if (a) ActionType.Activated else ActionType.Deactivated, id);
         }
 
         pub fn activateByName(name: String, a: bool) void {
             if (name_mapping) |*nm| {
-                if (nm.get(name)) |index| {
-                    activate(index, a);
+                if (nm.get(name)) |id| {
+                    activate(id, a);
                 }
             }
         }
 
-        pub fn isActive(index: usize) bool {
-            return active_mapping.isSet(index);
+        pub fn isActive(id: Index) bool {
+            return active_mapping.isSet(id);
         }
 
         pub fn clearAll() void {
-            var i: usize = 0;
+            var i: Index = 0;
             while (items.slots.nextSetBit(i)) |next| {
                 clear(i);
                 i = next + 1;
             }
         }
 
-        pub fn clear(index: usize) void {
-            notify(ActionType.Disposing, index);
-            if (has_onDispose) T.onDispose(index);
-            active_mapping.setValue(index, false);
-            items.reset(index);
+        pub fn clear(id: Index) void {
+            if (isActive(id))
+                activate(id, false);
+            notify(ActionType.Disposing, id);
+            if (has_onDispose)
+                T.onDispose(id);
+            active_mapping.setValue(id, false);
+            items.reset(id);
         }
 
         pub fn clearByName(name: String) void {
             if (name_mapping) |*nm| {
-                if (nm.get(name)) |index| clear(index);
+                if (nm.get(name)) |id| clear(id);
             }
         }
 
-        pub fn processActive(f: *const fn (*T) void) void {
-            var i: usize = 0;
+        pub fn processActive(f: *const fn (*const T) void) void {
+            var i: Index = 0;
             while (active_mapping.nextSetBit(i)) |next| {
                 f(items.get(i));
                 i = next + 1;
             }
         }
 
-        pub fn processBitSet(indices: *BitSet, f: *const fn (*T) void) void {
-            var i: usize = 0;
+        pub fn processBitSet(indices: *BitSet, f: *const fn (*const T) void) void {
+            var i: Index = 0;
             while (indices.nextSetBit(i)) |next| {
                 f(items.get(i));
                 i = next + 1;
             }
         }
 
-        pub fn processIndexed(indices: []usize, f: *const fn (*T) void) void {
+        pub fn processIndexed(indices: []Index, f: *const fn (*const T) void) void {
             for (indices) |i| {
                 f(items.get(i));
             }
@@ -410,12 +438,12 @@ pub fn ComponentPool(comptime T: type) type {
             }
         }
 
-        fn notify(event_type: ActionType, index: usize) void {
+        fn notify(event_type: ActionType, id: Index) void {
             if (event) |*e| {
                 // Test if copy here affects performance (but it thread safe?)
                 var ce = e.*;
                 ce.event_type = event_type;
-                ce.c_index = index;
+                ce.c_id = id;
                 eventDispatch.?.notify(ce);
             }
         }
@@ -423,137 +451,7 @@ pub fn ComponentPool(comptime T: type) type {
         fn checkComponentTrait(c: T) void {
             comptime {
                 if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
-                if (!trait.hasField("index")(@TypeOf(c))) @compileError("Expects component to have field 'index'.");
-            }
-        }
-    };
-}
-
-// Entity Components
-pub fn clearAllEntityComponentsAt(index: usize) void {
-    for (0..ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
-        ENTITY_COMPONENT_INTERFACE_TABLE.get(ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).clear(index);
-    }
-}
-
-pub fn EntityComponentPool(comptime T: type) type {
-
-    // check component type constraints
-    comptime var has_aspect: bool = false;
-    comptime var has_byId: bool = false;
-    // component function interceptors
-    comptime var has_onNew: bool = false;
-    comptime var has_onDispose: bool = false;
-    comptime {
-        if (!trait.is(.Struct)(T)) @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"NULL_VALUE"})) @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
-        if (!trait.hasDecls(T, .{"COMPONENT_NAME"})) @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
-        has_aspect = trait.hasDecls(T, .{"type_aspect"});
-        has_byId = trait.hasDecls(T, .{"byId"});
-        has_onNew = trait.hasDecls(T, .{"onNew"});
-        has_onDispose = trait.hasDecls(T, .{"onDispose"});
-    }
-
-    return struct {
-        const Self = @This();
-        // ensure type based singleton
-        var initialized = false;
-        // internal state
-        var items: DynArray(T) = undefined;
-        // external state
-        pub var c_aspect: *Aspect = undefined;
-
-        pub fn init() void {
-            if (initialized)
-                return;
-
-            errdefer Self.deinit();
-            defer {
-                ENTITY_COMPONENT_INTERFACE_TABLE.set(
-                    ComponentTypeInterface{
-                        .clear = Self.i_clear,
-                        .deinit = T.deinit,
-                        .to_string = toString,
-                    },
-                    c_aspect.index,
-                );
-                initialized = true;
-            }
-
-            items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
-            c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(@typeName(T));
-
-            if (has_aspect) T.type_aspect = c_aspect;
-            if (has_byId) T.byId = Self.byId;
-        }
-
-        pub fn deinit() void {
-            defer initialized = false;
-            if (!initialized)
-                return;
-
-            c_aspect = undefined;
-            items.deinit();
-
-            if (has_aspect) T.type_aspect = undefined;
-            if (has_byId) T.byId = undefined;
-        }
-
-        pub fn typeCheck(a: *Aspect) bool {
-            if (!initialized)
-                return false;
-
-            return c_aspect.index == a.index;
-        }
-
-        pub fn count() usize {
-            return items.slots.count();
-        }
-
-        pub fn register(c: *T, index: usize) *T {
-            checkComponentTrait(c);
-            c.index = index;
-            items.set(c, index);
-            if (has_onNew) T.onNew(index);
-            return items.get(index);
-        }
-
-        pub fn get(index: usize) *T {
-            return items.get(index);
-        }
-
-        pub fn clearAll() void {
-            var i: usize = 0;
-            while (items.slots.nextSetBit(i)) |next| {
-                clear(i);
-                i = next + 1;
-            }
-        }
-
-        pub fn clear(index: usize) void {
-            if (has_onDispose) T.onDispose(index);
-            items.reset(index);
-        }
-
-        fn toString() String {
-            var string_builder = ArrayList(u8).init(api.ALLOC);
-            defer string_builder.deinit();
-
-            var writer = string_builder.writer();
-            writer.print("\n  {s} size: {d}", .{ c_aspect.name, items.size() }) catch unreachable;
-            var next = items.slots.nextSetBit(0);
-            while (next) |i| {
-                writer.print("\n   {any}", .{ "", items.get(i) }) catch unreachable;
-                next = items.slots.nextSetBit(i + 1);
-            }
-
-            return string_builder.toOwnedSlice() catch unreachable;
-        }
-
-        fn checkComponentTrait(c: T) void {
-            comptime {
-                if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
-                if (!trait.hasField("index")(@TypeOf(c))) @compileError("Expects component to have field 'index'.");
+                if (!trait.hasField("id")(@TypeOf(c))) @compileError("Expects component to have field 'id'.");
             }
         }
     };

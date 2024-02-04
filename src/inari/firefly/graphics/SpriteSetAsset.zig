@@ -15,18 +15,20 @@ const String = utils.String;
 const Event = api.Component.Event;
 const ActionType = api.Component.ActionType;
 const TextureData = api.TextureData;
+const TextureAsset = graphics.TextureAsset;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Index = api.Index;
+const UNDEF_INDEX = api.UNDEF_INDEX;
 const RectF = utils.geom.RectF;
 const Vec2f = utils.geom.Vector2f;
 
 const SpriteSet = struct {
     sprites: ArrayList(SpriteData) = undefined,
-    name_mapping: StringHashMap(usize) = undefined,
+    name_mapping: StringHashMap(Index) = undefined,
 
-    fn byListIndex(self: *SpriteSet, index: usize) *SpriteData {
+    fn byListIndex(self: *SpriteSet, index: Index) *SpriteData {
         return &self.sprites.items[index];
     }
 
@@ -43,13 +45,14 @@ const SpriteSet = struct {
 var initialized = false;
 var resources: DynArray(SpriteSet) = undefined;
 pub var asset_type: *Aspect = undefined;
+pub const NULL_VALUE = SpriteSet{};
 
 pub fn init() !void {
     defer initialized = true;
     if (initialized) return;
 
     asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("SpriteSet");
-    resources = DynArray(SpriteSet).init(api.COMPONENT_ALLOC, SpriteSet{});
+    resources = try DynArray(SpriteSet).init(api.COMPONENT_ALLOC, SpriteSet{});
     Asset.subscribe(listener);
 }
 
@@ -71,7 +74,7 @@ pub const SpriteStamp = struct {
 };
 
 pub const SpriteSetData = struct {
-    texture_asset_id: UNDEF_INDEX,
+    texture_asset_id: Index,
     stamp_region: RectF,
     sprite_dim: Vec2f,
     stamps: ?[]?SpriteStamp = null,
@@ -100,7 +103,7 @@ pub fn new(data: SpriteSetData) *Asset {
         .resource_id = resources.add(
             SpriteSet{
                 .sprites = ArrayList(SpriteData).init(api.COMPONENT_ALLOC),
-                .name_mapping = StringHashMap(usize).init(api.COMPONENT_ALLOC),
+                .name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC),
             },
         ),
         .parent_asset_id = data.texture_asset_id,
@@ -132,20 +135,20 @@ pub fn new(data: SpriteSetData) *Asset {
     }
 }
 
-pub fn getResource(res_index: usize) *SpriteSet {
-    return &resources.get(res_index).byListIndex(0);
+pub fn getResource(res_id: Index) *SpriteSet {
+    return &resources.get(res_id).byListIndex(0);
 }
 
-pub fn getResourceForIndex(res_index: usize, list_index: usize) *SpriteSet {
-    return &resources.get(res_index).byListIndex(list_index);
+pub fn getResourceForIndex(res_id: Index, list_index: Index) *SpriteSet {
+    return &resources.get(res_id).byListIndex(list_index);
 }
 
-pub fn getResourceForName(res_index: usize, name: String) *SpriteSet {
-    return resources.get(res_index).byName(name);
+pub fn getResourceForName(res_id: Index, name: String) *SpriteSet {
+    return resources.get(res_id).byName(name);
 }
 
 fn listener(e: Event) void {
-    var asset: *Asset = Asset.pool.byId(e.c_index);
+    var asset: *Asset = Asset.pool.get(e.c_id);
     if (asset_type.index != asset.asset_type.index)
         return;
 
@@ -158,10 +161,11 @@ fn listener(e: Event) void {
 }
 
 fn load(asset: *Asset) void {
-    if (!initialized) @panic("Firefly module not initialized");
+    if (!initialized)
+        return;
 
     // check if texture asset is loaded, if not try to load
-    const texData: *const TextureData = Asset.byId(asset.parent_asset_id).getResource(TextureData);
+    const texData: *const TextureData = Asset.get(asset.parent_asset_id).getResource(TextureAsset);
     if (texData.binding == NO_BINDING) {
         Asset.activateById(asset.parent_asset_id, true);
         if (texData.binding == NO_BINDING) {
@@ -171,21 +175,22 @@ fn load(asset: *Asset) void {
     }
 
     var data: *SpriteSet = resources.get(asset.resource_id);
-    for (data.sprites) |*s| {
+    for (data.sprites.items) |*s| {
         s.texture_binding = texData.binding;
     }
 }
 
 fn unload(asset: *Asset) void {
-    if (!initialized) @panic("Firefly module not initialized");
+    if (!initialized)
+        return;
 
     const data: *SpriteSet = resources.get(asset.resource_id);
-    for (data.sprites) |*s| {
+    for (data.sprites.items) |*s| {
         s.texture_binding = NO_BINDING;
     }
 }
 
 fn delete(asset: *Asset) void {
-    Asset.activateById(asset.index, false);
+    Asset.activateById(asset.id, false);
     resources.reset(asset.resource_id);
 }

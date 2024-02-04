@@ -15,10 +15,12 @@ const String = utils.String;
 const Event = api.Component.Event;
 const ActionType = api.Component.ActionType;
 const TextureData = api.TextureData;
+const TextureAsset = graphics.TextureAsset;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Index = api.Index;
+const UNDEF_INDEX = api.UNDEF_INDEX;
 const RectF = utils.geom.RectF;
 const Vec2f = utils.geom.Vector2f;
 
@@ -33,7 +35,7 @@ pub fn init() !void {
     if (initialized) return;
 
     asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Sprite");
-    resources = DynArray(SpriteData).init(api.COMPONENT_ALLOC, NULL_VALUE);
+    resources = try DynArray(SpriteData).init(api.COMPONENT_ALLOC, NULL_VALUE);
     Asset.subscribe(listener);
 }
 
@@ -49,7 +51,7 @@ pub fn deinit() void {
 
 pub const Sprite = struct {
     name: String = NO_NAME,
-    texture_asset_id: usize,
+    texture_asset_id: Index,
     texture_bounds: RectF,
     flip_x: bool = false,
     flip_y: bool = false,
@@ -78,20 +80,20 @@ pub fn new(data: Sprite) *Asset {
     });
 }
 
-pub fn getResource(res_index: usize) *const SpriteData {
-    return resources.get(res_index);
+pub fn getResource(res_id: Index) *const SpriteData {
+    return resources.get(res_id);
 }
 
-pub fn getResourceForIndex(res_index: usize, _: usize) *const SpriteData {
-    return resources.get(res_index);
+pub fn getResourceForIndex(res_id: Index, _: Index) *const SpriteData {
+    return resources.get(res_id);
 }
 
-pub fn getResourceForName(res_index: usize, _: String) *const SpriteData {
-    return resources.get(res_index);
+pub fn getResourceForName(res_id: Index, _: String) *const SpriteData {
+    return resources.get(res_id);
 }
 
 fn listener(e: Event) void {
-    var asset: *Asset = Asset.pool.byId(e.c_index);
+    var asset: *Asset = Asset.pool.get(e.c_id);
     if (asset_type.index != asset.asset_type.index)
         return;
 
@@ -105,13 +107,14 @@ fn listener(e: Event) void {
 
 fn load(asset: *Asset) void {
     if (!initialized)
-        @panic("Firefly module not initialized");
+        return;
 
     var spriteData: *SpriteData = resources.get(asset.resource_id);
-    if (spriteData.texture_binding != NO_BINDING) return; // already loaded
+    if (spriteData.texture_binding != NO_BINDING)
+        return; // already loaded
 
     // check if texture asset is loaded, if not try to load
-    const texData: *const TextureData = Asset.byId(asset.parent_asset_id).getResource(TextureData);
+    const texData: *const TextureData = Asset.get(asset.parent_asset_id).getResource(TextureAsset);
     if (texData.binding == NO_BINDING) {
         Asset.activateById(asset.parent_asset_id, true);
         if (texData.binding == NO_BINDING) {
@@ -125,13 +128,13 @@ fn load(asset: *Asset) void {
 
 fn unload(asset: *Asset) void {
     if (!initialized)
-        @panic("Firefly module not initialized");
+        return;
 
     var spriteData: *SpriteData = resources.get(asset.resource_id);
     spriteData.texture_binding = NO_BINDING;
 }
 
 fn delete(asset: *Asset) void {
-    Asset.activateById(asset.index, false);
+    Asset.activateById(asset.id, false);
     resources.reset(asset.resource_id);
 }

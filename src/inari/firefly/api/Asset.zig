@@ -8,7 +8,8 @@ const AspectGroup = utils.aspect.AspectGroup;
 const aspect = utils.aspect;
 const Aspect = aspect.Aspect;
 const String = utils.String;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Index = api.Index;
+const UNDEF_INDEX = api.UNDEF_INDEX;
 const Asset = @This();
 
 // type aspects
@@ -28,7 +29,6 @@ pub fn deinit() void {
 
     aspect.disposeAspectGroup(COMPONENT_NAME);
     ASSET_TYPE_ASPECT_GROUP = undefined;
-    pool.deinit();
 }
 
 // type fields
@@ -39,24 +39,24 @@ pub const pool = Component.ComponentPool(Asset);
 // component type pool references
 pub var type_aspect: *Aspect = undefined;
 pub var new: *const fn (Asset) *Asset = undefined;
-pub var exists: *const fn (usize) bool = undefined;
+pub var exists: *const fn (Index) bool = undefined;
 pub var existsName: *const fn (String) bool = undefined;
-pub var get: *const fn (usize) *Asset = undefined;
-pub var byId: *const fn (usize) *const Asset = undefined;
+pub var get: *const fn (Index) *Asset = undefined;
+pub var byId: *const fn (Index) *const Asset = undefined;
 pub var byName: *const fn (String) *const Asset = undefined;
-pub var activateById: *const fn (usize, bool) void = undefined;
+pub var activateById: *const fn (Index, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
-pub var disposeById: *const fn (usize) void = undefined;
+pub var disposeById: *const fn (Index) void = undefined;
 pub var disposeByName: *const fn (String) void = undefined;
 pub var subscribe: *const fn (Component.EventListener) void = undefined;
 pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
 
 // struct fields
-index: usize = UNDEF_INDEX,
+id: Index = UNDEF_INDEX,
 asset_type: *Aspect = undefined,
 name: String = utils.NO_NAME,
-resource_id: usize = UNDEF_INDEX,
-parent_asset_id: usize = UNDEF_INDEX,
+resource_id: Index = UNDEF_INDEX,
+parent_asset_id: Index = UNDEF_INDEX,
 
 pub fn getResource(asset: *Asset, comptime asset_type: anytype) *const @TypeOf(asset_type.NULL_VALUE) {
     if (asset.resource_id == UNDEF_INDEX or !@hasDecl(asset_type, "getResource"))

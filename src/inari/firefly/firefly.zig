@@ -7,13 +7,6 @@ pub const utils = @import("../utils/utils.zig");
 pub const api = @import("api/api.zig");
 pub const graphics = @import("graphics/graphics.zig");
 
-// pub const component = api.Component;
-// pub const system = api.system;
-// pub const rendering_api = api.rendering_api;
-
-//pub const Asset = @import("Asset.zig");
-//pub const Entity = @import("Entity.zig");
-
 //pub var RENDER_API: rendering_api.RenderAPI() = undefined;
 var initialized = false;
 pub fn moduleInitDebug(allocator: Allocator) !void {
@@ -37,8 +30,6 @@ pub fn moduleInitAlloc(component_allocator: Allocator, entity_allocator: Allocat
 
 fn initModules(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
     // init root modules
-    try utils.aspect.init(allocator);
-    try api.init(component_allocator, entity_allocator, allocator);
     try graphics.init(component_allocator, entity_allocator, allocator);
 }
 
@@ -48,8 +39,6 @@ pub fn moduleDeinit() void {
         return;
 
     graphics.deinit();
-    api.deinit();
-    utils.aspect.deinit();
 }
 
 test {
@@ -71,9 +60,12 @@ test "Firefly init" {
         \\  Group[COMPONENT_ASPECT_GROUP|0]:
         \\    Aspect[Asset|0]
         \\    Aspect[Entity|1]
-        \\  Group[ENTITY_COMPONENT_ASPECT_GROUP|1]:
-        \\  Group[Asset|2]:
+        \\  Group[Asset|1]:
         \\    Aspect[Texture|0]
+        \\    Aspect[SpriteSet|1]
+        \\    Aspect[Sprite|2]
+        \\    Aspect[Shader|3]
+        \\  Group[ENTITY_COMPONENT_ASPECT_GROUP|2]:
         \\
         \\Components:
         \\  Asset size: 0

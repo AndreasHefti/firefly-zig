@@ -8,6 +8,7 @@ const utils = graphics.utils;
 const Aspect = utils.aspect.Aspect;
 const Asset = api.Asset;
 const DynArray = utils.dynarray.DynArray;
+const StringBuffer = utils.StringBuffer;
 const SpriteData = api.SpriteData;
 const BindingIndex = api.BindingIndex;
 const String = utils.String;
@@ -20,7 +21,8 @@ const CInt = utils.CInt;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Index = api.Index;
+const UNDEF_INDEX = api.UNDEF_INDEX;
 
 var initialized = false;
 var resources: DynArray(TextureData) = undefined;
@@ -76,20 +78,20 @@ pub fn new(data: Texture) *Asset {
     });
 }
 
-pub fn getResource(res_index: usize) *const TextureData {
-    return resources.get(res_index);
+pub fn getResource(res_id: Index) *const TextureData {
+    return resources.get(res_id);
 }
 
-pub fn getResourceForIndex(res_index: usize, _: usize) *const TextureData {
-    return resources.get(res_index);
+pub fn getResourceForIndex(res_id: Index, _: Index) *const TextureData {
+    return resources.get(res_id);
 }
 
-pub fn getResourceForName(res_index: usize, _: String) *const TextureData {
-    return resources.get(res_index);
+pub fn getResourceForName(res_id: Index, _: String) *const TextureData {
+    return resources.get(res_id);
 }
 
 fn listener(e: Event) void {
-    var asset: *Asset = Asset.pool.get(e.c_index);
+    var asset: *Asset = Asset.pool.get(e.c_id);
     if (asset_type.index != asset.asset_type.index)
         return;
 
@@ -102,10 +104,12 @@ fn listener(e: Event) void {
 }
 
 fn load(asset: *Asset) void {
-    if (!initialized) @panic("Firefly module not initialized");
+    if (!initialized)
+        return;
 
     var tex_data = resources.get(asset.resource_id);
-    if (tex_data.binding != NO_BINDING) return; // already loaded
+    if (tex_data.binding != NO_BINDING)
+        return; // already loaded
 
     api.RENDERING_API.loadTexture(tex_data) catch {
         std.log.err("Failed to load texture resource: {s}", .{tex_data.resource});
@@ -113,11 +117,15 @@ fn load(asset: *Asset) void {
 }
 
 fn unload(asset: *Asset) void {
-    if (!initialized) @panic("Firefly module not initialized");
+    if (!initialized)
+        return;
 
-    if (asset.resource_id == UNDEF_INDEX) return;
+    if (asset.resource_id == UNDEF_INDEX)
+        return;
+
     var tex_data: *TextureData = resources.get(asset.resource_id);
-    if (tex_data.binding == NO_BINDING) return;
+    if (tex_data.binding == NO_BINDING)
+        return; // already disposed
 
     api.RENDERING_API.disposeTexture(tex_data) catch {
         std.log.err("Failed to dispose texture resource: {s}", .{tex_data.resource});
@@ -130,9 +138,13 @@ fn unload(asset: *Asset) void {
 }
 
 fn delete(asset: *Asset) void {
-    Asset.activateById(asset.index, false);
+    Asset.activateById(asset.id, false);
     resources.reset(asset.resource_id);
 }
+
+//////////////////////////////////////////////////////////////
+//// TESTING
+//////////////////////////////////////////////////////////////
 
 test "TextureAsset init/deinit" {
     try graphics.init(std.testing.allocator, std.testing.allocator, std.testing.allocator);
@@ -152,7 +164,7 @@ test "TextureAsset load/unload" {
         .is_mipmap = false,
     });
 
-    try std.testing.expect(texture_asset.index != UNDEF_INDEX);
+    try std.testing.expect(texture_asset.id != UNDEF_INDEX);
     try std.testing.expect(texture_asset.asset_type.index == asset_type.index);
     try std.testing.expect(texture_asset.resource_id != UNDEF_INDEX);
     try std.testing.expectEqualStrings("TestTexture", texture_asset.name);
@@ -176,15 +188,58 @@ test "TextureAsset load/unload" {
     try std.testing.expect(res.height == -1);
 
     // load the texture... by id
-    Asset.activateById(texture_asset.index, true);
+    Asset.activateById(texture_asset.id, true);
     try std.testing.expect(res.binding == 0); // now loaded
     try std.testing.expect(res.width > 0);
     try std.testing.expect(res.height > 0);
+
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    api.rendering_api.DebugRenderAPI.printDebugRendering(&sb);
+    //std.debug.print("\n{s}", .{sb.toString()});
+    const render_state1: String =
+        \\
+        \\******************************
+        \\Debug Rendering API State:
+        \\ loaded textures:
+        \\   TextureData[ res:path/TestTexture, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
+        \\ loaded render textures:
+        \\ loaded shaders:
+        \\ current state:
+        \\   RenderTexture: null
+        \\   RenderData: RenderData[ clear:true, ccolor:{ 0, 0, 0, 255 }, tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
+        \\   Shader: null
+        \\   Offset: { 0.0e+00, 0.0e+00 }
+        \\ render actions:
+        \\
+    ;
+    try std.testing.expectEqualStrings(render_state1, sb.toString());
+
     // dispose texture
-    Asset.activateById(texture_asset.index, false);
+    Asset.activateById(texture_asset.id, false);
     try std.testing.expect(res.binding == NO_BINDING); // not loaded
     try std.testing.expect(res.width == -1);
     try std.testing.expect(res.height == -1);
+
+    sb.clear();
+    api.rendering_api.DebugRenderAPI.printDebugRendering(&sb);
+    const render_state2: String =
+        \\
+        \\******************************
+        \\Debug Rendering API State:
+        \\ loaded textures:
+        \\ loaded render textures:
+        \\ loaded shaders:
+        \\ current state:
+        \\   RenderTexture: null
+        \\   RenderData: RenderData[ clear:true, ccolor:{ 0, 0, 0, 255 }, tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
+        \\   Shader: null
+        \\   Offset: { 0.0e+00, 0.0e+00 }
+        \\ render actions:
+        \\
+    ;
+    try std.testing.expectEqualStrings(render_state2, sb.toString());
 }
 
 test "TextureAsset dispose" {
@@ -208,7 +263,7 @@ test "TextureAsset dispose" {
 
     try std.testing.expect(res.binding == NO_BINDING); // not loaded yet
     // asset ref has been reset
-    try std.testing.expect(texture_asset.index == UNDEF_INDEX);
+    try std.testing.expect(texture_asset.id == UNDEF_INDEX);
     try std.testing.expectEqualStrings(texture_asset.name, NO_NAME);
 }
 

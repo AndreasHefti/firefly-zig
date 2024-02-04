@@ -53,9 +53,9 @@ pub fn RenderAPI() type {
         setActiveShader: *const fn (BindingIndex) FFAPIError!void = undefined,
         /// This renders a given RenderTextureData (BindingIndex) to the actual render target that can be
         /// rendering texture or the screen
-        renderTexture: *const fn (BindingIndex, *TransformData, ?*RenderData, ?*Vector2f) void = undefined,
+        renderTexture: *const fn (BindingIndex, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
         // TODO
-        renderSprite: *const fn (*SpriteData, *TransformData, ?*RenderData, ?*Vector2f) void = undefined,
+        renderSprite: *const fn (*const SpriteData, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
         endRendering: *const fn () void = undefined,
 
@@ -72,6 +72,10 @@ pub fn RenderAPI() type {
     };
 }
 
+//////////////////////////////////////////////////////////////
+//// TESTING
+//////////////////////////////////////////////////////////////
+
 // Singleton Debug RenderAPI
 var singletonDebugRenderAPI: RenderAPI() = undefined;
 pub fn createDebugRenderAPI(allocator: std.mem.Allocator) !RenderAPI() {
@@ -87,7 +91,7 @@ pub fn createDebugRenderAPI(allocator: std.mem.Allocator) !RenderAPI() {
 /// var render_api = RenderAPI().init(DebugRenderAPI.initImpl);
 /// or
 /// var render_api = RenderAPI().init(DebugRenderAPI.initScreen(800, 600).initImpl);
-const DebugRenderAPI = struct {
+pub const DebugRenderAPI = struct {
     pub var screen_width: CInt = 800;
     pub var screen_height: CInt = 600;
     var alloc: std.mem.Allocator = undefined;
@@ -160,6 +164,12 @@ const DebugRenderAPI = struct {
         interface.renderTexture = renderTexture;
         interface.renderSprite = renderSprite;
         interface.endRendering = endRendering;
+
+        DebugRenderAPI.currentRenderTexture = null;
+        DebugRenderAPI.currentShader = null;
+        DebugRenderAPI.currentOffset = &defaultOffset;
+        DebugRenderAPI.currentRenderData = &defaultRenderData;
+
         initialized = true;
     }
 
@@ -233,7 +243,12 @@ const DebugRenderAPI = struct {
         currentShader = shaderId;
     }
 
-    pub fn renderTexture(textureId: BindingIndex, transform: *TransformData, renderData: ?*RenderData, offset: ?*Vector2f) void {
+    pub fn renderTexture(
+        textureId: BindingIndex,
+        transform: *const TransformData,
+        renderData: ?*const RenderData,
+        offset: ?*const Vector2f,
+    ) void {
         if (renderData) |rd| {
             currentRenderData = rd;
         }
@@ -248,7 +263,12 @@ const DebugRenderAPI = struct {
         });
     }
 
-    pub fn renderSprite(spriteData: *SpriteData, transform: *TransformData, renderData: ?*RenderData, offset: ?*Vector2f) void {
+    pub fn renderSprite(
+        spriteData: *const SpriteData,
+        transform: *const TransformData,
+        renderData: ?*const RenderData,
+        offset: ?*const Vector2f,
+    ) void {
         if (renderData) |rd| {
             currentRenderData = rd;
         }

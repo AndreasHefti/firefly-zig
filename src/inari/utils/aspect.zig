@@ -191,15 +191,15 @@ pub fn disposeAspectGroup(name: String) void {
     if (!initialized)
         return;
 
-    var index: usize = utils.UNDEF_INDEX;
+    var index: ?usize = null;
     for (ASPECT_GROUPS.items, 0..) |*group, i| {
         if (std.mem.eql(u8, name, group.name)) {
             index = i;
             break;
         }
     }
-    if (index != utils.UNDEF_INDEX) {
-        _ = ASPECT_GROUPS.swapRemove(index);
+    if (index) |i| {
+        _ = ASPECT_GROUPS.swapRemove(i);
     }
 }
 

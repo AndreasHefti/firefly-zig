@@ -11,6 +11,9 @@ const PosF = utils.geom.PosF;
 const RectI = utils.geom.RectI;
 const RectF = utils.geom.RectF;
 const Color = utils.geom.Color;
+const Vector2f = utils.geom.Vector2f;
+const Vector3f = utils.geom.Vector3f;
+const Vector4f = utils.geom.Vector4f;
 
 pub const utils = @import("../../utils/utils.zig");
 //pub const utils = @import("utils");
@@ -19,6 +22,10 @@ pub const System = @import("System.zig");
 pub const Timer = @import("Timer.zig");
 pub const Entity = @import("Entity.zig");
 pub const Asset = @import("Asset.zig");
+pub const rendering_api = @import("rendering_api.zig");
+
+pub const Index = usize;
+pub const UNDEF_INDEX = std.math.maxInt(Index);
 pub const BindingIndex = usize;
 pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
@@ -31,7 +38,8 @@ pub var RENDERING_API: rendering.RenderAPI() = undefined;
 var initialized = false;
 pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
     defer initialized = true;
-    if (initialized) return;
+    if (initialized)
+        return;
 
     COMPONENT_ALLOC = component_allocator;
     ENTITY_ALLOC = entity_allocator;
@@ -44,7 +52,6 @@ pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocat
 
     System.init();
     try Component.init();
-    try Asset.init();
 
     // register api based components and entity components
     Component.registerComponent(Asset);
@@ -53,9 +60,9 @@ pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocat
 
 pub fn deinit() void {
     defer initialized = false;
-    if (!initialized) return;
+    if (!initialized)
+        return;
 
-    Asset.deinit();
     System.deinit();
     Component.deinit();
     RENDERING_API.deinit();
@@ -115,20 +122,6 @@ pub const BlendMode = enum(CInt) {
     }
 };
 
-// pub const ViewData = struct {
-//     id: BindingIndex = NO_BINDING,
-//     renderTarget: BindingIndex = NO_BINDING,
-//     renderShader: BindingIndex = NO_BINDING,
-//     bounds: RectI = RectI{ 0, 0, 0, 0 },
-//     worldPosition: PosF = PosF{ 0, 0 },
-//     clearColor: Color = Color{ 0, 0, 0, 255 },
-//     clearBeforeStartRendering: bool = true,
-//     tintColor: Color = Color{ 255, 255, 255, 255 },
-//     blendMode: BlendMode = BlendMode.BLEND_ALPHA,
-//     zoom: Float = 1,
-//     fboScale: Float = 1,
-// };
-
 pub const TextureData = struct {
     resource: String = NO_NAME,
     binding: BindingIndex = NO_BINDING,
@@ -172,24 +165,32 @@ pub const RenderTextureData = struct {
     }
 };
 
-// TODO
-// interface ShaderUpdate {
-//     fun setUniformFloat(bindingName: String, value: Float)
-//     fun setUniformVec2(bindingName: String, value: Vector2f)
-//     fun setUniformVec3(bindingName: String, value: Vector3f)
-//     fun setUniformColorVec4(bindingName: String, value:Vector4f)
-//     fun bindTexture(bindingName: String, value: Int)
-//     fun bindViewTexture(bindingName: String, value: Int)
-// }
+pub const ShaderUpdate = struct {
+    setUniformFloat: *const fn (String, Float) void = undefined,
+    setUniformVec2: *const fn (String, *Vector2f) void = undefined,
+    setUniformVec3: *const fn (String, *Vector3f) void = undefined,
+    setUniformColorVec4: *const fn (String, *Vector4f) void = undefined,
+    bindTexture: *const fn (String, BindingIndex) void = undefined,
+};
 
 pub const ShaderData = struct {
     binding: BindingIndex = NO_BINDING,
     vertex_shader_resource: String = NO_NAME,
-    vertex_shader_program: String = NO_NAME,
     fragment_shader_resource: String = NO_NAME,
-    fragment_shader_program: String = NO_NAME,
-    // TODO
-    //shaderUpdate: (ShaderUpdate) -> Unit = VOID_CONSUMER_1
+    file_resource: bool = true,
+    shaderUpdate: ShaderUpdate = undefined,
+
+    pub fn format(
+        self: ShaderData,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "ShaderData[ binding:{d}, vert:{s}, frag:{s}, file_resource:{} ]",
+            .{ self.binding, self.vertex_shader_resource, self.fragment_shader_resource, self.file_resource },
+        );
+    }
 };
 
 pub const TransformData = struct {

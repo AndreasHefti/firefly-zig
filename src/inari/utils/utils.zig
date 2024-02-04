@@ -14,7 +14,6 @@ pub const EMPTY_STRING: String = "";
 pub const NO_NAME: String = EMPTY_STRING;
 
 pub const CInt = i32;
-pub const UNDEF_INDEX = std.math.maxInt(usize);
 pub const Float = f32;
 pub const Byte = u8;
 
@@ -29,6 +28,10 @@ pub const StringBuffer = struct {
 
     pub fn deinit(self: StringBuffer) void {
         self.buffer.deinit();
+    }
+
+    pub fn clear(self: *StringBuffer) void {
+        self.buffer.clearAndFree();
     }
 
     pub fn append(self: *StringBuffer, s: String) void {
