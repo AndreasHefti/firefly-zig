@@ -59,7 +59,8 @@ test "Firefly init" {
         \\Aspects:
         \\  Group[COMPONENT_ASPECT_GROUP|0]:
         \\    Aspect[Asset|0]
-        \\    Aspect[Entity|1]
+        \\    Aspect[System|1]
+        \\    Aspect[Entity|2]
         \\  Group[Asset|1]:
         \\    Aspect[Texture|0]
         \\    Aspect[SpriteSet|1]
@@ -69,6 +70,7 @@ test "Firefly init" {
         \\
         \\Components:
         \\  Asset size: 0
+        \\  System size: 0
         \\  Entity size: 0
     ;
 

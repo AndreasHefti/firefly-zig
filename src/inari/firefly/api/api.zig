@@ -50,11 +50,11 @@ pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocat
     // TODO make this configurable
     RENDERING_API = try rendering.createDebugRenderAPI(allocator);
 
-    System.init();
     try Component.init();
 
     // register api based components and entity components
     Component.registerComponent(Asset);
+    Component.registerComponent(System);
     Component.registerComponent(Entity);
 }
 
@@ -63,7 +63,6 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    System.deinit();
     Component.deinit();
     RENDERING_API.deinit();
     utils.aspect.deinit();
@@ -83,6 +82,19 @@ pub const ActionType = enum {
     DEACTIVATED,
     DISPOSED,
 };
+
+pub const UpdateEvent = struct {};
+pub const UpdateListener = *const fn (*const UpdateEvent) void;
+
+pub const RenderEventType = enum {
+    PRE_RENDER,
+    RENDER,
+    POST_RENDER,
+};
+pub const RenderEvent = struct {
+    type: RenderEventType,
+};
+pub const RenderListener = *const fn (*const RenderEvent) void;
 
 /// Color blending modes
 pub const BlendMode = enum(CInt) {

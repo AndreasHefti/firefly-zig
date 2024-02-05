@@ -2,8 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const trait = std.meta.trait;
 
-const api = @import("api.zig"); // TODO module
-
+const api = @import("api.zig");
 const DynArray = api.utils.dynarray.DynArray;
 const ArrayList = std.ArrayList;
 const Component = api.Component;

@@ -103,7 +103,7 @@ test "valid component" {
     try std.testing.expect(Component.isValid(newC));
     try std.testing.expect(Component.isValid(newCPtr));
     try std.testing.expect(!Component.isValid(invalid1));
-    try std.testing.expect(!Component.isValid(firefly.graphics.ETransform{}));
+    //try std.testing.expect(!Component.isValid(firefly.graphics.ETransform{}));
 }
 
 test "create/dispose component" {

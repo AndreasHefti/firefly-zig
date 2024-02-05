@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const api = @import("api.zig"); // TODO module
+const api = @import("api.zig");
 const utils = api.utils;
 const Component = api.Component;
 const AspectGroup = utils.aspect.AspectGroup;
