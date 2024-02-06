@@ -2,8 +2,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const api = @import("../../api/api.zig"); // TODO module
 const graphics = @import("../graphics.zig");
+const api = graphics.api;
 
 const Layer = graphics.Layer;
 const Component = api.Component;
@@ -13,6 +13,9 @@ const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const RenderTextureData = api.RenderTextureData;
 const Vec2f = api.utils.geom.Vector2f;
+const DynArray = graphics.utils.dynarray.DynArray;
+const ActionType = api.ActionType;
+const Projection = api.Projection;
 
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
@@ -43,11 +46,26 @@ id: Index = UNDEF_INDEX,
 name: String = NO_NAME,
 /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
 camera_position: Vec2f = Vec2f{},
-order: u8 = 0,
+order: u8 = undefined,
 render_data: RenderData = RenderData{},
-transform_data: TransformData = TransformData{},
+transform: TransformData = TransformData{},
+projection: Projection = Projection{},
 render_texture: RenderTextureData = RenderTextureData{},
 shader_binding: api.BindingIndex = api.NO_BINDING,
+ordered_active_layer: ?*DynArray(Index) = null,
+
+pub var screen_projection: Projection = Projection{};
+pub var ordered_active_views: DynArray(Index) = undefined;
+
+pub fn init() !void {
+    ordered_active_views = DynArray(Index).initWithRegisterSize(api.COMPONENT_ALLOC, 10, UNDEF_INDEX);
+    Layer.subscribe(onLayerAction);
+}
+
+pub fn deinit() void {
+    Layer.unsubscribe(onLayerAction);
+    ordered_active_views.deinit();
+}
 
 pub fn withNewLayer(self: *View, layer: Layer) *View {
     Component.checkValid(self);
@@ -77,25 +95,77 @@ pub fn onActivation(id: Index, active: bool) void {
 }
 
 fn activate(view: *View) void {
-    if (view.order == 0) {
-        // screen, no render texture load needed
-        return;
-    }
+    if (view.order == 0)
+        return; // screen, no render texture load needed
 
-    // create render texture for this view and make binding
+    addViewMapping(view);
+
     api.RENDERING_API.createRenderTexture(&view.render_texture) catch {
-        std.log.err("Failed to create render texture vor view: {any}", .{view});
+        std.log.err("Failed to create render texture for view: {any}", .{view});
     };
 }
 
 fn deactivate(view: *View) void {
-    if (view.order == 0) {
-        // screen, no render texture load needed
-        return;
+    // dispose render texture for this view and cancel binding
+    if (view.order == 0)
+        return; // screen, no render texture dispose needed
+
+    removeViewMapping(view);
+    api.RENDERING_API.disposeRenderTexture(&view.render_texture) catch {
+        std.log.err("Failed to dispose render texture for view: {any}", .{view});
+    };
+}
+
+fn onLayerAction(event: *const Component.Event) void {
+    switch (event.event_type) {
+        ActionType.ACTIVATED => addLayerMapping(Layer.byId(event.c_id)),
+        ActionType.DEACTIVATED => removeLayerMapping(Layer.byId(event.c_id)),
+        else => {},
+    }
+}
+
+fn addViewMapping(view: *View) void {
+    if (ordered_active_views.slots.isSet(view.order)) {
+        std.log.err("Order of view already in use: {any}", .{view});
+        @panic("View order mismatch");
     }
 
-    // dispose render texture for this view and cancel binding
-    api.RENDERING_API.disposeRenderTexture(&view.render_texture) catch {
-        std.log.err("Failed to dispose render texture vor view: {any}", .{view});
-    };
+    ordered_active_views.insert(view.order, view.id);
+}
+
+fn removeViewMapping(view: *View) void {
+    if (!ordered_active_views.slots.isSet(view.order))
+        return;
+
+    // clear layer mapping
+    if (view.ordered_active_layer) |l| {
+        l.clear();
+    }
+
+    // clear view mapping
+    ordered_active_views.reset(view.order);
+}
+
+fn addLayerMapping(layer: *Layer) void {
+    var view: *View = View.get(layer.view_id);
+    if (view.ordered_active_layer == null) {
+        view.ordered_active_layer = DynArray(Index).initWithRegisterSize(
+            api.COMPONENT_ALLOC,
+            10,
+            UNDEF_INDEX,
+        );
+    }
+    if (view.ordered_active_layer.?.slots.isSet(layer.order)) {
+        std.log.err("Order of Layer already in use: {any}", .{layer});
+        @panic("message: []const u8");
+    }
+
+    view.ordered_active_layer.?.set(layer.order, layer.id);
+}
+
+fn removeLayerMapping(layer: *Layer) void {
+    var view: *View = View.get(layer.view_id);
+    if (view.ordered_active_layer) |l| {
+        l.reset(layer.order);
+    }
 }

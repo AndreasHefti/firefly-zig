@@ -95,7 +95,7 @@ test "valid component" {
     var newCPtr = ExampleComponent.byId(newC.id);
 
     var invalid1 = ExampleComponent{
-        .id = 0,
+        //.id = 0,
         .color = Color{ 1, 2, 3, 255 },
         .position = PosF{ 10, 20 },
     };

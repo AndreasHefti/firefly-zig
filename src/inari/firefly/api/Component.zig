@@ -266,7 +266,8 @@ pub fn ComponentPool(comptime T: type) type {
             if (!initialized)
                 return;
 
-            if (has_deinit) T.deinit();
+            if (has_deinit)
+                T.deinit();
 
             c_aspect = undefined;
             items.deinit();

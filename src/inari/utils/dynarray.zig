@@ -40,6 +40,14 @@ pub fn DynArray(comptime T: type) type {
             };
         }
 
+        pub fn initWithRegisterSize(allocator: Allocator, register_size: usize, comptime null_value: ?T) !Self {
+            return Self{
+                .null_value = null_value,
+                .register = Register(T).initWithRegisterSize(allocator, register_size),
+                .slots = try BitSet.initEmpty(allocator, 128),
+            };
+        }
+
         pub fn deinit(self: *Self) void {
             self.register.deinit();
             self.slots.deinit();
@@ -92,6 +100,15 @@ pub fn DynArray(comptime T: type) type {
             }
         }
 
+        pub fn clear(self: *Self) void {
+            var next = self.slots.nextSetBit(0);
+            while (next) |i| {
+                self.reset(i);
+                self.slots.setValue(i, false);
+                next = self.slots.nextSetBit(i + 1);
+            }
+        }
+
         pub fn iterator(self: *Self) Iterator {
             return Iterator{
                 .array = self,
@@ -124,6 +141,13 @@ pub fn Register(comptime T: type) type {
         pub fn init(allocator: Allocator) Self {
             return Self{
                 ._allocator = allocator,
+            };
+        }
+
+        pub fn initWithRegisterSize(allocator: Allocator, register_size: usize) Self {
+            return Self{
+                ._allocator = allocator,
+                .array_size = register_size,
             };
         }
 

@@ -2,6 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const rendering = @import("rendering_api.zig");
+const EventDispatch = utils.event.EventDispatch;
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
@@ -15,26 +16,40 @@ const Vector2f = utils.geom.Vector2f;
 const Vector3f = utils.geom.Vector3f;
 const Vector4f = utils.geom.Vector4f;
 
+// public API
 pub const utils = @import("../../utils/utils.zig");
-//pub const utils = @import("utils");
 pub const Component = @import("Component.zig");
 pub const System = @import("System.zig");
 pub const Timer = @import("Timer.zig");
 pub const Entity = @import("Entity.zig");
 pub const Asset = @import("Asset.zig");
 pub const rendering_api = @import("rendering_api.zig");
-
 pub const Index = usize;
 pub const UNDEF_INDEX = std.math.maxInt(Index);
 pub const BindingIndex = usize;
 pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
+pub const UpdateEvent = struct {};
+pub const UpdateListener = *const fn (*const UpdateEvent) void;
+pub const RenderEventType = enum { PRE_RENDER, RENDER, POST_RENDER };
+pub const RenderEvent = struct { type: RenderEventType };
+pub const RenderListener = *const fn (*const RenderEvent) void;
+
+// public API constants
 pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
 pub var RENDERING_API: rendering.RenderAPI() = undefined;
 
-// module initialization
+// private state
+var UPDATE_EVENT_DISPATCHER: EventDispatch(*const UpdateEvent) = undefined;
+var RENDER_EVENT_DISPATCHER: EventDispatch(*const RenderEvent) = undefined;
+var UPDATE_EVENT = UpdateEvent{};
+var RENDER_EVENT = RenderEvent{
+    .type = RenderEventType.PRE_RENDER,
+};
+
+// initialization
 var initialized = false;
 pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
     defer initialized = true;
@@ -50,7 +65,11 @@ pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocat
     // TODO make this configurable
     RENDERING_API = try rendering.createDebugRenderAPI(allocator);
 
+    UPDATE_EVENT_DISPATCHER = EventDispatch(*const UpdateEvent).init(allocator);
+    RENDER_EVENT_DISPATCHER = EventDispatch(*const RenderEvent).init(allocator);
+
     try Component.init();
+    Timer.init();
 
     // register api based components and entity components
     Component.registerComponent(Asset);
@@ -63,9 +82,52 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    UPDATE_EVENT_DISPATCHER.deinit();
+    RENDER_EVENT_DISPATCHER.deinit();
+
+    Timer.deinit();
     Component.deinit();
     RENDERING_API.deinit();
     utils.aspect.deinit();
+}
+
+pub fn subscribeUpdate(listener: UpdateListener) void {
+    UPDATE_EVENT_DISPATCHER.register(listener);
+}
+
+pub fn subscribeUpdateAt(index: usize, listener: UpdateListener) void {
+    UPDATE_EVENT_DISPATCHER.register(index, listener);
+}
+
+pub fn unsubscribeUpdate(listener: UpdateListener) void {
+    UPDATE_EVENT_DISPATCHER.unregister(listener);
+}
+
+pub fn subscribeRender(listener: RenderListener) void {
+    RENDER_EVENT_DISPATCHER.register(listener);
+}
+
+pub fn subscribeRenderAt(index: usize, listener: RenderListener) void {
+    RENDER_EVENT_DISPATCHER.register(index, listener);
+}
+
+pub fn unsubscribeRender(listener: RenderListener) void {
+    RENDER_EVENT_DISPATCHER.unregister(listener);
+}
+
+/// Performs a tick.Update the Timer, notify UpdateEvent, notify Pre-Render, Render, Post-Render events
+pub fn tick() void {
+    Timer.tick();
+    UPDATE_EVENT_DISPATCHER.notify(&UPDATE_EVENT);
+
+    RENDER_EVENT.type = RenderEventType.PRE_RENDER;
+    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
+
+    RENDER_EVENT.type = RenderEventType.RENDER;
+    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
+
+    RENDER_EVENT.type = RenderEventType.POST_RENDER;
+    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
 }
 
 pub const FFAPIError = error{
@@ -82,19 +144,6 @@ pub const ActionType = enum {
     DEACTIVATED,
     DISPOSED,
 };
-
-pub const UpdateEvent = struct {};
-pub const UpdateListener = *const fn (*const UpdateEvent) void;
-
-pub const RenderEventType = enum {
-    PRE_RENDER,
-    RENDER,
-    POST_RENDER,
-};
-pub const RenderEvent = struct {
-    type: RenderEventType,
-};
-pub const RenderListener = *const fn (*const RenderEvent) void;
 
 /// Color blending modes
 pub const BlendMode = enum(CInt) {
@@ -158,11 +207,30 @@ pub const TextureData = struct {
     }
 };
 
+pub const Projection = struct {
+    clear_color: ?Color = Color{ 0, 0, 0, 255 },
+    offset: PosF = PosF{ 0, 0 },
+    pivot: PosF = PosF{ 0, 0 },
+    zoom: Float = 1,
+    rotation: Float = 0,
+
+    pub fn format(
+        self: Projection,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "Projection[ clear_color:{any}, offset:{any}, pivot:{any}, zoom:{d}, rot:{d} ]",
+            self,
+        );
+    }
+};
+
 pub const RenderTextureData = struct {
     binding: BindingIndex = NO_BINDING,
     width: CInt = 0,
     height: CInt = 0,
-    fbo_scale: Float = 1,
 
     pub fn format(
         self: RenderTextureData,
@@ -171,7 +239,7 @@ pub const RenderTextureData = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "RenderTextureData[ bind:{d}, w:{d}, h:{d}, fbo:{d} ]",
+            "RenderTextureData[ bind:{d}, w:{d}, h:{d} ]",
             self,
         );
     }
@@ -233,8 +301,6 @@ pub const TransformData = struct {
 };
 
 pub const RenderData = struct {
-    clear: bool = true,
-    clear_color: Color = Color{ 0, 0, 0, 255 },
     tint_color: Color = Color{ 255, 255, 255, 255 },
     blend_mode: BlendMode = BlendMode.ALPHA,
 
@@ -245,7 +311,7 @@ pub const RenderData = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "RenderData[ clear:{}, ccolor:{any}, tint:{any}, blend:{} ]",
+            "RenderData[ tint:{any}, blend:{} ]",
             self,
         );
     }

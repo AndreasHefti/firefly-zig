@@ -24,6 +24,14 @@ pub fn EventDispatch(comptime E: type) type {
             self.listeners.append(listener) catch @panic("Failed to append listener");
         }
 
+        pub fn registerPrepend(self: *Self, listener: Listener) void {
+            self.listeners.insert(0, listener) catch @panic("Failed to append listener");
+        }
+
+        pub fn registerInsert(self: *Self, index: usize, listener: Listener) void {
+            self.listeners.insert(index, listener) catch @panic("Failed to append listener");
+        }
+
         pub fn unregister(self: *Self, listener: Listener) void {
             for (0..self.listeners.items.len) |i| {
                 if (self.listeners.items[i] == listener) {

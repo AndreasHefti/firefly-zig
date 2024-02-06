@@ -9,12 +9,12 @@ pub const graphics = @import("graphics/graphics.zig");
 
 //pub var RENDER_API: rendering_api.RenderAPI() = undefined;
 var initialized = false;
+
 pub fn moduleInitDebug(allocator: Allocator) !void {
     defer initialized = true;
     if (initialized)
         return;
 
-    //RENDER_API = try rendering_api.createDebugRenderAPI(ALLOC);
     try initModules(allocator, allocator, allocator);
 }
 
@@ -23,8 +23,6 @@ pub fn moduleInitAlloc(component_allocator: Allocator, entity_allocator: Allocat
     if (initialized)
         return;
 
-    // TODO init default rendering_api impl here when available
-    //RENDER_API = try rendering_api.createDebugRenderAPI(ALLOC);
     try initModules(component_allocator, entity_allocator, allocator);
 }
 

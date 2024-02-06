@@ -20,18 +20,23 @@ const UpdateScheduler = struct {
 };
 
 var initialized = false;
-var lastUpdateTime = std.time.milliTimestamp();
+var lastUpdateTime: i64 = undefined;
 var scheduler: ArrayList(UpdateScheduler) = undefined;
 
 pub fn init() void {
     defer initialized = true;
-    if (initialized) return;
+    if (initialized)
+        return;
+
     scheduler = ArrayList(UpdateScheduler).init(api.ALLOC);
+    lastUpdateTime = std.time.milliTimestamp();
 }
 
 pub fn deinit() void {
     defer initialized = false;
-    if (!initialized) return;
+    if (!initialized)
+        return;
+
     scheduler.deinit();
 }
 

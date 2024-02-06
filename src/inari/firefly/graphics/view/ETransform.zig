@@ -1,8 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const api = @import("../../api/api.zig"); // TODO module
 const graphics = @import("../graphics.zig");
+const api = graphics.api;
 
 const Entity = api.Entity;
 const View = graphics.View;

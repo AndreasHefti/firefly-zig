@@ -1,8 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const api = @import("../../api/api.zig"); // TODO module
 const graphics = @import("../graphics.zig");
+const api = graphics.api;
 
 const Component = api.Component;
 const Aspect = api.utils.aspect.Aspect;
@@ -37,7 +37,7 @@ pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
 id: Index = UNDEF_INDEX,
 name: String = NO_NAME,
 position: Vec2f = Vec2f{},
-layer: u8 = 0,
+order: u8 = 0,
 view_id: Index,
 shader_binding: api.BindingIndex = api.NO_BINDING,
 

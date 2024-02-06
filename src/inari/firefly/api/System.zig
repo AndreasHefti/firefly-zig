@@ -36,24 +36,31 @@ pub var disposeByName: *const fn (String) void = undefined;
 pub var subscribe: *const fn (Component.EventListener) void = undefined;
 pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
 
-// struct fields of system
+// struct fields of a System
 id: Index = UNDEF_INDEX,
 name: String = NO_NAME,
 info: String = NO_NAME,
-onInit: *const fn () void = undefined,
-onActivation: *const fn (bool) void = undefined,
-onDispose: *const fn () void = undefined,
+// struct function references of a System
+onInit: ?*const fn () void = null,
+onActivation: ?*const fn (bool) void = null,
+onDispose: ?*const fn () void = null,
 
 pub fn onNew(id: Index) void {
-    System.get(id).onInit();
+    if (System.get(id).onInit) |onInit| {
+        onInit();
+    }
 }
 
 pub fn onActivation(id: Index, active: bool) void {
-    System.get(id).onActivation(active);
+    if (System.get(id).onActivation) |onAct| {
+        onAct(active);
+    }
 }
 
 pub fn onDispose(id: Index) void {
-    System.get(id).onDispose();
+    if (System.get(id).onDispose) |onDisp| {
+        onDisp();
+    }
 }
 
 // const api = @import("api.zig");

@@ -19,6 +19,7 @@ const SpriteData = api.SpriteData;
 const PosI = utils.geom.PosI;
 const CInt = utils.CInt;
 const Vector2f = utils.geom.Vector2f;
+const Projection = api.Projection;
 
 pub fn RenderAPI() type {
     return struct {
@@ -44,10 +45,9 @@ pub fn RenderAPI() type {
         /// Dispose the shader with the given binding identifier (shaderId) from GPU
         /// @param shaderId identifier of the shader to dispose.
         disposeShader: *const fn (*ShaderData) FFAPIError!void = undefined,
-
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
-        /// Use given render data as default rendering attributes
-        startRendering: *const fn (?BindingIndex) void = undefined,
+        /// Uses Projection to update camera projection and clear target before start rendering
+        startRendering: *const fn (?BindingIndex, ?*const Projection) void = undefined,
         /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
         /// @param shaderId The instance identifier of the shader.
         setActiveShader: *const fn (BindingIndex) FFAPIError!void = undefined,
@@ -57,6 +57,7 @@ pub fn RenderAPI() type {
         // TODO
         renderSprite: *const fn (*const SpriteData, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
+        /// switches back to screen rendering
         endRendering: *const fn () void = undefined,
 
         deinit: *const fn () void = undefined,
@@ -134,6 +135,7 @@ pub const DebugRenderAPI = struct {
 
     var renderActionQueue: DynArray(RenderAction) = undefined;
 
+    var currentProjection: Projection = Projection{};
     var currentRenderTexture: ?BindingIndex = null;
     var currentShader: ?BindingIndex = null;
     var currentOffset: *const Vector2f = &defaultOffset;
@@ -233,9 +235,14 @@ pub const DebugRenderAPI = struct {
         }
     }
 
-    pub fn startRendering(textureId: ?BindingIndex) void {
+    pub fn startRendering(textureId: ?BindingIndex, projection: ?*const Projection) void {
         if (textureId) |id| {
             currentRenderTexture = id;
+        }
+        if (projection) |p| {
+            currentProjection = p.*;
+        } else {
+            currentProjection = Projection{};
         }
     }
 
@@ -310,9 +317,11 @@ pub const DebugRenderAPI = struct {
         }
 
         buffer.append(" current state:\n");
-        buffer.print("   RenderTexture: {any}\n", .{DebugRenderAPI.currentRenderTexture});
-        buffer.print("   RenderData: {any}\n", .{DebugRenderAPI.currentRenderData});
-        buffer.print("   Shader: {any}\n", .{DebugRenderAPI.currentShader});
+
+        buffer.print("   {any}\n", .{DebugRenderAPI.currentProjection});
+        buffer.print("   {any}\n", .{DebugRenderAPI.currentRenderTexture});
+        buffer.print("   {any}\n", .{DebugRenderAPI.currentRenderData});
+        buffer.print("   {any}\n", .{DebugRenderAPI.currentShader});
         buffer.print("   Offset: {any}\n", .{DebugRenderAPI.currentOffset.*});
 
         buffer.append(" render actions:\n");
