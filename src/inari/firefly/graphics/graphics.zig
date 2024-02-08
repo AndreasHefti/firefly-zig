@@ -13,12 +13,19 @@ pub const View = @import("view/View.zig");
 pub const ETransform = @import("view/ETransform.zig");
 
 var initialized = false;
+var api_init = false;
 
-pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
+pub fn initTesting() !void {
+    try api.initTesting();
+    try init(api.InitMode.TESTING);
+    api_init = true;
+}
+
+pub fn init(_: api.InitMode) !void {
     defer initialized = true;
-    if (initialized) return;
+    if (initialized)
+        return;
 
-    try api.init(component_allocator, entity_allocator, allocator);
     try TextureAsset.init();
     try SpriteSetAsset.init();
     try SpriteAsset.init();
@@ -33,7 +40,10 @@ pub fn deinit() void {
     SpriteSetAsset.deinit();
     SpriteAsset.deinit();
     ShaderAsset.deinit();
-    api.deinit();
+    if (api_init) {
+        api.deinit();
+        api_init = false;
+    }
 }
 
 test {

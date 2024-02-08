@@ -1,89 +1,31 @@
 const std = @import("std");
 const api = @import("api.zig");
 
-const utils = api.utils;
-const StringBuffer = utils.StringBuffer;
-const String = utils.String;
+const StringBuffer = api.utils.StringBuffer;
+const String = api.utils.String;
 const FFAPIError = api.FFAPIError;
-const DynArray = utils.dynarray.DynArray;
+const DynArray = api.utils.dynarray.DynArray;
 const BindingIndex = api.BindingIndex;
 const NO_BINDING = api.NO_BINDING;
-const BlendMode = api.BlendMode;
-const ViewData = api.ViewData;
 const TextureData = api.TextureData;
 const RenderTextureData = api.RenderTextureData;
 const ShaderData = api.ShaderData;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const SpriteData = api.SpriteData;
-const PosI = utils.geom.PosI;
-const CInt = utils.CInt;
-const Vector2f = utils.geom.Vector2f;
+const PosI = api.utils.geom.PosI;
+const CInt = api.utils.CInt;
+const Vector2f = api.utils.geom.Vector2f;
 const Projection = api.Projection;
-
-pub fn RenderAPI() type {
-    return struct {
-        const Self = @This();
-        /// return the actual screen width
-        screenWidth: *const fn () CInt = undefined,
-        /// return the actual screen height
-        screenHeight: *const fn () CInt = undefined,
-        /// Show actual frame rate per second at given position on the screen
-        showFPS: *const fn (*PosI) void = undefined,
-
-        /// Loads image data from file system and create new texture data loaded into GPU
-        /// @param textureData The texture DAO. Sets binding, width and height to the DAO
-        loadTexture: *const fn (*TextureData) FFAPIError!void = undefined,
-        /// Disposes the texture with given texture binding id from GPU memory
-        /// @param textureId binding identifier of the texture to dispose.
-        disposeTexture: *const fn (*TextureData) FFAPIError!void = undefined,
-
-        createRenderTexture: *const fn (*RenderTextureData) FFAPIError!void = undefined,
-        disposeRenderTexture: *const fn (*RenderTextureData) FFAPIError!void = undefined,
-        /// create new shader from given shader data and load it to GPU
-        createShader: *const fn (*ShaderData) FFAPIError!void = undefined,
-        /// Dispose the shader with the given binding identifier (shaderId) from GPU
-        /// @param shaderId identifier of the shader to dispose.
-        disposeShader: *const fn (*ShaderData) FFAPIError!void = undefined,
-        /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
-        /// Uses Projection to update camera projection and clear target before start rendering
-        startRendering: *const fn (?BindingIndex, ?*const Projection) void = undefined,
-        /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
-        /// @param shaderId The instance identifier of the shader.
-        setActiveShader: *const fn (BindingIndex) FFAPIError!void = undefined,
-        /// This renders a given RenderTextureData (BindingIndex) to the actual render target that can be
-        /// rendering texture or the screen
-        renderTexture: *const fn (BindingIndex, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
-        // TODO
-        renderSprite: *const fn (*const SpriteData, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
-        /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
-        /// switches back to screen rendering
-        endRendering: *const fn () void = undefined,
-
-        deinit: *const fn () void = undefined,
-
-        pub fn init(
-            initImpl: *const fn (*RenderAPI(), std.mem.Allocator) anyerror!void,
-            allocator: std.mem.Allocator,
-        ) !Self {
-            var self = Self{};
-            _ = try initImpl(&self, allocator);
-            return self;
-        }
-    };
-}
-
-//////////////////////////////////////////////////////////////
-//// TESTING
-//////////////////////////////////////////////////////////////
+const RenderAPI = api.RenderAPI;
 
 // Singleton Debug RenderAPI
 var singletonDebugRenderAPI: RenderAPI() = undefined;
-pub fn createDebugRenderAPI(allocator: std.mem.Allocator) !RenderAPI() {
+pub fn createTestRenderAPI() !RenderAPI() {
     if (DebugRenderAPI.initialized) {
         return singletonDebugRenderAPI;
     }
-    singletonDebugRenderAPI = try RenderAPI().init(DebugRenderAPI.initImpl, allocator);
+    singletonDebugRenderAPI = try RenderAPI().init(DebugRenderAPI.initImpl, api.ALLOC);
     return singletonDebugRenderAPI;
 }
 
@@ -142,6 +84,10 @@ pub const DebugRenderAPI = struct {
     var currentRenderData: *const RenderData = &defaultRenderData;
 
     fn initImpl(interface: *RenderAPI(), allocator: std.mem.Allocator) !void {
+        defer initialized = true;
+        if (initialized)
+            return;
+
         alloc = allocator;
         textures = try DynArray(TextureData).init(allocator, null);
         renderTextures = try DynArray(RenderTextureData).init(allocator, null);
@@ -167,15 +113,20 @@ pub const DebugRenderAPI = struct {
         interface.renderSprite = renderSprite;
         interface.endRendering = endRendering;
 
+        interface.printDebug = printDebug;
+        interface.deinit = deinit;
+
         DebugRenderAPI.currentRenderTexture = null;
         DebugRenderAPI.currentShader = null;
         DebugRenderAPI.currentOffset = &defaultOffset;
         DebugRenderAPI.currentRenderData = &defaultRenderData;
-
-        initialized = true;
     }
 
     fn deinit() void {
+        defer initialized = false;
+        if (!initialized)
+            return;
+
         renderActionQueue.deinit();
         textures.deinit();
         renderTextures.deinit();
@@ -294,7 +245,7 @@ pub const DebugRenderAPI = struct {
         currentRenderTexture = null;
     }
 
-    pub fn printDebugRendering(buffer: *StringBuffer) void {
+    pub fn printDebug(buffer: *StringBuffer) void {
         buffer.append("\n******************************\n");
         buffer.append("Debug Rendering API State:\n");
 
@@ -332,8 +283,12 @@ pub const DebugRenderAPI = struct {
     }
 };
 
-test "debug init" {
-    try api.init(std.testing.allocator, std.testing.allocator, std.testing.allocator);
+// //////////////////////////////////////////////////////////////
+// //// TESTING RenderAPI
+// //////////////////////////////////////////////////////////////
+
+test "RenderAPI debug init" {
+    try api.initTesting();
     defer api.deinit();
 
     var width = api.RENDERING_API.screenWidth();
@@ -365,7 +320,7 @@ test "debug init" {
     api.RENDERING_API.renderSprite(&sprite, &transform, &renderData, null);
 
     // test creating another DebugGraphics will get the same instance back
-    var debugGraphics2 = try createDebugRenderAPI(std.testing.allocator);
+    var debugGraphics2 = try createTestRenderAPI();
     try std.testing.expectEqual(api.RENDERING_API, debugGraphics2);
     var offset = Vector2f{ 10, 10 };
     debugGraphics2.renderSprite(&sprite, &transform, &renderData, &offset);
@@ -380,25 +335,42 @@ test "debug init" {
         \\ loaded textures:
         \\   TextureData[ res:t1, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
         \\ loaded render textures:
-        \\   RenderTextureData[ bind:0, w:0, h:0, fbo:1 ]
+        \\   RenderTextureData[ bind:0, w:0, h:0 ]
         \\ loaded shaders:
         \\ current state:
-        \\   RenderTexture: null
-        \\   RenderData: RenderData[ clear:true, ccolor:{ 0, 0, 0, 255 }, tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
-        \\   Shader: null
+        \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
+        \\   null
+        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
+        \\   null
         \\   Offset: { 1.0e+01, 1.0e+01 }
         \\ render actions:
         \\   render SpriteData[ bind:0, bounds:{ 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00 } ] -->
         \\     TransformData[ pos:{ 1.0e+01, 1.0e+02 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
-        \\     RenderData[ clear:true, ccolor:{ 0, 0, 0, 255 }, tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
+        \\     RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
         \\     offset:null
         \\   render SpriteData[ bind:0, bounds:{ 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00 } ] -->
         \\     TransformData[ pos:{ 1.0e+01, 1.0e+02 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
-        \\     RenderData[ clear:true, ccolor:{ 0, 0, 0, 255 }, tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
+        \\     RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
         \\     offset:{ 1.0e+01, 1.0e+01 }
         \\
     ;
-    DebugRenderAPI.printDebugRendering(&sb);
+    api.RENDERING_API.printDebug(&sb);
     //std.debug.print("\n{s}", .{sb.toString()});
     try std.testing.expectEqualStrings(api_out, sb.toString());
 }
+
+// //////////////////////////////////////////////////////////////
+// //// TESTING System
+// //////////////////////////////////////////////////////////////
+
+// // test "initialization" {
+// //
+// //     try firefly.moduleInitDebug(std.testing.allocator);
+// //     defer firefly.moduleDeinit();
+
+// //     var exampleSystem = try System.initSystem(ExampleSystem);
+// //     try std.testing.expectEqualStrings("ExampleSystem", exampleSystem.getInfo().name);
+// //     var systemPtr = System.getSystem("ExampleSystem").?;
+// //     try std.testing.expectEqualStrings("ExampleSystem", systemPtr.getInfo().name);
+// //     System.activate(ExampleSystem.info.name, false);
+// // }

@@ -1,7 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const rendering = @import("rendering_api.zig");
 const EventDispatch = utils.event.EventDispatch;
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
@@ -15,23 +14,31 @@ const Color = utils.geom.Color;
 const Vector2f = utils.geom.Vector2f;
 const Vector3f = utils.geom.Vector3f;
 const Vector4f = utils.geom.Vector4f;
+const StringBuffer = utils.StringBuffer;
 
 // public API
+pub const testing = @import("testing.zig");
 pub const utils = @import("../../utils/utils.zig");
+pub const Engine = @import("Engine.zig");
 pub const Component = @import("Component.zig");
 pub const System = @import("System.zig");
 pub const Timer = @import("Timer.zig");
 pub const Entity = @import("Entity.zig");
 pub const Asset = @import("Asset.zig");
-pub const rendering_api = @import("rendering_api.zig");
 pub const Index = usize;
 pub const UNDEF_INDEX = std.math.maxInt(Index);
 pub const BindingIndex = usize;
 pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
 
+pub const InitMode = enum { TESTING, DEVELOPMENT, PRODUCTION };
+
 pub const UpdateEvent = struct {};
 pub const UpdateListener = *const fn (*const UpdateEvent) void;
-pub const RenderEventType = enum { PRE_RENDER, RENDER, POST_RENDER };
+pub const RenderEventType = enum {
+    PRE_RENDER,
+    RENDER,
+    POST_RENDER,
+};
 pub const RenderEvent = struct { type: RenderEventType };
 pub const RenderListener = *const fn (*const RenderEvent) void;
 
@@ -39,19 +46,25 @@ pub const RenderListener = *const fn (*const RenderEvent) void;
 pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
-pub var RENDERING_API: rendering.RenderAPI() = undefined;
-
-// private state
-var UPDATE_EVENT_DISPATCHER: EventDispatch(*const UpdateEvent) = undefined;
-var RENDER_EVENT_DISPATCHER: EventDispatch(*const RenderEvent) = undefined;
-var UPDATE_EVENT = UpdateEvent{};
-var RENDER_EVENT = RenderEvent{
-    .type = RenderEventType.PRE_RENDER,
-};
+pub var RENDERING_API: RenderAPI() = undefined;
 
 // initialization
 var initialized = false;
-pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocator: Allocator) !void {
+pub fn initTesting() !void {
+    try init(
+        std.testing.allocator,
+        std.testing.allocator,
+        std.testing.allocator,
+        InitMode.TESTING,
+    );
+}
+
+pub fn init(
+    component_allocator: Allocator,
+    entity_allocator: Allocator,
+    allocator: Allocator,
+    initMode: InitMode,
+) !void {
     defer initialized = true;
     if (initialized)
         return;
@@ -62,12 +75,14 @@ pub fn init(component_allocator: Allocator, entity_allocator: Allocator, allocat
 
     try utils.aspect.init(allocator);
 
-    // TODO make this configurable
-    RENDERING_API = try rendering.createDebugRenderAPI(allocator);
+    if (initMode == InitMode.TESTING) {
+        RENDERING_API = try testing.createTestRenderAPI();
+    } else {
+        // TODO
 
-    UPDATE_EVENT_DISPATCHER = EventDispatch(*const UpdateEvent).init(allocator);
-    RENDER_EVENT_DISPATCHER = EventDispatch(*const RenderEvent).init(allocator);
+    }
 
+    Engine.init();
     try Component.init();
     Timer.init();
 
@@ -82,52 +97,11 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    UPDATE_EVENT_DISPATCHER.deinit();
-    RENDER_EVENT_DISPATCHER.deinit();
-
+    Engine.deinit();
     Timer.deinit();
     Component.deinit();
     RENDERING_API.deinit();
     utils.aspect.deinit();
-}
-
-pub fn subscribeUpdate(listener: UpdateListener) void {
-    UPDATE_EVENT_DISPATCHER.register(listener);
-}
-
-pub fn subscribeUpdateAt(index: usize, listener: UpdateListener) void {
-    UPDATE_EVENT_DISPATCHER.register(index, listener);
-}
-
-pub fn unsubscribeUpdate(listener: UpdateListener) void {
-    UPDATE_EVENT_DISPATCHER.unregister(listener);
-}
-
-pub fn subscribeRender(listener: RenderListener) void {
-    RENDER_EVENT_DISPATCHER.register(listener);
-}
-
-pub fn subscribeRenderAt(index: usize, listener: RenderListener) void {
-    RENDER_EVENT_DISPATCHER.register(index, listener);
-}
-
-pub fn unsubscribeRender(listener: RenderListener) void {
-    RENDER_EVENT_DISPATCHER.unregister(listener);
-}
-
-/// Performs a tick.Update the Timer, notify UpdateEvent, notify Pre-Render, Render, Post-Render events
-pub fn tick() void {
-    Timer.tick();
-    UPDATE_EVENT_DISPATCHER.notify(&UPDATE_EVENT);
-
-    RENDER_EVENT.type = RenderEventType.PRE_RENDER;
-    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
-
-    RENDER_EVENT.type = RenderEventType.RENDER;
-    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
-
-    RENDER_EVENT.type = RenderEventType.POST_RENDER;
-    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
 }
 
 pub const FFAPIError = error{
@@ -346,8 +320,56 @@ pub const SpriteData = struct {
     }
 };
 
-test {
-    std.testing.refAllDecls(@import("rendering_api.zig"));
-    std.testing.refAllDecls(@import("system.zig"));
-    std.testing.refAllDecls(@import("component.zig"));
+pub fn RenderAPI() type {
+    return struct {
+        const Self = @This();
+        /// return the actual screen width
+        screenWidth: *const fn () CInt = undefined,
+        /// return the actual screen height
+        screenHeight: *const fn () CInt = undefined,
+        /// Show actual frame rate per second at given position on the screen
+        showFPS: *const fn (*PosI) void = undefined,
+
+        /// Loads image data from file system and create new texture data loaded into GPU
+        /// @param textureData The texture DAO. Sets binding, width and height to the DAO
+        loadTexture: *const fn (*TextureData) FFAPIError!void = undefined,
+        /// Disposes the texture with given texture binding id from GPU memory
+        /// @param textureId binding identifier of the texture to dispose.
+        disposeTexture: *const fn (*TextureData) FFAPIError!void = undefined,
+
+        createRenderTexture: *const fn (*RenderTextureData) FFAPIError!void = undefined,
+        disposeRenderTexture: *const fn (*RenderTextureData) FFAPIError!void = undefined,
+        /// create new shader from given shader data and load it to GPU
+        createShader: *const fn (*ShaderData) FFAPIError!void = undefined,
+        /// Dispose the shader with the given binding identifier (shaderId) from GPU
+        /// @param shaderId identifier of the shader to dispose.
+        disposeShader: *const fn (*ShaderData) FFAPIError!void = undefined,
+        /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
+        /// Uses Projection to update camera projection and clear target before start rendering
+        startRendering: *const fn (?BindingIndex, ?*const Projection) void = undefined,
+        /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
+        /// @param shaderId The instance identifier of the shader.
+        setActiveShader: *const fn (BindingIndex) FFAPIError!void = undefined,
+        /// This renders a given RenderTextureData (BindingIndex) to the actual render target that can be
+        /// rendering texture or the screen
+        renderTexture: *const fn (BindingIndex, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
+        // TODO
+        renderSprite: *const fn (*const SpriteData, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
+        /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
+        /// switches back to screen rendering
+        endRendering: *const fn () void = undefined,
+
+        printDebug: *const fn (*StringBuffer) void = undefined,
+
+        deinit: *const fn () void = undefined,
+
+        pub fn init(
+            initImpl: *const fn (*RenderAPI(), std.mem.Allocator) anyerror!void,
+            allocator: std.mem.Allocator,
+        ) !Self {
+            var self = Self{};
+            _ = try initImpl(&self, allocator);
+            return self;
+        }
+    };
 }
