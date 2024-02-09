@@ -5,6 +5,7 @@ const graphics = @import("graphics.zig");
 const api = graphics.api;
 const utils = graphics.utils;
 
+const BitSet = utils.bitset.BitSet;
 const Component = api.Component;
 const Aspect = api.utils.aspect.Aspect;
 const String = api.utils.String;
@@ -73,10 +74,14 @@ pub fn unsubscribeViewRendering(listener: ViewRenderListener) void {
 //////////////////////////////////////////////////////////////
 
 pub const ViewLayerMapping = struct {
-    mapping: DynArray(DynArray(ArrayList(Index))),
+    undef_mapping: BitSet,
+    mapping: DynArray(DynArray(BitSet)),
 
     pub fn new() ViewLayerMapping {
-        return ViewLayerMapping{ .mapping = DynArray(DynArray(ArrayList(Index))).init(api.ALLOC, null) };
+        return ViewLayerMapping{
+            .undef_mapping = BitSet.init(api.ALLOC),
+            .mapping = DynArray(DynArray(BitSet)).init(api.ALLOC, null),
+        };
     }
 
     pub fn deinit(self: *ViewLayerMapping) void {
@@ -95,8 +100,19 @@ pub const ViewLayerMapping = struct {
         getIdMapping(self, view_id, layer_id).append(id);
     }
 
+    pub fn get(self: *ViewLayerMapping, view_id: Index, layer_id: Index) ?*BitSet {
+        if (view_id == UNDEF_INDEX) {}
+        if (self.mapping.getIfExists(view_id)) |lmap| {
+            if (layer_id != UNDEF_INDEX) {
+                return lmap.getIfExists(layer_id);
+            } else {
+                return lmap.getIfExists(0);
+            }
+        }
+    }
+
     pub fn remove(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
-        getIdMapping(self, view_id, layer_id).swapRemove(id);
+        getIdMapping(self, view_id, layer_id).re;
     }
 
     pub fn clear(self: *ViewLayerMapping) void {
@@ -111,18 +127,22 @@ pub const ViewLayerMapping = struct {
         self.mapping.clear();
     }
 
-    fn getIdMapping(self: *ViewLayerMapping, view_id: Index, layer_id: Index) *ArrayList(Index) {
-        var layer_mapping: *DynArray(ArrayList(Index)) = getLayerMapping(self, view_id);
-        if (!layer_mapping.exists(layer_id)) {
-            layer_mapping.set(ArrayList(Index).init(api.ALLOC), layer_id);
+    fn getIdMapping(self: *ViewLayerMapping, view_id: Index, layer_id: Index) *BitSet {
+        if (view_id == UNDEF_INDEX) {
+            return &self.undef_mapping;
         }
-        return layer_mapping.get(layer_id);
+        var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, view_id);
+        var l_id = if (layer_id == UNDEF_INDEX) 0 else layer_id;
+        if (!layer_mapping.exists(l_id)) {
+            layer_mapping.set(BitSet.init(api.ALLOC), l_id);
+        }
+        return layer_mapping.get(l_id);
     }
 
-    fn getLayerMapping(self: *ViewLayerMapping, view_id: Index) *DynArray(ArrayList(Index)) {
+    fn getLayerMapping(self: *ViewLayerMapping, view_id: Index) *DynArray(BitSet) {
         if (!self.mapping.exists(view_id)) {
             self.mapping.set(
-                DynArray(ArrayList(Index)).init(api.ALLOC, null) catch unreachable,
+                DynArray(BitSet).init(api.ALLOC, null) catch unreachable,
                 view_id,
             );
         }

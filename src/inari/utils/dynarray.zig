@@ -77,6 +77,13 @@ pub fn DynArray(comptime T: type) type {
             return inBounds(self, index) and self.slots.isSet(index);
         }
 
+        pub fn getIfExists(self: *Self, index: usize) ?*T {
+            if (exists(self, index)) {
+                return self.register.get(index);
+            }
+            return null;
+        }
+
         pub fn get(self: *Self, index: usize) *T {
             if (exists(self, index)) {
                 return self.register.get(index);

@@ -7,9 +7,11 @@ const api = graphics.api;
 const utils = graphics.utils;
 
 const Aspect = utils.aspect.Aspect;
+const Kind = utils.aspect.Kind;
 const Asset = api.Asset;
 const DynArray = utils.dynarray.DynArray;
 const SpriteData = api.SpriteData;
+const RenderData = api.RenderData;
 const BindingId = api.BindingId;
 const String = utils.String;
 const Event = api.Component.Event;
@@ -17,7 +19,11 @@ const ActionType = api.Component.ActionType;
 const TextureData = api.TextureData;
 const TextureAsset = graphics.TextureAsset;
 const Entity = api.Entity;
+const ETransform = graphics.view.ETransform;
 const View = graphics.View;
+const ViewLayerMapping = graphics.view.ViewLayerMapping;
+const ViewRenderEvent = graphics.view.ViewRenderEvent;
+const ViewRenderListener = graphics.view.ViewRenderListener;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
@@ -100,6 +106,7 @@ pub const ESprite = struct {
 
     id: Index = UNDEF_INDEX,
     sprite_ref: BindingId = NO_BINDING,
+    render_data: RenderData = RenderData{},
 
     pub fn setSpriteByAssetName(self: *ESprite, view_name: String) void {
         self.view_id = View.byName(view_name).id;
@@ -351,4 +358,44 @@ pub const SpriteSetAsset = struct {
 //// Simple Sprite Renderer System
 //////////////////////////////////////////////////////////////
 
-const SimpleSpriteRenderer = struct {};
+const SimpleSpriteRenderer = struct {
+    var accept_kind: Kind = undefined;
+    var sprite_refs: ViewLayerMapping = undefined;
+    var offset: Vec2f = Vec2f{};
+
+    fn handleEntityEvent(e: Event) void {
+        switch (e.event_type) {
+            ActionType.Activated => {
+                if (accepted(e.c_id)) |t| {
+                    sprite_refs.add(t.view_id, t.layer_id, e.c_id);
+                }
+            },
+            ActionType.Deactivated => {
+                if (accepted(e.c_id)) |t| {
+                    sprite_refs.remove(t.view_id, t.layer_id, e.c_id);
+                }
+            },
+            else => {},
+        }
+    }
+
+    fn accepted(entity_id: Index) ?*const ETransform {
+        if (accept_kind.isKindOf(Entity.byId(entity_id))) {
+            return ETransform.byId(entity_id);
+        }
+        return null;
+    }
+
+    fn handleRenderEvent(e: *const ViewRenderEvent) void {
+        if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
+            var i = all.nextSetBit(0);
+            while (i) |id| {
+                // render the sprite
+                const s: ESprite = ESprite.byId(id);
+                const sd: SpriteData = sprites.get(s.sprite_ref);
+                const t: ETransform = ETransform.byId(id);
+                api.RENDERING_API.renderSprite(sd, t, s.render_data, offset);
+            }
+        }
+    }
+};

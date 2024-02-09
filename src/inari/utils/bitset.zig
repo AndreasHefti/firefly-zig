@@ -21,6 +21,10 @@ pub const BitSet = struct {
     /// The number of valid items in this bit set
     unmanaged: DynamicBitSetUnmanaged = .{},
 
+    pub fn init(allocator: Allocator) !Self {
+        initEmpty(allocator, 64);
+    }
+
     /// Creates a bit set with no elements present.
     pub fn initEmpty(allocator: Allocator, bit_length: usize) !Self {
         return Self{
