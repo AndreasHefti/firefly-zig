@@ -80,11 +80,35 @@ pub const ViewLayerMapping = struct {
     }
 
     pub fn deinit(self: *ViewLayerMapping) void {
+        var it = self.mapping.iterator();
+        while (it.next()) |*next| {
+            var itt = next.iterator();
+            while (itt.next()) |*n| {
+                n.deinit();
+            }
+            next.deinit();
+        }
         self.mapping.deinit();
     }
 
     pub fn add(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
         getIdMapping(self, view_id, layer_id).append(id);
+    }
+
+    pub fn remove(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
+        getIdMapping(self, view_id, layer_id).swapRemove(id);
+    }
+
+    pub fn clear(self: *ViewLayerMapping) void {
+        var it = self.mapping.iterator();
+        while (it.next()) |*next| {
+            var itt = next.iterator();
+            while (itt.next()) |*n| {
+                n.clearAndFree();
+            }
+            next.clear();
+        }
+        self.mapping.clear();
     }
 
     fn getIdMapping(self: *ViewLayerMapping, view_id: Index, layer_id: Index) *ArrayList(Index) {
