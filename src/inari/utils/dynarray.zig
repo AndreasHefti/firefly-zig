@@ -4,11 +4,7 @@ const BitSet = @import("bitset.zig").BitSet;
 const utils = @import("utils.zig");
 const UNDEF_INDEX = std.math.maxInt(usize);
 
-const DynArrayError = error{IllegalSlotAccess};
-
-pub fn DynArrayUndefined(comptime T: type) type {
-    return DynArray(T, undefined);
-}
+pub const DynArrayError = error{IllegalSlotAccess};
 
 pub fn DynArray(comptime T: type) type {
     return struct {

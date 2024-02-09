@@ -41,9 +41,9 @@ test "Firefly init" {
         \\    Aspect[Entity|2]
         \\  Group[Asset|1]:
         \\    Aspect[Texture|0]
-        \\    Aspect[SpriteSet|1]
+        \\    Aspect[Shader|1]
         \\    Aspect[Sprite|2]
-        \\    Aspect[Shader|3]
+        \\    Aspect[SpriteSet|3]
         \\  Group[ENTITY_COMPONENT_ASPECT_GROUP|2]:
         \\
         \\Components:

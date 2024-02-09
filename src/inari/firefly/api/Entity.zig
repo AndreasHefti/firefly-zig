@@ -39,7 +39,6 @@ pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
 id: Index = UNDEF_INDEX,
 name: String = NO_NAME,
 kind: Kind = undefined,
-parent_id: Index = UNDEF_INDEX,
 
 pub fn withComponent(self: *Entity, c: anytype) *Entity {
     checkValid(c);

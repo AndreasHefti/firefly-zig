@@ -1,19 +1,45 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
+const sprite = @import("sprite.zig");
+
+const Aspect = utils.aspect.Aspect;
+const Asset = api.Asset;
+const DynArray = utils.dynarray.DynArray;
+const StringBuffer = utils.StringBuffer;
+const ShaderData = api.ShaderData;
+const BindingId = api.BindingId;
+const String = utils.String;
+const Event = api.Component.Event;
+const ActionType = api.Component.ActionType;
+const TextureData = api.TextureData;
+
+const NO_NAME = utils.NO_NAME;
+const NO_BINDING = api.NO_BINDING;
+const Index = api.Index;
+const UNDEF_INDEX = api.UNDEF_INDEX;
+const RectF = utils.geom.RectF;
+const Vec2f = utils.geom.Vector2f;
+const CInt = utils.CInt;
+
+//////////////////////////////////////////////////////////////
+//// global
+//////////////////////////////////////////////////////////////
 
 pub const api = @import("../api/api.zig");
 pub const utils = api.utils;
 
-pub const TextureAsset = @import("TextureAsset.zig");
-pub const SpriteAsset = @import("SpriteAsset.zig");
-pub const SpriteSetAsset = @import("SpriteSetAsset.zig");
-pub const ShaderAsset = @import("ShaderAsset.zig");
-pub const Layer = @import("view/Layer.zig");
-pub const View = @import("view/View.zig");
-pub const ETransform = @import("view/ETransform.zig");
+pub const ESprite = sprite.ESprite;
+pub const SpriteSet = sprite.SpriteSet;
+pub const SpriteAsset = sprite.SpriteAsset;
+pub const SpriteSetAsset = sprite.SpriteSetAsset;
+pub const view = @import("view.zig");
 
 var initialized = false;
 var api_init = false;
+
+var textures: DynArray(TextureData) = undefined;
+var shader: DynArray(ShaderData) = undefined;
 
 pub fn initTesting() !void {
     try api.initTesting();
@@ -26,26 +52,232 @@ pub fn init(_: api.InitMode) !void {
     if (initialized)
         return;
 
-    try TextureAsset.init();
-    try SpriteSetAsset.init();
-    try SpriteAsset.init();
-    try ShaderAsset.init();
+    // init texture asset
+    TextureAsset.asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
+    textures = try DynArray(TextureData).init(api.COMPONENT_ALLOC, TextureAsset.NULL_VALUE);
+    Asset.subscribe(TextureAsset.listener);
+    // init shader asset
+    ShaderAsset.asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Shader");
+    shader = try DynArray(ShaderData).init(api.COMPONENT_ALLOC, ShaderAsset.NULL_VALUE);
+    Asset.subscribe(ShaderAsset.listener);
+    // init sprite package
+    try sprite.init();
 }
 
 pub fn deinit() void {
     defer initialized = false;
-    if (!initialized) return;
+    if (!initialized)
+        return;
 
-    TextureAsset.deinit();
-    SpriteSetAsset.deinit();
-    SpriteAsset.deinit();
-    ShaderAsset.deinit();
+    // deinit sprite package
+    sprite.deinit();
+    // deinit texture asset
+    Asset.unsubscribe(TextureAsset.listener);
+    TextureAsset.asset_type = undefined;
+    textures.deinit();
+    textures = undefined;
+    // deinit shader asset
+    Asset.unsubscribe(ShaderAsset.listener);
+    ShaderAsset.asset_type = undefined;
+    shader.deinit();
+    shader = undefined;
+    // deinit api if it was initialized by this package
     if (api_init) {
         api.deinit();
         api_init = false;
     }
 }
 
-test {
-    std.testing.refAllDecls(@This());
-}
+//////////////////////////////////////////////////////////////
+//// ShaderAsset
+//////////////////////////////////////////////////////////////
+
+pub const ShaderAsset = struct {
+    pub var asset_type: *Aspect = undefined;
+    pub const NULL_VALUE = ShaderData{};
+
+    pub const Shader = struct {
+        asset_name: String = NO_NAME,
+        vertex_shader_resource: String = NO_NAME,
+        fragment_shader_resource: String = NO_NAME,
+        file_resource: bool = true,
+    };
+
+    pub fn new(data: Shader) *Asset {
+        if (!initialized)
+            @panic("Firefly module not initialized");
+
+        return Asset.new(Asset{
+            .asset_type = asset_type,
+            .name = data.asset_name,
+            .resource_id = shader.add(ShaderData{
+                .vertex_shader_resource = data.vertex_shader_resource,
+                .fragment_shader_resource = data.fragment_shader_resource,
+                .file_resource = data.file_resource,
+            }),
+        });
+    }
+
+    pub fn resourceSize() usize {
+        return shader.size();
+    }
+
+    pub fn getResource(res_id: Index) *const ShaderData {
+        return shader.get(res_id);
+    }
+
+    pub fn getResourceForIndex(res_id: Index, _: Index) *const ShaderData {
+        return shader.get(res_id);
+    }
+
+    pub fn getResourceForName(res_id: Index, _: String) *const ShaderData {
+        return shader.get(res_id);
+    }
+
+    fn listener(e: Event) void {
+        var asset: *Asset = Asset.pool.get(e.c_id);
+        if (asset_type.index != asset.asset_type.index)
+            return;
+
+        switch (e.event_type) {
+            ActionType.Activated => load(asset),
+            ActionType.Deactivated => unload(asset),
+            ActionType.Disposing => delete(asset),
+            else => {},
+        }
+    }
+
+    fn load(asset: *Asset) void {
+        if (!initialized)
+            return;
+
+        var shaderData: *ShaderData = shader.get(asset.resource_id);
+        if (shaderData.binding != NO_BINDING)
+            return; // already loaded
+
+        api.RENDERING_API.createShader(shaderData) catch {
+            std.log.err("Failed to load shader: {any}", .{shaderData});
+        };
+    }
+
+    fn unload(asset: *Asset) void {
+        if (!initialized)
+            return;
+
+        var shaderData: *ShaderData = shader.get(asset.resource_id);
+        api.RENDERING_API.disposeShader(shaderData) catch {
+            std.log.err("Failed to dispose shader: {any}", .{shaderData});
+        };
+    }
+
+    fn delete(asset: *Asset) void {
+        Asset.activateById(asset.id, false);
+        shader.reset(asset.resource_id);
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// TextureAsset
+//////////////////////////////////////////////////////////////
+
+pub const TextureAsset = struct {
+    pub var asset_type: *Aspect = undefined;
+    pub const NULL_VALUE = TextureData{};
+
+    pub const Texture = struct {
+        asset_name: String = NO_NAME,
+        resource_path: String,
+        is_mipmap: bool = false,
+        s_wrap: CInt = -1,
+        t_wrap: CInt = -1,
+        min_filter: CInt = -1,
+        mag_filter: CInt = -1,
+    };
+
+    pub fn new(data: Texture) *Asset {
+        if (!initialized) @panic("Firefly module not initialized");
+
+        return Asset.new(Asset{
+            .asset_type = asset_type,
+            .name = data.asset_name,
+            .resource_id = textures.add(
+                TextureData{
+                    .resource = data.resource_path,
+                    .is_mipmap = data.is_mipmap,
+                    .s_wrap = data.s_wrap,
+                    .t_wrap = data.t_wrap,
+                    .min_filter = data.min_filter,
+                    .mag_filter = data.mag_filter,
+                },
+            ),
+        });
+    }
+
+    pub fn resourceSize() usize {
+        return textures.size();
+    }
+
+    pub fn getResource(res_id: Index) *const TextureData {
+        return textures.get(res_id);
+    }
+
+    pub fn getResourceForIndex(res_id: Index, _: Index) *const TextureData {
+        return textures.get(res_id);
+    }
+
+    pub fn getResourceForName(res_id: Index, _: String) *const TextureData {
+        return textures.get(res_id);
+    }
+
+    fn listener(e: Event) void {
+        var asset: *Asset = Asset.pool.get(e.c_id);
+        if (asset_type.index != asset.asset_type.index)
+            return;
+
+        switch (e.event_type) {
+            ActionType.Activated => load(asset),
+            ActionType.Deactivated => unload(asset),
+            ActionType.Disposing => delete(asset),
+            else => {},
+        }
+    }
+
+    fn load(asset: *Asset) void {
+        if (!initialized)
+            return;
+
+        var tex_data = textures.get(asset.resource_id);
+        if (tex_data.binding != NO_BINDING)
+            return; // already loaded
+
+        api.RENDERING_API.loadTexture(tex_data) catch {
+            std.log.err("Failed to load texture resource: {s}", .{tex_data.resource});
+        };
+    }
+
+    fn unload(asset: *Asset) void {
+        if (!initialized)
+            return;
+
+        if (asset.resource_id == UNDEF_INDEX)
+            return;
+
+        var tex_data: *TextureData = textures.get(asset.resource_id);
+        if (tex_data.binding == NO_BINDING)
+            return; // already disposed
+
+        api.RENDERING_API.disposeTexture(tex_data) catch {
+            std.log.err("Failed to dispose texture resource: {s}", .{tex_data.resource});
+            return;
+        };
+
+        assert(tex_data.binding == NO_BINDING);
+        assert(tex_data.width == -1);
+        assert(tex_data.height == -1);
+    }
+
+    fn delete(asset: *Asset) void {
+        Asset.activateById(asset.id, false);
+        textures.reset(asset.resource_id);
+    }
+};

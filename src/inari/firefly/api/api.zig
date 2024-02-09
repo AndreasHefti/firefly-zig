@@ -27,8 +27,8 @@ pub const Entity = @import("Entity.zig");
 pub const Asset = @import("Asset.zig");
 pub const Index = usize;
 pub const UNDEF_INDEX = std.math.maxInt(Index);
-pub const BindingIndex = usize;
-pub const NO_BINDING: BindingIndex = std.math.maxInt(usize);
+pub const BindingId = usize;
+pub const NO_BINDING: BindingId = std.math.maxInt(usize);
 
 pub const InitMode = enum { TESTING, DEVELOPMENT, PRODUCTION };
 
@@ -159,7 +159,7 @@ pub const BlendMode = enum(CInt) {
 
 pub const TextureData = struct {
     resource: String = NO_NAME,
-    binding: BindingIndex = NO_BINDING,
+    binding: BindingId = NO_BINDING,
     width: CInt = 0,
     height: CInt = 0,
     is_mipmap: bool = false,
@@ -202,7 +202,7 @@ pub const Projection = struct {
 };
 
 pub const RenderTextureData = struct {
-    binding: BindingIndex = NO_BINDING,
+    binding: BindingId = NO_BINDING,
     width: CInt = 0,
     height: CInt = 0,
 
@@ -224,11 +224,11 @@ pub const ShaderUpdate = struct {
     setUniformVec2: *const fn (String, *Vector2f) void = undefined,
     setUniformVec3: *const fn (String, *Vector3f) void = undefined,
     setUniformColorVec4: *const fn (String, *Vector4f) void = undefined,
-    bindTexture: *const fn (String, BindingIndex) void = undefined,
+    bindTexture: *const fn (String, BindingId) void = undefined,
 };
 
 pub const ShaderData = struct {
-    binding: BindingIndex = NO_BINDING,
+    binding: BindingId = NO_BINDING,
     vertex_shader_resource: String = NO_NAME,
     fragment_shader_resource: String = NO_NAME,
     file_resource: bool = true,
@@ -292,7 +292,7 @@ pub const RenderData = struct {
 };
 
 pub const SpriteData = struct {
-    texture_binding: BindingIndex = NO_BINDING,
+    texture_binding: BindingId = NO_BINDING,
     texture_bounds: RectF = RectF{ 0, 0, 0, 0 },
 
     // x = x + width / width = -width
@@ -346,13 +346,13 @@ pub fn RenderAPI() type {
         disposeShader: *const fn (*ShaderData) FFAPIError!void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
         /// Uses Projection to update camera projection and clear target before start rendering
-        startRendering: *const fn (?BindingIndex, ?*const Projection) void = undefined,
+        startRendering: *const fn (?BindingId, ?*const Projection) void = undefined,
         /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
         /// @param shaderId The instance identifier of the shader.
-        setActiveShader: *const fn (BindingIndex) FFAPIError!void = undefined,
-        /// This renders a given RenderTextureData (BindingIndex) to the actual render target that can be
+        setActiveShader: *const fn (BindingId) FFAPIError!void = undefined,
+        /// This renders a given RenderTextureData (BindingId) to the actual render target that can be
         /// rendering texture or the screen
-        renderTexture: *const fn (BindingIndex, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
+        renderTexture: *const fn (BindingId, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
         // TODO
         renderSprite: *const fn (*const SpriteData, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).

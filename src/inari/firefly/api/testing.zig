@@ -5,7 +5,7 @@ const StringBuffer = api.utils.StringBuffer;
 const String = api.utils.String;
 const FFAPIError = api.FFAPIError;
 const DynArray = api.utils.dynarray.DynArray;
-const BindingIndex = api.BindingIndex;
+const BindingId = api.BindingId;
 const NO_BINDING = api.NO_BINDING;
 const TextureData = api.TextureData;
 const RenderTextureData = api.RenderTextureData;
@@ -44,7 +44,7 @@ pub const DebugRenderAPI = struct {
     const defaultRenderData = RenderData{};
 
     const RenderAction = struct {
-        render_texture: ?BindingIndex = null,
+        render_texture: ?BindingId = null,
         render_sprite: ?SpriteData = null,
         transform: TransformData,
         render: ?RenderData,
@@ -78,8 +78,8 @@ pub const DebugRenderAPI = struct {
     var renderActionQueue: DynArray(RenderAction) = undefined;
 
     var currentProjection: Projection = Projection{};
-    var currentRenderTexture: ?BindingIndex = null;
-    var currentShader: ?BindingIndex = null;
+    var currentRenderTexture: ?BindingId = null;
+    var currentShader: ?BindingId = null;
     var currentOffset: *const Vector2f = &defaultOffset;
     var currentRenderData: *const RenderData = &defaultRenderData;
 
@@ -186,7 +186,7 @@ pub const DebugRenderAPI = struct {
         }
     }
 
-    pub fn startRendering(textureId: ?BindingIndex, projection: ?*const Projection) void {
+    pub fn startRendering(textureId: ?BindingId, projection: ?*const Projection) void {
         if (textureId) |id| {
             currentRenderTexture = id;
         }
@@ -197,12 +197,12 @@ pub const DebugRenderAPI = struct {
         }
     }
 
-    pub fn setActiveShader(shaderId: BindingIndex) FFAPIError!void {
+    pub fn setActiveShader(shaderId: BindingId) FFAPIError!void {
         currentShader = shaderId;
     }
 
     pub fn renderTexture(
-        textureId: BindingIndex,
+        textureId: BindingId,
         transform: *const TransformData,
         renderData: ?*const RenderData,
         offset: ?*const Vector2f,
