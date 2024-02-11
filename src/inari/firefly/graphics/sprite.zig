@@ -71,6 +71,12 @@ pub fn init() !void {
     // init SpriteSetAsset
     SpriteSetAsset.asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("SpriteSet");
     Asset.subscribe(SpriteSetAsset.listener);
+    // init components and entities
+    Entity.registerEntityComponent(ESprite);
+
+    // init SimpleSpriteRenderer
+    SimpleSpriteRenderer.accept_kind = Kind.of(ETransform.type_aspect).with(ESprite.type_aspect);
+    SimpleSpriteRenderer.sprite_refs = ViewLayerMapping.new();
 }
 
 pub fn deinit() void {
@@ -82,6 +88,9 @@ pub fn deinit() void {
     sprites = undefined;
     sprite_sets.deinit();
     sprite_sets = undefined;
+    // deinit SimpleSpriteRenderer
+    SimpleSpriteRenderer.accept_kind = undefined;
+    SimpleSpriteRenderer.sprite_refs.deinit();
     // deinit SpriteAsset
     Asset.unsubscribe(SpriteAsset.listener);
     SpriteAsset.asset_type = undefined;
@@ -107,6 +116,7 @@ pub const ESprite = struct {
     id: Index = UNDEF_INDEX,
     sprite_ref: BindingId = NO_BINDING,
     render_data: RenderData = RenderData{},
+    offset: ?Vec2f = null,
 
     pub fn setSpriteByAssetName(self: *ESprite, view_name: String) void {
         self.view_id = View.byName(view_name).id;
@@ -170,9 +180,9 @@ pub const SpriteAsset = struct {
             return;
 
         switch (e.event_type) {
-            ActionType.Activated => load(asset),
-            ActionType.Deactivated => unload(asset),
-            ActionType.Disposing => delete(asset),
+            ActionType.ACTIVATED => load(asset),
+            ActionType.DEACTIVATING => unload(asset),
+            ActionType.DISPOSING => delete(asset),
             else => {},
         }
     }
@@ -307,9 +317,9 @@ pub const SpriteSetAsset = struct {
             return;
 
         switch (e.event_type) {
-            ActionType.Activated => load(asset),
-            ActionType.Deactivated => unload(asset),
-            ActionType.Disposing => delete(asset),
+            ActionType.ACTIVATED => load(asset),
+            ActionType.DEACTIVATING => unload(asset),
+            ActionType.DISPOSING => delete(asset),
             else => {},
         }
     }
@@ -361,16 +371,15 @@ pub const SpriteSetAsset = struct {
 const SimpleSpriteRenderer = struct {
     var accept_kind: Kind = undefined;
     var sprite_refs: ViewLayerMapping = undefined;
-    var offset: Vec2f = Vec2f{};
 
     fn handleEntityEvent(e: Event) void {
         switch (e.event_type) {
-            ActionType.Activated => {
+            ActionType.ACTIVATED => {
                 if (accepted(e.c_id)) |t| {
                     sprite_refs.add(t.view_id, t.layer_id, e.c_id);
                 }
             },
-            ActionType.Deactivated => {
+            ActionType.DEACTIVATING => {
                 if (accepted(e.c_id)) |t| {
                     sprite_refs.remove(t.view_id, t.layer_id, e.c_id);
                 }
@@ -394,7 +403,7 @@ const SimpleSpriteRenderer = struct {
                 const s: ESprite = ESprite.byId(id);
                 const sd: SpriteData = sprites.get(s.sprite_ref);
                 const t: ETransform = ETransform.byId(id);
-                api.RENDERING_API.renderSprite(sd, t, s.render_data, offset);
+                api.RENDERING_API.renderSprite(sd, t, s.render_data, s.offset);
             }
         }
     }

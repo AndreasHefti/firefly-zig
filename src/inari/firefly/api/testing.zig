@@ -25,7 +25,7 @@ pub fn createTestRenderAPI() !RenderAPI() {
     if (DebugRenderAPI.initialized) {
         return singletonDebugRenderAPI;
     }
-    singletonDebugRenderAPI = try RenderAPI().init(DebugRenderAPI.initImpl, api.ALLOC);
+    singletonDebugRenderAPI = RenderAPI().init(DebugRenderAPI.initImpl);
     return singletonDebugRenderAPI;
 }
 
@@ -37,7 +37,6 @@ pub fn createTestRenderAPI() !RenderAPI() {
 pub const DebugRenderAPI = struct {
     pub var screen_width: CInt = 800;
     pub var screen_height: CInt = 600;
-    var alloc: std.mem.Allocator = undefined;
     var initialized = false;
 
     const defaultOffset = Vector2f{ 0, 0 };
@@ -80,19 +79,18 @@ pub const DebugRenderAPI = struct {
     var currentProjection: Projection = Projection{};
     var currentRenderTexture: ?BindingId = null;
     var currentShader: ?BindingId = null;
-    var currentOffset: *const Vector2f = &defaultOffset;
+    var currentOffset: Vector2f = defaultOffset;
     var currentRenderData: *const RenderData = &defaultRenderData;
 
-    fn initImpl(interface: *RenderAPI(), allocator: std.mem.Allocator) !void {
+    fn initImpl(interface: *RenderAPI()) void {
         defer initialized = true;
         if (initialized)
             return;
 
-        alloc = allocator;
-        textures = try DynArray(TextureData).init(allocator, null);
-        renderTextures = try DynArray(RenderTextureData).init(allocator, null);
-        shaders = try DynArray(ShaderData).init(allocator, null);
-        renderActionQueue = try DynArray(RenderAction).init(allocator, null);
+        textures = DynArray(TextureData).init(api.ALLOC, null) catch unreachable;
+        renderTextures = DynArray(RenderTextureData).init(api.ALLOC, null) catch unreachable;
+        shaders = DynArray(ShaderData).init(api.ALLOC, null) catch unreachable;
+        renderActionQueue = DynArray(RenderAction).init(api.ALLOC, null) catch unreachable;
 
         interface.deinit = deinit;
 
@@ -109,6 +107,9 @@ pub const DebugRenderAPI = struct {
 
         interface.startRendering = startRendering;
         interface.setActiveShader = setActiveShader;
+        interface.setOffset = setOffset;
+        interface.addOffset = addOffset;
+        interface.removeOffset = removeOffset;
         interface.renderTexture = renderTexture;
         interface.renderSprite = renderSprite;
         interface.endRendering = endRendering;
@@ -118,7 +119,7 @@ pub const DebugRenderAPI = struct {
 
         DebugRenderAPI.currentRenderTexture = null;
         DebugRenderAPI.currentShader = null;
-        DebugRenderAPI.currentOffset = &defaultOffset;
+        DebugRenderAPI.currentOffset = defaultOffset;
         DebugRenderAPI.currentRenderData = &defaultRenderData;
     }
 
@@ -146,14 +147,14 @@ pub const DebugRenderAPI = struct {
         std.debug.print("showFPS: {any}\n", .{pos.*});
     }
 
-    pub fn loadTexture(textureData: *TextureData) FFAPIError!void {
+    pub fn loadTexture(textureData: *TextureData) void {
         textureData.width = 1;
         textureData.height = 1;
         textureData.binding = textures.add(textureData.*);
         textures.get(textureData.binding).binding = textureData.binding;
     }
 
-    pub fn disposeTexture(textureData: *TextureData) FFAPIError!void {
+    pub fn disposeTexture(textureData: *TextureData) void {
         if (textureData.binding != NO_BINDING) {
             textures.reset(textureData.binding);
             textureData.binding = NO_BINDING;
@@ -162,24 +163,24 @@ pub const DebugRenderAPI = struct {
         }
     }
 
-    pub fn createRenderTexture(textureData: *RenderTextureData) FFAPIError!void {
+    pub fn createRenderTexture(textureData: *RenderTextureData) void {
         textureData.binding = renderTextures.add(textureData.*);
         renderTextures.get(textureData.binding).binding = textureData.binding;
     }
 
-    pub fn disposeRenderTexture(textureData: *RenderTextureData) FFAPIError!void {
+    pub fn disposeRenderTexture(textureData: *RenderTextureData) void {
         if (textureData.binding != NO_BINDING) {
             renderTextures.reset(textureData.binding);
             textureData.binding = NO_BINDING;
         }
     }
 
-    pub fn createShader(shaderData: *ShaderData) FFAPIError!void {
+    pub fn createShader(shaderData: *ShaderData) void {
         shaderData.binding = shaders.add(shaderData.*);
         shaders.get(shaderData.binding).binding = shaderData.binding;
     }
 
-    pub fn disposeShader(shaderData: *ShaderData) FFAPIError!void {
+    pub fn disposeShader(shaderData: *ShaderData) void {
         if (shaderData.binding != NO_BINDING) {
             shaders.reset(shaderData.binding);
             shaderData.binding = NO_BINDING;
@@ -197,8 +198,22 @@ pub const DebugRenderAPI = struct {
         }
     }
 
-    pub fn setActiveShader(shaderId: BindingId) FFAPIError!void {
+    pub fn setActiveShader(shaderId: BindingId) void {
         currentShader = shaderId;
+    }
+
+    pub fn setOffset(offset: Vector2f) void {
+        currentOffset = offset;
+    }
+
+    pub fn addOffset(offset: Vector2f) void {
+        currentOffset[0] += offset[0];
+        currentOffset[1] += offset[1];
+    }
+
+    pub fn removeOffset(offset: Vector2f) void {
+        currentOffset[0] -= offset[0];
+        currentOffset[1] -= offset[1];
     }
 
     pub fn renderTexture(
@@ -209,9 +224,6 @@ pub const DebugRenderAPI = struct {
     ) void {
         if (renderData) |rd| {
             currentRenderData = rd;
-        }
-        if (offset) |o| {
-            currentOffset = o;
         }
         _ = renderActionQueue.add(RenderAction{
             .render_texture = textureId,
@@ -229,9 +241,6 @@ pub const DebugRenderAPI = struct {
     ) void {
         if (renderData) |rd| {
             currentRenderData = rd;
-        }
-        if (offset) |o| {
-            currentOffset = o;
         }
         _ = renderActionQueue.add(RenderAction{
             .render_sprite = spriteData.*,
@@ -273,7 +282,7 @@ pub const DebugRenderAPI = struct {
         buffer.print("   {any}\n", .{DebugRenderAPI.currentRenderTexture});
         buffer.print("   {any}\n", .{DebugRenderAPI.currentRenderData});
         buffer.print("   {any}\n", .{DebugRenderAPI.currentShader});
-        buffer.print("   Offset: {any}\n", .{DebugRenderAPI.currentOffset.*});
+        buffer.print("   Offset: {any}\n", .{DebugRenderAPI.currentOffset});
 
         buffer.append(" render actions:\n");
         var aitr = DebugRenderAPI.renderActionQueue.iterator();
@@ -310,10 +319,10 @@ test "RenderAPI debug init" {
     transform.position[1] = 100;
 
     try std.testing.expect(t1.binding == NO_BINDING);
-    try api.RENDERING_API.loadTexture(&t1);
+    api.RENDERING_API.loadTexture(&t1);
     try std.testing.expect(t1.binding != NO_BINDING);
     try std.testing.expect(t2.binding == NO_BINDING);
-    try api.RENDERING_API.createRenderTexture(&t2);
+    api.RENDERING_API.createRenderTexture(&t2);
     try std.testing.expect(t2.binding != NO_BINDING);
 
     sprite.texture_binding = t1.binding;
@@ -323,6 +332,7 @@ test "RenderAPI debug init" {
     var debugGraphics2 = try createTestRenderAPI();
     try std.testing.expectEqual(api.RENDERING_API, debugGraphics2);
     var offset = Vector2f{ 10, 10 };
+    debugGraphics2.setOffset(offset);
     debugGraphics2.renderSprite(&sprite, &transform, &renderData, &offset);
 
     var sb = StringBuffer.init(std.testing.allocator);

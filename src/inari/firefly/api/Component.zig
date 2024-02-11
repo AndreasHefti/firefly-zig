@@ -62,10 +62,10 @@ pub const ComponentTypeInterface = struct {
 // Component Event Handling
 pub const ActionType = enum {
     NONE,
-    Created,
-    Activated,
-    Deactivated,
-    Disposing,
+    CREATED,
+    ACTIVATED,
+    DEACTIVATING,
+    DISPOSING,
 
     pub fn format(
         self: ActionType,
@@ -75,10 +75,10 @@ pub const ActionType = enum {
     ) !void {
         try writer.writeAll(switch (self) {
             .NONE => "NONE",
-            .Created => "Created",
-            .Activated => "Activated",
-            .Deactivated => "Deactivated",
-            .Disposing => "Disposing",
+            .CREATED => "CREATED",
+            .ACTIVATED => "ACTIVATED",
+            .DEACTIVATING => "DEACTIVATING",
+            .DISPOSING => "DISPOSING",
         });
     }
 };
@@ -328,7 +328,7 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_onNew)
                 T.onNew(id);
 
-            notify(ActionType.Created, id);
+            notify(ActionType.CREATED, id);
             return result;
         }
 
@@ -369,7 +369,7 @@ pub fn ComponentPool(comptime T: type) type {
             active_mapping.setValue(id, a);
             if (has_onActivation)
                 T.onActivation(id, a);
-            notify(if (a) ActionType.Activated else ActionType.Deactivated, id);
+            notify(if (a) ActionType.ACTIVATED else ActionType.DEACTIVATING, id);
         }
 
         pub fn activateByName(name: String, a: bool) void {
@@ -395,7 +395,7 @@ pub fn ComponentPool(comptime T: type) type {
         pub fn clear(id: Index) void {
             if (isActive(id))
                 activate(id, false);
-            notify(ActionType.Disposing, id);
+            notify(ActionType.DISPOSING, id);
             if (has_onDispose)
                 T.onDispose(id);
             active_mapping.setValue(id, false);

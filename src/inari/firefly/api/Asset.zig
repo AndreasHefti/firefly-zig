@@ -20,7 +20,7 @@ pub fn init() !void {
     defer initialized = true;
     if (initialized) return;
 
-    ASSET_TYPE_ASPECT_GROUP = try aspect.newAspectGroup(COMPONENT_NAME);
+    ASSET_TYPE_ASPECT_GROUP = try aspect.newAspectGroup("ASSET_TYPE_ASPECT_GROUP");
 }
 
 pub fn deinit() void {

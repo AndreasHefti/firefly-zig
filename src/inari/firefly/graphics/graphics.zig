@@ -60,7 +60,9 @@ pub fn init(_: api.InitMode) !void {
     ShaderAsset.asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Shader");
     shader = try DynArray(ShaderData).init(api.COMPONENT_ALLOC, ShaderAsset.NULL_VALUE);
     Asset.subscribe(ShaderAsset.listener);
-    // init sprite package
+
+    // init sub packages
+    try view.init();
     try sprite.init();
 }
 
@@ -71,6 +73,7 @@ pub fn deinit() void {
 
     // deinit sprite package
     sprite.deinit();
+    view.deinit();
     // deinit texture asset
     Asset.unsubscribe(TextureAsset.listener);
     TextureAsset.asset_type = undefined;
@@ -140,9 +143,9 @@ pub const ShaderAsset = struct {
             return;
 
         switch (e.event_type) {
-            ActionType.Activated => load(asset),
-            ActionType.Deactivated => unload(asset),
-            ActionType.Disposing => delete(asset),
+            ActionType.ACTIVATED => load(asset),
+            ActionType.DEACTIVATING => unload(asset),
+            ActionType.DISPOSING => delete(asset),
             else => {},
         }
     }
@@ -155,9 +158,7 @@ pub const ShaderAsset = struct {
         if (shaderData.binding != NO_BINDING)
             return; // already loaded
 
-        api.RENDERING_API.createShader(shaderData) catch {
-            std.log.err("Failed to load shader: {any}", .{shaderData});
-        };
+        api.RENDERING_API.createShader(shaderData);
     }
 
     fn unload(asset: *Asset) void {
@@ -165,9 +166,7 @@ pub const ShaderAsset = struct {
             return;
 
         var shaderData: *ShaderData = shader.get(asset.resource_id);
-        api.RENDERING_API.disposeShader(shaderData) catch {
-            std.log.err("Failed to dispose shader: {any}", .{shaderData});
-        };
+        api.RENDERING_API.disposeShader(shaderData);
     }
 
     fn delete(asset: *Asset) void {
@@ -235,9 +234,9 @@ pub const TextureAsset = struct {
             return;
 
         switch (e.event_type) {
-            ActionType.Activated => load(asset),
-            ActionType.Deactivated => unload(asset),
-            ActionType.Disposing => delete(asset),
+            ActionType.ACTIVATED => load(asset),
+            ActionType.DEACTIVATING => unload(asset),
+            ActionType.DISPOSING => delete(asset),
             else => {},
         }
     }
@@ -250,9 +249,7 @@ pub const TextureAsset = struct {
         if (tex_data.binding != NO_BINDING)
             return; // already loaded
 
-        api.RENDERING_API.loadTexture(tex_data) catch {
-            std.log.err("Failed to load texture resource: {s}", .{tex_data.resource});
-        };
+        api.RENDERING_API.loadTexture(tex_data);
     }
 
     fn unload(asset: *Asset) void {
@@ -266,10 +263,7 @@ pub const TextureAsset = struct {
         if (tex_data.binding == NO_BINDING)
             return; // already disposed
 
-        api.RENDERING_API.disposeTexture(tex_data) catch {
-            std.log.err("Failed to dispose texture resource: {s}", .{tex_data.resource});
-            return;
-        };
+        api.RENDERING_API.disposeTexture(tex_data);
 
         assert(tex_data.binding == NO_BINDING);
         assert(tex_data.width == -1);

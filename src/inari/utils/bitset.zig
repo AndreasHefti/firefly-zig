@@ -22,7 +22,7 @@ pub const BitSet = struct {
     unmanaged: DynamicBitSetUnmanaged = .{},
 
     pub fn init(allocator: Allocator) !Self {
-        initEmpty(allocator, 64);
+        return try initEmpty(allocator, 64);
     }
 
     /// Creates a bit set with no elements present.

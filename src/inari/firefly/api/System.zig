@@ -62,3 +62,15 @@ pub fn onDispose(id: Index) void {
         onDisp();
     }
 }
+
+pub fn format(
+    self: System,
+    comptime _: []const u8,
+    _: std.fmt.FormatOptions,
+    writer: anytype,
+) !void {
+    try writer.print(
+        "{s}[ id:{d}, info:{s} ]",
+        .{ self.name, self.id, self.info[0..60] ++ "..." },
+    );
+}

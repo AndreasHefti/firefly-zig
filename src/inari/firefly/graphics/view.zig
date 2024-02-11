@@ -5,6 +5,7 @@ const graphics = @import("graphics.zig");
 const api = graphics.api;
 const utils = graphics.utils;
 
+const EventDispatch = utils.event.EventDispatch;
 const BitSet = utils.bitset.BitSet;
 const Component = api.Component;
 const Aspect = api.utils.aspect.Aspect;
@@ -14,7 +15,7 @@ const RenderData = api.RenderData;
 const RenderTextureData = api.RenderTextureData;
 const Vec2f = api.utils.geom.Vector2f;
 const DynArray = graphics.utils.dynarray.DynArray;
-const ActionType = api.ActionType;
+const ActionType = Component.ActionType;
 const Projection = api.Projection;
 const Entity = api.Entity;
 const RenderEvent = api.RenderEvent;
@@ -31,11 +32,14 @@ const NO_NAME = api.utils.NO_NAME;
 //////////////////////////////////////////////////////////////
 
 var initialized = false;
-pub fn init() void {
+pub fn init() !void {
     defer initialized = true;
     if (initialized)
         return;
 
+    Component.registerComponent(Layer);
+    Component.registerComponent(View);
+    Entity.registerEntityComponent(ETransform);
     // init ViewRenderer
     ViewRenderer.system_id = System.new(ViewRenderer.sys).id;
 }
@@ -45,6 +49,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    View.deinit();
     // deinit ViewRenderer
     System.activateById(ViewRenderer.system_id, false);
     System.disposeById(ViewRenderer.system_id);
@@ -79,21 +84,22 @@ pub const ViewLayerMapping = struct {
 
     pub fn new() ViewLayerMapping {
         return ViewLayerMapping{
-            .undef_mapping = BitSet.init(api.ALLOC),
-            .mapping = DynArray(DynArray(BitSet)).init(api.ALLOC, null),
+            .undef_mapping = BitSet.init(api.ALLOC) catch unreachable,
+            .mapping = DynArray(DynArray(BitSet)).init(api.ALLOC, null) catch unreachable,
         };
     }
 
     pub fn deinit(self: *ViewLayerMapping) void {
         var it = self.mapping.iterator();
-        while (it.next()) |*next| {
+        while (it.next()) |next| {
             var itt = next.iterator();
-            while (itt.next()) |*n| {
+            while (itt.next()) |n| {
                 n.deinit();
             }
             next.deinit();
         }
         self.mapping.deinit();
+        self.undef_mapping.deinit();
     }
 
     pub fn add(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
@@ -112,7 +118,7 @@ pub const ViewLayerMapping = struct {
     }
 
     pub fn remove(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
-        getIdMapping(self, view_id, layer_id).re;
+        getIdMapping(self, view_id, layer_id).setValue(id, false);
     }
 
     pub fn clear(self: *ViewLayerMapping) void {
@@ -178,21 +184,25 @@ pub const View = struct {
     id: Index = UNDEF_INDEX,
     name: String = NO_NAME,
     /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
-    camera_position: Vec2f = Vec2f{},
+    camera_position: Vec2f = Vec2f{ 0, 0 },
     order: u8 = undefined,
     render_data: RenderData = RenderData{},
     transform: TransformData = TransformData{},
     projection: Projection = Projection{},
     render_texture: RenderTextureData = RenderTextureData{},
     shader_binding: BindingId = NO_BINDING,
-    ordered_active_layer: ?*DynArray(Index) = null,
+    ordered_active_layer: ?DynArray(Index) = null,
 
     pub var screen_projection: Projection = Projection{};
     pub var screen_shader_binding: BindingId = NO_BINDING;
     pub var ordered_active_views: DynArray(Index) = undefined;
 
     pub fn init() !void {
-        ordered_active_views = DynArray(Index).initWithRegisterSize(api.COMPONENT_ALLOC, 10, UNDEF_INDEX);
+        ordered_active_views = try DynArray(Index).initWithRegisterSize(
+            api.COMPONENT_ALLOC,
+            10,
+            UNDEF_INDEX,
+        );
         Layer.subscribe(onLayerAction);
     }
 
@@ -219,7 +229,7 @@ pub const View = struct {
     }
 
     pub fn onActivation(id: Index, active: bool) void {
-        var view: *View = View.byId(id);
+        var view: *View = View.get(id);
         Component.checkValid(view);
         if (active) {
             activate(view);
@@ -234,9 +244,7 @@ pub const View = struct {
 
         addViewMapping(view);
 
-        api.RENDERING_API.createRenderTexture(&view.render_texture) catch {
-            std.log.err("Failed to create render texture for view: {any}", .{view});
-        };
+        api.RENDERING_API.createRenderTexture(&view.render_texture);
     }
 
     fn deactivate(view: *View) void {
@@ -245,15 +253,13 @@ pub const View = struct {
             return; // screen, no render texture dispose needed
 
         removeViewMapping(view);
-        api.RENDERING_API.disposeRenderTexture(&view.render_texture) catch {
-            std.log.err("Failed to dispose render texture for view: {any}", .{view});
-        };
+        api.RENDERING_API.disposeRenderTexture(&view.render_texture);
     }
 
-    fn onLayerAction(event: *const Component.Event) void {
+    fn onLayerAction(event: Component.Event) void {
         switch (event.event_type) {
             ActionType.ACTIVATED => addLayerMapping(Layer.byId(event.c_id)),
-            ActionType.DEACTIVATED => removeLayerMapping(Layer.byId(event.c_id)),
+            ActionType.DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id)),
             else => {},
         }
     }
@@ -264,7 +270,7 @@ pub const View = struct {
             @panic("View order mismatch");
         }
 
-        ordered_active_views.insert(view.order, view.id);
+        ordered_active_views.set(view.order, view.id);
     }
 
     fn removeViewMapping(view: *View) void {
@@ -272,7 +278,7 @@ pub const View = struct {
             return;
 
         // clear layer mapping
-        if (view.ordered_active_layer) |l| {
+        if (view.ordered_active_layer) |*l| {
             l.clear();
         }
 
@@ -280,14 +286,14 @@ pub const View = struct {
         ordered_active_views.reset(view.order);
     }
 
-    fn addLayerMapping(layer: *Layer) void {
+    fn addLayerMapping(layer: *const Layer) void {
         var view: *View = View.get(layer.view_id);
         if (view.ordered_active_layer == null) {
             view.ordered_active_layer = DynArray(Index).initWithRegisterSize(
                 api.COMPONENT_ALLOC,
                 10,
                 UNDEF_INDEX,
-            );
+            ) catch unreachable;
         }
         if (view.ordered_active_layer.?.slots.isSet(layer.order)) {
             std.log.err("Order of Layer already in use: {any}", .{layer});
@@ -297,9 +303,9 @@ pub const View = struct {
         view.ordered_active_layer.?.set(layer.order, layer.id);
     }
 
-    fn removeLayerMapping(layer: *Layer) void {
+    fn removeLayerMapping(layer: *const Layer) void {
         var view: *View = View.get(layer.view_id);
-        if (view.ordered_active_layer) |l| {
+        if (view.ordered_active_layer) |*l| {
             l.reset(layer.order);
         }
     }
@@ -332,9 +338,9 @@ pub const Layer = struct {
     // struct fields
     id: Index = UNDEF_INDEX,
     name: String = NO_NAME,
-    position: Vec2f = Vec2f{},
+    offset: Vec2f = Vec2f{ 0, 0 },
     order: u8 = 0,
-    view_id: Index,
+    view_id: Index = UNDEF_INDEX,
     shader_binding: api.BindingId = api.NO_BINDING,
 
     pub fn setViewByName(self: *Layer, view_name: String) void {
@@ -393,8 +399,8 @@ const ViewRenderer = struct {
         ,
         .onActivation = onActivation,
     };
-    var system_id = UNDEF_INDEX;
-    var VIEW_RENDER_EVENT_DISPATCHER: utils.EventDispatch(*const ViewRenderEvent) = undefined;
+    var system_id: Index = UNDEF_INDEX;
+    var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(*const ViewRenderEvent) = undefined;
     var VIEW_RENDER_EVENT = ViewRenderEvent{
         .view_id = UNDEF_INDEX,
         .layer_id = UNDEF_INDEX,
@@ -402,9 +408,9 @@ const ViewRenderer = struct {
 
     fn onActivation(active: bool) void {
         if (active) {
-            api.subscribeRender(render);
+            api.Engine.subscribeRender(render);
         } else {
-            api.unsubscribeRender(render);
+            api.Engine.unsubscribeRender(render);
         }
     }
 
@@ -426,7 +432,7 @@ const ViewRenderer = struct {
             // render to all FBO
             var view_it = View.ordered_active_views.iterator();
             while (view_it.next()) |view_id| {
-                renderView(View.byId(view_id));
+                renderView(View.byId(view_id.*));
             }
 
             // rendering all FBO to screen
@@ -438,11 +444,11 @@ const ViewRenderer = struct {
             api.RENDERING_API.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
             while (view_it.next()) |view_id| {
-                var view: *View = View.byId(view_id);
+                var view: *const View = View.byId(view_id.*);
                 api.RENDERING_API.renderTexture(
                     view.render_texture.binding,
-                    view.transform,
-                    view.render_data,
+                    &view.transform,
+                    &view.render_data,
                     null,
                 );
             }
@@ -459,12 +465,22 @@ const ViewRenderer = struct {
         // activate FBO
         api.RENDERING_API.startRendering(view.render_texture.binding, &view.projection);
         // emit render events for all layers of the view in order to render to FBO
-        if (view.ordered_active_layer) |layers| {
-            var layer_it = layers.iterator();
-            while (layer_it.next()) |layer_id| {
+        if (view.ordered_active_layer != null) {
+            var it = view.ordered_active_layer.?.slots.nextSetBit(0);
+            while (it) |layer_id| {
+                var layer: *const Layer = Layer.byId(layer_id);
+                // apply layer shader to render engine if set
+                if (layer.shader_binding != NO_BINDING)
+                    api.RENDERING_API.setActiveShader(layer.shader_binding);
+                // add layer offset to render engine
+                api.RENDERING_API.addOffset(layer.offset);
+                // send layer render event
                 VIEW_RENDER_EVENT.view_id = view.id;
                 VIEW_RENDER_EVENT.layer_id = layer_id;
                 VIEW_RENDER_EVENT_DISPATCHER.notify(&VIEW_RENDER_EVENT);
+                // remove layer offset form render engine
+                api.RENDERING_API.removeOffset(layer.offset);
+                it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
             }
         } else {
             // we have no layer so only one render call for this view

@@ -39,17 +39,24 @@ test "Firefly init" {
         \\    Aspect[Asset|0]
         \\    Aspect[System|1]
         \\    Aspect[Entity|2]
-        \\  Group[Asset|1]:
+        \\    Aspect[Layer|3]
+        \\    Aspect[View|4]
+        \\  Group[ASSET_TYPE_ASPECT_GROUP|1]:
         \\    Aspect[Texture|0]
         \\    Aspect[Shader|1]
         \\    Aspect[Sprite|2]
         \\    Aspect[SpriteSet|3]
         \\  Group[ENTITY_COMPONENT_ASPECT_GROUP|2]:
+        \\    Aspect[ETransform|0]
+        \\    Aspect[ESprite|1]
         \\
         \\Components:
         \\  Asset size: 0
-        \\  System size: 0
+        \\  System size: 1
+        \\    x ViewRenderer[ id:0, info:View Renderer emits ViewRenderEvent in order of active Views... ]
         \\  Entity size: 0
+        \\  Layer size: 0
+        \\  View size: 0
     ;
 
     try std.testing.expectEqualStrings(output, sb.toString());

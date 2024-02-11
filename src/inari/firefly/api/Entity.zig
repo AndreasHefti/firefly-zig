@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const trait = std.meta.trait;
 
 const api = @import("api.zig");
+const StringBuffer = api.utils.StringBuffer;
 const DynArray = api.utils.dynarray.DynArray;
 const ArrayList = std.ArrayList;
 const Component = api.Component;
@@ -174,8 +175,8 @@ pub fn EntityComponentPool(comptime T: type) type {
             defer {
                 ENTITY_COMPONENT_INTERFACE_TABLE.set(
                     Component.ComponentTypeInterface{
-                        .clear = Self.i_clear,
-                        .deinit = T.deinit,
+                        .clear = Self.clear,
+                        .deinit = Self.deinit,
                         .to_string = toString,
                     },
                     c_aspect.index,
@@ -184,7 +185,7 @@ pub fn EntityComponentPool(comptime T: type) type {
             }
 
             items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
-            c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(@typeName(T));
+            c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_NAME);
 
             if (has_aspect) T.type_aspect = c_aspect;
             if (has_get) T.get = Self.get;
@@ -243,19 +244,13 @@ pub fn EntityComponentPool(comptime T: type) type {
             items.reset(id);
         }
 
-        fn toString() String {
-            var string_builder = ArrayList(u8).init(api.ALLOC);
-            defer string_builder.deinit();
-
-            var writer = string_builder.writer();
-            writer.print("\n  {s} size: {d}", .{ c_aspect.name, items.size() }) catch unreachable;
+        fn toString(string_buffer: *StringBuffer) void {
+            string_buffer.print("\n  {s} size: {d}", .{ c_aspect.name, items.size() });
             var next = items.slots.nextSetBit(0);
             while (next) |i| {
-                writer.print("\n   {any}", .{ "", items.get(i) }) catch unreachable;
+                string_buffer.print("\n   {any}", .{items.get(i)});
                 next = items.slots.nextSetBit(i + 1);
             }
-
-            return string_builder.toOwnedSlice() catch unreachable;
         }
 
         fn checkComponentTrait(c: T) void {

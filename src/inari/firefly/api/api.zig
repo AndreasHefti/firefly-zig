@@ -112,13 +112,6 @@ pub const FFAPIError = error{
     RenderingError,
 };
 
-pub const ActionType = enum {
-    CREATED,
-    ACTIVATED,
-    DEACTIVATED,
-    DISPOSED,
-};
-
 /// Color blending modes
 pub const BlendMode = enum(CInt) {
     /// Blend textures considering alpha (default)
@@ -332,24 +325,30 @@ pub fn RenderAPI() type {
 
         /// Loads image data from file system and create new texture data loaded into GPU
         /// @param textureData The texture DAO. Sets binding, width and height to the DAO
-        loadTexture: *const fn (*TextureData) FFAPIError!void = undefined,
+        loadTexture: *const fn (*TextureData) void = undefined,
         /// Disposes the texture with given texture binding id from GPU memory
         /// @param textureId binding identifier of the texture to dispose.
-        disposeTexture: *const fn (*TextureData) FFAPIError!void = undefined,
+        disposeTexture: *const fn (*TextureData) void = undefined,
 
-        createRenderTexture: *const fn (*RenderTextureData) FFAPIError!void = undefined,
-        disposeRenderTexture: *const fn (*RenderTextureData) FFAPIError!void = undefined,
+        createRenderTexture: *const fn (*RenderTextureData) void = undefined,
+        disposeRenderTexture: *const fn (*RenderTextureData) void = undefined,
         /// create new shader from given shader data and load it to GPU
-        createShader: *const fn (*ShaderData) FFAPIError!void = undefined,
+        createShader: *const fn (*ShaderData) void = undefined,
         /// Dispose the shader with the given binding identifier (shaderId) from GPU
         /// @param shaderId identifier of the shader to dispose.
-        disposeShader: *const fn (*ShaderData) FFAPIError!void = undefined,
+        disposeShader: *const fn (*ShaderData) void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
         /// Uses Projection to update camera projection and clear target before start rendering
         startRendering: *const fn (?BindingId, ?*const Projection) void = undefined,
         /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
         /// @param shaderId The instance identifier of the shader.
-        setActiveShader: *const fn (BindingId) FFAPIError!void = undefined,
+        setActiveShader: *const fn (BindingId) void = undefined,
+        /// Set rendering offset
+        setOffset: *const fn (Vector2f) void = undefined,
+        /// Adds given offset to actual offset of the rendering engine
+        addOffset: *const fn (Vector2f) void = undefined,
+        /// Remove the given offset from actual offset of the rendering engine
+        removeOffset: *const fn (Vector2f) void = undefined,
         /// This renders a given RenderTextureData (BindingId) to the actual render target that can be
         /// rendering texture or the screen
         renderTexture: *const fn (BindingId, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
@@ -363,12 +362,9 @@ pub fn RenderAPI() type {
 
         deinit: *const fn () void = undefined,
 
-        pub fn init(
-            initImpl: *const fn (*RenderAPI(), std.mem.Allocator) anyerror!void,
-            allocator: std.mem.Allocator,
-        ) !Self {
+        pub fn init(initImpl: *const fn (*RenderAPI()) void) Self {
             var self = Self{};
-            _ = try initImpl(&self, allocator);
+            _ = initImpl(&self);
             return self;
         }
     };
