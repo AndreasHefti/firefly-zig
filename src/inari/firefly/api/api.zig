@@ -23,7 +23,8 @@ pub const Engine = @import("Engine.zig");
 pub const Component = @import("Component.zig");
 pub const System = @import("System.zig");
 pub const Timer = @import("Timer.zig");
-pub const Entity = @import("Entity.zig");
+pub const Entity = @import("Entity.zig").Entity;
+pub const EntityComponent = @import("Entity.zig").EntityComponent;
 pub const Asset = @import("Asset.zig");
 pub const Index = usize;
 pub const UNDEF_INDEX = std.math.maxInt(Index);
@@ -246,6 +247,49 @@ pub const TransformData = struct {
     scale: PosF = PosF{ 1, 1 },
     rotation: Float = 0,
 
+    pub fn clear(self: *TransformData) void {
+        self.position = PosF{ 0, 0 };
+        self.pivot = PosF{ 0, 0 };
+        self.scale = PosF{ 1, 1 };
+        self.rotation = 0;
+    }
+
+    pub fn set(self: *TransformData, other: TransformData) void {
+        self.position = other.position;
+        self.pivot = other.pivot;
+        self.scale = other.scale;
+        self.rotation = other.rotation;
+    }
+
+    pub fn setDiscrete(self: *TransformData, other: TransformData) void {
+        self.position = @floor(other.position);
+        self.pivot = @floor(other.pivot);
+        self.scale = other.scale;
+        self.rotation = other.rotation;
+    }
+
+    pub fn add(self: *TransformData, other: TransformData) void {
+        self.position += other.position;
+        self.pivot += other.pivot;
+        self.scale += other.scale;
+        self.rotation += other.rotation;
+    }
+
+    pub fn minus(self: *TransformData, other: TransformData) void {
+        self.position -= other.position;
+        self.pivot -= other.pivot;
+        self.scale -= other.scale;
+        self.rotation -= other.rotation;
+    }
+
+    pub fn move(self: *TransformData, offset: Vector2f) void {
+        self.position += offset;
+    }
+
+    pub fn moveDiscrete(self: *TransformData, offset: Vector2f) void {
+        self.position += @floor(offset);
+    }
+
     pub fn hasRotation(self: *TransformData) bool {
         return self.rotation != 0;
     }
@@ -351,9 +395,9 @@ pub fn RenderAPI() type {
         removeOffset: *const fn (Vector2f) void = undefined,
         /// This renders a given RenderTextureData (BindingId) to the actual render target that can be
         /// rendering texture or the screen
-        renderTexture: *const fn (BindingId, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
+        renderTexture: *const fn (BindingId, *const TransformData, ?*const RenderData, ?Vector2f) void = undefined,
         // TODO
-        renderSprite: *const fn (*const SpriteData, *const TransformData, ?*const RenderData, ?*const Vector2f) void = undefined,
+        renderSprite: *const fn (*const SpriteData, *const TransformData, ?*const RenderData, ?Vector2f) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
         /// switches back to screen rendering
         endRendering: *const fn () void = undefined,

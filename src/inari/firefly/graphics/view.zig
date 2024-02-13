@@ -13,11 +13,12 @@ const String = api.utils.String;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const RenderTextureData = api.RenderTextureData;
-const Vec2f = api.utils.geom.Vector2f;
+const Vector2f = api.utils.geom.Vector2f;
 const DynArray = graphics.utils.dynarray.DynArray;
 const ActionType = Component.ActionType;
 const Projection = api.Projection;
 const Entity = api.Entity;
+const EntityComponent = api.EntityComponent;
 const RenderEvent = api.RenderEvent;
 const System = api.System;
 
@@ -39,9 +40,9 @@ pub fn init() !void {
 
     Component.registerComponent(Layer);
     Component.registerComponent(View);
-    Entity.registerEntityComponent(ETransform);
-    // init ViewRenderer
-    ViewRenderer.system_id = System.new(ViewRenderer.sys).id;
+    EntityComponent.registerEntityComponent(ETransform);
+    EntityComponent.registerEntityComponent(EMultiplier);
+    ViewRenderer.init();
 }
 
 pub fn deinit() void {
@@ -50,24 +51,21 @@ pub fn deinit() void {
         return;
 
     View.deinit();
-    // deinit ViewRenderer
-    System.activateById(ViewRenderer.system_id, false);
-    System.disposeById(ViewRenderer.system_id);
-    ViewRenderer.system_id = UNDEF_INDEX;
+    ViewRenderer.deinit();
 }
 
 pub const ViewRenderEvent = struct {
     view_id: Index,
     layer_id: Index,
 };
-pub const ViewRenderListener = *const fn (*const ViewRenderEvent) void;
+pub const ViewRenderListener = *const fn (ViewRenderEvent) void;
 
 pub fn subscribeViewRendering(listener: ViewRenderListener) void {
     ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.register(listener);
 }
 
 pub fn subscribeViewRenderingAt(index: usize, listener: ViewRenderListener) void {
-    ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.register(index, listener);
+    ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
 }
 
 pub fn unsubscribeViewRendering(listener: ViewRenderListener) void {
@@ -103,11 +101,13 @@ pub const ViewLayerMapping = struct {
     }
 
     pub fn add(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
-        getIdMapping(self, view_id, layer_id).append(id);
+        getIdMapping(self, view_id, layer_id).set(id);
     }
 
     pub fn get(self: *ViewLayerMapping, view_id: Index, layer_id: Index) ?*BitSet {
-        if (view_id == UNDEF_INDEX) {}
+        if (view_id == UNDEF_INDEX) {
+            return &self.undef_mapping;
+        }
         if (self.mapping.getIfExists(view_id)) |lmap| {
             if (layer_id != UNDEF_INDEX) {
                 return lmap.getIfExists(layer_id);
@@ -115,6 +115,7 @@ pub const ViewLayerMapping = struct {
                 return lmap.getIfExists(0);
             }
         }
+        return null;
     }
 
     pub fn remove(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
@@ -140,7 +141,7 @@ pub const ViewLayerMapping = struct {
         var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, view_id);
         var l_id = if (layer_id == UNDEF_INDEX) 0 else layer_id;
         if (!layer_mapping.exists(l_id)) {
-            layer_mapping.set(BitSet.init(api.ALLOC), l_id);
+            layer_mapping.set(BitSet.init(api.ALLOC) catch unreachable, l_id);
         }
         return layer_mapping.get(l_id);
     }
@@ -184,7 +185,7 @@ pub const View = struct {
     id: Index = UNDEF_INDEX,
     name: String = NO_NAME,
     /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
-    camera_position: Vec2f = Vec2f{ 0, 0 },
+    camera_position: Vector2f = Vector2f{ 0, 0 },
     order: u8 = undefined,
     render_data: RenderData = RenderData{},
     transform: TransformData = TransformData{},
@@ -338,7 +339,7 @@ pub const Layer = struct {
     // struct fields
     id: Index = UNDEF_INDEX,
     name: String = NO_NAME,
-    offset: Vec2f = Vec2f{ 0, 0 },
+    offset: Vector2f = Vector2f{ 0, 0 },
     order: u8 = 0,
     view_id: Index = UNDEF_INDEX,
     shader_binding: api.BindingId = api.NO_BINDING,
@@ -363,11 +364,11 @@ pub const Layer = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETransform = struct {
-    // component type fields
+    // entity component type fields
     pub const NULL_VALUE = ETransform{};
     pub const COMPONENT_NAME = "ETransform";
     pub const pool = Entity.EntityComponentPool(ETransform);
-    // component type pool references
+    // entity component type pool references
     pub var type_aspect: *Aspect = undefined;
     pub var get: *const fn (Index) *ETransform = undefined;
     pub var byId: *const fn (Index) *const ETransform = undefined;
@@ -384,6 +385,43 @@ pub const ETransform = struct {
     pub fn setLayerByName(self: *ETransform, layer_name: String) void {
         self.layer_id = Layer.byName(layer_name).id;
     }
+
+    pub fn destruct(self: *ETransform) void {
+        self.layer_id = UNDEF_INDEX;
+        self.view_id = UNDEF_INDEX;
+        self.transform.clear();
+    }
+};
+
+//////////////////////////////////////////////////////////////////////////
+//// EMultiplier Entity position multiplier
+//////////////////////////////////////////////////////////////////////////
+
+const EMultiplier = struct {
+    // entity component type fields
+    pub const NULL_VALUE = EMultiplier{};
+    pub const NULL_POS_ENTRY = Vector2f{};
+    pub const COMPONENT_NAME = "EMultiplier";
+    pub const pool = Entity.EntityComponentPool(EMultiplier);
+    // entity component type pool references
+    pub var type_aspect: *Aspect = undefined;
+    pub var get: *const fn (Index) *EMultiplier = undefined;
+    pub var byId: *const fn (Index) *const EMultiplier = undefined;
+
+    id: Index = UNDEF_INDEX,
+    positions: DynArray(Vector2f) = undefined,
+
+    pub fn construct(self: *EMultiplier) void {
+        self.positions = DynArray(Vector2f).init(
+            api.COMPONENT_ALLOC,
+            NULL_POS_ENTRY,
+        ) catch unreachable;
+    }
+
+    pub fn destruct(self: *EMultiplier) void {
+        self.positions.deinit();
+        self.positions = undefined;
+    }
 };
 
 //////////////////////////////////////////////////////////////
@@ -391,20 +429,29 @@ pub const ETransform = struct {
 //////////////////////////////////////////////////////////////
 
 const ViewRenderer = struct {
-    const sys = System{
-        .name = "ViewRenderer",
-        .info =
-        \\View Renderer emits ViewRenderEvent in order of active Views and its activeLayers
-        \\Individual or specialized renderer systems can subscribe to this events and render its parts
-        ,
-        .onActivation = onActivation,
-    };
     var system_id: Index = UNDEF_INDEX;
-    var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(*const ViewRenderEvent) = undefined;
+    var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(ViewRenderEvent) = undefined;
     var VIEW_RENDER_EVENT = ViewRenderEvent{
         .view_id = UNDEF_INDEX,
         .layer_id = UNDEF_INDEX,
     };
+
+    fn init() void {
+        VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).init(api.ALLOC);
+        system_id = System.new(System{
+            .name = "ViewRenderer",
+            .info = "Emits ViewRenderEvent in order of active Views and its Layers",
+            .onActivation = onActivation,
+        }).id;
+        System.activateById(system_id, true);
+    }
+
+    fn deinit() void {
+        System.activateById(system_id, false);
+        System.disposeById(system_id);
+        system_id = UNDEF_INDEX;
+        VIEW_RENDER_EVENT_DISPATCHER.deinit();
+    }
 
     fn onActivation(active: bool) void {
         if (active) {
@@ -426,7 +473,7 @@ const ViewRenderer = struct {
             api.RENDERING_API.startRendering(null, &View.screen_projection);
             VIEW_RENDER_EVENT.view_id = UNDEF_INDEX;
             VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
-            VIEW_RENDER_EVENT_DISPATCHER.notify(&VIEW_RENDER_EVENT);
+            VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
             api.RENDERING_API.endRendering();
         } else {
             // render to all FBO
@@ -477,7 +524,7 @@ const ViewRenderer = struct {
                 // send layer render event
                 VIEW_RENDER_EVENT.view_id = view.id;
                 VIEW_RENDER_EVENT.layer_id = layer_id;
-                VIEW_RENDER_EVENT_DISPATCHER.notify(&VIEW_RENDER_EVENT);
+                VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
                 // remove layer offset form render engine
                 api.RENDERING_API.removeOffset(layer.offset);
                 it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
@@ -486,7 +533,7 @@ const ViewRenderer = struct {
             // we have no layer so only one render call for this view
             VIEW_RENDER_EVENT.view_id = view.id;
             VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
-            VIEW_RENDER_EVENT_DISPATCHER.notify(&VIEW_RENDER_EVENT);
+            VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
         }
         // end rendering to FBO
         api.RENDERING_API.endRendering();

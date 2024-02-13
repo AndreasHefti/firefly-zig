@@ -48,12 +48,14 @@ test "Firefly init" {
         \\    Aspect[SpriteSet|3]
         \\  Group[ENTITY_COMPONENT_ASPECT_GROUP|2]:
         \\    Aspect[ETransform|0]
-        \\    Aspect[ESprite|1]
+        \\    Aspect[EMultiplier|1]
+        \\    Aspect[ESprite|2]
         \\
         \\Components:
         \\  Asset size: 0
-        \\  System size: 1
-        \\    x ViewRenderer[ id:0, info:View Renderer emits ViewRenderEvent in order of active Views... ]
+        \\  System size: 2
+        \\    a ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
+        \\    a SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
         \\  Entity size: 0
         \\  Layer size: 0
         \\  View size: 0
@@ -104,17 +106,17 @@ const ExampleComponent = struct {
 
     pub fn deinit() void {}
 
-    pub fn onNew(id: Index) void {
-        std.testing.expect(id != UNDEF_INDEX) catch unreachable;
+    pub fn construct(self: *ExampleComponent) void {
+        std.testing.expect(self.id != UNDEF_INDEX) catch unreachable;
     }
 
-    pub fn onActivation(id: Index, active: bool) void {
+    pub fn activation(self: *ExampleComponent, active: bool) void {
         _ = active;
-        std.testing.expect(id != UNDEF_INDEX) catch unreachable;
+        std.testing.expect(self.id != UNDEF_INDEX) catch unreachable;
     }
 
-    pub fn onDispose(id: Index) void {
-        std.testing.expect(id != UNDEF_INDEX) catch unreachable;
+    pub fn destruct(self: *ExampleComponent) void {
+        std.testing.expect(self.id != UNDEF_INDEX) catch unreachable;
     }
 };
 

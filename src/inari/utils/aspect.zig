@@ -110,7 +110,7 @@ pub const Kind = struct {
         return kind;
     }
 
-    pub fn unionKind(self: Kind, other: Kind) Kind {
+    pub fn unionKind(self: *Kind, other: *const Kind) Kind {
         if (self.group != other.group) {
             return copy(self);
         }
@@ -120,7 +120,7 @@ pub const Kind = struct {
         };
     }
 
-    pub fn intersectionKind(self: Kind, other: Kind) Kind {
+    pub fn intersectionKind(self: *Kind, other: *const Kind) Kind {
         if (self.group != other.group) {
             return copy(self);
         }
@@ -137,19 +137,19 @@ pub const Kind = struct {
         };
     }
 
-    pub fn isKindOf(self: *Kind, other: *Kind) bool {
+    pub fn isKindOf(self: *Kind, other: *const Kind) bool {
         return other._mask & self._mask == self._mask;
     }
 
-    pub fn isOfKind(self: *Kind, other: *Kind) bool {
+    pub fn isOfKind(self: *Kind, other: *const Kind) bool {
         return self._mask & other._mask == other._mask;
     }
 
-    pub fn isExactKindOf(self: *Kind, other: *Kind) bool {
+    pub fn isExactKindOf(self: *Kind, other: *const Kind) bool {
         return other._mask == self._mask;
     }
 
-    pub fn isNotKindOf(self: *Kind, other: *Kind) bool {
+    pub fn isNotKindOf(self: *Kind, other: *const Kind) bool {
         return other._mask & self._mask == 0;
     }
 

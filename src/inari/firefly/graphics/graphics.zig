@@ -52,14 +52,9 @@ pub fn init(_: api.InitMode) !void {
     if (initialized)
         return;
 
-    // init texture asset
-    TextureAsset.asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
-    textures = try DynArray(TextureData).init(api.COMPONENT_ALLOC, TextureAsset.NULL_VALUE);
-    Asset.subscribe(TextureAsset.listener);
-    // init shader asset
-    ShaderAsset.asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Shader");
-    shader = try DynArray(ShaderData).init(api.COMPONENT_ALLOC, ShaderAsset.NULL_VALUE);
-    Asset.subscribe(ShaderAsset.listener);
+    // init Assets
+    try TextureAsset.init();
+    try ShaderAsset.init();
 
     // init sub packages
     try view.init();
@@ -74,16 +69,10 @@ pub fn deinit() void {
     // deinit sprite package
     sprite.deinit();
     view.deinit();
-    // deinit texture asset
-    Asset.unsubscribe(TextureAsset.listener);
-    TextureAsset.asset_type = undefined;
-    textures.deinit();
-    textures = undefined;
-    // deinit shader asset
-    Asset.unsubscribe(ShaderAsset.listener);
-    ShaderAsset.asset_type = undefined;
-    shader.deinit();
-    shader = undefined;
+    // deinit Assets
+    ShaderAsset.deinit();
+    TextureAsset.deinit();
+
     // deinit api if it was initialized by this package
     if (api_init) {
         api.deinit();
@@ -105,6 +94,19 @@ pub const ShaderAsset = struct {
         fragment_shader_resource: String = NO_NAME,
         file_resource: bool = true,
     };
+
+    fn init() !void {
+        asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Shader");
+        shader = try DynArray(ShaderData).init(api.COMPONENT_ALLOC, NULL_VALUE);
+        Asset.subscribe(listener);
+    }
+
+    fn deinit() void {
+        Asset.unsubscribe(listener);
+        asset_type = undefined;
+        shader.deinit();
+        shader = undefined;
+    }
 
     pub fn new(data: Shader) *Asset {
         if (!initialized)
@@ -192,6 +194,19 @@ pub const TextureAsset = struct {
         min_filter: CInt = -1,
         mag_filter: CInt = -1,
     };
+
+    fn init() !void {
+        asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
+        textures = try DynArray(TextureData).init(api.COMPONENT_ALLOC, NULL_VALUE);
+        Asset.subscribe(listener);
+    }
+
+    fn deinit() void {
+        Asset.unsubscribe(listener);
+        asset_type = undefined;
+        textures.deinit();
+        textures = undefined;
+    }
 
     pub fn new(data: Texture) *Asset {
         if (!initialized) @panic("Firefly module not initialized");

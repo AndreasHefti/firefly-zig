@@ -15,249 +15,275 @@ const String = api.utils.String;
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
 const NO_NAME = api.utils.NO_NAME;
-const Entity = @This();
 
-// component type fields
-pub const NULL_VALUE = Entity{};
-pub const COMPONENT_NAME = "Entity";
-pub const pool = Component.ComponentPool(Entity);
-// component type pool references
-pub var type_aspect: *Aspect = undefined;
-pub var new: *const fn (Entity) *Entity = undefined;
-pub var exists: *const fn (Index) bool = undefined;
-pub var existsName: *const fn (String) bool = undefined;
-pub var get: *const fn (Index) *Entity = undefined;
-pub var byId: *const fn (Index) *const Entity = undefined;
-pub var byName: *const fn (String) *const Entity = undefined;
-pub var activateById: *const fn (Index, bool) void = undefined;
-pub var activateByName: *const fn (String, bool) void = undefined;
-pub var disposeById: *const fn (Index) void = undefined;
-pub var disposeByName: *const fn (String) void = undefined;
-pub var subscribe: *const fn (Component.EventListener) void = undefined;
-pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
+pub const Entity = struct {
 
-// struct fields of an entity
-id: Index = UNDEF_INDEX,
-name: String = NO_NAME,
-kind: Kind = undefined,
+    // component type fields
+    pub const NULL_VALUE = Entity{};
+    pub const COMPONENT_NAME = "Entity";
+    pub const pool = Component.ComponentPool(Entity);
+    // component type pool references
+    pub var type_aspect: *Aspect = undefined;
+    pub var new: *const fn (Entity) *Entity = undefined;
+    pub var exists: *const fn (Index) bool = undefined;
+    pub var existsName: *const fn (String) bool = undefined;
+    pub var get: *const fn (Index) *Entity = undefined;
+    pub var byId: *const fn (Index) *const Entity = undefined;
+    pub var byName: *const fn (String) *const Entity = undefined;
+    pub var activateById: *const fn (Index, bool) void = undefined;
+    pub var activateByName: *const fn (String, bool) void = undefined;
+    pub var disposeById: *const fn (Index) void = undefined;
+    pub var disposeByName: *const fn (String) void = undefined;
+    pub var subscribe: *const fn (Component.EventListener) void = undefined;
+    pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
 
-pub fn withComponent(self: *Entity, c: anytype) *Entity {
-    checkValid(c);
+    // struct fields of an entity
+    id: Index = UNDEF_INDEX,
+    name: String = NO_NAME,
+    kind: Kind = undefined,
 
-    const T = @TypeOf(c);
-    _ = EntityComponentPool(T).register(@as(T, c), self.id);
-    self.kind.with(T.type_aspect);
-    return self;
-}
-
-pub fn withParent(self: *Entity, name: String) *Entity {
-    self.parent_id = Entity.byName(name).index;
-}
-
-pub fn onDispose(id: Index) void {
-    for (0..ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
-        ENTITY_COMPONENT_INTERFACE_TABLE.get(ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).clear(id);
+    pub fn init() !void {
+        try EntityComponent.init();
     }
-}
+
+    pub fn deinit() void {
+        EntityComponent.deinit();
+    }
+
+    pub fn withComponent(self: *Entity, c: anytype) *Entity {
+        EntityComponent.checkValid(c);
+
+        const T = @TypeOf(c);
+        _ = EntityComponent.EntityComponentPool(T).register(@as(T, c), self.id);
+        self.kind.with(T.type_aspect);
+        return self;
+    }
+
+    pub fn withParent(self: *Entity, name: String) *Entity {
+        self.parent_id = Entity.byName(name).index;
+    }
+
+    pub fn onDispose(id: Index) void {
+        for (0..EntityComponent.ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
+            EntityComponent.ENTITY_COMPONENT_INTERFACE_TABLE.get(EntityComponent.ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).clear(id);
+        }
+    }
+};
 
 //////////////////////////////////////////////////////////////////////////
 //// Entity Components
 //////////////////////////////////////////////////////////////////////////
-var INIT = false;
-var ENTITY_COMPONENT_INTERFACE_TABLE: DynArray(Component.ComponentTypeInterface) = undefined;
-pub var ENTITY_COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
-// module init
-pub fn init() !void {
-    defer INIT = true;
-    if (INIT)
-        return;
+pub const EntityComponent = struct {
+    var initialized = false;
 
-    ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(Component.ComponentTypeInterface).init(api.ENTITY_ALLOC, null);
-    ENTITY_COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("ENTITY_COMPONENT_ASPECT_GROUP");
-}
+    var ENTITY_COMPONENT_INTERFACE_TABLE: DynArray(Component.ComponentTypeInterface) = undefined;
+    pub var ENTITY_COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
-// module deinit
-pub fn deinit() void {
-    defer INIT = false;
-    if (!INIT)
-        return;
+    // module init
+    pub fn init() !void {
+        defer initialized = true;
+        if (initialized)
+            return;
 
-    // deinit all registered entity component pools via aspect interface mapping
-    for (0..ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
-        ENTITY_COMPONENT_INTERFACE_TABLE.get(ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).deinit();
-    }
-    ENTITY_COMPONENT_INTERFACE_TABLE.deinit();
-    ENTITY_COMPONENT_INTERFACE_TABLE = undefined;
-
-    aspect.disposeAspectGroup("ENTITY_COMPONENT_TYPE_ASPECT_GROUP");
-    ENTITY_COMPONENT_ASPECT_GROUP = undefined;
-}
-
-pub fn registerEntityComponent(comptime T: type) void {
-    EntityComponentPool(T).init();
-}
-
-pub inline fn checkValid(any_component: anytype) void {
-    if (!isValid(any_component))
-        @panic("Invalid Entity Component");
-}
-
-pub fn isValid(any_component: anytype) bool {
-    const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
-    const c_type = switch (info) {
-        .Pointer => @TypeOf(any_component.*),
-        .Struct => @TypeOf(any_component),
-        else => {
-            std.log.err("No valid type entity component: {any}", .{any_component});
-            return false;
-        },
-    };
-
-    if (!@hasField(c_type, "id")) {
-        std.log.err("No valid entity component. No id field: {any}", .{any_component});
-        return false;
+        ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(Component.ComponentTypeInterface).init(api.ENTITY_ALLOC, null);
+        ENTITY_COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("ENTITY_COMPONENT_ASPECT_GROUP");
     }
 
-    if (!EntityComponentPool(c_type).c_aspect.isOfGroup(ENTITY_COMPONENT_ASPECT_GROUP)) {
-        std.log.err("No valid entity component. AspectGroup mismatch: {any}", .{any_component});
-        return false;
-    }
+    // module deinit
+    pub fn deinit() void {
+        defer initialized = false;
+        if (!initialized)
+            return;
 
-    if (any_component.id == api.UNDEF_INDEX) {
-        std.log.err("No valid entity component. Undefined id: {any}", .{any_component});
-        return false;
-    }
-
-    return true;
-}
-
-pub fn EntityComponentPool(comptime T: type) type {
-
-    // check component type constraints
-    comptime var has_aspect: bool = false;
-    comptime var has_get: bool = false;
-    comptime var has_byId: bool = false;
-    // component function interceptors
-    comptime var has_onNew: bool = false;
-    comptime var has_onDispose: bool = false;
-    comptime {
-        if (!trait.is(.Struct)(T))
-            @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"NULL_VALUE"}))
-            @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
-        if (!trait.hasDecls(T, .{"COMPONENT_NAME"}))
-            @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
-        if (!trait.hasField("id")(T))
-            @compileError("Expects component type to have field named id");
-
-        has_aspect = trait.hasDecls(T, .{"type_aspect"});
-        has_get = trait.hasDecls(T, .{"get"});
-        has_byId = trait.hasDecls(T, .{"byId"});
-        has_onNew = trait.hasDecls(T, .{"onNew"});
-        has_onDispose = trait.hasDecls(T, .{"onDispose"});
-    }
-
-    return struct {
-        const Self = @This();
-        // ensure type based singleton
-        var initialized = false;
-        // internal state
-        var items: DynArray(T) = undefined;
-        // external state
-        pub var c_aspect: *Aspect = undefined;
-
-        pub fn init() void {
-            if (Self.initialized)
-                return;
-
-            errdefer Self.deinit();
-            defer {
-                ENTITY_COMPONENT_INTERFACE_TABLE.set(
-                    Component.ComponentTypeInterface{
-                        .clear = Self.clear,
-                        .deinit = Self.deinit,
-                        .to_string = toString,
-                    },
-                    c_aspect.index,
-                );
-                Self.initialized = true;
-            }
-
-            items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
-            c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_NAME);
-
-            if (has_aspect) T.type_aspect = c_aspect;
-            if (has_get) T.get = Self.get;
-            if (has_byId) T.byId = Self.byId;
+        // deinit all registered entity component pools via aspect interface mapping
+        for (0..ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
+            ENTITY_COMPONENT_INTERFACE_TABLE.get(ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).deinit();
         }
+        ENTITY_COMPONENT_INTERFACE_TABLE.deinit();
+        ENTITY_COMPONENT_INTERFACE_TABLE = undefined;
 
-        pub fn deinit() void {
-            defer Self.initialized = false;
-            if (!Self.initialized)
-                return;
+        aspect.disposeAspectGroup("ENTITY_COMPONENT_TYPE_ASPECT_GROUP");
+        ENTITY_COMPONENT_ASPECT_GROUP = undefined;
+    }
 
-            c_aspect = undefined;
-            items.deinit();
+    pub fn registerEntityComponent(comptime T: type) void {
+        EntityComponentPool(T).init();
+    }
 
-            if (has_aspect) T.type_aspect = undefined;
-            if (has_byId) T.byId = undefined;
-        }
+    pub inline fn checkValid(any_component: anytype) void {
+        if (!isValid(any_component))
+            @panic("Invalid Entity Component");
+    }
 
-        pub fn typeCheck(a: *Aspect) bool {
-            if (!Self.initialized)
+    pub fn isValid(any_component: anytype) bool {
+        const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
+        const c_type = switch (info) {
+            .Pointer => @TypeOf(any_component.*),
+            .Struct => @TypeOf(any_component),
+            else => {
+                std.log.err("No valid type entity component: {any}", .{any_component});
                 return false;
+            },
+        };
 
-            return c_aspect.index == a.index;
+        if (!@hasField(c_type, "id")) {
+            std.log.err("No valid entity component. No id field: {any}", .{any_component});
+            return false;
         }
 
-        pub fn count() usize {
-            return items.slots.count();
+        if (!EntityComponentPool(c_type).c_aspect.isOfGroup(ENTITY_COMPONENT_ASPECT_GROUP)) {
+            std.log.err("No valid entity component. AspectGroup mismatch: {any}", .{any_component});
+            return false;
         }
 
-        pub fn register(c: *T, id: Index) *T {
-            checkComponentTrait(c);
-            c.id = id;
-            items.set(c, id);
-            if (has_onNew) T.onNew(id);
-            return items.get(id);
+        if (any_component.id == api.UNDEF_INDEX) {
+            std.log.err("No valid entity component. Undefined id: {any}", .{any_component});
+            return false;
         }
 
-        pub fn get(id: Index) *T {
-            return items.get(id);
+        return true;
+    }
+
+    pub fn EntityComponentPool(comptime T: type) type {
+
+        // check component type constraints
+        comptime var has_aspect: bool = false;
+        comptime var has_get: bool = false;
+        comptime var has_byId: bool = false;
+        // component function interceptors
+        comptime var has_init: bool = false;
+        comptime var has_deinit: bool = false;
+        // component struct based interceptors / methods
+        comptime var has_construct: bool = false;
+        comptime var has_destruct: bool = false;
+
+        comptime {
+            if (!trait.is(.Struct)(T))
+                @compileError("Expects component type is a struct.");
+            if (!trait.hasDecls(T, .{"NULL_VALUE"}))
+                @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
+            if (!trait.hasDecls(T, .{"COMPONENT_NAME"}))
+                @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
+            if (!trait.hasField("id")(T))
+                @compileError("Expects component type to have field named id");
+
+            has_aspect = trait.hasDecls(T, .{"type_aspect"});
+            has_get = trait.hasDecls(T, .{"get"});
+            has_byId = trait.hasDecls(T, .{"byId"});
+
+            has_init = trait.hasDecls(T, .{"init"});
+            has_deinit = trait.hasDecls(T, .{"deinit"});
+
+            has_construct = trait.hasDecls(T, .{"construct"});
+            has_destruct = trait.hasDecls(T, .{"destruct"});
         }
 
-        pub fn byId(id: Index) *const T {
-            return items.get(id);
-        }
+        return struct {
+            const Self = @This();
+            // ensure type based singleton
+            var initialized = false;
+            // internal state
+            var items: DynArray(T) = undefined;
+            // external state
+            pub var c_aspect: *Aspect = undefined;
 
-        pub fn clearAll() void {
-            var i: usize = 0;
-            while (items.slots.nextSetBit(i)) |next| {
-                clear(i);
-                i = next + 1;
+            pub fn init() void {
+                if (Self.initialized)
+                    return;
+
+                errdefer Self.deinit();
+                defer {
+                    ENTITY_COMPONENT_INTERFACE_TABLE.set(
+                        Component.ComponentTypeInterface{
+                            .clear = Self.clear,
+                            .deinit = Self.deinit,
+                            .to_string = toString,
+                        },
+                        c_aspect.index,
+                    );
+                    Self.initialized = true;
+                }
+
+                items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
+                c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_NAME);
+
+                if (has_aspect) T.type_aspect = c_aspect;
+                if (has_get) T.get = Self.get;
+                if (has_byId) T.byId = Self.byId;
+                if (has_init) T.init();
             }
-        }
 
-        pub fn clear(id: Index) void {
-            if (has_onDispose) T.onDispose(id);
-            items.reset(id);
-        }
+            pub fn deinit() void {
+                defer Self.initialized = false;
+                if (!Self.initialized)
+                    return;
 
-        fn toString(string_buffer: *StringBuffer) void {
-            string_buffer.print("\n  {s} size: {d}", .{ c_aspect.name, items.size() });
-            var next = items.slots.nextSetBit(0);
-            while (next) |i| {
-                string_buffer.print("\n   {any}", .{items.get(i)});
-                next = items.slots.nextSetBit(i + 1);
+                if (has_deinit) T.deinit();
+                c_aspect = undefined;
+                items.deinit();
+
+                if (has_aspect) T.type_aspect = undefined;
+                if (has_byId) T.byId = undefined;
             }
-        }
 
-        fn checkComponentTrait(c: T) void {
-            comptime {
-                if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
-                if (!trait.hasField("id")(@TypeOf(c))) @compileError("Expects component to have field 'id'.");
+            pub fn typeCheck(a: *Aspect) bool {
+                if (!Self.initialized)
+                    return false;
+
+                return c_aspect.index == a.index;
             }
-        }
-    };
-}
+
+            pub fn count() usize {
+                return items.slots.count();
+            }
+
+            pub fn register(c: *T, id: Index) *T {
+                checkComponentTrait(c);
+                c.id = id;
+                items.set(c, id);
+                if (has_construct) c.construct();
+                return items.get(id);
+            }
+
+            pub fn get(id: Index) *T {
+                return items.get(id);
+            }
+
+            pub fn byId(id: Index) *const T {
+                return items.get(id);
+            }
+
+            pub fn clearAll() void {
+                var i: usize = 0;
+                while (items.slots.nextSetBit(i)) |next| {
+                    clear(i);
+                    i = next + 1;
+                }
+            }
+
+            pub fn clear(id: Index) void {
+                if (has_destruct) {
+                    get(id).destruct();
+                }
+                items.reset(id);
+            }
+
+            fn toString(string_buffer: *StringBuffer) void {
+                string_buffer.print("\n  {s} size: {d}", .{ c_aspect.name, items.size() });
+                var next = items.slots.nextSetBit(0);
+                while (next) |i| {
+                    string_buffer.print("\n   {any}", .{items.get(i)});
+                    next = items.slots.nextSetBit(i + 1);
+                }
+            }
+
+            fn checkComponentTrait(c: T) void {
+                comptime {
+                    if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
+                    if (!trait.hasField("id")(@TypeOf(c))) @compileError("Expects component to have field 'id'.");
+                }
+            }
+        };
+    }
+};

@@ -25,11 +25,11 @@ pub fn EventDispatch(comptime E: type) type {
         }
 
         pub fn registerPrepend(self: *Self, listener: Listener) void {
-            self.listeners.insert(0, listener) catch @panic("Failed to append listener");
+            self.listeners.insert(0, listener) catch @panic("Failed to prepend listener");
         }
 
         pub fn registerInsert(self: *Self, index: usize, listener: Listener) void {
-            self.listeners.insert(index, listener) catch @panic("Failed to append listener");
+            self.listeners.insert(index, listener) catch @panic("Failed to insert listener");
         }
 
         pub fn unregister(self: *Self, listener: Listener) void {
@@ -61,6 +61,14 @@ test "Events and Listeners" {
     ED.unregister(testlistener1);
 
     ED.notify("hallo3");
+}
+
+test "Listener insert" {
+    var ED = EventDispatch([]const u8).init(std.testing.allocator);
+    defer ED.deinit();
+
+    ED.registerInsert(0, testlistener1);
+    ED.registerInsert(0, testlistener1);
 }
 
 fn testlistener1(event: []const u8) void {

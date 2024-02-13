@@ -71,6 +71,6 @@ pub fn format(
 ) !void {
     try writer.print(
         "{s}[ id:{d}, info:{s} ]",
-        .{ self.name, self.id, self.info[0..60] ++ "..." },
+        .{ self.name, self.id, self.info },
     );
 }

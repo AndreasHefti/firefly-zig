@@ -19,11 +19,13 @@ const ActionType = api.Component.ActionType;
 const TextureData = api.TextureData;
 const TextureAsset = graphics.TextureAsset;
 const Entity = api.Entity;
+const EntityComponent = api.EntityComponent;
 const ETransform = graphics.view.ETransform;
 const View = graphics.View;
 const ViewLayerMapping = graphics.view.ViewLayerMapping;
 const ViewRenderEvent = graphics.view.ViewRenderEvent;
 const ViewRenderListener = graphics.view.ViewRenderListener;
+const System = api.System;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
@@ -65,18 +67,13 @@ pub fn init() !void {
 
     sprites = try DynArray(SpriteData).init(api.COMPONENT_ALLOC, SpriteAsset.NULL_VALUE);
     sprite_sets = try DynArray(SpriteSet).init(api.COMPONENT_ALLOC, SpriteSetAsset.NULL_VALUE);
-    // init Sprite Asset
-    SpriteAsset.asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Sprite");
-    Asset.subscribe(SpriteAsset.listener);
-    // init SpriteSetAsset
-    SpriteSetAsset.asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("SpriteSet");
-    Asset.subscribe(SpriteSetAsset.listener);
+    // init Asset
+    SpriteAsset.init();
+    SpriteSetAsset.init();
     // init components and entities
-    Entity.registerEntityComponent(ESprite);
-
-    // init SimpleSpriteRenderer
-    SimpleSpriteRenderer.accept_kind = Kind.of(ETransform.type_aspect).with(ESprite.type_aspect);
-    SimpleSpriteRenderer.sprite_refs = ViewLayerMapping.new();
+    EntityComponent.registerEntityComponent(ESprite);
+    // init renderer
+    SimpleSpriteRenderer.init();
 }
 
 pub fn deinit() void {
@@ -88,19 +85,15 @@ pub fn deinit() void {
     sprites = undefined;
     sprite_sets.deinit();
     sprite_sets = undefined;
-    // deinit SimpleSpriteRenderer
-    SimpleSpriteRenderer.accept_kind = undefined;
-    SimpleSpriteRenderer.sprite_refs.deinit();
-    // deinit SpriteAsset
-    Asset.unsubscribe(SpriteAsset.listener);
-    SpriteAsset.asset_type = undefined;
-    // deinit SpriteSetAsset
-    Asset.unsubscribe(SpriteSetAsset.listener);
-    SpriteSetAsset.asset_type = undefined;
+    // deinit renderer
+    SimpleSpriteRenderer.deinit();
+    // deinit Assets
+    SpriteSetAsset.deinit();
+    SpriteAsset.deinit();
 }
 
 //////////////////////////////////////////////////////////////
-//// Sprite Entity Component ESprite
+//// ESprite Sprite Entity Component
 //////////////////////////////////////////////////////////////
 
 pub const ESprite = struct {
@@ -116,10 +109,16 @@ pub const ESprite = struct {
     id: Index = UNDEF_INDEX,
     sprite_ref: BindingId = NO_BINDING,
     render_data: RenderData = RenderData{},
-    offset: ?Vec2f = null,
+    offset: Vec2f = Vec2f{ 0, 0 },
 
     pub fn setSpriteByAssetName(self: *ESprite, view_name: String) void {
         self.view_id = View.byName(view_name).id;
+    }
+
+    pub fn destruct(self: *ESprite) void {
+        self.sprite_ref = NO_BINDING;
+        self.render_data = RenderData{};
+        self.offset = Vec2f{ 0, 0 };
     }
 };
 
@@ -138,6 +137,16 @@ pub const SpriteAsset = struct {
         flip_x: bool = false,
         flip_y: bool = false,
     };
+
+    fn init() void {
+        asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Sprite");
+        Asset.subscribe(listener);
+    }
+
+    fn deinit() void {
+        Asset.unsubscribe(listener);
+        asset_type = undefined;
+    }
 
     pub fn new(data: Sprite) *Asset {
         if (!initialized)
@@ -229,6 +238,16 @@ pub const SpriteAsset = struct {
 pub const SpriteSetAsset = struct {
     pub var asset_type: *Aspect = undefined;
     pub const NULL_VALUE = SpriteSet{};
+
+    fn init() void {
+        asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("SpriteSet");
+        Asset.subscribe(listener);
+    }
+
+    fn deinit() void {
+        Asset.unsubscribe(listener);
+        asset_type = undefined;
+    }
 
     pub const SpriteStamp = struct {
         name: String = NO_NAME,
@@ -369,8 +388,38 @@ pub const SpriteSetAsset = struct {
 //////////////////////////////////////////////////////////////
 
 const SimpleSpriteRenderer = struct {
+    var system_id: Index = UNDEF_INDEX;
     var accept_kind: Kind = undefined;
     var sprite_refs: ViewLayerMapping = undefined;
+
+    fn init() void {
+        accept_kind = Kind.of(ETransform.type_aspect).with(ESprite.type_aspect);
+        sprite_refs = ViewLayerMapping.new();
+        system_id = System.new(System{
+            .name = "SimpleSpriteRenderer",
+            .info = "Render Entities with ETransform and ESprite components",
+            .onActivation = onActivation,
+        }).id;
+        System.activateById(system_id, true);
+    }
+
+    fn deinit() void {
+        System.activateById(system_id, false);
+        System.disposeById(system_id);
+        system_id = UNDEF_INDEX;
+        accept_kind = undefined;
+        sprite_refs.deinit();
+    }
+
+    fn onActivation(active: bool) void {
+        if (active) {
+            Entity.subscribe(handleEntityEvent);
+            graphics.view.subscribeViewRenderingAt(0, handleRenderEvent);
+        } else {
+            graphics.view.unsubscribeViewRendering(handleRenderEvent);
+            Entity.unsubscribe(handleEntityEvent);
+        }
+    }
 
     fn handleEntityEvent(e: Event) void {
         switch (e.event_type) {
@@ -389,21 +438,24 @@ const SimpleSpriteRenderer = struct {
     }
 
     fn accepted(entity_id: Index) ?*const ETransform {
-        if (accept_kind.isKindOf(Entity.byId(entity_id))) {
+        if (accept_kind.isKindOf(&Entity.byId(entity_id).kind)) {
             return ETransform.byId(entity_id);
         }
         return null;
     }
 
-    fn handleRenderEvent(e: *const ViewRenderEvent) void {
+    fn handleRenderEvent(e: ViewRenderEvent) void {
         if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the sprite
-                const s: ESprite = ESprite.byId(id);
-                const sd: SpriteData = sprites.get(s.sprite_ref);
-                const t: ETransform = ETransform.byId(id);
-                api.RENDERING_API.renderSprite(sd, t, s.render_data, s.offset);
+                var s = ESprite.byId(id);
+                api.RENDERING_API.renderSprite(
+                    sprites.get(s.sprite_ref),
+                    &ETransform.byId(id).transform,
+                    &s.render_data,
+                    s.offset,
+                );
             }
         }
     }

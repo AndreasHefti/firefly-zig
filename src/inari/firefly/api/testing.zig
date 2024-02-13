@@ -220,7 +220,7 @@ pub const DebugRenderAPI = struct {
         textureId: BindingId,
         transform: *const TransformData,
         renderData: ?*const RenderData,
-        offset: ?*const Vector2f,
+        offset: ?Vector2f,
     ) void {
         if (renderData) |rd| {
             currentRenderData = rd;
@@ -229,7 +229,7 @@ pub const DebugRenderAPI = struct {
             .render_texture = textureId,
             .transform = transform.*,
             .render = if (renderData) |sd| sd.* else null,
-            .offset = if (offset) |sd| sd.* else null,
+            .offset = offset,
         });
     }
 
@@ -237,7 +237,7 @@ pub const DebugRenderAPI = struct {
         spriteData: *const SpriteData,
         transform: *const TransformData,
         renderData: ?*const RenderData,
-        offset: ?*const Vector2f,
+        offset: ?Vector2f,
     ) void {
         if (renderData) |rd| {
             currentRenderData = rd;
@@ -246,7 +246,7 @@ pub const DebugRenderAPI = struct {
             .render_sprite = spriteData.*,
             .transform = transform.*,
             .render = if (renderData) |sd| sd.* else null,
-            .offset = if (offset) |sd| sd.* else null,
+            .offset = offset,
         });
     }
 
@@ -333,7 +333,7 @@ test "RenderAPI debug init" {
     try std.testing.expectEqual(api.RENDERING_API, debugGraphics2);
     var offset = Vector2f{ 10, 10 };
     debugGraphics2.setOffset(offset);
-    debugGraphics2.renderSprite(&sprite, &transform, &renderData, &offset);
+    debugGraphics2.renderSprite(&sprite, &transform, &renderData, offset);
 
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
@@ -367,6 +367,39 @@ test "RenderAPI debug init" {
     api.RENDERING_API.printDebug(&sb);
     //std.debug.print("\n{s}", .{sb.toString()});
     try std.testing.expectEqualStrings(api_out, sb.toString());
+}
+
+test "TransformData operations" {
+    var td1 = TransformData{
+        .position = Vector2f{ 10, 10 },
+        .pivot = Vector2f{ 0, 0 },
+        .scale = Vector2f{ 1, 1 },
+        .rotation = 2,
+    };
+    var td2 = TransformData{
+        .position = Vector2f{ 10, 10 },
+        .pivot = Vector2f{ 1, 1 },
+        .scale = Vector2f{ 2, 2 },
+        .rotation = 5,
+    };
+    var td3 = TransformData{};
+    td3.set(td1);
+
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+    sb.print("{any}", .{td3});
+    try std.testing.expectEqualStrings(
+        "TransformData[ pos:{ 1.0e+01, 1.0e+01 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:2 ]",
+        sb.toString(),
+    );
+
+    sb.clear();
+    td3.add(td2);
+    sb.print("{any}", .{td3});
+    try std.testing.expectEqualStrings(
+        "TransformData[ pos:{ 2.0e+01, 2.0e+01 }, pivot:{ 1.0e+00, 1.0e+00 }, scale:{ 3.0e+00, 3.0e+00 }, rot:7 ]",
+        sb.toString(),
+    );
 }
 
 // //////////////////////////////////////////////////////////////

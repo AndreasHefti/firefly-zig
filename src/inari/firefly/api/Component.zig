@@ -142,7 +142,7 @@ pub fn isValid(any_component: anytype) bool {
 
 pub fn ComponentPool(comptime T: type) type {
 
-    // check component type constraints and function refs
+    // component type constraints and function references
     comptime var has_aspect: bool = false;
     comptime var has_new: bool = false;
     comptime var has_exists: bool = false;
@@ -157,13 +157,14 @@ pub fn ComponentPool(comptime T: type) type {
     comptime var has_subscribe: bool = false;
     comptime var has_name_mapping: bool = false;
 
+    // component type init/deinit functions
     comptime var has_init: bool = false;
     comptime var has_deinit: bool = false;
 
-    // component function interceptors
-    comptime var has_onNew: bool = false;
-    comptime var has_onActivation: bool = false;
-    comptime var has_onDispose: bool = false;
+    // component member function interceptors
+    comptime var has_construct: bool = false;
+    comptime var has_activation: bool = false;
+    comptime var has_destruct: bool = false;
 
     comptime {
         if (!trait.is(.Struct)(T))
@@ -194,9 +195,9 @@ pub fn ComponentPool(comptime T: type) type {
 
         has_init = trait.hasDecls(T, .{"init"});
         has_deinit = trait.hasDecls(T, .{"deinit"});
-        has_onNew = trait.hasDecls(T, .{"onNew"});
-        has_onActivation = trait.hasDecls(T, .{"onActivation"});
-        has_onDispose = trait.hasDecls(T, .{"onDispose"});
+        has_construct = trait.hasDecls(T, .{"construct"});
+        has_activation = trait.hasDecls(T, .{"activation"});
+        has_destruct = trait.hasDecls(T, .{"destruct"});
     }
 
     return struct {
@@ -325,8 +326,8 @@ pub fn ComponentPool(comptime T: type) type {
                     nm.put(result.name, id) catch unreachable;
             }
 
-            if (has_onNew)
-                T.onNew(id);
+            if (has_construct)
+                result.construct();
 
             notify(ActionType.CREATED, id);
             return result;
@@ -367,8 +368,8 @@ pub fn ComponentPool(comptime T: type) type {
 
         pub fn activate(id: Index, a: bool) void {
             active_mapping.setValue(id, a);
-            if (has_onActivation)
-                T.onActivation(id, a);
+            if (has_activation)
+                get(id).activation(a);
             notify(if (a) ActionType.ACTIVATED else ActionType.DEACTIVATING, id);
         }
 
@@ -396,8 +397,8 @@ pub fn ComponentPool(comptime T: type) type {
             if (isActive(id))
                 activate(id, false);
             notify(ActionType.DISPOSING, id);
-            if (has_onDispose)
-                T.onDispose(id);
+            if (has_destruct)
+                get(id).destruct();
             active_mapping.setValue(id, false);
             items.reset(id);
         }
