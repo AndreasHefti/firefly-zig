@@ -5,17 +5,17 @@ const api = @import("api.zig");
 const utils = api.utils;
 const Float = utils.Float;
 
-const UpdateScheduler = struct {
+pub const UpdateScheduler = struct {
     resolution: Float = 60,
-    needsUpdate: bool = false,
+    needs_update: bool = false,
     ticks: i64 = 0,
-    lastUpdate: i64 = 0,
+    last_update: i64 = 0,
     fn update(self: *UpdateScheduler) void {
-        if (lastUpdateTime - self.lastUpdate >= 1000 / self.resolution) {
-            self.lastUpdate = lastUpdateTime;
+        if (lastUpdateTime - self.last_update >= 1000 / self.resolution) {
+            self.last_update = lastUpdateTime;
             self.ticks += 1;
-            self.needsUpdate = true;
-        } else self.needsUpdate = false;
+            self.needs_update = true;
+        } else self.needs_update = false;
     }
 };
 
@@ -50,7 +50,7 @@ pub fn tick() void {
     lastUpdateTime = currentTime;
 }
 
-pub fn updateScheduler() void {
+pub fn update() void {
     for (scheduler.items) |*s| {
         s.update();
     }

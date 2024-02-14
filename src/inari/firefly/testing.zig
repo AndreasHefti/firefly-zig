@@ -37,8 +37,8 @@ test "Firefly init" {
         \\Aspects:
         \\  Group[COMPONENT_ASPECT_GROUP|0]:
         \\    Aspect[Asset|0]
-        \\    Aspect[System|1]
-        \\    Aspect[Entity|2]
+        \\    Aspect[Entity|1]
+        \\    Aspect[System|2]
         \\    Aspect[Layer|3]
         \\    Aspect[View|4]
         \\  Group[ASSET_TYPE_ASPECT_GROUP|1]:
@@ -53,10 +53,10 @@ test "Firefly init" {
         \\
         \\Components:
         \\  Asset size: 0
+        \\  Entity size: 0
         \\  System size: 2
         \\    a ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    a SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
-        \\  Entity size: 0
         \\  Layer size: 0
         \\  View size: 0
     ;
@@ -271,7 +271,7 @@ test "event propagation" {
     c1.activate(false);
 }
 
-fn testListener(event: Component.Event) void {
+fn testListener(event: *const Component.ComponentEvent) void {
     std.debug.print("received: {any}\n", .{event});
 }
 

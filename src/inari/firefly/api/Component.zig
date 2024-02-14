@@ -83,12 +83,12 @@ pub const ActionType = enum {
     }
 };
 
-pub const Event = struct {
+pub const ComponentEvent = struct {
     event_type: ActionType = ActionType.NONE,
     c_id: Index = UNDEF_INDEX,
 
     pub fn format(
-        self: Event,
+        self: ComponentEvent,
         comptime _: []const u8,
         _: std.fmt.FormatOptions,
         writer: anytype,
@@ -97,7 +97,7 @@ pub const Event = struct {
     }
 };
 
-pub const EventListener = *const fn (Event) void;
+pub const EventListener = *const fn (*const ComponentEvent) void;
 
 pub fn registerComponent(comptime T: type) void {
     ComponentPool(T).init();
@@ -210,8 +210,8 @@ pub fn ComponentPool(comptime T: type) type {
         var active_mapping: BitSet = undefined;
         var name_mapping: ?StringHashMap(Index) = null;
         // events
-        var event: ?Event = null;
-        var eventDispatch: ?EventDispatch(Event) = null;
+        var event: ?ComponentEvent = null;
+        var eventDispatch: ?EventDispatch(*const ComponentEvent) = null;
         // external state
         pub var c_aspect: *Aspect = undefined;
 
@@ -237,8 +237,8 @@ pub fn ComponentPool(comptime T: type) type {
             c_aspect = COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_NAME);
 
             if (has_subscribe) {
-                event = Event{};
-                eventDispatch = EventDispatch(Event).init(api.COMPONENT_ALLOC);
+                event = ComponentEvent{};
+                eventDispatch = EventDispatch(*const ComponentEvent).init(api.COMPONENT_ALLOC);
                 T.subscribe = Self.subscribe;
                 T.unsubscribe = Self.unsubscribe;
             }
@@ -306,11 +306,11 @@ pub fn ComponentPool(comptime T: type) type {
             return active_mapping.count();
         }
 
-        pub fn subscribe(listener: *const fn (Event) void) void {
+        pub fn subscribe(listener: EventListener) void {
             if (eventDispatch) |*ed| ed.register(listener);
         }
 
-        pub fn unsubscribe(listener: *const fn (Event) void) void {
+        pub fn unsubscribe(listener: EventListener) void {
             if (eventDispatch) |*ed| ed.unregister(listener);
         }
 
@@ -331,6 +331,14 @@ pub fn ComponentPool(comptime T: type) type {
 
             notify(ActionType.CREATED, id);
             return result;
+        }
+
+        pub fn nextId(index: usize) ?usize {
+            return items.slots.nextSetBit(index);
+        }
+
+        pub fn nextActiveId(index: usize) ?usize {
+            return active_mapping.nextSetBit(index);
         }
 
         pub fn exists(id: Index) bool {
@@ -445,11 +453,9 @@ pub fn ComponentPool(comptime T: type) type {
 
         fn notify(event_type: ActionType, id: Index) void {
             if (event) |*e| {
-                // Test if copy here affects performance (but it thread safe?)
-                var ce = e.*;
-                ce.event_type = event_type;
-                ce.c_id = id;
-                eventDispatch.?.notify(ce);
+                e.event_type = event_type;
+                e.c_id = id;
+                eventDispatch.?.notify(e);
             }
         }
 

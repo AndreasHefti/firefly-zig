@@ -257,7 +257,7 @@ pub const View = struct {
         api.RENDERING_API.disposeRenderTexture(&view.render_texture);
     }
 
-    fn onLayerAction(event: Component.Event) void {
+    fn onLayerAction(event: *const Component.ComponentEvent) void {
         switch (event.event_type) {
             ActionType.ACTIVATED => addLayerMapping(Layer.byId(event.c_id)),
             ActionType.DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id)),
@@ -397,7 +397,7 @@ pub const ETransform = struct {
 //// EMultiplier Entity position multiplier
 //////////////////////////////////////////////////////////////////////////
 
-const EMultiplier = struct {
+pub const EMultiplier = struct {
     // entity component type fields
     pub const NULL_VALUE = EMultiplier{};
     pub const NULL_POS_ENTRY = Vector2f{};
@@ -429,7 +429,6 @@ const EMultiplier = struct {
 //////////////////////////////////////////////////////////////
 
 const ViewRenderer = struct {
-    var system_id: Index = UNDEF_INDEX;
     var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(ViewRenderEvent) = undefined;
     var VIEW_RENDER_EVENT = ViewRenderEvent{
         .view_id = UNDEF_INDEX,
@@ -438,28 +437,27 @@ const ViewRenderer = struct {
 
     fn init() void {
         VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).init(api.ALLOC);
-        system_id = System.new(System{
+        _ = System.new(System{
             .name = "ViewRenderer",
             .info = "Emits ViewRenderEvent in order of active Views and its Layers",
-            .onActivation = onActivation,
-        }).id;
-        System.activateById(system_id, true);
+            .onRenderEvent = render,
+        });
+        System.activateByName("ViewRenderer", true);
     }
 
     fn deinit() void {
-        System.activateById(system_id, false);
-        System.disposeById(system_id);
-        system_id = UNDEF_INDEX;
+        System.activateByName("ViewRenderer", false);
+        System.disposeByName("ViewRenderer");
         VIEW_RENDER_EVENT_DISPATCHER.deinit();
     }
 
-    fn onActivation(active: bool) void {
-        if (active) {
-            api.Engine.subscribeRender(render);
-        } else {
-            api.Engine.unsubscribeRender(render);
-        }
-    }
+    // fn onActivation(active: bool) void {
+    //     if (active) {
+    //         api.Engine.subscribeRender(render);
+    //     } else {
+    //         api.Engine.unsubscribeRender(render);
+    //     }
+    // }
 
     fn render(event: *const RenderEvent) void {
         if (event.type != api.RenderEventType.RENDER)

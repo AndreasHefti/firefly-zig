@@ -1,7 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
-const sprite = @import("sprite.zig");
 
 const Aspect = utils.aspect.Aspect;
 const Asset = api.Asset;
@@ -10,7 +9,7 @@ const StringBuffer = utils.StringBuffer;
 const ShaderData = api.ShaderData;
 const BindingId = api.BindingId;
 const String = utils.String;
-const Event = api.Component.Event;
+const ComponentEvent = api.Component.ComponentEvent;
 const ActionType = api.Component.ActionType;
 const TextureData = api.TextureData;
 
@@ -28,11 +27,7 @@ const CInt = utils.CInt;
 
 pub const api = @import("../api/api.zig");
 pub const utils = api.utils;
-
-pub const ESprite = sprite.ESprite;
-pub const SpriteSet = sprite.SpriteSet;
-pub const SpriteAsset = sprite.SpriteAsset;
-pub const SpriteSetAsset = sprite.SpriteSetAsset;
+pub const sprite = @import("sprite.zig");
 pub const view = @import("view.zig");
 
 var initialized = false;
@@ -139,7 +134,7 @@ pub const ShaderAsset = struct {
         return shader.get(res_id);
     }
 
-    fn listener(e: Event) void {
+    fn listener(e: *const ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
@@ -243,7 +238,7 @@ pub const TextureAsset = struct {
         return textures.get(res_id);
     }
 
-    fn listener(e: Event) void {
+    fn listener(e: *const ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;

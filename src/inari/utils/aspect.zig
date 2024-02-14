@@ -94,7 +94,7 @@ pub const Kind = struct {
         };
     }
 
-    pub fn of(aspect: *Aspect) Kind {
+    pub fn of(aspect: anytype) Kind {
         return Kind{
             .group = aspect.group,
             ._mask = 0 | maskBit(aspect.index),

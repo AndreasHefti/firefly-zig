@@ -89,8 +89,8 @@ pub fn init(
 
     // register api based components and entity components
     Component.registerComponent(Asset);
-    Component.registerComponent(System);
     Component.registerComponent(Entity);
+    Component.registerComponent(System);
 }
 
 pub fn deinit() void {
@@ -98,10 +98,10 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    Engine.deinit();
-    Timer.deinit();
     Component.deinit();
     RENDERING_API.deinit();
+    Timer.deinit();
+    Engine.deinit();
     utils.aspect.deinit();
 }
 

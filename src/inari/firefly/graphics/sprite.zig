@@ -14,13 +14,14 @@ const SpriteData = api.SpriteData;
 const RenderData = api.RenderData;
 const BindingId = api.BindingId;
 const String = utils.String;
-const Event = api.Component.Event;
+const ComponentEvent = api.Component.ComponentEvent;
 const ActionType = api.Component.ActionType;
 const TextureData = api.TextureData;
 const TextureAsset = graphics.TextureAsset;
 const Entity = api.Entity;
 const EntityComponent = api.EntityComponent;
 const ETransform = graphics.view.ETransform;
+const EMultiplier = graphics.view.EMultiplier;
 const View = graphics.View;
 const ViewLayerMapping = graphics.view.ViewLayerMapping;
 const ViewRenderEvent = graphics.view.ViewRenderEvent;
@@ -183,7 +184,7 @@ pub const SpriteAsset = struct {
         return sprites.get(res_id);
     }
 
-    fn listener(e: Event) void {
+    fn listener(e: *const ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
@@ -330,7 +331,7 @@ pub const SpriteSetAsset = struct {
         return sprite_sets.get(res_id).byName(name);
     }
 
-    fn listener(e: Event) void {
+    fn listener(e: *const ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
@@ -388,61 +389,52 @@ pub const SpriteSetAsset = struct {
 //////////////////////////////////////////////////////////////
 
 const SimpleSpriteRenderer = struct {
-    var system_id: Index = UNDEF_INDEX;
-    var accept_kind: Kind = undefined;
+    const sys_name = "SimpleSpriteRenderer";
     var sprite_refs: ViewLayerMapping = undefined;
 
     fn init() void {
-        accept_kind = Kind.of(ETransform.type_aspect).with(ESprite.type_aspect);
         sprite_refs = ViewLayerMapping.new();
-        system_id = System.new(System{
-            .name = "SimpleSpriteRenderer",
+        _ = System.new(System{
+            .name = sys_name,
             .info = "Render Entities with ETransform and ESprite components",
+            .onEntityEvent = handleEntityEvent,
+            .entity_accept_kind = Kind.of(ETransform.type_aspect).with(ESprite.type_aspect),
+            .entity_dismiss_kind = Kind.of(EMultiplier.type_aspect),
             .onActivation = onActivation,
-        }).id;
-        System.activateById(system_id, true);
+        });
+        System.activateByName(sys_name, true);
     }
 
     fn deinit() void {
-        System.activateById(system_id, false);
-        System.disposeById(system_id);
-        system_id = UNDEF_INDEX;
-        accept_kind = undefined;
+        System.activateByName(sys_name, false);
+        System.disposeByName(sys_name);
         sprite_refs.deinit();
     }
 
     fn onActivation(active: bool) void {
         if (active) {
-            Entity.subscribe(handleEntityEvent);
             graphics.view.subscribeViewRenderingAt(0, handleRenderEvent);
         } else {
             graphics.view.unsubscribeViewRendering(handleRenderEvent);
-            Entity.unsubscribe(handleEntityEvent);
         }
     }
 
-    fn handleEntityEvent(e: Event) void {
+    fn handleEntityEvent(e: *const ComponentEvent) void {
+        var transform = ETransform.byId(e.c_id);
         switch (e.event_type) {
-            ActionType.ACTIVATED => {
-                if (accepted(e.c_id)) |t| {
-                    sprite_refs.add(t.view_id, t.layer_id, e.c_id);
-                }
-            },
-            ActionType.DEACTIVATING => {
-                if (accepted(e.c_id)) |t| {
-                    sprite_refs.remove(t.view_id, t.layer_id, e.c_id);
-                }
-            },
+            ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id),
+            ActionType.DEACTIVATING => sprite_refs.remove(transform.view_id, transform.layer_id, e.c_id),
             else => {},
         }
     }
 
-    fn accepted(entity_id: Index) ?*const ETransform {
-        if (accept_kind.isKindOf(&Entity.byId(entity_id).kind)) {
-            return ETransform.byId(entity_id);
-        }
-        return null;
-    }
+    // fn accepted(entity_id: Index) ?*const ETransform {
+    //     const e_kind = &Entity.byId(entity_id).kind;
+    //     if (accept_kind.isKindOf(e_kind) and dismiss_kind.isNotKindOf(e_kind)) {
+    //         return ETransform.byId(entity_id);
+    //     }
+    //     return null;
+    // }
 
     fn handleRenderEvent(e: ViewRenderEvent) void {
         if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
