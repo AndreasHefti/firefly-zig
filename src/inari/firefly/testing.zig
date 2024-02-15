@@ -316,6 +316,13 @@ test "get poll and process" {
     //processViaIdCast(compId);
 }
 
+test "function pointer equality op" {
+    const p1: *const fn () void = process;
+    const p2: *const fn () void = process;
+
+    try std.testing.expect(p1 == p2);
+}
+
 // fn processViaIdCast(id: component.ComponentId) void {
 //     if (ComponentPool(ExampleComponent).typeCheck(id.aspect)) {
 //         var arr = [1]usize{id.cIndex};

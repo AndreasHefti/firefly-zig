@@ -4,13 +4,16 @@ const Allocator = std.mem.Allocator;
 const trait = std.meta.trait;
 
 const api = @import("api.zig");
-const DynArray = api.utils.dynarray.DynArray;
-const ArrayList = std.ArrayList;
+//const DynArray = api.utils.dynarray.DynArray;
+//const ArrayList = std.ArrayList;
 const Component = api.Component;
 const ComponentEvent = Component.ComponentEvent;
 const UpdateEvent = api.UpdateEvent;
+const UpdateListener = api.UpdateListener;
 const RenderEvent = api.RenderEvent;
+const RenderListener = api.RenderListener;
 const UpdateScheduler = api.Timer.UpdateScheduler;
+const Engine = api.Engine;
 const Entity = api.Entity;
 const Kind = api.utils.aspect.Kind;
 const aspect = api.utils.aspect;
@@ -51,39 +54,21 @@ onConstruct: ?*const fn () void = null,
 onActivation: ?*const fn (bool) void = null,
 onDestruct: ?*const fn () void = null,
 // entity handling
-onEntityEvent: ?*const fn (*const ComponentEvent) void = null,
+onEntityEvent: ?Component.EventListener = null,
 entity_accept_kind: ?Kind = null,
 entity_dismiss_kind: ?Kind = null,
 // update handling
-onUpdateEvent: ?*const fn (*const UpdateEvent) void = null,
-update_scheduler: ?*const UpdateScheduler = null,
+onUpdateEvent: ?UpdateListener = null,
+update_scheduler: ?UpdateScheduler = null,
 // renderer handling
-onRenderEvent: ?*const fn (*const RenderEvent) void = null,
-
-var initialized = false;
-pub fn init() !void {
-    defer initialized = true;
-    if (initialized)
-        return;
-
-    Entity.subscribe(onEntityEvent);
-    api.Engine.subscribeUpdate(onUpdateEvent);
-    api.Engine.subscribeRender(onRenderEvent);
-}
-
-pub fn deinit() void {
-    defer initialized = false;
-    if (!initialized)
-        return;
-
-    Entity.unsubscribe(onEntityEvent);
-    api.Engine.unsubscribeUpdate(onUpdateEvent);
-    api.Engine.unsubscribeRender(onRenderEvent);
-}
+onRenderEvent: ?RenderListener = null,
 
 pub fn construct(self: *System) void {
     if (self.onConstruct) |onConstruct| {
         onConstruct();
+    }
+    if (self.onEntityEvent) |onEntityEvent| {
+        Entity.subscribe(onEntityEvent);
     }
 }
 
@@ -91,11 +76,47 @@ pub fn activation(self: *System, active: bool) void {
     if (self.onActivation) |onActivation| {
         onActivation(active);
     }
+    if (active) {
+        if (self.onUpdateEvent) |onUpdateEvent| {
+            Engine.subscribeUpdate(onUpdateEvent);
+        }
+        if (self.onRenderEvent) |onRenderEvent| {
+            Engine.subscribeRender(onRenderEvent);
+        }
+    } else {
+        if (self.onUpdateEvent) |onUpdateEvent| {
+            Engine.unsubscribeUpdate(onUpdateEvent);
+        }
+        if (self.onRenderEvent) |onRenderEvent| {
+            Engine.unsubscribeRender(onRenderEvent);
+        }
+    }
+}
+
+pub fn acceptEntity(self: *System, event: *const ComponentEvent) bool {
+    const e_kind = &Entity.byId(event.c_id).kind;
+    if (self.entity_accept_kind) |*ak| {
+        if (!ak.isKindOf(e_kind)) return false;
+    }
+    if (self.entity_dismiss_kind) |*dk| {
+        if (!dk.isNotKindOf(e_kind)) return false;
+    }
+    return true;
+}
+
+pub fn needsUpdate(self: *System) bool {
+    if (self.update_scheduler) |us| {
+        return us.needs_update;
+    }
+    return true;
 }
 
 pub fn destruct(self: *System) void {
     if (self.onDestruct) |onDestruct| {
         onDestruct();
+    }
+    if (self.onEntityEvent) |onEntityEvent| {
+        Entity.unsubscribe(onEntityEvent);
     }
 }
 
@@ -109,53 +130,4 @@ pub fn format(
         "{s}[ id:{d}, info:{s} ]",
         .{ self.name, self.id, self.info },
     );
-}
-
-// TODO  create event dedicated system ref collections that store only system ids of systems that
-//       are interested in the particular event and iterate this instead of all.
-
-fn onEntityEvent(event: *const ComponentEvent) void {
-    const e_kind = &Entity.byId(event.c_id).kind;
-    var i: Index = 0;
-    while (System.pool.nextActiveId(i)) |id| {
-        var system: *System = System.get(id);
-        if (system.onEntityEvent) |onEntity| {
-            if (system.entity_accept_kind) |*ak| {
-                if (!ak.isKindOf(e_kind)) return;
-            }
-            if (system.entity_dismiss_kind) |*dk| {
-                if (!dk.isNotKindOf(e_kind)) return;
-            }
-            onEntity(event);
-        }
-        i = id + 1;
-    }
-}
-
-fn onUpdateEvent(event: *const UpdateEvent) void {
-    var i: Index = 0;
-    while (System.pool.nextActiveId(i)) |id| {
-        var system: *const System = System.byId(id);
-        if (system.onUpdateEvent) |update| {
-            if (system.update_scheduler) |us| {
-                if (us.needs_update) {
-                    update(event);
-                }
-            } else {
-                update(event);
-            }
-        }
-        i = id + 1;
-    }
-}
-
-fn onRenderEvent(event: *const RenderEvent) void {
-    var i: Index = 0;
-    while (System.pool.nextActiveId(i)) |id| {
-        var system: *const System = System.byId(id);
-        if (system.onRenderEvent) |render| {
-            render(event);
-        }
-        i = id + 1;
-    }
 }

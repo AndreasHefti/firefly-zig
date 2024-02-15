@@ -12,6 +12,8 @@ pub const event = @import("event.zig");
 pub const String = []const u8;
 pub const EMPTY_STRING: String = "";
 pub const NO_NAME: String = EMPTY_STRING;
+pub const Index = usize;
+pub const UNDEF_INDEX = std.math.maxInt(Index);
 
 pub const CInt = i32;
 pub const Float = f32;

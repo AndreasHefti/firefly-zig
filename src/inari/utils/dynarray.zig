@@ -2,9 +2,94 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const BitSet = @import("bitset.zig").BitSet;
 const utils = @import("utils.zig");
+const Index = utils.Index;
 const UNDEF_INDEX = std.math.maxInt(usize);
 
 pub const DynArrayError = error{IllegalSlotAccess};
+
+pub const DynIndexArray = struct {
+    items: []Index,
+    size_pointer: usize,
+    grow_size: usize,
+    allocator: Allocator,
+
+    pub fn init(allocator: Allocator, grow_size: usize) DynIndexArray {
+        return DynIndexArray{
+            .items = &[_]Index{},
+            .size_pointer = 0,
+            .grow_size = grow_size,
+            .allocator = allocator,
+        };
+    }
+
+    pub fn deinit(self: *DynIndexArray) void {
+        self.allocator.free(self.items);
+        self.items = &[_]Index{};
+        self.size_pointer = 0;
+    }
+
+    pub fn add(self: *DynIndexArray, index: Index) void {
+        ensureCapacity(self, self.size_pointer + 1);
+        self.items[self.size_pointer] = index;
+        self.size_pointer += 1;
+    }
+
+    pub fn set(self: *DynIndexArray, at: usize, index: Index) void {
+        ensureCapacity(self, index);
+        self.items[at] = index;
+        if (self.size_pointer < at) {
+            self.size_pointer = at + 1;
+        }
+    }
+
+    pub fn get(self: *DynIndexArray, at: usize) Index {
+        if (at > self.size_pointer) {
+            return UNDEF_INDEX;
+        }
+        return self.items[at];
+    }
+
+    pub fn removeAt(self: *DynIndexArray, at: usize) Index {
+        if (at > self.size_pointer) {
+            return UNDEF_INDEX;
+        }
+        var res = self.items[at];
+        for (at..self.size_pointer - 1) |i| {
+            self.items[i] = self.items[i + 1];
+        }
+        self.size_pointer -= 1;
+        self.items[self.size_pointer] = UNDEF_INDEX;
+        return res;
+    }
+
+    pub fn removeFirst(self: *DynIndexArray, index: Index) void {
+        for (0..self.size_pointer) |i| {
+            if (self.items[i] == index) {
+                _ = removeAt(self, i);
+                return;
+            }
+        }
+    }
+
+    fn ensureCapacity(self: *DynIndexArray, index: usize) void {
+        while (self.items.len < index) {
+            growOne(self);
+        }
+    }
+
+    fn growOne(self: *DynIndexArray) void {
+        const old_mem = self.items;
+        if (!self.allocator.resize(old_mem, self.items.len + self.grow_size)) {
+            const new_memory = self.allocator.alloc(Index, self.items.len + self.grow_size) catch unreachable;
+            @memcpy(new_memory[0..self.items.len], self.items);
+            self.allocator.free(self.items);
+            self.items = new_memory;
+        }
+        for (self.size_pointer..self.items.len) |i| {
+            self.items[i] = UNDEF_INDEX;
+        }
+    }
+};
 
 pub fn DynArray(comptime T: type) type {
     return struct {
@@ -62,6 +147,17 @@ pub fn DynArray(comptime T: type) type {
             self.register.set(t, index);
             self.slots.set(index);
             return index;
+        }
+
+        pub fn remove(self: *Self, t: T) void {
+            var i: usize = 0;
+            while (self.slots.nextSetBit(i)) |next| {
+                if (std.meta.eql(t, self.get(next).*)) {
+                    reset(self, i);
+                    return;
+                }
+                i = next + 1;
+            }
         }
 
         pub fn set(self: *Self, t: T, index: usize) void {
@@ -251,7 +347,126 @@ pub fn Register(comptime T: type) type {
     };
 }
 
-test "initialize" {
+test "DynIndexArray initialize" {
+    const allocator = std.testing.allocator;
+    const testing = std.testing;
+
+    var array = DynIndexArray.init(allocator, 10);
+    defer array.deinit();
+
+    try testing.expect(array.items.len == 0);
+    try testing.expect(array.grow_size == 10);
+    try testing.expect(array.size_pointer == 0);
+}
+
+test "DynIndexArray grow one" {
+    const allocator = std.testing.allocator;
+    const testing = std.testing;
+
+    var array = DynIndexArray.init(allocator, 10);
+    defer array.deinit();
+
+    array.add(1);
+
+    try testing.expect(array.items.len == 10);
+    try testing.expect(array.grow_size == 10);
+    try testing.expect(array.size_pointer == 1);
+    try testing.expect(array.items[0] == 1);
+
+    array.add(2);
+
+    try testing.expect(array.items.len == 10);
+    try testing.expect(array.grow_size == 10);
+    try testing.expect(array.size_pointer == 2);
+    try testing.expect(array.items[0] == 1);
+    try testing.expect(array.items[1] == 2);
+
+    array.set(4, 5);
+
+    try testing.expect(array.items.len == 10);
+    try testing.expect(array.grow_size == 10);
+    try testing.expect(array.size_pointer == 5);
+    try testing.expect(array.items[0] == 1);
+    try testing.expect(array.items[1] == 2);
+    try testing.expect(array.items[2] == UNDEF_INDEX);
+    try testing.expect(array.items[3] == UNDEF_INDEX);
+    try testing.expect(array.items[4] == 5);
+    try testing.expect(array.items[5] == UNDEF_INDEX);
+
+    array.add(6);
+
+    try testing.expect(array.items.len == 10);
+    try testing.expect(array.grow_size == 10);
+    try testing.expect(array.size_pointer == 6);
+    try testing.expect(array.items[0] == 1);
+    try testing.expect(array.items[1] == 2);
+    try testing.expect(array.items[2] == UNDEF_INDEX);
+    try testing.expect(array.items[3] == UNDEF_INDEX);
+    try testing.expect(array.items[4] == 5);
+    try testing.expect(array.items[5] == 6);
+    try testing.expect(array.items[6] == UNDEF_INDEX);
+}
+
+test "DynIndexArray remove" {
+    const allocator = std.testing.allocator;
+    const testing = std.testing;
+
+    var array = DynIndexArray.init(allocator, 10);
+    defer array.deinit();
+
+    array.add(1);
+    array.add(2);
+    array.add(3);
+    array.add(4);
+    array.add(5);
+
+    try testing.expect(array.items.len == 10);
+    try testing.expect(array.grow_size == 10);
+    try testing.expect(array.size_pointer == 5);
+    try testing.expect(array.items[0] == 1);
+    try testing.expect(array.items[1] == 2);
+    try testing.expect(array.items[2] == 3);
+    try testing.expect(array.items[3] == 4);
+    try testing.expect(array.items[4] == 5);
+    try testing.expect(array.items[5] == UNDEF_INDEX);
+
+    array.removeFirst(3);
+
+    try testing.expect(array.items.len == 10);
+    try testing.expect(array.grow_size == 10);
+    try testing.expect(array.size_pointer == 4);
+    try testing.expect(array.items[0] == 1);
+    try testing.expect(array.items[1] == 2);
+    try testing.expect(array.items[2] == 4);
+    try testing.expect(array.items[3] == 5);
+    try testing.expect(array.items[4] == UNDEF_INDEX);
+}
+
+test "DynIndexArray grow" {
+    const allocator = std.testing.allocator;
+    const testing = std.testing;
+
+    var array = DynIndexArray.init(allocator, 2);
+    defer array.deinit();
+
+    array.add(1);
+    array.add(2);
+    array.add(3);
+    array.add(4);
+    array.add(5);
+
+    try testing.expect(array.items.len == 6);
+    try testing.expect(array.grow_size == 2);
+    try testing.expect(array.size_pointer == 5);
+    try testing.expect(array.items[0] == 1);
+    try testing.expect(array.items[1] == 2);
+    try testing.expect(array.items[2] == 3);
+    try testing.expect(array.items[3] == 4);
+    try testing.expect(array.items[4] == 5);
+    try testing.expect(array.items[5] == UNDEF_INDEX);
+}
+
+test "DynArray initialize" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
@@ -265,7 +480,7 @@ test "initialize" {
     try testing.expect(dyn_array.get(2).* == -1);
 }
 
-test "scale up" {
+test "DynArray scale up" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
@@ -283,7 +498,7 @@ test "scale up" {
     try testing.expect(-1 == dyn_array.get(200001).*);
 }
 
-test "consistency checks" {
+test "DynArray consistency checks" {
     var dyn_array = try DynArray(i32).init(std.testing.allocator, -1);
     defer dyn_array.deinit();
 
@@ -296,7 +511,7 @@ test "consistency checks" {
     try std.testing.expect(!dyn_array.exists(2000));
 }
 
-test "use u16 as index" {
+test "DynArray use u16 as index" {
     var dyn_array = try DynArray(i32).init(std.testing.allocator, -1);
     defer dyn_array.deinit();
 

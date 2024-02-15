@@ -391,10 +391,11 @@ pub const SpriteSetAsset = struct {
 const SimpleSpriteRenderer = struct {
     const sys_name = "SimpleSpriteRenderer";
     var sprite_refs: ViewLayerMapping = undefined;
+    var system: *System = undefined;
 
     fn init() void {
         sprite_refs = ViewLayerMapping.new();
-        _ = System.new(System{
+        system = System.new(System{
             .name = sys_name,
             .info = "Render Entities with ETransform and ESprite components",
             .onEntityEvent = handleEntityEvent,
@@ -409,6 +410,7 @@ const SimpleSpriteRenderer = struct {
         System.activateByName(sys_name, false);
         System.disposeByName(sys_name);
         sprite_refs.deinit();
+        system = undefined;
     }
 
     fn onActivation(active: bool) void {
@@ -420,6 +422,9 @@ const SimpleSpriteRenderer = struct {
     }
 
     fn handleEntityEvent(e: *const ComponentEvent) void {
+        if (!system.acceptEntity(e))
+            return;
+
         var transform = ETransform.byId(e.c_id);
         switch (e.event_type) {
             ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id),
@@ -427,14 +432,6 @@ const SimpleSpriteRenderer = struct {
             else => {},
         }
     }
-
-    // fn accepted(entity_id: Index) ?*const ETransform {
-    //     const e_kind = &Entity.byId(entity_id).kind;
-    //     if (accept_kind.isKindOf(e_kind) and dismiss_kind.isNotKindOf(e_kind)) {
-    //         return ETransform.byId(entity_id);
-    //     }
-    //     return null;
-    // }
 
     fn handleRenderEvent(e: ViewRenderEvent) void {
         if (sprite_refs.get(e.view_id, e.layer_id)) |all| {

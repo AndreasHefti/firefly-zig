@@ -26,8 +26,8 @@ pub const Timer = @import("Timer.zig");
 pub const Entity = @import("Entity.zig").Entity;
 pub const EntityComponent = @import("Entity.zig").EntityComponent;
 pub const Asset = @import("Asset.zig");
-pub const Index = usize;
-pub const UNDEF_INDEX = std.math.maxInt(Index);
+pub const Index = utils.Index;
+pub const UNDEF_INDEX = utils.UNDEF_INDEX;
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
 

@@ -434,10 +434,11 @@ const ViewRenderer = struct {
         .view_id = UNDEF_INDEX,
         .layer_id = UNDEF_INDEX,
     };
+    var system: *System = undefined;
 
     fn init() void {
         VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).init(api.ALLOC);
-        _ = System.new(System{
+        system = System.new(System{
             .name = "ViewRenderer",
             .info = "Emits ViewRenderEvent in order of active Views and its Layers",
             .onRenderEvent = render,
@@ -449,15 +450,8 @@ const ViewRenderer = struct {
         System.activateByName("ViewRenderer", false);
         System.disposeByName("ViewRenderer");
         VIEW_RENDER_EVENT_DISPATCHER.deinit();
+        system = undefined;
     }
-
-    // fn onActivation(active: bool) void {
-    //     if (active) {
-    //         api.Engine.subscribeRender(render);
-    //     } else {
-    //         api.Engine.unsubscribeRender(render);
-    //     }
-    // }
 
     fn render(event: *const RenderEvent) void {
         if (event.type != api.RenderEventType.RENDER)

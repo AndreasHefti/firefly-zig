@@ -396,7 +396,7 @@ pub fn ComponentPool(comptime T: type) type {
         pub fn clearAll() void {
             var i: Index = 0;
             while (items.slots.nextSetBit(i)) |next| {
-                clear(i);
+                clear(next);
                 i = next + 1;
             }
         }
@@ -420,7 +420,7 @@ pub fn ComponentPool(comptime T: type) type {
         pub fn processActive(f: *const fn (*const T) void) void {
             var i: Index = 0;
             while (active_mapping.nextSetBit(i)) |next| {
-                f(items.get(i));
+                f(items.get(next));
                 i = next + 1;
             }
         }
@@ -428,7 +428,7 @@ pub fn ComponentPool(comptime T: type) type {
         pub fn processBitSet(indices: *BitSet, f: *const fn (*const T) void) void {
             var i: Index = 0;
             while (indices.nextSetBit(i)) |next| {
-                f(items.get(i));
+                f(items.get(next));
                 i = next + 1;
             }
         }
