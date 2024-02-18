@@ -4,6 +4,8 @@ const firefly = @import("firefly.zig");
 const api = @import("api/api.zig"); // TODO module
 const utils = api.utils;
 const Component = api.Component;
+const ComponentListener = Component.ComponentListener;
+const ComponentEvent = Component.ComponentEvent;
 const ComponentPool = api.Component.ComponentPool;
 const CompLifecycleEvent = Component.CompLifecycleEvent;
 const Aspect = utils.aspect.Aspect;
@@ -85,8 +87,8 @@ const ExampleComponent = struct {
     pub var activateByName: *const fn (String, bool) void = undefined;
     pub var disposeById: *const fn (Index) void = undefined;
     pub var disposeByName: *const fn (String) void = undefined;
-    pub var subscribe: *const fn (Component.EventListener) void = undefined;
-    pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
+    pub var subscribe: *const fn (ComponentListener) void = undefined;
+    pub var unsubscribe: *const fn (ComponentListener) void = undefined;
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -271,7 +273,7 @@ test "event propagation" {
     c1.activate(false);
 }
 
-fn testListener(event: *const Component.ComponentEvent) void {
+fn testListener(event: Component.ComponentEvent) void {
     std.debug.print("received: {any}\n", .{event});
 }
 
@@ -340,4 +342,17 @@ fn processOne(c: *const ExampleComponent) void {
 
 fn processOneUnknown(c: anytype) void {
     std.debug.print("process {any}\n", .{c});
+}
+
+test "testStructFnc" {
+    const f1 = testStructFnc(1);
+    const f2 = testStructFnc(2);
+    try std.testing.expect(f1.i == 1);
+    try std.testing.expect(f2.i == 2);
+}
+
+fn testStructFnc(comptime index: usize) type {
+    return struct {
+        pub var i = index;
+    };
 }

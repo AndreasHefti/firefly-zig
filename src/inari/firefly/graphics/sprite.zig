@@ -9,6 +9,8 @@ const utils = graphics.utils;
 const Aspect = utils.aspect.Aspect;
 const Kind = utils.aspect.Kind;
 const Asset = api.Asset;
+const Condition = utils.Condition;
+const EntityEventSubscription = api.EntityEventSubscription;
 const DynArray = utils.dynarray.DynArray;
 const SpriteData = api.SpriteData;
 const RenderData = api.RenderData;
@@ -184,7 +186,7 @@ pub const SpriteAsset = struct {
         return sprites.get(res_id);
     }
 
-    fn listener(e: *const ComponentEvent) void {
+    fn listener(e: ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
@@ -331,7 +333,7 @@ pub const SpriteSetAsset = struct {
         return sprite_sets.get(res_id).byName(name);
     }
 
-    fn listener(e: *const ComponentEvent) void {
+    fn listener(e: ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
@@ -390,41 +392,42 @@ pub const SpriteSetAsset = struct {
 
 const SimpleSpriteRenderer = struct {
     const sys_name = "SimpleSpriteRenderer";
+
+    var ee_subscription: EntityEventSubscription(SimpleSpriteRenderer) = undefined;
     var sprite_refs: ViewLayerMapping = undefined;
-    var system: *System = undefined;
 
     fn init() void {
+        ee_subscription = EntityEventSubscription(SimpleSpriteRenderer)
+            .of(registerEntity)
+            .withAcceptKind(Kind.of(ETransform.type_aspect).with(ESprite.type_aspect))
+            .withDismissKind(Kind.of(EMultiplier.type_aspect))
+            .subscribe();
+
         sprite_refs = ViewLayerMapping.new();
-        system = System.new(System{
+        _ = System.new(System{
             .name = sys_name,
             .info = "Render Entities with ETransform and ESprite components",
-            .onEntityEvent = handleEntityEvent,
-            .entity_accept_kind = Kind.of(ETransform.type_aspect).with(ESprite.type_aspect),
-            .entity_dismiss_kind = Kind.of(EMultiplier.type_aspect),
             .onActivation = onActivation,
         });
         System.activateByName(sys_name, true);
     }
 
     fn deinit() void {
-        System.activateByName(sys_name, false);
         System.disposeByName(sys_name);
+        _ = ee_subscription.unsubscribe();
+        ee_subscription = undefined;
         sprite_refs.deinit();
-        system = undefined;
     }
 
     fn onActivation(active: bool) void {
         if (active) {
-            graphics.view.subscribeViewRenderingAt(0, handleRenderEvent);
+            graphics.view.subscribeViewRenderingAt(0, render);
         } else {
-            graphics.view.unsubscribeViewRendering(handleRenderEvent);
+            graphics.view.unsubscribeViewRendering(render);
         }
     }
 
-    fn handleEntityEvent(e: *const ComponentEvent) void {
-        if (!system.acceptEntity(e))
-            return;
-
+    fn registerEntity(e: ComponentEvent) void {
         var transform = ETransform.byId(e.c_id);
         switch (e.event_type) {
             ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id),
@@ -433,7 +436,7 @@ const SimpleSpriteRenderer = struct {
         }
     }
 
-    fn handleRenderEvent(e: ViewRenderEvent) void {
+    fn render(e: ViewRenderEvent) void {
         if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |id| {

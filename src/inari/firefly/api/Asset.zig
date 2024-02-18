@@ -4,6 +4,8 @@ const Allocator = std.mem.Allocator;
 const api = @import("api.zig");
 const utils = api.utils;
 const Component = api.Component;
+const ComponentListener = Component.ComponentListener;
+const ComponentEvent = Component.ComponentEvent;
 const AspectGroup = utils.aspect.AspectGroup;
 const aspect = utils.aspect;
 const Aspect = aspect.Aspect;
@@ -48,8 +50,8 @@ pub var activateById: *const fn (Index, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
 pub var disposeById: *const fn (Index) void = undefined;
 pub var disposeByName: *const fn (String) void = undefined;
-pub var subscribe: *const fn (Component.EventListener) void = undefined;
-pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
+pub var subscribe: *const fn (ComponentListener) void = undefined;
+pub var unsubscribe: *const fn (ComponentListener) void = undefined;
 
 // struct fields
 id: Index = UNDEF_INDEX,

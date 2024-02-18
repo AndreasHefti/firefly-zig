@@ -97,7 +97,7 @@ pub const ComponentEvent = struct {
     }
 };
 
-pub const EventListener = *const fn (*const ComponentEvent) void;
+pub const ComponentListener = *const fn (ComponentEvent) void;
 
 pub fn registerComponent(comptime T: type) void {
     ComponentPool(T).init();
@@ -211,7 +211,7 @@ pub fn ComponentPool(comptime T: type) type {
         var name_mapping: ?StringHashMap(Index) = null;
         // events
         var event: ?ComponentEvent = null;
-        var eventDispatch: ?EventDispatch(*const ComponentEvent) = null;
+        var eventDispatch: ?EventDispatch(ComponentEvent) = null;
         // external state
         pub var c_aspect: *Aspect = undefined;
 
@@ -238,7 +238,7 @@ pub fn ComponentPool(comptime T: type) type {
 
             if (has_subscribe) {
                 event = ComponentEvent{};
-                eventDispatch = EventDispatch(*const ComponentEvent).init(api.COMPONENT_ALLOC);
+                eventDispatch = EventDispatch(ComponentEvent).init(api.COMPONENT_ALLOC);
                 T.subscribe = Self.subscribe;
                 T.unsubscribe = Self.unsubscribe;
             }
@@ -306,11 +306,11 @@ pub fn ComponentPool(comptime T: type) type {
             return active_mapping.count();
         }
 
-        pub fn subscribe(listener: EventListener) void {
+        pub fn subscribe(listener: ComponentListener) void {
             if (eventDispatch) |*ed| ed.register(listener);
         }
 
-        pub fn unsubscribe(listener: EventListener) void {
+        pub fn unsubscribe(listener: ComponentListener) void {
             if (eventDispatch) |*ed| ed.unregister(listener);
         }
 
@@ -455,7 +455,7 @@ pub fn ComponentPool(comptime T: type) type {
             if (event) |*e| {
                 e.event_type = event_type;
                 e.c_id = id;
-                eventDispatch.?.notify(e);
+                eventDispatch.?.notify(e.*);
             }
         }
 

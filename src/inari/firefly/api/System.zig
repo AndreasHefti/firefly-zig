@@ -6,8 +6,11 @@ const trait = std.meta.trait;
 const api = @import("api.zig");
 //const DynArray = api.utils.dynarray.DynArray;
 //const ArrayList = std.ArrayList;
+const EventDispatch = api.utils.event.EventDispatch;
 const Component = api.Component;
 const ComponentEvent = Component.ComponentEvent;
+const ComponentListener = Component.ComponentListener;
+const EntityKindPredicate = api.EntityKindPredicate;
 const UpdateEvent = api.UpdateEvent;
 const UpdateListener = api.UpdateListener;
 const RenderEvent = api.RenderEvent;
@@ -42,8 +45,6 @@ pub var activateById: *const fn (Index, bool) void = undefined;
 pub var activateByName: *const fn (String, bool) void = undefined;
 pub var disposeById: *const fn (Index) void = undefined;
 pub var disposeByName: *const fn (String) void = undefined;
-// pub var subscribe: *const fn (Component.EventListener) void = undefined;
-// pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
 
 // struct fields of a System
 id: Index = UNDEF_INDEX,
@@ -53,22 +54,10 @@ info: String = NO_NAME,
 onConstruct: ?*const fn () void = null,
 onActivation: ?*const fn (bool) void = null,
 onDestruct: ?*const fn () void = null,
-// entity handling
-onEntityEvent: ?Component.EventListener = null,
-entity_accept_kind: ?Kind = null,
-entity_dismiss_kind: ?Kind = null,
-// update handling
-onUpdateEvent: ?UpdateListener = null,
-update_scheduler: ?UpdateScheduler = null,
-// renderer handling
-onRenderEvent: ?RenderListener = null,
 
 pub fn construct(self: *System) void {
     if (self.onConstruct) |onConstruct| {
         onConstruct();
-    }
-    if (self.onEntityEvent) |onEntityEvent| {
-        Entity.subscribe(onEntityEvent);
     }
 }
 
@@ -76,47 +65,11 @@ pub fn activation(self: *System, active: bool) void {
     if (self.onActivation) |onActivation| {
         onActivation(active);
     }
-    if (active) {
-        if (self.onUpdateEvent) |onUpdateEvent| {
-            Engine.subscribeUpdate(onUpdateEvent);
-        }
-        if (self.onRenderEvent) |onRenderEvent| {
-            Engine.subscribeRender(onRenderEvent);
-        }
-    } else {
-        if (self.onUpdateEvent) |onUpdateEvent| {
-            Engine.unsubscribeUpdate(onUpdateEvent);
-        }
-        if (self.onRenderEvent) |onRenderEvent| {
-            Engine.unsubscribeRender(onRenderEvent);
-        }
-    }
-}
-
-pub fn acceptEntity(self: *System, event: *const ComponentEvent) bool {
-    const e_kind = &Entity.byId(event.c_id).kind;
-    if (self.entity_accept_kind) |*ak| {
-        if (!ak.isKindOf(e_kind)) return false;
-    }
-    if (self.entity_dismiss_kind) |*dk| {
-        if (!dk.isNotKindOf(e_kind)) return false;
-    }
-    return true;
-}
-
-pub fn needsUpdate(self: *System) bool {
-    if (self.update_scheduler) |us| {
-        return us.needs_update;
-    }
-    return true;
 }
 
 pub fn destruct(self: *System) void {
     if (self.onDestruct) |onDestruct| {
         onDestruct();
-    }
-    if (self.onEntityEvent) |onEntityEvent| {
-        Entity.unsubscribe(onEntityEvent);
     }
 }
 

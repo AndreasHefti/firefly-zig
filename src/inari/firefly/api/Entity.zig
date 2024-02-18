@@ -7,6 +7,9 @@ const StringBuffer = api.utils.StringBuffer;
 const DynArray = api.utils.dynarray.DynArray;
 const ArrayList = std.ArrayList;
 const Component = api.Component;
+const ComponentListener = Component.ComponentListener;
+const ComponentEvent = Component.ComponentEvent;
+const Condition = api.utils.Condition;
 const Kind = api.utils.aspect.Kind;
 const aspect = api.utils.aspect;
 const Aspect = aspect.Aspect;
@@ -34,8 +37,8 @@ pub const Entity = struct {
     pub var activateByName: *const fn (String, bool) void = undefined;
     pub var disposeById: *const fn (Index) void = undefined;
     pub var disposeByName: *const fn (String) void = undefined;
-    pub var subscribe: *const fn (Component.EventListener) void = undefined;
-    pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
+    pub var subscribe: *const fn (ComponentListener) void = undefined;
+    pub var unsubscribe: *const fn (ComponentListener) void = undefined;
 
     // struct fields of an entity
     id: Index = UNDEF_INDEX,
@@ -287,3 +290,59 @@ pub const EntityComponent = struct {
         };
     }
 };
+
+pub fn EntityEventSubscription(comptime _: type) type {
+    return struct {
+        const Self = @This();
+
+        var _listener: ComponentListener = undefined;
+        var _order: ?usize = null;
+        var _accept_kind: ?Kind = null;
+        var _dismiss_kind: ?Kind = null;
+        var _condition: ?Condition(ComponentEvent) = null;
+
+        pub fn of(listener: ComponentListener) Self {
+            _listener = listener;
+            return Self{};
+        }
+
+        pub fn withCondition(self: Self, condition: Condition(ComponentEvent)) Self {
+            _condition = condition;
+            return self;
+        }
+
+        pub fn withAcceptKind(self: Self, accept_kind: Kind) Self {
+            _accept_kind = accept_kind;
+            return self;
+        }
+
+        pub fn withDismissKind(self: Self, dismiss_kind: Kind) Self {
+            _dismiss_kind = dismiss_kind;
+            return self;
+        }
+
+        pub fn subscribe(self: Self) Self {
+            Entity.subscribe(adapt);
+            return self;
+        }
+
+        pub fn unsubscribe(self: Self) Self {
+            Entity.unsubscribe(adapt);
+            return self;
+        }
+
+        fn adapt(e: ComponentEvent) void {
+            const e_kind = &Entity.byId(e.c_id).kind;
+            if (_accept_kind) |*ak| {
+                if (!ak.isKindOf(e_kind)) return;
+            }
+            if (_dismiss_kind) |*dk| {
+                if (!dk.isNotKindOf(e_kind)) return;
+            }
+            if (_condition) |*c| {
+                if (!c.check(e)) return;
+            }
+            _listener(e);
+        }
+    };
+}

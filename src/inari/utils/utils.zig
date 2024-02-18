@@ -19,6 +19,23 @@ pub const CInt = i32;
 pub const Float = f32;
 pub const Byte = u8;
 
+pub fn Condition(comptime T: type) type {
+    return struct {
+        const Self = @This();
+        f: *const fn (T) bool,
+
+        pub fn of(f: *const fn (T) bool) Self {
+            return Self{
+                .f = f,
+            };
+        }
+
+        pub fn check(self: Self, t: T) bool {
+            return self.f(t);
+        }
+    };
+}
+
 pub const StringBuffer = struct {
     buffer: std.ArrayList(u8),
 

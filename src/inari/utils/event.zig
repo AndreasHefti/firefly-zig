@@ -6,7 +6,8 @@ const ArrayList = std.ArrayList;
 pub fn EventDispatch(comptime E: type) type {
     return struct {
         const Self = @This();
-        const Listener = *const fn (E) void;
+
+        pub const Listener = *const fn (E) void;
 
         listeners: ArrayList(Listener) = undefined,
 

@@ -8,6 +8,8 @@ const utils = graphics.utils;
 const EventDispatch = utils.event.EventDispatch;
 const BitSet = utils.bitset.BitSet;
 const Component = api.Component;
+const ComponentListener = Component.ComponentListener;
+const ComponentEvent = Component.ComponentEvent;
 const Aspect = api.utils.aspect.Aspect;
 const String = api.utils.String;
 const TransformData = api.TransformData;
@@ -20,6 +22,7 @@ const Projection = api.Projection;
 const Entity = api.Entity;
 const EntityComponent = api.EntityComponent;
 const RenderEvent = api.RenderEvent;
+const RenderEventSubscription = api.RenderEventSubscription;
 const System = api.System;
 
 const Index = api.Index;
@@ -178,8 +181,8 @@ pub const View = struct {
     pub var activateByName: *const fn (String, bool) void = undefined;
     pub var disposeById: *const fn (Index) void = undefined;
     pub var disposeByName: *const fn (String) void = undefined;
-    pub var subscribe: *const fn (Component.EventListener) void = undefined;
-    pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
+    pub var subscribe: *const fn (ComponentListener) void = undefined;
+    pub var unsubscribe: *const fn (ComponentListener) void = undefined;
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -257,7 +260,7 @@ pub const View = struct {
         api.RENDERING_API.disposeRenderTexture(&view.render_texture);
     }
 
-    fn onLayerAction(event: *const Component.ComponentEvent) void {
+    fn onLayerAction(event: Component.ComponentEvent) void {
         switch (event.event_type) {
             ActionType.ACTIVATED => addLayerMapping(Layer.byId(event.c_id)),
             ActionType.DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id)),
@@ -333,8 +336,8 @@ pub const Layer = struct {
     pub var activateByName: *const fn (String, bool) void = undefined;
     pub var disposeById: *const fn (Index) void = undefined;
     pub var disposeByName: *const fn (String) void = undefined;
-    pub var subscribe: *const fn (Component.EventListener) void = undefined;
-    pub var unsubscribe: *const fn (Component.EventListener) void = undefined;
+    pub var subscribe: *const fn (ComponentListener) void = undefined;
+    pub var unsubscribe: *const fn (ComponentListener) void = undefined;
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -434,14 +437,15 @@ const ViewRenderer = struct {
         .view_id = UNDEF_INDEX,
         .layer_id = UNDEF_INDEX,
     };
-    var system: *System = undefined;
+
+    var re_subscription: RenderEventSubscription(ViewRenderer) = undefined;
 
     fn init() void {
         VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).init(api.ALLOC);
-        system = System.new(System{
+        _ = System.new(System{
             .name = "ViewRenderer",
             .info = "Emits ViewRenderEvent in order of active Views and its Layers",
-            .onRenderEvent = render,
+            .onActivation = onActivation,
         });
         System.activateByName("ViewRenderer", true);
     }
@@ -450,10 +454,20 @@ const ViewRenderer = struct {
         System.activateByName("ViewRenderer", false);
         System.disposeByName("ViewRenderer");
         VIEW_RENDER_EVENT_DISPATCHER.deinit();
-        system = undefined;
     }
 
-    fn render(event: *const RenderEvent) void {
+    fn onActivation(active: bool) void {
+        if (active) {
+            re_subscription = RenderEventSubscription(ViewRenderer)
+                .of(render)
+                .subscribe();
+        } else {
+            _ = re_subscription.unsubscribe();
+            re_subscription = undefined;
+        }
+    }
+
+    fn render(event: RenderEvent) void {
         if (event.type != api.RenderEventType.RENDER)
             return;
 

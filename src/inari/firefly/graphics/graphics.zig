@@ -134,7 +134,7 @@ pub const ShaderAsset = struct {
         return shader.get(res_id);
     }
 
-    fn listener(e: *const ComponentEvent) void {
+    fn listener(e: ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
@@ -238,7 +238,7 @@ pub const TextureAsset = struct {
         return textures.get(res_id);
     }
 
-    fn listener(e: *const ComponentEvent) void {
+    fn listener(e: ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;

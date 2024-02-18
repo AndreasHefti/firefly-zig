@@ -12,15 +12,15 @@ const RenderListener = api.RenderListener;
 const Timer = api.Timer;
 
 // private state
-var UPDATE_EVENT_DISPATCHER: EventDispatch(*const UpdateEvent) = undefined;
-var RENDER_EVENT_DISPATCHER: EventDispatch(*const RenderEvent) = undefined;
+var UPDATE_EVENT_DISPATCHER: EventDispatch(UpdateEvent) = undefined;
+var RENDER_EVENT_DISPATCHER: EventDispatch(RenderEvent) = undefined;
 var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 
 var initialized = false;
 pub fn init() void {
-    UPDATE_EVENT_DISPATCHER = EventDispatch(*const UpdateEvent).init(api.ALLOC);
-    RENDER_EVENT_DISPATCHER = EventDispatch(*const RenderEvent).init(api.ALLOC);
+    UPDATE_EVENT_DISPATCHER = EventDispatch(UpdateEvent).init(api.ALLOC);
+    RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).init(api.ALLOC);
 }
 
 pub fn deinit() void {

@@ -2,6 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const EventDispatch = utils.event.EventDispatch;
+const Condition = utils.Condition;
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
@@ -15,41 +16,43 @@ const Vector2f = utils.geom.Vector2f;
 const Vector3f = utils.geom.Vector3f;
 const Vector4f = utils.geom.Vector4f;
 const StringBuffer = utils.StringBuffer;
+const entity = @import("Entity.zig");
 
-// public API
+//////////////////////////////////////////////////////////////
+//// Public API declarations
+//////////////////////////////////////////////////////////////
+
 pub const testing = @import("testing.zig");
 pub const utils = @import("../../utils/utils.zig");
+pub const Asset = @import("Asset.zig");
 pub const Engine = @import("Engine.zig");
 pub const Component = @import("Component.zig");
 pub const System = @import("System.zig");
 pub const Timer = @import("Timer.zig");
-pub const Entity = @import("Entity.zig").Entity;
-pub const EntityComponent = @import("Entity.zig").EntityComponent;
-pub const Asset = @import("Asset.zig");
+pub const Entity = entity.Entity;
+pub const EntityEventSubscription = entity.EntityEventSubscription;
+pub const EntityComponent = entity.EntityComponent;
 pub const Index = utils.Index;
 pub const UNDEF_INDEX = utils.UNDEF_INDEX;
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
-
-pub const InitMode = enum { TESTING, DEVELOPMENT, PRODUCTION };
-
-pub const UpdateEvent = struct {};
-pub const UpdateListener = *const fn (*const UpdateEvent) void;
-pub const RenderEventType = enum {
-    PRE_RENDER,
-    RENDER,
-    POST_RENDER,
+pub const FFAPIError = error{
+    GenericError,
+    SingletonAlreadyInitialized,
+    ComponentInitError,
+    RenderingInitError,
+    RenderingError,
 };
-pub const RenderEvent = struct { type: RenderEventType };
-pub const RenderListener = *const fn (*const RenderEvent) void;
 
-// public API constants
+//////////////////////////////////////////////////////////////
+//// Initialization
+//////////////////////////////////////////////////////////////
+pub const InitMode = enum { TESTING, DEVELOPMENT, PRODUCTION };
 pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
 pub var RENDERING_API: RenderAPI() = undefined;
 
-// initialization
 var initialized = false;
 pub fn initTesting() !void {
     try init(
@@ -105,15 +108,58 @@ pub fn deinit() void {
     utils.aspect.deinit();
 }
 
-pub const FFAPIError = error{
-    GenericError,
-    SingletonAlreadyInitialized,
-    ComponentInitError,
-    RenderingInitError,
-    RenderingError,
+//////////////////////////////////////////////////////////////
+//// Update Event and Render Event declarations
+//////////////////////////////////////////////////////////////
+pub const UpdateEvent = struct {};
+pub const UpdateListener = *const fn (UpdateEvent) void;
+pub const RenderEventType = enum {
+    PRE_RENDER,
+    RENDER,
+    POST_RENDER,
 };
+pub const RenderEvent = struct { type: RenderEventType };
+pub const RenderListener = *const fn (RenderEvent) void;
 
-/// Color blending modes
+pub fn RenderEventSubscription(comptime _: type) type {
+    return struct {
+        const Self = @This();
+
+        var _listener: RenderListener = undefined;
+        var _condition: ?Condition(RenderEvent) = null;
+
+        pub fn of(listener: RenderListener) Self {
+            _listener = listener;
+            return Self{};
+        }
+
+        pub fn withCondition(self: Self, condition: Condition(RenderEvent)) Self {
+            _condition = condition;
+            return self;
+        }
+
+        pub fn subscribe(self: Self) Self {
+            Engine.subscribeRender(adapt);
+            return self;
+        }
+
+        pub fn unsubscribe(self: Self) Self {
+            Engine.unsubscribeRender(adapt);
+            return self;
+        }
+
+        fn adapt(e: RenderEvent) void {
+            if (_condition) |*c| {
+                if (!c.check(e)) return;
+            }
+            _listener(e);
+        }
+    };
+}
+
+//////////////////////////////////////////////////////////////
+//// Graphics API declarations
+//////////////////////////////////////////////////////////////
 pub const BlendMode = enum(CInt) {
     /// Blend textures considering alpha (default)
     ALPHA = 0,
