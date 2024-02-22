@@ -141,13 +141,11 @@ pub const SpriteAsset = struct {
     pub var asset_type: *Aspect = undefined;
     pub const NULL_VALUE = SpriteData{};
 
-    pub const Sprite = struct {
-        name: String = NO_NAME,
-        texture_asset_id: Index,
-        texture_bounds: RectF,
-        flip_x: bool = false,
-        flip_y: bool = false,
-    };
+    name: String = NO_NAME,
+    texture_asset_id: Index,
+    texture_bounds: RectF,
+    flip_x: bool = false,
+    flip_y: bool = false,
 
     fn init() void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Sprite");
@@ -159,7 +157,7 @@ pub const SpriteAsset = struct {
         asset_type = undefined;
     }
 
-    pub fn new(data: Sprite) *Asset {
+    pub fn new(data: SpriteAsset) *Asset {
         if (!initialized)
             @panic("Firefly module not initialized");
 
@@ -250,6 +248,28 @@ pub const SpriteSetAsset = struct {
     pub var asset_type: *Aspect = undefined;
     pub const NULL_VALUE = SpriteSet{};
 
+    pub const SpriteStamp = struct {
+        name: String = NO_NAME,
+        flip_x: bool = false,
+        flip_y: bool = false,
+        offset: Vec2f = Vec2f{ 0, 0 },
+    };
+
+    texture_asset_id: Index,
+    stamp_region: RectF,
+    sprite_dim: Vec2f,
+    stamps: ?[]?SpriteStamp = null,
+
+    fn getStamp(self: *SpriteSetAsset, x: usize, y: usize) ?SpriteStamp {
+        if (self.stamps) |sp| {
+            const index = y * self.stamp_region[2] + x;
+            if (index < sp.len) {
+                return sp[index];
+            }
+        }
+        return null;
+    }
+
     fn init() void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("SpriteSet");
         Asset.subscribe(listener);
@@ -260,31 +280,7 @@ pub const SpriteSetAsset = struct {
         asset_type = undefined;
     }
 
-    pub const SpriteStamp = struct {
-        name: String = NO_NAME,
-        flip_x: bool = false,
-        flip_y: bool = false,
-        offset: Vec2f = Vec2f{ 0, 0 },
-    };
-
-    pub const SpriteSetData = struct {
-        texture_asset_id: Index,
-        stamp_region: RectF,
-        sprite_dim: Vec2f,
-        stamps: ?[]?SpriteStamp = null,
-
-        fn getStamp(self: *SpriteSetData, x: usize, y: usize) ?SpriteStamp {
-            if (self.stamps) |sp| {
-                const index = y * self.stamp_region[2] + x;
-                if (index < sp.len) {
-                    return sp[index];
-                }
-            }
-            return null;
-        }
-    };
-
-    pub fn new(data: SpriteSetData) *Asset {
+    pub fn new(data: SpriteSetAsset) *Asset {
         if (!initialized)
             @panic("Firefly module not initialized");
 

@@ -19,7 +19,6 @@ const ShaderAsset = graphics.ShaderAsset;
 const TextureData = api.TextureData;
 const Shader = ShaderAsset.Shader;
 const ShaderData = api.ShaderData;
-const Texture = TextureAsset.Texture;
 const RectF = utils.geom.RectF;
 const Vec2f = utils.geom.Vector2f;
 const CInt = utils.CInt;
@@ -48,7 +47,7 @@ test "TextureAsset load/unload" {
     try graphics.initTesting();
     defer graphics.deinit();
 
-    var texture_asset: *Asset = TextureAsset.new(Texture{
+    var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
         .resource_path = "path/TestTexture",
         .is_mipmap = false,
@@ -138,7 +137,7 @@ test "TextureAsset dispose" {
     try graphics.initTesting();
     defer graphics.deinit();
 
-    var texture_asset: *Asset = TextureAsset.new(Texture{
+    var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
         .resource_path = "path/TestTexture",
         .is_mipmap = false,
@@ -163,7 +162,7 @@ test "get resources is const" {
     try graphics.initTesting();
     defer graphics.deinit();
 
-    var texture_asset: *Asset = TextureAsset.new(Texture{
+    var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
         .resource_path = "path/TestTexture",
         .is_mipmap = false,

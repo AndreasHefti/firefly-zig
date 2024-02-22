@@ -180,15 +180,13 @@ pub const TextureAsset = struct {
     pub var asset_type: *Aspect = undefined;
     pub const NULL_VALUE = TextureData{};
 
-    pub const Texture = struct {
-        name: String = NO_NAME,
-        resource_path: String,
-        is_mipmap: bool = false,
-        s_wrap: CInt = -1,
-        t_wrap: CInt = -1,
-        min_filter: CInt = -1,
-        mag_filter: CInt = -1,
-    };
+    name: String = NO_NAME,
+    resource_path: String,
+    is_mipmap: bool = false,
+    s_wrap: CInt = -1,
+    t_wrap: CInt = -1,
+    min_filter: CInt = -1,
+    mag_filter: CInt = -1,
 
     fn init() !void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
@@ -203,7 +201,7 @@ pub const TextureAsset = struct {
         textures = undefined;
     }
 
-    pub fn new(data: Texture) *Asset {
+    pub fn new(data: TextureAsset) *Asset {
         if (!initialized) @panic("Firefly module not initialized");
 
         return Asset.new(Asset{

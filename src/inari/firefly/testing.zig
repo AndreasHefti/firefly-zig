@@ -22,7 +22,6 @@ const TransformData = firefly.api.TransformData;
 const ESprite = firefly.graphics.sprite.ESprite;
 const Asset = firefly.api.Asset;
 const TextureAsset = firefly.graphics.TextureAsset;
-const Texture = TextureAsset.Texture;
 const SpriteAsset = firefly.graphics.sprite.SpriteAsset;
 
 test {
@@ -375,24 +374,23 @@ test "Init Rendering one sprite entity with no view and layer" {
     var sb = utils.StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    var texture_asset: *Asset = TextureAsset.new(Texture{
+    var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
         .resource_path = "path/TestTexture",
         .is_mipmap = false,
     });
 
-    var sprite_asset: *Asset = SpriteAsset.new(SpriteAsset.Sprite{
+    var sprite_asset: *Asset = SpriteAsset.new(.{
         .name = "TestSprite",
         .texture_asset_id = texture_asset.id,
         .texture_bounds = utils.geom.RectF{ 0, 0, 20, 20 },
         .flip_x = true,
     });
 
-    var entity = Entity.new(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .transform = TransformData{ .position = PosF{ 50, 50 } } })
+    _ = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{ .transform = .{ .position = .{ 50, 50 } } })
         .withComponent(ESprite.fromAsset(sprite_asset))
         .activate();
-    _ = entity;
 
     var output: utils.String =
         \\
