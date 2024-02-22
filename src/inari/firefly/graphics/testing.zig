@@ -49,7 +49,7 @@ test "TextureAsset load/unload" {
     defer graphics.deinit();
 
     var texture_asset: *Asset = TextureAsset.new(Texture{
-        .asset_name = "TestTexture",
+        .name = "TestTexture",
         .resource_path = "path/TestTexture",
         .is_mipmap = false,
     });
@@ -139,7 +139,7 @@ test "TextureAsset dispose" {
     defer graphics.deinit();
 
     var texture_asset: *Asset = TextureAsset.new(Texture{
-        .asset_name = "TestTexture",
+        .name = "TestTexture",
         .resource_path = "path/TestTexture",
         .is_mipmap = false,
     });
@@ -164,7 +164,7 @@ test "get resources is const" {
     defer graphics.deinit();
 
     var texture_asset: *Asset = TextureAsset.new(Texture{
-        .asset_name = "TestTexture",
+        .name = "TestTexture",
         .resource_path = "path/TestTexture",
         .is_mipmap = false,
     });

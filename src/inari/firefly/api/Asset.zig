@@ -57,6 +57,7 @@ pub var unsubscribe: *const fn (ComponentListener) void = undefined;
 id: Index = UNDEF_INDEX,
 asset_type: *Aspect = undefined,
 name: String = utils.NO_NAME,
+
 resource_id: Index = UNDEF_INDEX,
 parent_asset_id: Index = UNDEF_INDEX,
 
@@ -76,4 +77,16 @@ pub fn getResourceForName(asset: *Asset, asset_type: anytype, comptime T: type, 
     if (asset.resource_id == UNDEF_INDEX)
         return null;
     return asset_type.getResourceForName(asset.resource_id, name);
+}
+
+pub fn format(
+    self: Asset,
+    comptime _: []const u8,
+    _: std.fmt.FormatOptions,
+    writer: anytype,
+) !void {
+    try writer.print(
+        "Asset[{d}|{any}|{s}| resource_id={d}, parent_asset_id={d} ]",
+        self,
+    );
 }

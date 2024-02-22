@@ -55,14 +55,14 @@ pub fn unsubscribeRender(listener: RenderListener) void {
 /// Performs a tick.Update the Timer, notify UpdateEvent, notify Pre-Render, Render, Post-Render events
 pub fn tick() void {
     Timer.tick();
-    UPDATE_EVENT_DISPATCHER.notify(&UPDATE_EVENT);
+    UPDATE_EVENT_DISPATCHER.notify(UPDATE_EVENT);
 
     RENDER_EVENT.type = RenderEventType.PRE_RENDER;
-    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
+    RENDER_EVENT_DISPATCHER.notify(RENDER_EVENT);
 
     RENDER_EVENT.type = RenderEventType.RENDER;
-    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
+    RENDER_EVENT_DISPATCHER.notify(RENDER_EVENT);
 
     RENDER_EVENT.type = RenderEventType.POST_RENDER;
-    RENDER_EVENT_DISPATCHER.notify(&RENDER_EVENT);
+    RENDER_EVENT_DISPATCHER.notify(RENDER_EVENT);
 }

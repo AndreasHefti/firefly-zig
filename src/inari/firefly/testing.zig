@@ -7,7 +7,6 @@ const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
 const ComponentPool = api.Component.ComponentPool;
-const CompLifecycleEvent = Component.CompLifecycleEvent;
 const Aspect = utils.aspect.Aspect;
 const String = utils.String;
 const FFAPIError = FFAPIError;
@@ -16,6 +15,15 @@ const PosF = utils.geom.PosF;
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
+const Entity = api.Entity;
+const Engine = api.Engine;
+const ETransform = firefly.graphics.view.ETransform;
+const TransformData = firefly.api.TransformData;
+const ESprite = firefly.graphics.sprite.ESprite;
+const Asset = firefly.api.Asset;
+const TextureAsset = firefly.graphics.TextureAsset;
+const Texture = TextureAsset.Texture;
+const SpriteAsset = firefly.graphics.sprite.SpriteAsset;
 
 test {
     std.testing.refAllDecls(@import("api/testing.zig"));
@@ -57,8 +65,8 @@ test "Firefly init" {
         \\  Asset size: 0
         \\  Entity size: 0
         \\  System size: 2
-        \\    a ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
-        \\    a SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
+        \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
+        \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
         \\  Layer size: 0
         \\  View size: 0
     ;
@@ -355,4 +363,102 @@ fn testStructFnc(comptime index: usize) type {
     return struct {
         pub var i = index;
     };
+}
+
+//////////////////////////////////////////////////////////////
+//// TESTING Render one Entity no View and Layer
+//////////////////////////////////////////////////////////////
+
+test "Init Rendering one sprite entity with no view and layer" {
+    try firefly.initTesting();
+    defer firefly.deinit();
+    var sb = utils.StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    var texture_asset: *Asset = TextureAsset.new(Texture{
+        .name = "TestTexture",
+        .resource_path = "path/TestTexture",
+        .is_mipmap = false,
+    });
+
+    var sprite_asset: *Asset = SpriteAsset.new(SpriteAsset.Sprite{
+        .name = "TestSprite",
+        .texture_asset_id = texture_asset.id,
+        .texture_bounds = utils.geom.RectF{ 0, 0, 20, 20 },
+        .flip_x = true,
+    });
+
+    var entity = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{ .transform = TransformData{ .position = PosF{ 50, 50 } } })
+        .withComponent(ESprite.fromAsset(sprite_asset))
+        .activate();
+    _ = entity;
+
+    var output: utils.String =
+        \\
+        \\Components:
+        \\  Asset size: 2
+        \\    (a) Asset[0|Aspect[ASSET_TYPE_ASPECT_GROUP|Texture|0]|TestTexture| resource_id=0, parent_asset_id=18446744073709551615 ]
+        \\    (a) Asset[1|Aspect[ASSET_TYPE_ASPECT_GROUP|Sprite|2]|TestSprite| resource_id=0, parent_asset_id=0 ]
+        \\  Entity size: 1
+        \\    (a) Entity[0|TestEntity|Kind[ group: ENTITY_COMPONENT_ASPECT_GROUP, aspects: ETransform ESprite ]]
+        \\  System size: 2
+        \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
+        \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
+        \\  Layer size: 0
+        \\  View size: 0
+    ;
+
+    api.Component.print(&sb);
+    try std.testing.expectEqualStrings(output, sb.toString());
+
+    // no rendering yet but texture data loaded
+    sb.clear();
+    var api_out: String =
+        \\
+        \\******************************
+        \\Debug Rendering API State:
+        \\ loaded textures:
+        \\   TextureData[ res:path/TestTexture, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
+        \\ loaded render textures:
+        \\ loaded shaders:
+        \\ current state:
+        \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
+        \\   null
+        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
+        \\   null
+        \\   Offset: { 0.0e+00, 0.0e+00 }
+        \\ render actions:
+        \\
+    ;
+    api.RENDERING_API.printDebug(&sb);
+    try std.testing.expectEqualStrings(api_out, sb.toString());
+
+    // simulate one tick
+    Engine.tick();
+    // and watch rendering, should have one render action for the sprite entity now
+    sb.clear();
+    api_out =
+        \\
+        \\******************************
+        \\Debug Rendering API State:
+        \\ loaded textures:
+        \\   TextureData[ res:path/TestTexture, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
+        \\ loaded render textures:
+        \\ loaded shaders:
+        \\ current state:
+        \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
+        \\   null
+        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
+        \\   null
+        \\   Offset: { 0.0e+00, 0.0e+00 }
+        \\ render actions:
+        \\   render SpriteData[ bind:0, bounds:{ 2.0e+01, 0.0e+00, -2.0e+01, 2.0e+01 } ] -->
+        \\     TransformData[ pos:{ 5.0e+01, 5.0e+01 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
+        \\     RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
+        \\     offset:{ 0.0e+00, 0.0e+00 }
+        \\
+    ;
+    api.RENDERING_API.printDebug(&sb);
+    try std.testing.expectEqualStrings(api_out, sb.toString());
 }

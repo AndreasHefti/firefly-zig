@@ -181,7 +181,7 @@ pub const TextureAsset = struct {
     pub const NULL_VALUE = TextureData{};
 
     pub const Texture = struct {
-        asset_name: String = NO_NAME,
+        name: String = NO_NAME,
         resource_path: String,
         is_mipmap: bool = false,
         s_wrap: CInt = -1,
@@ -208,7 +208,7 @@ pub const TextureAsset = struct {
 
         return Asset.new(Asset{
             .asset_type = asset_type,
-            .name = data.asset_name,
+            .name = data.name,
             .resource_id = textures.add(
                 TextureData{
                     .resource = data.resource_path,

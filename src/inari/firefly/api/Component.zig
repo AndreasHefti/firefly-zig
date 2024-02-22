@@ -444,7 +444,7 @@ pub fn ComponentPool(comptime T: type) type {
             var next = items.slots.nextSetBit(0);
             while (next) |i| {
                 string_buffer.print("\n    {s} {any}", .{
-                    if (active_mapping.isSet(i)) "a" else "x",
+                    if (active_mapping.isSet(i)) "(a)" else "(x)",
                     items.get(i),
                 });
                 next = items.slots.nextSetBit(i + 1);

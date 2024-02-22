@@ -52,6 +52,18 @@ pub const Aspect = struct {
     pub fn isOfGroup(self: *Aspect, group: *const AspectGroup) bool {
         return std.mem.eql(u8, self.group.name, group.name);
     }
+
+    pub fn format(
+        self: Aspect,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "Aspect[{s}|{s}|{d}]",
+            .{ self.group.name, self.name, self.index },
+        );
+    }
 };
 
 pub const AspectGroup = struct {

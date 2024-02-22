@@ -394,6 +394,12 @@ pub const ETransform = struct {
         self.view_id = UNDEF_INDEX;
         self.transform.clear();
     }
+
+    pub fn withData(self: ETransform, data: TransformData) ETransform {
+        var copy = self;
+        copy.transform = data;
+        return copy;
+    }
 };
 
 //////////////////////////////////////////////////////////////////////////

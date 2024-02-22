@@ -53,23 +53,52 @@ pub const Entity = struct {
         EntityComponent.deinit();
     }
 
+    pub fn construct(self: *Entity) void {
+        self.kind = Kind.ofGroup(EntityComponent.ENTITY_COMPONENT_ASPECT_GROUP);
+    }
+
     pub fn withComponent(self: *Entity, c: anytype) *Entity {
         EntityComponent.checkValid(c);
 
         const T = @TypeOf(c);
-        _ = EntityComponent.EntityComponentPool(T).register(@as(T, c), self.id);
-        self.kind.with(T.type_aspect);
+        var comp = @as(T, c);
+        _ = EntityComponent.EntityComponentPool(T).register(comp, self.id);
+        self.kind = self.kind.with(T.type_aspect);
         return self;
     }
 
-    pub fn withParent(self: *Entity, name: String) *Entity {
-        self.parent_id = Entity.byName(name).index;
+    pub fn activate(self: *Entity) *Entity {
+        if (self.id == UNDEF_INDEX)
+            return self;
+
+        Entity.activateById(self.id, true);
+        return self;
+    }
+
+    pub fn deactivate(self: *Entity) *Entity {
+        if (self.id == UNDEF_INDEX)
+            return self;
+
+        Entity.activateById(self.id, false);
+        return self;
     }
 
     pub fn onDispose(id: Index) void {
         for (0..EntityComponent.ENTITY_COMPONENT_ASPECT_GROUP._size) |i| {
             EntityComponent.ENTITY_COMPONENT_INTERFACE_TABLE.get(EntityComponent.ENTITY_COMPONENT_ASPECT_GROUP.aspects[i].index).clear(id);
         }
+    }
+
+    pub fn format(
+        self: Entity,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "Entity[{d}|{s}|{any}]",
+            .{ self.id, self.name, self.kind },
+        );
     }
 };
 
@@ -140,10 +169,10 @@ pub const EntityComponent = struct {
             return false;
         }
 
-        if (any_component.id == api.UNDEF_INDEX) {
-            std.log.err("No valid entity component. Undefined id: {any}", .{any_component});
-            return false;
-        }
+        // if (any_component.id == api.UNDEF_INDEX) {
+        //     std.log.err("No valid entity component. Undefined id: {any}", .{any_component});
+        //     return false;
+        // }
 
         return true;
     }
@@ -241,12 +270,16 @@ pub const EntityComponent = struct {
                 return items.slots.count();
             }
 
-            pub fn register(c: *T, id: Index) *T {
+            pub fn register(c: T, id: Index) *T {
                 checkComponentTrait(c);
-                c.id = id;
+
                 items.set(c, id);
-                if (has_construct) c.construct();
-                return items.get(id);
+                if (has_construct)
+                    c.construct();
+
+                var comp: *T = items.get(id);
+                comp.id = id;
+                return comp;
             }
 
             pub fn get(id: Index) *T {

@@ -114,14 +114,22 @@ pub const ESprite = struct {
     render_data: RenderData = RenderData{},
     offset: Vec2f = Vec2f{ 0, 0 },
 
-    pub fn setSpriteByAssetName(self: *ESprite, view_name: String) void {
+    pub fn setSpriteByAssetName(self: *ESprite, view_name: String) *ESprite {
         self.view_id = View.byName(view_name).id;
+        return self;
     }
 
     pub fn destruct(self: *ESprite) void {
         self.sprite_ref = NO_BINDING;
         self.render_data = RenderData{};
         self.offset = Vec2f{ 0, 0 };
+    }
+
+    pub fn fromAsset(asset: *Asset) ESprite {
+        Asset.activateById(asset.id, true);
+        return ESprite{
+            .sprite_ref = asset.resource_id,
+        };
     }
 };
 
@@ -155,7 +163,7 @@ pub const SpriteAsset = struct {
         if (!initialized)
             @panic("Firefly module not initialized");
 
-        if (data.texture_asset_id != UNDEF_INDEX and Asset.pool.exists(data.texture_asset_id))
+        if (data.texture_asset_id == UNDEF_INDEX or !Asset.pool.exists(data.texture_asset_id))
             @panic("Sprite has invalid TextureAsset reference id");
 
         var spriteData = SpriteData{
@@ -168,7 +176,7 @@ pub const SpriteAsset = struct {
 
         return Asset.new(Asset{
             .asset_type = asset_type,
-            .name = data.asset_name,
+            .name = data.name,
             .resource_id = sprites.add(spriteData),
             .parent_asset_id = data.texture_asset_id,
         });
@@ -448,6 +456,7 @@ const SimpleSpriteRenderer = struct {
                     &s.render_data,
                     s.offset,
                 );
+                i = all.nextSetBit(id + 1);
             }
         }
     }
