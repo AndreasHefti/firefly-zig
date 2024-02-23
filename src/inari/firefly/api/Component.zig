@@ -139,6 +139,48 @@ pub fn isValid(any_component: anytype) bool {
     return true;
 }
 
+pub fn API_Adapter_FullFunctions(comptime T: type, comptime name: String) type {
+    return struct {
+        pub const NULL_VALUE = T{};
+        pub const COMPONENT_NAME = name;
+        pub const pool = ComponentPool(T);
+        pub var type_aspect: *Aspect = undefined;
+        pub var new: *const fn (T) *T = undefined;
+        pub var exists: *const fn (Index) bool = undefined;
+        pub var existsName: *const fn (String) bool = undefined;
+        pub var get: *const fn (Index) *T = undefined;
+        pub var byId: *const fn (Index) *const T = undefined;
+        pub var byName: *const fn (String) *const T = undefined;
+        pub var activateById: *const fn (Index, bool) void = undefined;
+        pub var activateByName: *const fn (String, bool) void = undefined;
+        pub var disposeById: *const fn (Index) void = undefined;
+        pub var disposeByName: *const fn (String) void = undefined;
+        pub var subscribe: *const fn (ComponentListener) void = undefined;
+        pub var unsubscribe: *const fn (ComponentListener) void = undefined;
+    };
+}
+
+pub fn API_Adapter_NoEvents(comptime T: type, comptime name: String) type {
+    return struct {
+        pub const NULL_VALUE = T{};
+        pub const COMPONENT_NAME = name;
+        pub const pool = ComponentPool(T);
+        pub var type_aspect: *Aspect = undefined;
+        pub var new: *const fn (T) *T = undefined;
+        pub var exists: *const fn (Index) bool = undefined;
+        pub var existsName: *const fn (String) bool = undefined;
+        pub var get: *const fn (Index) *T = undefined;
+        pub var byId: *const fn (Index) *const T = undefined;
+        pub var byName: *const fn (String) *const T = undefined;
+        pub var activateById: *const fn (Index, bool) void = undefined;
+        pub var activateByName: *const fn (String, bool) void = undefined;
+        pub var disposeById: *const fn (Index) void = undefined;
+        pub var disposeByName: *const fn (String) void = undefined;
+        pub var subscribe: *const fn (ComponentListener) void = undefined;
+        pub var unsubscribe: *const fn (ComponentListener) void = undefined;
+    };
+}
+
 pub fn ComponentPool(comptime T: type) type {
 
     // component type constraints and function references

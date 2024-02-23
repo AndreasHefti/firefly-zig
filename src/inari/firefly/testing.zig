@@ -78,24 +78,8 @@ test "Firefly init" {
 // //////////////////////////////////////////////////////////////
 
 const ExampleComponent = struct {
-
-    // component type fields needed by the Component interface
-    pub const NULL_VALUE = ExampleComponent{};
-    pub const COMPONENT_NAME = "ExampleComponent";
-    pub const pool = ComponentPool(ExampleComponent);
-    pub var type_aspect: *Aspect = undefined;
-    pub var new: *const fn (ExampleComponent) *ExampleComponent = undefined;
-    pub var exists: *const fn (Index) bool = undefined;
-    pub var existsName: *const fn (String) bool = undefined;
-    pub var get: *const fn (Index) *ExampleComponent = undefined;
-    pub var byId: *const fn (Index) *const ExampleComponent = undefined;
-    pub var byName: *const fn (String) *const ExampleComponent = undefined;
-    pub var activateById: *const fn (Index, bool) void = undefined;
-    pub var activateByName: *const fn (String, bool) void = undefined;
-    pub var disposeById: *const fn (Index) void = undefined;
-    pub var disposeByName: *const fn (String) void = undefined;
-    pub var subscribe: *const fn (ComponentListener) void = undefined;
-    pub var unsubscribe: *const fn (ComponentListener) void = undefined;
+    const Self = @This();
+    pub usingnamespace Component.API_Adapter_FullFunctions(Self, "ExampleComponent");
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -105,7 +89,7 @@ const ExampleComponent = struct {
 
     // methods
     pub fn activate(self: ExampleComponent, active: bool) void {
-        pool.activate(self.id, active);
+        Self.pool.activate(self.id, active);
     }
 
     // following methods will automatically be called by Component interface when defined
