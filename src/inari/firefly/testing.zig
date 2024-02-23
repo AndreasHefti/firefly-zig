@@ -78,8 +78,7 @@ test "Firefly init" {
 // //////////////////////////////////////////////////////////////
 
 const ExampleComponent = struct {
-    const Self = @This();
-    pub usingnamespace Component.API_Adapter_FullFunctions(Self, "ExampleComponent");
+    pub usingnamespace Component.API.Adapter(@This(), .{ .name = "ExampleComponent" });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -89,7 +88,7 @@ const ExampleComponent = struct {
 
     // methods
     pub fn activate(self: ExampleComponent, active: bool) void {
-        Self.pool.activate(self.id, active);
+        @This().pool.activate(self.id, active);
     }
 
     // following methods will automatically be called by Component interface when defined
@@ -289,24 +288,9 @@ test "get poll and process" {
         .color = Color{ 0, 5, 0, 255 },
         .position = PosF{ 40, 70 },
     });
+    _ = c3;
 
     process();
-
-    // var ptr = component.CompPoolPtr{
-    //     .aspect = ExampleComponent.pool.c_aspect,
-    //     .address = @intFromPtr(ExampleComponent.pool),
-    // };
-    // _ = ptr;
-
-    var compId = Component.ComponentId{
-        .aspect = ExampleComponent.type_aspect,
-        .id = c3.id,
-    };
-    _ = compId;
-
-    //component.processById(ExampleComponent, &compId, processOne);
-
-    //processViaIdCast(compId);
 }
 
 test "function pointer equality op" {

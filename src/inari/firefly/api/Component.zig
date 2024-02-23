@@ -19,8 +19,6 @@ const String = utils.String;
 // component global variables and state
 var INIT = false;
 var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
-// public aspect groups
-pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
 pub fn init() !void {
     defer INIT = true;
@@ -47,10 +45,8 @@ pub fn deinit() void {
     COMPONENT_ASPECT_GROUP = undefined;
 }
 
-pub const ComponentId = struct {
-    aspect: *Aspect = undefined,
-    id: Index = undefined,
-};
+// public aspect groups
+pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
 pub const ComponentTypeInterface = struct {
     clear: *const fn (Index) void,
@@ -139,47 +135,39 @@ pub fn isValid(any_component: anytype) bool {
     return true;
 }
 
-pub fn API_Adapter_FullFunctions(comptime T: type, comptime name: String) type {
-    return struct {
-        pub const NULL_VALUE = T{};
-        pub const COMPONENT_NAME = name;
-        pub const pool = ComponentPool(T);
-        pub var type_aspect: *Aspect = undefined;
-        pub var new: *const fn (T) *T = undefined;
-        pub var exists: *const fn (Index) bool = undefined;
-        pub var existsName: *const fn (String) bool = undefined;
-        pub var get: *const fn (Index) *T = undefined;
-        pub var byId: *const fn (Index) *const T = undefined;
-        pub var byName: *const fn (String) *const T = undefined;
-        pub var activateById: *const fn (Index, bool) void = undefined;
-        pub var activateByName: *const fn (String, bool) void = undefined;
-        pub var disposeById: *const fn (Index) void = undefined;
-        pub var disposeByName: *const fn (String) void = undefined;
-        pub var subscribe: *const fn (ComponentListener) void = undefined;
-        pub var unsubscribe: *const fn (ComponentListener) void = undefined;
+pub const API = struct {
+    pub const Context = struct {
+        name: String,
+        activation: bool = true,
+        name_mapping: bool = true,
+        subscription: bool = true,
     };
-}
 
-pub fn API_Adapter_NoEvents(comptime T: type, comptime name: String) type {
-    return struct {
-        pub const NULL_VALUE = T{};
-        pub const COMPONENT_NAME = name;
-        pub const pool = ComponentPool(T);
-        pub var type_aspect: *Aspect = undefined;
-        pub var new: *const fn (T) *T = undefined;
-        pub var exists: *const fn (Index) bool = undefined;
-        pub var existsName: *const fn (String) bool = undefined;
-        pub var get: *const fn (Index) *T = undefined;
-        pub var byId: *const fn (Index) *const T = undefined;
-        pub var byName: *const fn (String) *const T = undefined;
-        pub var activateById: *const fn (Index, bool) void = undefined;
-        pub var activateByName: *const fn (String, bool) void = undefined;
-        pub var disposeById: *const fn (Index) void = undefined;
-        pub var disposeByName: *const fn (String) void = undefined;
+    const Subscription = struct {
         pub var subscribe: *const fn (ComponentListener) void = undefined;
         pub var unsubscribe: *const fn (ComponentListener) void = undefined;
     };
-}
+
+    pub fn Adapter(comptime T: type, comptime context: Context) type {
+        return struct {
+            pub const NULL_VALUE = T{};
+            pub const COMPONENT_NAME = context.name;
+            pub const pool = ComponentPool(T);
+            pub var type_aspect: *Aspect = undefined;
+            pub var new: *const fn (T) *T = undefined;
+            pub var exists: *const fn (Index) bool = undefined;
+            pub var existsName: *const fn (String) bool = undefined;
+            pub var get: *const fn (Index) *T = undefined;
+            pub var byId: *const fn (Index) *const T = undefined;
+            pub var byName: *const fn (String) *const T = undefined;
+            pub var activateById: *const fn (Index, bool) void = undefined;
+            pub var activateByName: *const fn (String, bool) void = undefined;
+            pub var disposeById: *const fn (Index) void = undefined;
+            pub var disposeByName: *const fn (String) void = undefined;
+            pub usingnamespace if (context.subscription) Subscription else struct {};
+        };
+    }
+};
 
 pub fn ComponentPool(comptime T: type) type {
 
