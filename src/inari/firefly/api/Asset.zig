@@ -6,9 +6,8 @@ const utils = api.utils;
 const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
-const AspectGroup = utils.aspect.AspectGroup;
-const aspect = utils.aspect;
-const Aspect = aspect.Aspect;
+const AspectGroup = utils.AspectGroup;
+const Aspect = utils.Aspect;
 const String = utils.String;
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
@@ -22,14 +21,14 @@ pub fn init() !void {
     defer initialized = true;
     if (initialized) return;
 
-    ASSET_TYPE_ASPECT_GROUP = try aspect.newAspectGroup("ASSET_TYPE_ASPECT_GROUP");
+    ASSET_TYPE_ASPECT_GROUP = try AspectGroup.new("ASSET_TYPE_ASPECT_GROUP");
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized) return;
 
-    aspect.disposeAspectGroup(COMPONENT_NAME);
+    AspectGroup.dispose(COMPONENT_NAME);
     ASSET_TYPE_ASPECT_GROUP = undefined;
 }
 

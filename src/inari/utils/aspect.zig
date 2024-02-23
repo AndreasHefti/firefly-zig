@@ -5,12 +5,6 @@ const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Writer = std.io.Writer;
 
-const AspectError = error{
-    Notinitializedialized,
-    AspectGroupMismatch,
-    NoAspectGroupFound,
-};
-
 /// The integer type used to represent a Kind
 const MaskInt = u128;
 /// Maximal number of aspects possible for one aspect group
@@ -18,9 +12,19 @@ const MaxIndex = 128;
 /// The integer type used to shift a bit mask
 const ShiftInt = std.math.Log2Int(MaskInt);
 // aspect namespace variables and state
-var initialized = false;
+
 var ASPECT_GROUPS: ArrayList(AspectGroup) = undefined;
 var ALLOCATOR: Allocator = undefined;
+var initialized = false;
+
+pub fn isInitialized() bool {
+    return initialized;
+}
+
+fn checkInitialized() void {
+    if (!initialized)
+        @panic("aspect module not initialized");
+}
 
 pub fn init(_allocator: Allocator) !void {
     defer initialized = true;
@@ -40,10 +44,37 @@ pub fn deinit() void {
     }
 }
 
+pub fn print(string_buffer: *utils.StringBuffer) void {
+    if (!initialized) {
+        string_buffer.append("Aspects: [ NOT initialized ]\n");
+        return;
+    }
+
+    string_buffer.append("Aspects:");
+    if (ASPECT_GROUPS.items.len == 0) {
+        string_buffer.append("EMPTY");
+    } else {
+        var gi: usize = 0;
+        for (ASPECT_GROUPS.items) |item| {
+            string_buffer.print("\n  Group[{s}|{}]:", .{ item.name, gi });
+            for (0..item._size) |i| {
+                string_buffer.print("\n    Aspect[{s}|{d}]", .{ item.aspects[i].name, item.aspects[i].index });
+            }
+            gi += 1;
+        }
+    }
+    _ = string_buffer.append("\n");
+}
+
 pub const Aspect = struct {
     group: *AspectGroup,
     name: String,
     index: u8,
+
+    pub fn getAspect(groupName: []const u8, aspectName: []const u8) !*Aspect {
+        const group = try findOrCreateAspectGroup(groupName);
+        return group.getAspect(aspectName);
+    }
 
     pub fn sameGroup(self: *Aspect, other: *const Aspect) bool {
         return std.mem.eql(u8, self.group.name, other.group.name);
@@ -74,6 +105,44 @@ pub const AspectGroup = struct {
     /// the actual size of the group (and pointer for next aspect insertion).
     /// NOTE: This value is shall only be modified internally. Do not modify this value from outside.
     _size: u8 = 0,
+
+    pub fn new(name: String) !*AspectGroup {
+        checkInitialized();
+        var new_group = AspectGroup{
+            .name = name,
+            .aspects = [_]Aspect{undefined} ** MaxIndex,
+        };
+        try ASPECT_GROUPS.append(new_group);
+        return &ASPECT_GROUPS.items[ASPECT_GROUPS.items.len - 1];
+    }
+
+    pub fn get(name: String) !*AspectGroup {
+        checkInitialized();
+
+        for (ASPECT_GROUPS.items) |*group| {
+            if (std.mem.eql(u8, name, group.name)) {
+                return group;
+            }
+        }
+
+        @panic("No Aspect Group Found");
+    }
+
+    pub fn dispose(name: String) void {
+        if (!initialized)
+            return;
+
+        var index: ?usize = null;
+        for (ASPECT_GROUPS.items, 0..) |*group, i| {
+            if (std.mem.eql(u8, name, group.name)) {
+                index = i;
+                break;
+            }
+        }
+        if (index) |i| {
+            _ = ASPECT_GROUPS.swapRemove(i);
+        }
+    }
 
     pub fn getAspect(self: *AspectGroup, name: String) *Aspect {
         //std.debug.print("\n************* group {s} aspect size {d}\n", .{ self.name, self._size });
@@ -185,49 +254,6 @@ pub const Kind = struct {
     }
 };
 
-pub fn newAspectGroup(name: String) !*AspectGroup {
-    try checkInitialized();
-    var new_group = AspectGroup{
-        .name = name,
-        .aspects = [_]Aspect{undefined} ** MaxIndex,
-    };
-    try ASPECT_GROUPS.append(new_group);
-    return &ASPECT_GROUPS.items[ASPECT_GROUPS.items.len - 1];
-}
-
-pub fn getAspectGroup(name: String) !*AspectGroup {
-    try checkInitialized();
-
-    for (ASPECT_GROUPS.items) |*group| {
-        if (std.mem.eql(u8, name, group.name)) {
-            return group;
-        }
-    }
-
-    return AspectError.NoAspectGroupFound;
-}
-
-pub fn disposeAspectGroup(name: String) void {
-    if (!initialized)
-        return;
-
-    var index: ?usize = null;
-    for (ASPECT_GROUPS.items, 0..) |*group, i| {
-        if (std.mem.eql(u8, name, group.name)) {
-            index = i;
-            break;
-        }
-    }
-    if (index) |i| {
-        _ = ASPECT_GROUPS.swapRemove(i);
-    }
-}
-
-pub fn getAspect(groupName: []const u8, aspectName: []const u8) !*Aspect {
-    const group = try findOrCreateAspectGroup(groupName);
-    return group.getAspect(aspectName);
-}
-
 fn findOrCreateAspectGroup(name: []const u8) !*AspectGroup {
     for (0..ASPECT_GROUPS.items.len) |i| {
         var pg = &ASPECT_GROUPS.items[i];
@@ -235,76 +261,5 @@ fn findOrCreateAspectGroup(name: []const u8) !*AspectGroup {
             return pg;
         }
     }
-    return newAspectGroup(name);
-}
-
-fn checkInitialized() !void {
-    if (!initialized) {
-        return AspectError.Notinitializedialized;
-    }
-}
-
-pub fn print(string_buffer: *utils.StringBuffer) void {
-    if (!initialized) {
-        string_buffer.append("Aspects: [ NOT initialized ]\n");
-        return;
-    }
-
-    string_buffer.append("Aspects:");
-    if (ASPECT_GROUPS.items.len == 0) {
-        string_buffer.append("EMPTY");
-    } else {
-        var gi: usize = 0;
-        for (ASPECT_GROUPS.items) |item| {
-            string_buffer.print("\n  Group[{s}|{}]:", .{ item.name, gi });
-            for (0..item._size) |i| {
-                string_buffer.print("\n    Aspect[{s}|{d}]", .{ item.aspects[i].name, item.aspects[i].index });
-            }
-            gi += 1;
-        }
-    }
-    _ = string_buffer.append("\n");
-}
-
-test "initialize" {
-    try init(std.testing.allocator);
-    defer deinit();
-
-    var groupPtr = try newAspectGroup("TestGroup");
-    try std.testing.expectEqualStrings("TestGroup", groupPtr.name);
-    try std.testing.expect(groupPtr._size == 0);
-
-    var aspect1Ptr = groupPtr.getAspect("aspect1");
-    try std.testing.expect(groupPtr._size == 1);
-    try std.testing.expect(aspect1Ptr.group == groupPtr);
-    try std.testing.expect(aspect1Ptr.index == 0);
-    try std.testing.expectEqualStrings("aspect1", aspect1Ptr.name);
-
-    var aspect2Ptr = groupPtr.getAspect("aspect2");
-    try std.testing.expect(groupPtr._size == 2);
-    try std.testing.expect(aspect2Ptr.group == groupPtr);
-    try std.testing.expect(aspect2Ptr.index == 1);
-    try std.testing.expectEqualStrings("aspect2", aspect2Ptr.name);
-}
-
-test "kind" {
-    try init(std.testing.allocator);
-    defer deinit();
-
-    var groupPtr = try newAspectGroup("TestGroup");
-    var aspect1Ptr = groupPtr.getAspect("aspect1");
-    var aspect2Ptr = groupPtr.getAspect("aspect2");
-    var aspect3Ptr = groupPtr.getAspect("aspect3");
-    var aspect4Ptr = groupPtr.getAspect("aspect4");
-
-    var kind1 = Kind.of(aspect1Ptr).with(aspect2Ptr).with(aspect3Ptr);
-    var kind2 = Kind.of(aspect2Ptr).with(aspect3Ptr);
-    var kind3 = Kind.of(aspect4Ptr);
-
-    try std.testing.expect(kind2.isKindOf(&kind1));
-    try std.testing.expect(!kind1.isKindOf(&kind2));
-    try std.testing.expect(kind1.isOfKind(&kind2));
-    try std.testing.expect(!kind1.isExactKindOf(&kind2));
-    try std.testing.expect(!kind3.isExactKindOf(&kind2));
-    try std.testing.expect(!kind3.isExactKindOf(&kind1));
+    return AspectGroup.newAspectGroup(name);
 }

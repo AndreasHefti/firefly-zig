@@ -2,13 +2,41 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Writer = std.io.Writer;
 const ArrayList = std.ArrayList;
+const aspect = @import("aspect.zig");
 
-pub const bitset = @import("bitset.zig");
-pub const dynarray = @import("dynarray.zig");
-pub const geom = @import("geom.zig");
-pub const aspect = @import("aspect.zig");
-pub const event = @import("event.zig");
+//////////////////////////////////////////////////////////////
+//// module init
+//////////////////////////////////////////////////////////////
 
+var initialized = false;
+pub fn isInitialized() bool {
+    return initialized;
+}
+
+pub fn init(allocator: Allocator) !void {
+    defer initialized = true;
+    if (initialized)
+        return;
+
+    try aspect.init(allocator);
+}
+
+pub fn deinit() void {
+    defer initialized = false;
+    if (!initialized)
+        return;
+
+    aspect.deinit();
+}
+
+//////////////////////////////////////////////////////////////
+//// inari utils public API
+//////////////////////////////////////////////////////////////
+
+pub usingnamespace @import("geom.zig");
+pub usingnamespace @import("event.zig");
+pub usingnamespace @import("dynarray.zig");
+pub usingnamespace @import("bitset.zig");
 pub const String = []const u8;
 pub const EMPTY_STRING: String = "";
 pub const NO_NAME: String = EMPTY_STRING;
@@ -18,6 +46,10 @@ pub const UNDEF_INDEX = std.math.maxInt(Index);
 pub const CInt = i32;
 pub const Float = f32;
 pub const Byte = u8;
+
+pub const Aspect = aspect.Aspect;
+pub const AspectGroup = aspect.AspectGroup;
+pub const Kind = aspect.Kind;
 
 pub fn Condition(comptime T: type) type {
     return struct {
@@ -70,32 +102,10 @@ pub const StringBuffer = struct {
     }
 };
 
-test "StringBuffer" {
-    var sb = StringBuffer.init(std.testing.allocator);
-    defer sb.deinit();
+//////////////////////////////////////////////////////////////
+//// module debug/testing api
+//////////////////////////////////////////////////////////////
 
-    sb.append("Test12");
-    sb.append("Test34");
-    sb.print("Test{s}", .{"56"});
-
-    var str = sb.toString();
-    try std.testing.expectEqualStrings("Test12Test34Test56", str);
-}
-
-test "repl test" {
-    var v = getReadwrite();
-    v[0] = 0;
-}
-
-var v1: geom.Vector2f = geom.Vector2f{ 0, 0 };
-pub fn getReadonly() *const geom.Vector2f {
-    return &v1;
-}
-
-pub fn getReadwrite() *geom.Vector2f {
-    return &v1;
-}
-
-test {
-    std.testing.refAllDecls(@This());
-}
+pub const debug = struct {
+    pub const printAspects = aspect.print;
+};

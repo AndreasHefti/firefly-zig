@@ -6,12 +6,11 @@ const StringHashMap = std.StringHashMap;
 const api = @import("api.zig"); // TODO module
 const utils = api.utils;
 const StringBuffer = utils.StringBuffer;
-const aspect = utils.aspect;
-const Aspect = aspect.Aspect;
-const AspectGroup = aspect.AspectGroup;
-const EventDispatch = utils.event.EventDispatch;
-const DynArray = utils.dynarray.DynArray;
-const BitSet = utils.bitset.BitSet;
+const Aspect = utils.Aspect;
+const AspectGroup = utils.AspectGroup;
+const EventDispatch = utils.EventDispatch;
+const DynArray = utils.DynArray;
+const BitSet = utils.BitSet;
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
@@ -29,7 +28,7 @@ pub fn init() !void {
         return;
 
     COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(api.COMPONENT_ALLOC, null);
-    COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("COMPONENT_ASPECT_GROUP");
+    COMPONENT_ASPECT_GROUP = try AspectGroup.new("COMPONENT_ASPECT_GROUP");
 }
 
 pub fn deinit() void {
@@ -44,7 +43,7 @@ pub fn deinit() void {
     COMPONENT_INTERFACE_TABLE.deinit();
     COMPONENT_INTERFACE_TABLE = undefined;
 
-    aspect.disposeAspectGroup("COMPONENT_ASPECT_GROUP");
+    AspectGroup.dispose("COMPONENT_ASPECT_GROUP");
     COMPONENT_ASPECT_GROUP = undefined;
 }
 

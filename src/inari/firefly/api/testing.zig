@@ -1,10 +1,11 @@
 const std = @import("std");
 const api = @import("api.zig");
+const utils = api.utils;
 
-const StringBuffer = api.utils.StringBuffer;
-const String = api.utils.String;
+const StringBuffer = utils.StringBuffer;
+const String = utils.String;
 const FFAPIError = api.FFAPIError;
-const DynArray = api.utils.dynarray.DynArray;
+const DynArray = utils.DynArray;
 const BindingId = api.BindingId;
 const NO_BINDING = api.NO_BINDING;
 const TextureData = api.TextureData;
@@ -13,9 +14,9 @@ const ShaderData = api.ShaderData;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const SpriteData = api.SpriteData;
-const PosI = api.utils.geom.PosI;
-const CInt = api.utils.CInt;
-const Vector2f = api.utils.geom.Vector2f;
+const PosI = utils.PosI;
+const CInt = utils.CInt;
+const Vector2f = utils.Vector2f;
 const Projection = api.Projection;
 const RenderAPI = api.RenderAPI;
 

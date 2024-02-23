@@ -1,20 +1,20 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const EventDispatch = utils.event.EventDispatch;
+const EventDispatch = utils.EventDispatch;
 const Condition = utils.Condition;
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
 const Float = utils.Float;
-const PosI = utils.geom.PosI;
-const PosF = utils.geom.PosF;
-const RectI = utils.geom.RectI;
-const RectF = utils.geom.RectF;
-const Color = utils.geom.Color;
-const Vector2f = utils.geom.Vector2f;
-const Vector3f = utils.geom.Vector3f;
-const Vector4f = utils.geom.Vector4f;
+const PosI = utils.PosI;
+const PosF = utils.PosF;
+const RectI = utils.RectI;
+const RectF = utils.RectF;
+const Color = utils.Color;
+const Vector2f = utils.Vector2f;
+const Vector3f = utils.Vector3f;
+const Vector4f = utils.Vector4f;
 const StringBuffer = utils.StringBuffer;
 const entity = @import("Entity.zig");
 
@@ -29,6 +29,7 @@ pub const Engine = @import("Engine.zig");
 pub const Component = @import("Component.zig");
 pub const System = @import("System.zig");
 pub const Timer = @import("Timer.zig");
+pub const UpdateScheduler = Timer.UpdateScheduler;
 pub const Entity = entity.Entity;
 pub const EntityEventSubscription = entity.EntityEventSubscription;
 pub const EntityComponent = entity.EntityComponent;
@@ -77,7 +78,7 @@ pub fn init(
     ENTITY_ALLOC = entity_allocator;
     ALLOC = allocator;
 
-    try utils.aspect.init(allocator);
+    try utils.init(allocator);
 
     if (initMode == InitMode.TESTING) {
         RENDERING_API = try testing.createTestRenderAPI();
@@ -105,7 +106,7 @@ pub fn deinit() void {
     RENDERING_API.deinit();
     Timer.deinit();
     Engine.deinit();
-    utils.aspect.deinit();
+    utils.deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -149,9 +150,48 @@ pub fn RenderEventSubscription(comptime _: type) type {
         }
 
         fn adapt(e: RenderEvent) void {
-            if (_condition) |*c| {
-                if (!c.check(e)) return;
-            }
+            if (_condition) |*c| if (!c.check(e))
+                return;
+
+            _listener(e);
+        }
+    };
+}
+
+pub fn UpdateEventSubscription(comptime _: type) type {
+    return struct {
+        const Self = @This();
+
+        var _listener: UpdateListener = undefined;
+        var _condition: ?Condition(UpdateEvent) = null;
+        var _scheduler: ?UpdateScheduler = null;
+
+        pub fn of(listener: UpdateListener) Self {
+            _listener = listener;
+            return Self{};
+        }
+
+        pub fn withCondition(self: Self, condition: Condition(UpdateEvent)) Self {
+            _condition = condition;
+            return self;
+        }
+
+        pub fn subscribe(self: Self) Self {
+            Engine.subscribeUpdate(adapt);
+            return self;
+        }
+
+        pub fn unsubscribe(self: Self) Self {
+            Engine.unsubscribeUpdate(adapt);
+            return self;
+        }
+
+        fn adapt(e: UpdateEvent) void {
+            if (_scheduler) |*s| if (!s.needs_update)
+                return;
+            if (_condition) |*c| if (!c.check(e))
+                return;
+
             _listener(e);
         }
     };

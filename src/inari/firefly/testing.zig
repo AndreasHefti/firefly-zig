@@ -7,11 +7,11 @@ const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
 const ComponentPool = api.Component.ComponentPool;
-const Aspect = utils.aspect.Aspect;
+const Aspect = utils.Aspect;
 const String = utils.String;
 const FFAPIError = FFAPIError;
-const Color = utils.geom.Color;
-const PosF = utils.geom.PosF;
+const Color = utils.Color;
+const PosF = utils.PosF;
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
@@ -39,7 +39,7 @@ test "Firefly init" {
     var sb = utils.StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    utils.aspect.print(&sb);
+    utils.debug.printAspects(&sb);
     api.Component.print(&sb);
 
     var output: utils.String =
@@ -383,7 +383,7 @@ test "Init Rendering one sprite entity with no view and layer" {
     var sprite_asset: *Asset = SpriteAsset.new(.{
         .name = "TestSprite",
         .texture_asset_id = texture_asset.id,
-        .texture_bounds = utils.geom.RectF{ 0, 0, 20, 20 },
+        .texture_bounds = utils.RectF{ 0, 0, 20, 20 },
         .flip_x = true,
     });
 

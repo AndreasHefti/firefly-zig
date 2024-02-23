@@ -4,14 +4,14 @@ const StringHashMap = std.StringHashMap;
 
 const graphics = @import("graphics.zig");
 const api = graphics.api;
-const utils = graphics.utils;
+const utils = api.utils;
 
-const Aspect = utils.aspect.Aspect;
-const Kind = utils.aspect.Kind;
+const Aspect = utils.Aspect;
+const Kind = utils.Kind;
 const Asset = api.Asset;
 const Condition = utils.Condition;
 const EntityEventSubscription = api.EntityEventSubscription;
-const DynArray = utils.dynarray.DynArray;
+const DynArray = utils.DynArray;
 const SpriteData = api.SpriteData;
 const RenderData = api.RenderData;
 const BindingId = api.BindingId;
@@ -34,8 +34,8 @@ const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
-const RectF = utils.geom.RectF;
-const Vec2f = utils.geom.Vector2f;
+const RectF = utils.RectF;
+const Vec2f = utils.Vector2f;
 
 //////////////////////////////////////////////////////////////
 //// global

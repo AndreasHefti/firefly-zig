@@ -2,9 +2,9 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const Aspect = utils.aspect.Aspect;
+const Aspect = utils.Aspect;
 const Asset = api.Asset;
-const DynArray = utils.dynarray.DynArray;
+const DynArray = utils.DynArray;
 const StringBuffer = utils.StringBuffer;
 const ShaderData = api.ShaderData;
 const BindingId = api.BindingId;

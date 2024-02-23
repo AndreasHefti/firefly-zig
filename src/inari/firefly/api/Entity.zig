@@ -3,21 +3,21 @@ const Allocator = std.mem.Allocator;
 const trait = std.meta.trait;
 
 const api = @import("api.zig");
+const utils = api.utils;
 const StringBuffer = api.utils.StringBuffer;
-const DynArray = api.utils.dynarray.DynArray;
+const DynArray = utils.DynArray;
 const ArrayList = std.ArrayList;
 const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
-const Condition = api.utils.Condition;
-const Kind = api.utils.aspect.Kind;
-const aspect = api.utils.aspect;
-const Aspect = aspect.Aspect;
-const AspectGroup = aspect.AspectGroup;
-const String = api.utils.String;
+const Condition = utils.Condition;
+const Kind = utils.Kind;
+const Aspect = utils.Aspect;
+const AspectGroup = utils.AspectGroup;
+const String = utils.String;
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
-const NO_NAME = api.utils.NO_NAME;
+const NO_NAME = utils.NO_NAME;
 
 pub const Entity = struct {
 
@@ -119,7 +119,7 @@ pub const EntityComponent = struct {
             return;
 
         ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(Component.ComponentTypeInterface).init(api.ENTITY_ALLOC, null);
-        ENTITY_COMPONENT_ASPECT_GROUP = try aspect.newAspectGroup("ENTITY_COMPONENT_ASPECT_GROUP");
+        ENTITY_COMPONENT_ASPECT_GROUP = try AspectGroup.new("ENTITY_COMPONENT_ASPECT_GROUP");
     }
 
     // module deinit
@@ -135,7 +135,7 @@ pub const EntityComponent = struct {
         ENTITY_COMPONENT_INTERFACE_TABLE.deinit();
         ENTITY_COMPONENT_INTERFACE_TABLE = undefined;
 
-        aspect.disposeAspectGroup("ENTITY_COMPONENT_TYPE_ASPECT_GROUP");
+        AspectGroup.dispose("ENTITY_COMPONENT_TYPE_ASPECT_GROUP");
         ENTITY_COMPONENT_ASPECT_GROUP = undefined;
     }
 
@@ -366,15 +366,13 @@ pub fn EntityEventSubscription(comptime _: type) type {
 
         fn adapt(e: ComponentEvent) void {
             const e_kind = &Entity.byId(e.c_id).kind;
-            if (_accept_kind) |*ak| {
-                if (!ak.isKindOf(e_kind)) return;
-            }
-            if (_dismiss_kind) |*dk| {
-                if (!dk.isNotKindOf(e_kind)) return;
-            }
-            if (_condition) |*c| {
-                if (!c.check(e)) return;
-            }
+            if (_accept_kind) |*ak| if (!ak.isKindOf(e_kind))
+                return;
+            if (_dismiss_kind) |*dk| if (!dk.isNotKindOf(e_kind))
+                return;
+            if (_condition) |*c| if (!c.check(e))
+                return;
+
             _listener(e);
         }
     };

@@ -216,25 +216,4 @@ pub const BitSet = struct {
             };
         }
     }
-
-    test "test ensure capacity" {
-        const allocator = testing.allocator;
-        var bitset2 = try BitSet.initEmpty(allocator, 8);
-        defer bitset2.deinit();
-
-        bitset2.set(2);
-
-        try testing.expect(!bitset2.isSet(0));
-        try testing.expect(!bitset2.isSet(1));
-        try testing.expect(bitset2.isSet(2));
-        try testing.expect(!bitset2.isSet(3));
-        try testing.expect(bitset2.capacity() == 8);
-
-        bitset2.set(8);
-
-        try testing.expect(bitset2.capacity() == 16);
-        try testing.expect(!bitset2.isSet(7));
-        try testing.expect(bitset2.isSet(8));
-        try testing.expect(!bitset2.isSet(9));
-    }
 };

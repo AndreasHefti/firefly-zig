@@ -3,20 +3,20 @@ const ArrayList = std.ArrayList;
 
 const graphics = @import("graphics.zig");
 const api = graphics.api;
-const utils = graphics.utils;
+const utils = api.utils;
 
-const EventDispatch = utils.event.EventDispatch;
-const BitSet = utils.bitset.BitSet;
+const EventDispatch = utils.EventDispatch;
+const BitSet = utils.BitSet;
 const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
-const Aspect = api.utils.aspect.Aspect;
-const String = api.utils.String;
+const Aspect = utils.Aspect;
+const String = utils.String;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const RenderTextureData = api.RenderTextureData;
-const Vector2f = api.utils.geom.Vector2f;
-const DynArray = graphics.utils.dynarray.DynArray;
+const Vector2f = utils.Vector2f;
+const DynArray = utils.DynArray;
 const ActionType = Component.ActionType;
 const Projection = api.Projection;
 const Entity = api.Entity;
