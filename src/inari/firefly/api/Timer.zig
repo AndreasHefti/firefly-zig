@@ -1,8 +1,9 @@
 const std = @import("std");
-const ArrayList = std.ArrayList;
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const api = inari.firefly.api;
 
-const api = @import("api.zig");
-const utils = api.utils;
+const ArrayList = std.ArrayList;
 const Float = utils.Float;
 
 pub const UpdateScheduler = struct {

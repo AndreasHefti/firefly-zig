@@ -1,7 +1,8 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
-const BitSet = @import("bitset.zig").BitSet;
 const utils = @import("utils.zig");
+
+const Allocator = std.mem.Allocator;
+const BitSet = utils.BitSet;
 const Index = utils.Index;
 const UNDEF_INDEX = std.math.maxInt(usize);
 

@@ -1,16 +1,17 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const api = inari.firefly.api;
 
-const api = @import("api.zig");
-const utils = api.utils;
+const Allocator = std.mem.Allocator;
 const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
 const AspectGroup = utils.AspectGroup;
 const Aspect = utils.Aspect;
 const String = utils.String;
-const Index = api.Index;
-const UNDEF_INDEX = api.UNDEF_INDEX;
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const Asset = @This();
 
 pub usingnamespace Component.API.Adapter(@This(), .{ .name = "Asset" });

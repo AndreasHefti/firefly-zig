@@ -1,9 +1,9 @@
 const std = @import("std");
 const assert = std.debug.assert;
-
-const graphics = @import("graphics.zig");
-const api = graphics.api;
-const utils = graphics.utils;
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const api = inari.firefly.api;
+const graphics = inari.firefly.graphics;
 
 const Aspect = utils.aspect.Aspect;
 const Asset = api.Asset;
@@ -25,8 +25,8 @@ const CInt = utils.CInt;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
-const Index = api.Index;
-const UNDEF_INDEX = api.UNDEF_INDEX;
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// TESTING Texture Asset

@@ -1,8 +1,9 @@
 const std = @import("std");
+const inari = @import("../inari.zig");
+const utils = inari.utils;
+const firefly = inari.firefly;
+const api = firefly.api;
 
-const firefly = @import("firefly.zig");
-const api = @import("api/api.zig"); // TODO module
-const utils = api.utils;
 const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
@@ -12,17 +13,17 @@ const String = utils.String;
 const FFAPIError = FFAPIError;
 const Color = utils.Color;
 const PosF = utils.PosF;
-const Index = api.Index;
-const UNDEF_INDEX = api.UNDEF_INDEX;
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 const Entity = api.Entity;
 const Engine = api.Engine;
-const ETransform = firefly.graphics.view.ETransform;
+const ETransform = firefly.graphics.ETransform;
 const TransformData = firefly.api.TransformData;
-const ESprite = firefly.graphics.sprite.ESprite;
+const ESprite = firefly.graphics.ESprite;
 const Asset = firefly.api.Asset;
 const TextureAsset = firefly.graphics.TextureAsset;
-const SpriteAsset = firefly.graphics.sprite.SpriteAsset;
+const SpriteAsset = firefly.graphics.SpriteAsset;
 
 test {
     std.testing.refAllDecls(@import("api/testing.zig"));
@@ -55,7 +56,7 @@ test "Firefly init" {
         \\    Aspect[Shader|1]
         \\    Aspect[Sprite|2]
         \\    Aspect[SpriteSet|3]
-        \\  Group[ENTITY_COMPONENT_ASPECT_GROUP|2]:
+        \\  Group[ENTITY_KIND_ASP_GROUP|2]:
         \\    Aspect[ETransform|0]
         \\    Aspect[EMultiplier|1]
         \\    Aspect[ESprite|2]
@@ -367,7 +368,7 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\    (a) Asset[0|Aspect[ASSET_TYPE_ASPECT_GROUP|Texture|0]|TestTexture| resource_id=0, parent_asset_id=18446744073709551615 ]
         \\    (a) Asset[1|Aspect[ASSET_TYPE_ASPECT_GROUP|Sprite|2]|TestSprite| resource_id=0, parent_asset_id=0 ]
         \\  Entity size: 1
-        \\    (a) Entity[0|TestEntity|Kind[ group: ENTITY_COMPONENT_ASPECT_GROUP, aspects: ETransform ESprite ]]
+        \\    (a) Entity[0|TestEntity|Kind[ group: ENTITY_KIND_ASP_GROUP, aspects: ETransform ESprite ]]
         \\  System size: 2
         \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]

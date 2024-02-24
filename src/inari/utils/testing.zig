@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const utils = @import("utils.zig");
-
 const StringBuffer = utils.StringBuffer;
 const Vector2f = utils.Vector2f;
 const UNDEF_INDEX = utils.UNDEF_INDEX;

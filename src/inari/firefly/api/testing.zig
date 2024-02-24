@@ -1,6 +1,7 @@
 const std = @import("std");
-const api = @import("api.zig");
-const utils = api.utils;
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const api = inari.firefly.api;
 
 const StringBuffer = utils.StringBuffer;
 const String = utils.String;

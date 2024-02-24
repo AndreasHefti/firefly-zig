@@ -1,18 +1,19 @@
 const std = @import("std");
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const api = inari.firefly.api;
 const trait = std.meta.trait;
+
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
-
-const api = @import("api.zig"); // TODO module
-const utils = api.utils;
 const StringBuffer = utils.StringBuffer;
 const Aspect = utils.Aspect;
 const AspectGroup = utils.AspectGroup;
 const EventDispatch = utils.EventDispatch;
 const DynArray = utils.DynArray;
 const BitSet = utils.BitSet;
-const Index = api.Index;
-const UNDEF_INDEX = api.UNDEF_INDEX;
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 const String = utils.String;
 
@@ -146,7 +147,7 @@ pub const API = struct {
             return false;
         }
 
-        if (any_component.id == api.UNDEF_INDEX) {
+        if (any_component.id == utils.UNDEF_INDEX) {
             std.log.err("Invalid component. Undefined id: {any}", .{any_component});
             return false;
         }

@@ -1,6 +1,15 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
 
+const Allocator = std.mem.Allocator;
+const testing = @import("testing.zig");
+const asset = @import("Asset.zig");
+const engine = @import("Engine.zig");
+const component = @import("Component.zig");
+const system = @import("System.zig");
+const timer = @import("Timer.zig");
+const entity = @import("Entity.zig");
 const EventDispatch = utils.EventDispatch;
 const Condition = utils.Condition;
 const String = utils.String;
@@ -16,34 +25,27 @@ const Vector2f = utils.Vector2f;
 const Vector3f = utils.Vector3f;
 const Vector4f = utils.Vector4f;
 const StringBuffer = utils.StringBuffer;
-const entity = @import("Entity.zig");
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const testing = @import("testing.zig");
-pub const utils = @import("../../utils/utils.zig");
-pub const Asset = @import("Asset.zig");
-pub const Engine = @import("Engine.zig");
-pub const Component = @import("Component.zig");
-pub const System = @import("System.zig");
-pub const Timer = @import("Timer.zig");
-pub const UpdateScheduler = Timer.UpdateScheduler;
+pub const Asset = asset;
+pub const Engine = engine;
+pub const Component = component;
+pub const ComponentEvent = component.ComponentEvent;
+pub const ComponentActionType = component.ActionType;
+pub const ComponentListener = component.ComponentListener;
+pub const System = system;
+pub const Timer = timer;
+pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
-pub const EntityEventSubscription = entity.EntityEventSubscription;
 pub const EntityComponent = entity.EntityComponent;
-pub const Index = utils.Index;
-pub const UNDEF_INDEX = utils.UNDEF_INDEX;
+pub const EntityEventSubscription = entity.EntityEventSubscription;
+//pub const EntityComponentPool = entity.EntityComponentPool;
+
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
-pub const FFAPIError = error{
-    GenericError,
-    SingletonAlreadyInitialized,
-    ComponentInitError,
-    RenderingInitError,
-    RenderingError,
-};
 
 //////////////////////////////////////////////////////////////
 //// Initialization

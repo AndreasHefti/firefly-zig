@@ -1,8 +1,9 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const api = inari.firefly.api;
 
-const api = @import("api.zig");
-const utils = api.utils;
+const Allocator = std.mem.Allocator;
 const UpdateEvent = api.UpdateEvent;
 const RenderEvent = api.RenderEvent;
 const RenderEventType = api.RenderEventType;

@@ -1,34 +1,52 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const firefly = inari.firefly;
 const assert = std.debug.assert;
+const sprite = @import("sprite.zig");
+const view = @import("view.zig");
 
+const Allocator = std.mem.Allocator;
 const Aspect = utils.Aspect;
-const Asset = api.Asset;
+const Asset = firefly.api.Asset;
 const DynArray = utils.DynArray;
 const StringBuffer = utils.StringBuffer;
-const ShaderData = api.ShaderData;
-const BindingId = api.BindingId;
+const ShaderData = firefly.api.ShaderData;
+const BindingId = firefly.api.BindingId;
 const String = utils.String;
-const ComponentEvent = api.Component.ComponentEvent;
-const ActionType = api.Component.ActionType;
-const TextureData = api.TextureData;
+const ComponentEvent = firefly.api.ComponentEvent;
+const ActionType = firefly.api.ComponentActionType;
+const TextureData = firefly.api.TextureData;
 
 const NO_NAME = utils.NO_NAME;
-const NO_BINDING = api.NO_BINDING;
-const Index = api.Index;
-const UNDEF_INDEX = api.UNDEF_INDEX;
+const NO_BINDING = firefly.api.NO_BINDING;
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const RectF = utils.geom.RectF;
 const Vec2f = utils.geom.Vector2f;
 const CInt = utils.CInt;
 
 //////////////////////////////////////////////////////////////
-//// global
+//// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const api = @import("../api/api.zig");
-pub const utils = api.utils;
-pub const sprite = @import("sprite.zig");
-pub const view = @import("view.zig");
+pub const ESprite = sprite.ESprite;
+pub const SpriteAsset = sprite.SpriteAsset;
+pub const SpriteSet = sprite.SpriteSet;
+pub const SpriteSetAsset = sprite.SpriteSetAsset;
+
+pub const View = view.View;
+pub const Layer = view.Layer;
+pub const ViewLayerMapping = view.ViewLayerMapping;
+pub const EMultiplier = view.EMultiplier;
+pub const ETransform = view.ETransform;
+pub const ViewRenderEvent = view.ViewRenderEvent;
+pub const ViewRenderListener = view.ViewRenderListener;
+pub const ViewRenderer = view.ViewRenderer;
+
+//////////////////////////////////////////////////////////////
+//// global
+//////////////////////////////////////////////////////////////
 
 var initialized = false;
 var api_init = false;
@@ -37,12 +55,12 @@ var textures: DynArray(TextureData) = undefined;
 var shader: DynArray(ShaderData) = undefined;
 
 pub fn initTesting() !void {
-    try api.initTesting();
-    try init(api.InitMode.TESTING);
+    try firefly.api.initTesting();
+    try init(firefly.api.InitMode.TESTING);
     api_init = true;
 }
 
-pub fn init(_: api.InitMode) !void {
+pub fn init(_: firefly.api.InitMode) !void {
     defer initialized = true;
     if (initialized)
         return;
@@ -70,7 +88,7 @@ pub fn deinit() void {
 
     // deinit api if it was initialized by this package
     if (api_init) {
-        api.deinit();
+        firefly.api.deinit();
         api_init = false;
     }
 }
@@ -92,7 +110,7 @@ pub const ShaderAsset = struct {
 
     fn init() !void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Shader");
-        shader = try DynArray(ShaderData).init(api.COMPONENT_ALLOC, NULL_VALUE);
+        shader = try DynArray(ShaderData).init(firefly.api.COMPONENT_ALLOC, NULL_VALUE);
         Asset.subscribe(listener);
     }
 
@@ -155,7 +173,7 @@ pub const ShaderAsset = struct {
         if (shaderData.binding != NO_BINDING)
             return; // already loaded
 
-        api.RENDERING_API.createShader(shaderData);
+        firefly.api.RENDERING_API.createShader(shaderData);
     }
 
     fn unload(asset: *Asset) void {
@@ -163,7 +181,7 @@ pub const ShaderAsset = struct {
             return;
 
         var shaderData: *ShaderData = shader.get(asset.resource_id);
-        api.RENDERING_API.disposeShader(shaderData);
+        firefly.api.RENDERING_API.disposeShader(shaderData);
     }
 
     fn delete(asset: *Asset) void {
@@ -190,7 +208,7 @@ pub const TextureAsset = struct {
 
     fn init() !void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
-        textures = try DynArray(TextureData).init(api.COMPONENT_ALLOC, NULL_VALUE);
+        textures = try DynArray(TextureData).init(firefly.api.COMPONENT_ALLOC, NULL_VALUE);
         Asset.subscribe(listener);
     }
 
@@ -257,7 +275,7 @@ pub const TextureAsset = struct {
         if (tex_data.binding != NO_BINDING)
             return; // already loaded
 
-        api.RENDERING_API.loadTexture(tex_data);
+        firefly.api.RENDERING_API.loadTexture(tex_data);
     }
 
     fn unload(asset: *Asset) void {
@@ -271,7 +289,7 @@ pub const TextureAsset = struct {
         if (tex_data.binding == NO_BINDING)
             return; // already disposed
 
-        api.RENDERING_API.disposeTexture(tex_data);
+        firefly.api.RENDERING_API.disposeTexture(tex_data);
 
         assert(tex_data.binding == NO_BINDING);
         assert(tex_data.width == -1);

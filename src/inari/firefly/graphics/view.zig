@@ -1,10 +1,10 @@
 const std = @import("std");
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const api = inari.firefly.api;
+const graphics = inari.firefly.graphics;
+
 const ArrayList = std.ArrayList;
-
-const graphics = @import("graphics.zig");
-const api = graphics.api;
-const utils = api.utils;
-
 const EventDispatch = utils.EventDispatch;
 const BitSet = utils.BitSet;
 const Component = api.Component;
@@ -25,11 +25,11 @@ const RenderEvent = api.RenderEvent;
 const RenderEventSubscription = api.RenderEventSubscription;
 const System = api.System;
 
-const Index = api.Index;
+const Index = utils.Index;
 const BindingId = api.BindingId;
-const UNDEF_INDEX = api.UNDEF_INDEX;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_BINDING = api.NO_BINDING;
-const NO_NAME = api.utils.NO_NAME;
+const NO_NAME = utils.NO_NAME;
 
 //////////////////////////////////////////////////////////////
 //// global
@@ -55,24 +55,6 @@ pub fn deinit() void {
 
     View.deinit();
     ViewRenderer.deinit();
-}
-
-pub const ViewRenderEvent = struct {
-    view_id: Index,
-    layer_id: Index,
-};
-pub const ViewRenderListener = *const fn (ViewRenderEvent) void;
-
-pub fn subscribeViewRendering(listener: ViewRenderListener) void {
-    ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.register(listener);
-}
-
-pub fn subscribeViewRenderingAt(index: usize, listener: ViewRenderListener) void {
-    ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
-}
-
-pub fn unsubscribeViewRendering(listener: ViewRenderListener) void {
-    ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.unregister(listener);
 }
 
 //////////////////////////////////////////////////////////////
@@ -389,7 +371,25 @@ pub const EMultiplier = struct {
 //// ViewRenderer System
 //////////////////////////////////////////////////////////////
 
-const ViewRenderer = struct {
+pub const ViewRenderEvent = struct {
+    view_id: Index,
+    layer_id: Index,
+};
+pub const ViewRenderListener = *const fn (ViewRenderEvent) void;
+
+pub const ViewRenderer = struct {
+    pub fn subscribe(listener: ViewRenderListener) void {
+        ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.register(listener);
+    }
+
+    pub fn subscribeAt(index: usize, listener: ViewRenderListener) void {
+        ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
+    }
+
+    pub fn unsubscribe(listener: ViewRenderListener) void {
+        ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.unregister(listener);
+    }
+
     var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(ViewRenderEvent) = undefined;
     var VIEW_RENDER_EVENT = ViewRenderEvent{
         .view_id = UNDEF_INDEX,

@@ -1,11 +1,11 @@
 const std = @import("std");
+const inari = @import("../../inari.zig");
+const utils = inari.utils;
+const api = inari.firefly.api;
+const graphics = inari.firefly.graphics;
+
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
-
-const graphics = @import("graphics.zig");
-const api = graphics.api;
-const utils = api.utils;
-
 const Aspect = utils.Aspect;
 const Kind = utils.Kind;
 const Asset = api.Asset;
@@ -22,18 +22,18 @@ const TextureData = api.TextureData;
 const TextureAsset = graphics.TextureAsset;
 const Entity = api.Entity;
 const EntityComponent = api.EntityComponent;
-const ETransform = graphics.view.ETransform;
-const EMultiplier = graphics.view.EMultiplier;
+const ETransform = graphics.ETransform;
+const EMultiplier = graphics.EMultiplier;
 const View = graphics.View;
-const ViewLayerMapping = graphics.view.ViewLayerMapping;
-const ViewRenderEvent = graphics.view.ViewRenderEvent;
-const ViewRenderListener = graphics.view.ViewRenderListener;
+const ViewLayerMapping = graphics.ViewLayerMapping;
+const ViewRenderEvent = graphics.ViewRenderEvent;
+const ViewRenderListener = graphics.ViewRenderListener;
 const System = api.System;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
-const Index = api.Index;
-const UNDEF_INDEX = api.UNDEF_INDEX;
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const RectF = utils.RectF;
 const Vec2f = utils.Vector2f;
 
@@ -418,9 +418,9 @@ const SimpleSpriteRenderer = struct {
 
     fn onActivation(active: bool) void {
         if (active) {
-            graphics.view.subscribeViewRenderingAt(0, render);
+            graphics.ViewRenderer.subscribeAt(0, render);
         } else {
-            graphics.view.unsubscribeViewRendering(render);
+            graphics.ViewRenderer.unsubscribe(render);
         }
     }
 
