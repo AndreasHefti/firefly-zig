@@ -41,8 +41,8 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    Component.registerComponent(Layer);
-    Component.registerComponent(View);
+    Component.API.registerComponent(Layer);
+    Component.API.registerComponent(View);
     EntityComponent.registerEntityComponent(ETransform);
     EntityComponent.registerEntityComponent(EMultiplier);
     ViewRenderer.init();
@@ -165,24 +165,7 @@ pub const ViewLayerMapping = struct {
 //////////////////////////////////////////////////////////////
 
 pub const View = struct {
-    // component type fields
-    pub const NULL_VALUE = View{};
-    pub const COMPONENT_NAME = "View";
-    pub const pool = Component.ComponentPool(View);
-    // component type pool references
-    pub var type_aspect: *Aspect = undefined;
-    pub var new: *const fn (View) *View = undefined;
-    pub var exists: *const fn (Index) bool = undefined;
-    pub var existsName: *const fn (String) bool = undefined;
-    pub var get: *const fn (Index) *View = undefined;
-    pub var byId: *const fn (Index) *const View = undefined;
-    pub var byName: *const fn (String) *const View = undefined;
-    pub var activateById: *const fn (Index, bool) void = undefined;
-    pub var activateByName: *const fn (String, bool) void = undefined;
-    pub var disposeById: *const fn (Index) void = undefined;
-    pub var disposeByName: *const fn (String) void = undefined;
-    pub var subscribe: *const fn (ComponentListener) void = undefined;
-    pub var unsubscribe: *const fn (ComponentListener) void = undefined;
+    pub usingnamespace Component.API.Adapter(View, .{ .name = "View" });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -320,24 +303,7 @@ pub const View = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Layer = struct {
-    // component type fields
-    pub const NULL_VALUE = Layer{};
-    pub const COMPONENT_NAME = "Layer";
-    pub const pool = Component.ComponentPool(Layer);
-    // component type pool references
-    pub var type_aspect: *Aspect = undefined;
-    pub var new: *const fn (Layer) *Layer = undefined;
-    pub var exists: *const fn (Index) bool = undefined;
-    pub var existsName: *const fn (String) bool = undefined;
-    pub var get: *const fn (Index) *Layer = undefined;
-    pub var byId: *const fn (Index) *const Layer = undefined;
-    pub var byName: *const fn (String) *const Layer = undefined;
-    pub var activateById: *const fn (Index, bool) void = undefined;
-    pub var activateByName: *const fn (String, bool) void = undefined;
-    pub var disposeById: *const fn (Index) void = undefined;
-    pub var disposeByName: *const fn (String) void = undefined;
-    pub var subscribe: *const fn (ComponentListener) void = undefined;
-    pub var unsubscribe: *const fn (ComponentListener) void = undefined;
+    pub usingnamespace Component.API.Adapter(Layer, .{ .name = "Layer" });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -367,14 +333,7 @@ pub const Layer = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETransform = struct {
-    // entity component type fields
-    pub const NULL_VALUE = ETransform{};
-    pub const COMPONENT_NAME = "ETransform";
-    pub const pool = Entity.EntityComponentPool(ETransform);
-    // entity component type pool references
-    pub var type_aspect: *Aspect = undefined;
-    pub var get: *const fn (Index) *ETransform = undefined;
-    pub var byId: *const fn (Index) *const ETransform = undefined;
+    pub usingnamespace EntityComponent.API.Adapter(@This(), "ETransform");
 
     id: Index = UNDEF_INDEX,
     transform: TransformData = TransformData{},
@@ -407,15 +366,8 @@ pub const ETransform = struct {
 //////////////////////////////////////////////////////////////////////////
 
 pub const EMultiplier = struct {
-    // entity component type fields
-    pub const NULL_VALUE = EMultiplier{};
+    pub usingnamespace EntityComponent.API.Adapter(@This(), "EMultiplier");
     pub const NULL_POS_ENTRY = Vector2f{};
-    pub const COMPONENT_NAME = "EMultiplier";
-    pub const pool = Entity.EntityComponentPool(EMultiplier);
-    // entity component type pool references
-    pub var type_aspect: *Aspect = undefined;
-    pub var get: *const fn (Index) *EMultiplier = undefined;
-    pub var byId: *const fn (Index) *const EMultiplier = undefined;
 
     id: Index = UNDEF_INDEX,
     positions: DynArray(Vector2f) = undefined,

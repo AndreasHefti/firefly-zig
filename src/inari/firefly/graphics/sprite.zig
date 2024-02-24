@@ -100,14 +100,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const ESprite = struct {
-    // component type fields
-    pub const NULL_VALUE = ESprite{};
-    pub const COMPONENT_NAME = "ESprite";
-    pub const pool = Entity.EntityComponentPool(ESprite);
-    // component type pool references
-    pub var type_aspect: *Aspect = undefined;
-    pub var get: *const fn (Index) *ESprite = undefined;
-    pub var byId: *const fn (Index) *const ESprite = undefined;
+    pub usingnamespace EntityComponent.API.Adapter(@This(), "ESprite");
 
     id: Index = UNDEF_INDEX,
     sprite_ref: BindingId = NO_BINDING,

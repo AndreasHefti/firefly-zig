@@ -10,6 +10,7 @@ const ArrayList = std.ArrayList;
 const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
+const ComponentTypeInterface = Component.API.ComponentTypeInterface;
 const Condition = utils.Condition;
 const Kind = utils.Kind;
 const Aspect = utils.Aspect;
@@ -20,27 +21,8 @@ const UNDEF_INDEX = api.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 
 pub const Entity = struct {
+    pub usingnamespace Component.API.Adapter(Entity, .{ .name = "Entity" });
 
-    // component type fields
-    pub const NULL_VALUE = Entity{};
-    pub const COMPONENT_NAME = "Entity";
-    pub const pool = Component.ComponentPool(Entity);
-    // component type pool references
-    pub var type_aspect: *Aspect = undefined;
-    pub var new: *const fn (Entity) *Entity = undefined;
-    pub var exists: *const fn (Index) bool = undefined;
-    pub var existsName: *const fn (String) bool = undefined;
-    pub var get: *const fn (Index) *Entity = undefined;
-    pub var byId: *const fn (Index) *const Entity = undefined;
-    pub var byName: *const fn (String) *const Entity = undefined;
-    pub var activateById: *const fn (Index, bool) void = undefined;
-    pub var activateByName: *const fn (String, bool) void = undefined;
-    pub var disposeById: *const fn (Index) void = undefined;
-    pub var disposeByName: *const fn (String) void = undefined;
-    pub var subscribe: *const fn (ComponentListener) void = undefined;
-    pub var unsubscribe: *const fn (ComponentListener) void = undefined;
-
-    // struct fields of an entity
     id: Index = UNDEF_INDEX,
     name: String = NO_NAME,
     kind: Kind = undefined,
@@ -58,7 +40,7 @@ pub const Entity = struct {
     }
 
     pub fn withComponent(self: *Entity, c: anytype) *Entity {
-        EntityComponent.checkValid(c);
+        EntityComponent.API.checkValid(c);
 
         const T = @TypeOf(c);
         var comp = @as(T, c);
@@ -109,7 +91,7 @@ pub const Entity = struct {
 pub const EntityComponent = struct {
     var initialized = false;
 
-    var ENTITY_COMPONENT_INTERFACE_TABLE: DynArray(Component.ComponentTypeInterface) = undefined;
+    var ENTITY_COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
     pub var ENTITY_COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
     // module init
@@ -118,7 +100,7 @@ pub const EntityComponent = struct {
         if (initialized)
             return;
 
-        ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(Component.ComponentTypeInterface).init(api.ENTITY_ALLOC, null);
+        ENTITY_COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(api.ENTITY_ALLOC, null);
         ENTITY_COMPONENT_ASPECT_GROUP = try AspectGroup.new("ENTITY_COMPONENT_ASPECT_GROUP");
     }
 
@@ -143,39 +125,54 @@ pub const EntityComponent = struct {
         EntityComponentPool(T).init();
     }
 
-    pub inline fn checkValid(any_component: anytype) void {
-        if (!isValid(any_component))
-            @panic("Invalid Entity Component");
-    }
+    pub const API = struct {
+        pub fn Adapter(comptime T: type, comptime type_name: String) type {
+            return struct {
+                // component type fields
+                pub const NULL_VALUE = T{};
+                pub const COMPONENT_TYPE_NAME = type_name;
+                pub const pool = Entity.EntityComponentPool(T);
+                // component type pool function references
+                pub var type_aspect: *Aspect = undefined;
+                pub var get: *const fn (Index) *T = undefined;
+                pub var byId: *const fn (Index) *const T = undefined;
+            };
+        }
 
-    pub fn isValid(any_component: anytype) bool {
-        const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
-        const c_type = switch (info) {
-            .Pointer => @TypeOf(any_component.*),
-            .Struct => @TypeOf(any_component),
-            else => {
-                std.log.err("No valid type entity component: {any}", .{any_component});
+        pub inline fn checkValid(any_component: anytype) void {
+            if (!isValid(any_component))
+                @panic("Invalid Entity Component");
+        }
+
+        pub fn isValid(any_component: anytype) bool {
+            const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
+            const c_type = switch (info) {
+                .Pointer => @TypeOf(any_component.*),
+                .Struct => @TypeOf(any_component),
+                else => {
+                    std.log.err("No valid type entity component: {any}", .{any_component});
+                    return false;
+                },
+            };
+
+            if (!@hasField(c_type, "id")) {
+                std.log.err("No valid entity component. No id field: {any}", .{any_component});
                 return false;
-            },
-        };
+            }
 
-        if (!@hasField(c_type, "id")) {
-            std.log.err("No valid entity component. No id field: {any}", .{any_component});
-            return false;
+            if (!EntityComponentPool(c_type).c_aspect.isOfGroup(ENTITY_COMPONENT_ASPECT_GROUP)) {
+                std.log.err("No valid entity component. AspectGroup mismatch: {any}", .{any_component});
+                return false;
+            }
+
+            // if (any_component.id == api.UNDEF_INDEX) {
+            //     std.log.err("No valid entity component. Undefined id: {any}", .{any_component});
+            //     return false;
+            // }
+
+            return true;
         }
-
-        if (!EntityComponentPool(c_type).c_aspect.isOfGroup(ENTITY_COMPONENT_ASPECT_GROUP)) {
-            std.log.err("No valid entity component. AspectGroup mismatch: {any}", .{any_component});
-            return false;
-        }
-
-        // if (any_component.id == api.UNDEF_INDEX) {
-        //     std.log.err("No valid entity component. Undefined id: {any}", .{any_component});
-        //     return false;
-        // }
-
-        return true;
-    }
+    };
 
     pub fn EntityComponentPool(comptime T: type) type {
 
@@ -195,8 +192,8 @@ pub const EntityComponent = struct {
                 @compileError("Expects component type is a struct.");
             if (!trait.hasDecls(T, .{"NULL_VALUE"}))
                 @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
-            if (!trait.hasDecls(T, .{"COMPONENT_NAME"}))
-                @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
+            if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
+                @compileError("Expects component type to have member named 'COMPONENT_TYPE_NAME' that defines a unique name of the component type.");
             if (!trait.hasField("id")(T))
                 @compileError("Expects component type to have field named id");
 
@@ -227,7 +224,7 @@ pub const EntityComponent = struct {
                 errdefer Self.deinit();
                 defer {
                     ENTITY_COMPONENT_INTERFACE_TABLE.set(
-                        Component.ComponentTypeInterface{
+                        ComponentTypeInterface{
                             .clear = Self.clear,
                             .deinit = Self.deinit,
                             .to_string = toString,
@@ -238,7 +235,7 @@ pub const EntityComponent = struct {
                 }
 
                 items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
-                c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_NAME);
+                c_aspect = ENTITY_COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
 
                 if (has_aspect) T.type_aspect = c_aspect;
                 if (has_get) T.get = Self.get;

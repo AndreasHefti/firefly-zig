@@ -92,9 +92,9 @@ pub fn init(
     Timer.init();
 
     // register api based components and entity components
-    Component.registerComponent(Asset);
-    Component.registerComponent(Entity);
-    Component.registerComponent(System);
+    Component.API.registerComponent(Asset);
+    Component.API.registerComponent(Entity);
+    Component.API.registerComponent(System);
 }
 
 pub fn deinit() void {

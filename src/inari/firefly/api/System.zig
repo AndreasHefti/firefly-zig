@@ -26,25 +26,9 @@ const String = api.utils.String;
 const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
 const NO_NAME = api.utils.NO_NAME;
-
 const System = @This();
 
-// component type fields
-pub const NULL_VALUE = System{};
-pub const COMPONENT_NAME = "System";
-pub const pool = Component.ComponentPool(System);
-// component type pool references
-pub var type_aspect: *Aspect = undefined;
-pub var new: *const fn (System) *System = undefined;
-pub var exists: *const fn (Index) bool = undefined;
-pub var existsName: *const fn (String) bool = undefined;
-pub var get: *const fn (Index) *System = undefined;
-pub var byId: *const fn (Index) *const System = undefined;
-pub var byName: *const fn (String) *const System = undefined;
-pub var activateById: *const fn (Index, bool) void = undefined;
-pub var activateByName: *const fn (String, bool) void = undefined;
-pub var disposeById: *const fn (Index) void = undefined;
-pub var disposeByName: *const fn (String) void = undefined;
+pub usingnamespace Component.API.Adapter(System, .{ .name = "System", .subscription = false });
 
 // struct fields of a System
 id: Index = UNDEF_INDEX,

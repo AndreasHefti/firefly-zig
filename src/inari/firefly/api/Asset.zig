@@ -13,6 +13,8 @@ const Index = api.Index;
 const UNDEF_INDEX = api.UNDEF_INDEX;
 const Asset = @This();
 
+pub usingnamespace Component.API.Adapter(@This(), .{ .name = "Asset" });
+
 // type aspects
 var initialized = false;
 pub var ASSET_TYPE_ASPECT_GROUP: *AspectGroup = undefined;
@@ -28,29 +30,9 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized) return;
 
-    AspectGroup.dispose(COMPONENT_NAME);
+    AspectGroup.dispose(@This().COMPONENT_TYPE_NAME);
     ASSET_TYPE_ASPECT_GROUP = undefined;
 }
-
-// type fields
-pub const NULL_VALUE = Asset{};
-pub const COMPONENT_NAME = "Asset";
-pub const pool = Component.ComponentPool(Asset);
-
-// component type pool references
-pub var type_aspect: *Aspect = undefined;
-pub var new: *const fn (Asset) *Asset = undefined;
-pub var exists: *const fn (Index) bool = undefined;
-pub var existsName: *const fn (String) bool = undefined;
-pub var get: *const fn (Index) *Asset = undefined;
-pub var byId: *const fn (Index) *const Asset = undefined;
-pub var byName: *const fn (String) *const Asset = undefined;
-pub var activateById: *const fn (Index, bool) void = undefined;
-pub var activateByName: *const fn (String, bool) void = undefined;
-pub var disposeById: *const fn (Index) void = undefined;
-pub var disposeByName: *const fn (String) void = undefined;
-pub var subscribe: *const fn (ComponentListener) void = undefined;
-pub var unsubscribe: *const fn (ComponentListener) void = undefined;
 
 // struct fields
 id: Index = UNDEF_INDEX,

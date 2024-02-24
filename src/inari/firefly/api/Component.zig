@@ -16,17 +16,17 @@ const UNDEF_INDEX = api.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 const String = utils.String;
 
-// component global variables and state
+//////////////////////////////////////////////////////////////
+//// Component global
+//////////////////////////////////////////////////////////////
 var INIT = false;
-var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
-
 pub fn init() !void {
     defer INIT = true;
     if (INIT)
         return;
 
-    COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(api.COMPONENT_ALLOC, null);
-    COMPONENT_ASPECT_GROUP = try AspectGroup.new("COMPONENT_ASPECT_GROUP");
+    API.COMPONENT_INTERFACE_TABLE = try DynArray(API.ComponentTypeInterface).init(api.COMPONENT_ALLOC, null);
+    API.COMPONENT_ASPECT_GROUP = try AspectGroup.new("COMPONENT_ASPECT_GROUP");
 }
 
 pub fn deinit() void {
@@ -35,26 +35,131 @@ pub fn deinit() void {
         return;
 
     // deinit all registered component pools via aspect interface mapping
-    for (0..COMPONENT_ASPECT_GROUP._size) |i| {
-        COMPONENT_INTERFACE_TABLE.get(COMPONENT_ASPECT_GROUP.aspects[i].index).deinit();
+    for (0..API.COMPONENT_ASPECT_GROUP._size) |i| {
+        API.COMPONENT_INTERFACE_TABLE.get(API.COMPONENT_ASPECT_GROUP.aspects[i].index).deinit();
     }
-    COMPONENT_INTERFACE_TABLE.deinit();
-    COMPONENT_INTERFACE_TABLE = undefined;
+    API.COMPONENT_INTERFACE_TABLE.deinit();
+    API.COMPONENT_INTERFACE_TABLE = undefined;
 
     AspectGroup.dispose("COMPONENT_ASPECT_GROUP");
-    COMPONENT_ASPECT_GROUP = undefined;
+    API.COMPONENT_ASPECT_GROUP = undefined;
 }
 
-// public aspect groups
-pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
+//////////////////////////////////////////////////////////////
+//// Component API
+//////////////////////////////////////////////////////////////
+pub const API = struct {
+    var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
+    pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
-pub const ComponentTypeInterface = struct {
-    clear: *const fn (Index) void,
-    deinit: *const fn () void,
-    to_string: *const fn (*StringBuffer) void,
+    const SUBSCRIBE_DECL = *const fn (ComponentListener) void;
+    const UNSUBSCRIBE_DECL = *const fn (ComponentListener) void;
+
+    pub const ComponentTypeInterface = struct {
+        clear: *const fn (Index) void,
+        deinit: *const fn () void,
+        to_string: *const fn (*StringBuffer) void,
+    };
+
+    pub const Context = struct {
+        name: String,
+        activation: bool = true,
+        name_mapping: bool = true,
+        subscription: bool = true,
+    };
+
+    fn SubscriptionAPI(comptime _: type) type {
+        return struct {
+            pub var subscribe: SUBSCRIBE_DECL = undefined;
+            pub var unsubscribe: UNSUBSCRIBE_DECL = undefined;
+        };
+    }
+
+    fn NameMappingAPI(comptime T: type) type {
+        return struct {
+            pub var existsName: *const fn (String) bool = undefined;
+            pub var byName: *const fn (String) *const T = undefined;
+            pub var disposeByName: *const fn (String) void = undefined;
+        };
+    }
+
+    fn ActivationAPI(comptime _: type) type {
+        return struct {
+            pub var activateById: *const fn (Index, bool) void = undefined;
+            pub var activateByName: *const fn (String, bool) void = undefined;
+        };
+    }
+
+    pub fn Adapter(comptime T: type, comptime context: Context) type {
+        return struct {
+
+            // component type fields
+            pub const NULL_VALUE = T{};
+            pub const COMPONENT_TYPE_NAME = context.name;
+            pub const pool = ComponentPool(T);
+            pub var type_aspect: *Aspect = undefined;
+
+            // component type pool function references
+            pub var new: *const fn (T) *T = undefined;
+            pub var exists: *const fn (Index) bool = undefined;
+            pub var get: *const fn (Index) *T = undefined;
+            pub var byId: *const fn (Index) *const T = undefined;
+            pub var disposeById: *const fn (Index) void = undefined;
+
+            // optional component type feature function references
+            pub usingnamespace if (context.name_mapping) NameMappingAPI(T) else struct {};
+            pub usingnamespace if (context.activation) ActivationAPI(T) else struct {};
+            pub usingnamespace if (context.subscription) SubscriptionAPI(T) else struct {};
+        };
+    }
+
+    pub fn registerComponent(comptime T: type) void {
+        ComponentPool(T).init();
+    }
+
+    pub inline fn checkValidity(any_component: anytype) void {
+        if (!checkComponentValidity(any_component))
+            @panic("Invalid component type");
+    }
+
+    pub fn checkComponentValidity(any_component: anytype) bool {
+        const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
+        const c_type = switch (info) {
+            .Pointer => @TypeOf(any_component.*),
+            .Struct => @TypeOf(any_component),
+            else => {
+                std.log.err("Invalid type component: {any}", .{any_component});
+                return false;
+            },
+        };
+
+        if (!@hasField(c_type, "id")) {
+            std.log.err("Invalid component. No id field: {any}", .{any_component});
+            return false;
+        }
+
+        if (@intFromPtr(c_type.type_aspect) == 0) {
+            std.log.err("Invalid component. aspect not initialized: {any}", .{any_component});
+            return false;
+        } else if (!c_type.type_aspect.isOfGroup(COMPONENT_ASPECT_GROUP)) {
+            std.log.err("Invalid component. AspectGroup mismatch: {any}", .{any_component});
+            return false;
+        }
+
+        if (any_component.id == api.UNDEF_INDEX) {
+            std.log.err("Invalid component. Undefined id: {any}", .{any_component});
+            return false;
+        }
+
+        return true;
+    }
 };
 
-// Component Event Handling
+//////////////////////////////////////////////////////////////
+//// Component Event Handling
+//////////////////////////////////////////////////////////////
+
+pub const ComponentListener = *const fn (ComponentEvent) void;
 pub const ActionType = enum {
     NONE,
     CREATED,
@@ -92,82 +197,9 @@ pub const ComponentEvent = struct {
     }
 };
 
-pub const ComponentListener = *const fn (ComponentEvent) void;
-
-pub fn registerComponent(comptime T: type) void {
-    ComponentPool(T).init();
-}
-
-pub inline fn checkValid(any_component: anytype) void {
-    if (!isValid(any_component))
-        @panic("Invalid component type");
-}
-
-pub fn isValid(any_component: anytype) bool {
-    const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
-    const c_type = switch (info) {
-        .Pointer => @TypeOf(any_component.*),
-        .Struct => @TypeOf(any_component),
-        else => {
-            std.log.err("Invalid type component: {any}", .{any_component});
-            return false;
-        },
-    };
-
-    if (!@hasField(c_type, "id")) {
-        std.log.err("Invalid component. No id field: {any}", .{any_component});
-        return false;
-    }
-
-    if (@intFromPtr(c_type.type_aspect) == 0) {
-        std.log.err("Invalid component. aspect not initialized: {any}", .{any_component});
-        return false;
-    } else if (!c_type.type_aspect.isOfGroup(COMPONENT_ASPECT_GROUP)) {
-        std.log.err("Invalid component. AspectGroup mismatch: {any}", .{any_component});
-        return false;
-    }
-
-    if (any_component.id == api.UNDEF_INDEX) {
-        std.log.err("Invalid component. Undefined id: {any}", .{any_component});
-        return false;
-    }
-
-    return true;
-}
-
-pub const API = struct {
-    pub const Context = struct {
-        name: String,
-        activation: bool = true,
-        name_mapping: bool = true,
-        subscription: bool = true,
-    };
-
-    const Subscription = struct {
-        pub var subscribe: *const fn (ComponentListener) void = undefined;
-        pub var unsubscribe: *const fn (ComponentListener) void = undefined;
-    };
-
-    pub fn Adapter(comptime T: type, comptime context: Context) type {
-        return struct {
-            pub const NULL_VALUE = T{};
-            pub const COMPONENT_NAME = context.name;
-            pub const pool = ComponentPool(T);
-            pub var type_aspect: *Aspect = undefined;
-            pub var new: *const fn (T) *T = undefined;
-            pub var exists: *const fn (Index) bool = undefined;
-            pub var existsName: *const fn (String) bool = undefined;
-            pub var get: *const fn (Index) *T = undefined;
-            pub var byId: *const fn (Index) *const T = undefined;
-            pub var byName: *const fn (String) *const T = undefined;
-            pub var activateById: *const fn (Index, bool) void = undefined;
-            pub var activateByName: *const fn (String, bool) void = undefined;
-            pub var disposeById: *const fn (Index) void = undefined;
-            pub var disposeByName: *const fn (String) void = undefined;
-            pub usingnamespace if (context.subscription) Subscription else struct {};
-        };
-    }
-};
+//////////////////////////////////////////////////////////////
+//// Component Pooling
+//////////////////////////////////////////////////////////////
 
 pub fn ComponentPool(comptime T: type) type {
 
@@ -200,8 +232,8 @@ pub fn ComponentPool(comptime T: type) type {
             @compileError("Expects component type is a struct.");
         if (!trait.hasDecls(T, .{"NULL_VALUE"}))
             @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
-        if (!trait.hasDecls(T, .{"COMPONENT_NAME"}))
-            @compileError("Expects component type to have member named 'COMPONENT_NAME' that defines a unique name of the component type.");
+        if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
+            @compileError("Expects component type to have member named 'COMPONENT_TYPE_NAME' that defines a unique name of the component type.");
         if (!trait.hasField("id")(T))
             @compileError("Expects component type to have field named id");
 
@@ -217,10 +249,10 @@ pub fn ComponentPool(comptime T: type) type {
         has_byName = has_name_mapping and trait.hasDecls(T, .{"byName"});
         has_activateById = trait.hasDecls(T, .{"activateById"});
         has_activateByName = has_name_mapping and trait.hasDecls(T, .{"activateByName"});
-        has_subscribe = trait.hasDecls(T, .{"subscribe"});
-        if (has_subscribe) {
-            if (!trait.hasDecls(T, .{"unsubscribe"})) @compileError("Expects component type to have member named 'unsubscribe' when there is subscribe.");
-        }
+        has_subscribe = trait.hasDecls(T, .{"subscribe"}) and @TypeOf(T.subscribe) == API.SUBSCRIBE_DECL;
+        if (has_subscribe)
+            if (!trait.hasDecls(T, .{"unsubscribe"}) or @TypeOf(T.unsubscribe) != API.UNSUBSCRIBE_DECL)
+                @compileError("Expects component type to have member named 'unsubscribe' when there is subscribe.");
 
         has_init = trait.hasDecls(T, .{"init"});
         has_deinit = trait.hasDecls(T, .{"deinit"});
@@ -250,8 +282,8 @@ pub fn ComponentPool(comptime T: type) type {
 
             errdefer Self.deinit();
             defer {
-                COMPONENT_INTERFACE_TABLE.set(
-                    ComponentTypeInterface{
+                API.COMPONENT_INTERFACE_TABLE.set(
+                    API.ComponentTypeInterface{
                         .clear = Self.clear,
                         .deinit = Self.deinit,
                         .to_string = toString,
@@ -263,7 +295,7 @@ pub fn ComponentPool(comptime T: type) type {
 
             items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
             active_mapping = BitSet.initEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
-            c_aspect = COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_NAME);
+            c_aspect = API.COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
 
             if (has_subscribe) {
                 event = ComponentEvent{};
@@ -344,8 +376,6 @@ pub fn ComponentPool(comptime T: type) type {
         }
 
         pub fn register(c: T) *T {
-            checkComponentTrait(c);
-
             var id = items.add(c);
             var result = items.get(id);
             result.id = id;
@@ -377,7 +407,7 @@ pub fn ComponentPool(comptime T: type) type {
         pub fn get(id: Index) *T {
             const ret = items.get(id);
             if (ret.id == UNDEF_INDEX) {
-                std.log.err("No Component with id: {d} of type: {s}", .{ id, T.COMPONENT_NAME });
+                std.log.err("No Component with id: {d} of type: {s}", .{ id, T.COMPONENT_TYPE_NAME });
                 @panic("Component does not exist");
             }
             return ret;
@@ -487,21 +517,14 @@ pub fn ComponentPool(comptime T: type) type {
                 eventDispatch.?.notify(e.*);
             }
         }
-
-        fn checkComponentTrait(c: T) void {
-            comptime {
-                if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
-                if (!trait.hasField("id")(@TypeOf(c))) @compileError("Expects component to have field 'id'.");
-            }
-        }
     };
 }
 
 pub fn print(string_buffer: *StringBuffer) void {
     string_buffer.print("\nComponents:", .{});
-    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    var next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
     while (next) |i| {
-        COMPONENT_INTERFACE_TABLE.get(i).to_string(string_buffer);
-        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+        API.COMPONENT_INTERFACE_TABLE.get(i).to_string(string_buffer);
+        next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
     }
 }
