@@ -20,8 +20,8 @@ var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 
 var initialized = false;
 pub fn init() void {
-    UPDATE_EVENT_DISPATCHER = EventDispatch(UpdateEvent).init(api.ALLOC);
-    RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).init(api.ALLOC);
+    UPDATE_EVENT_DISPATCHER = EventDispatch(UpdateEvent).new(api.ALLOC);
+    RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).new(api.ALLOC);
 }
 
 pub fn deinit() void {

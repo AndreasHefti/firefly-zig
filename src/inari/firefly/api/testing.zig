@@ -89,10 +89,10 @@ pub const DebugRenderAPI = struct {
         if (initialized)
             return;
 
-        textures = DynArray(TextureData).init(api.ALLOC, null) catch unreachable;
-        renderTextures = DynArray(RenderTextureData).init(api.ALLOC, null) catch unreachable;
-        shaders = DynArray(ShaderData).init(api.ALLOC, null) catch unreachable;
-        renderActionQueue = DynArray(RenderAction).init(api.ALLOC, null) catch unreachable;
+        textures = DynArray(TextureData).new(api.ALLOC, null) catch unreachable;
+        renderTextures = DynArray(RenderTextureData).new(api.ALLOC, null) catch unreachable;
+        shaders = DynArray(ShaderData).new(api.ALLOC, null) catch unreachable;
+        renderActionQueue = DynArray(RenderAction).new(api.ALLOC, null) catch unreachable;
 
         interface.deinit = deinit;
 

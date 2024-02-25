@@ -11,7 +11,7 @@ pub fn EventDispatch(comptime E: type) type {
 
         listeners: ArrayList(Listener) = undefined,
 
-        pub fn init(allocator: Allocator) Self {
+        pub fn new(allocator: Allocator) Self {
             return Self{
                 .listeners = ArrayList(Listener).init(allocator),
             };

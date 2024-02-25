@@ -10,6 +10,7 @@ const DynIndexArray = utils.DynIndexArray;
 const BitSet = utils.BitSet;
 const Kind = utils.Kind;
 const Vector2i = utils.Vector2i;
+const Region = utils.Region;
 
 test "StringBuffer" {
     var sb = StringBuffer.init(std.testing.allocator);
@@ -38,7 +39,7 @@ test "StringBuffer" {
 // }
 
 test "Events and Listeners" {
-    var ED = EventDispatch([]const u8).init(std.testing.allocator);
+    var ED = EventDispatch([]const u8).new(std.testing.allocator);
     defer ED.deinit();
 
     ED.register(testlistener1);
@@ -52,7 +53,7 @@ test "Events and Listeners" {
 }
 
 test "Listener insert" {
-    var ED = EventDispatch([]const u8).init(std.testing.allocator);
+    var ED = EventDispatch([]const u8).new(std.testing.allocator);
     defer ED.deinit();
 
     ED.registerInsert(0, testlistener1);
@@ -217,7 +218,7 @@ test "DynArray initialize" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = try DynArray(i32).init(allocator, -1);
+    var dyn_array = try DynArray(i32).new(allocator, -1);
     defer dyn_array.deinit();
     try testing.expect(dyn_array.size() == 0);
     dyn_array.set(1, 0);
@@ -231,7 +232,7 @@ test "DynArray scale up" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = try DynArray(i32).init(allocator, -1);
+    var dyn_array = try DynArray(i32).new(allocator, -1);
     defer dyn_array.deinit();
 
     dyn_array.set(100, 0);
@@ -246,7 +247,7 @@ test "DynArray scale up" {
 }
 
 test "DynArray consistency checks" {
-    var dyn_array = try DynArray(i32).init(std.testing.allocator, -1);
+    var dyn_array = try DynArray(i32).new(std.testing.allocator, -1);
     defer dyn_array.deinit();
 
     try std.testing.expect(-1 == dyn_array.null_value);
@@ -259,7 +260,7 @@ test "DynArray consistency checks" {
 }
 
 test "DynArray use u16 as index" {
-    var dyn_array = try DynArray(i32).init(std.testing.allocator, -1);
+    var dyn_array = try DynArray(i32).new(std.testing.allocator, -1);
     defer dyn_array.deinit();
 
     const index1: u16 = 0;
@@ -268,7 +269,7 @@ test "DynArray use u16 as index" {
 }
 
 test "test ensure capacity" {
-    var bitset2 = try BitSet.initEmpty(std.testing.allocator, 8);
+    var bitset2 = try BitSet.newEmpty(std.testing.allocator, 8);
     defer bitset2.deinit();
 
     bitset2.set(2);
@@ -422,4 +423,120 @@ test "vec math" {
     var p2 = Vector2i{ 2, 2 };
     var dp1p2 = utils.distance2i(&p1, &p2);
     try std.testing.expect(dp1p2 == 1.4142135381698608);
+}
+
+// BitMask tests
+test "Init BitMask" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    sb.print("{any}", .{mask});
+    const expected =
+        \\BitMask[10|10]
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask setBitsRegionFrom" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    const bits = [_]u8{ 1, 1, 1, 1, 0, 1, 1, 1, 1 };
+    mask.setRegionFrom(Region.of(0, 0, 3, 3), bits[0..bits.len]);
+
+    sb.print("{any}", .{mask});
+    var expected =
+        \\BitMask[10|10]
+        \\  1,1,1,0,0,0,0,0,0,0,
+        \\  1,0,1,0,0,0,0,0,0,0,
+        \\  1,1,1,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+    try std.testing.expectEqualStrings(expected, sb.toString());
+
+    mask.clearMask();
+    sb.clear();
+    mask.setRegionFrom(Region.of(3, 3, 3, 3), bits[0..bits.len]);
+
+    sb.print("{any}", .{mask});
+    expected =
+        \\BitMask[10|10]
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,1,1,1,0,0,0,0,
+        \\  0,0,0,1,0,1,0,0,0,0,
+        \\  0,0,0,1,1,1,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+    try std.testing.expectEqualStrings(expected, sb.toString());
+
+    mask.clearMask();
+    sb.clear();
+    mask.setRegionFrom(Region.of(-1, -1, 3, 3), bits[0..bits.len]);
+
+    sb.print("{any}", .{mask});
+    expected =
+        \\BitMask[10|10]
+        \\  0,1,0,0,0,0,0,0,0,0,
+        \\  1,1,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+    try std.testing.expectEqualStrings(expected, sb.toString());
+
+    mask.clearMask();
+    sb.clear();
+    mask.setRegionFrom(Region.of(8, 8, 3, 3), bits[0..bits.len]);
+
+    sb.print("{any}", .{mask});
+    expected =
+        \\BitMask[10|10]
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,1,1,
+        \\  0,0,0,0,0,0,0,0,1,0,
+        \\
+    ;
+    try std.testing.expectEqualStrings(expected, sb.toString());
 }

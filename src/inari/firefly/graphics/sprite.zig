@@ -68,8 +68,8 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    sprites = try DynArray(SpriteData).init(api.COMPONENT_ALLOC, SpriteAsset.NULL_VALUE);
-    sprite_sets = try DynArray(SpriteSet).init(api.COMPONENT_ALLOC, SpriteSetAsset.NULL_VALUE);
+    sprites = try DynArray(SpriteData).new(api.COMPONENT_ALLOC, SpriteAsset.NULL_VALUE);
+    sprite_sets = try DynArray(SpriteSet).new(api.COMPONENT_ALLOC, SpriteSetAsset.NULL_VALUE);
     // init Asset
     SpriteAsset.init();
     SpriteSetAsset.init();

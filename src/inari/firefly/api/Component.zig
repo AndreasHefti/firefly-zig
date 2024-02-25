@@ -26,7 +26,7 @@ pub fn init() !void {
     if (INIT)
         return;
 
-    API.COMPONENT_INTERFACE_TABLE = try DynArray(API.ComponentTypeInterface).init(api.COMPONENT_ALLOC, null);
+    API.COMPONENT_INTERFACE_TABLE = try DynArray(API.ComponentTypeInterface).new(api.COMPONENT_ALLOC, null);
     API.COMPONENT_ASPECT_GROUP = try AspectGroup.new("COMPONENT_ASPECT_GROUP");
 }
 
@@ -294,13 +294,13 @@ pub fn ComponentPool(comptime T: type) type {
                 initialized = true;
             }
 
-            items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
-            active_mapping = BitSet.initEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
+            items = DynArray(T).new(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
+            active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
             c_aspect = API.COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
 
             if (has_subscribe) {
                 event = ComponentEvent{};
-                eventDispatch = EventDispatch(ComponentEvent).init(api.COMPONENT_ALLOC);
+                eventDispatch = EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
                 T.subscribe = Self.subscribe;
                 T.unsubscribe = Self.unsubscribe;
             }

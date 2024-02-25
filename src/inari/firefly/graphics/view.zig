@@ -67,8 +67,8 @@ pub const ViewLayerMapping = struct {
 
     pub fn new() ViewLayerMapping {
         return ViewLayerMapping{
-            .undef_mapping = BitSet.init(api.ALLOC) catch unreachable,
-            .mapping = DynArray(DynArray(BitSet)).init(api.ALLOC, null) catch unreachable,
+            .undef_mapping = BitSet.new(api.ALLOC) catch unreachable,
+            .mapping = DynArray(DynArray(BitSet)).new(api.ALLOC, null) catch unreachable,
         };
     }
 
@@ -126,7 +126,7 @@ pub const ViewLayerMapping = struct {
         var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, view_id);
         var l_id = if (layer_id == UNDEF_INDEX) 0 else layer_id;
         if (!layer_mapping.exists(l_id)) {
-            layer_mapping.set(BitSet.init(api.ALLOC) catch unreachable, l_id);
+            layer_mapping.set(BitSet.new(api.ALLOC) catch unreachable, l_id);
         }
         return layer_mapping.get(l_id);
     }
@@ -134,7 +134,7 @@ pub const ViewLayerMapping = struct {
     fn getLayerMapping(self: *ViewLayerMapping, view_id: Index) *DynArray(BitSet) {
         if (!self.mapping.exists(view_id)) {
             self.mapping.set(
-                DynArray(BitSet).init(api.ALLOC, null) catch unreachable,
+                DynArray(BitSet).new(api.ALLOC, null) catch unreachable,
                 view_id,
             );
         }
@@ -167,7 +167,7 @@ pub const View = struct {
     pub var ordered_active_views: DynArray(Index) = undefined;
 
     pub fn init() !void {
-        ordered_active_views = try DynArray(Index).initWithRegisterSize(
+        ordered_active_views = try DynArray(Index).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             10,
             UNDEF_INDEX,
@@ -258,7 +258,7 @@ pub const View = struct {
     fn addLayerMapping(layer: *const Layer) void {
         var view: *View = View.get(layer.view_id);
         if (view.ordered_active_layer == null) {
-            view.ordered_active_layer = DynArray(Index).initWithRegisterSize(
+            view.ordered_active_layer = DynArray(Index).newWithRegisterSize(
                 api.COMPONENT_ALLOC,
                 10,
                 UNDEF_INDEX,
@@ -399,7 +399,7 @@ pub const ViewRenderer = struct {
     var re_subscription: RenderEventSubscription(ViewRenderer) = undefined;
 
     fn init() void {
-        VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).init(api.ALLOC);
+        VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(api.ALLOC);
         _ = System.new(System{
             .name = "ViewRenderer",
             .info = "Emits ViewRenderEvent in order of active Views and its Layers",

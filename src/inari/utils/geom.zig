@@ -3,9 +3,11 @@ const utils = @import("utils.zig");
 const CInt = utils.CInt;
 const Float = utils.Float;
 const Byte = utils.Byte;
+const BitSet = utils.BitSet;
 
 pub const HALF_PI: Float = std.math.pi / 2.0;
 pub const TAU: Float = 2 * std.math.pi;
+
 /// Two dimensional vector of i32 values
 pub const Vector2i = @Vector(2, CInt);
 /// Three dimensional vector of i32 values
@@ -28,6 +30,37 @@ pub const RectF = Vector4f;
 pub const PosI = Vector2i;
 pub const PosF = Vector2f;
 
+pub const Region = struct {
+    x: i32,
+    y: i32,
+    w: usize,
+    h: usize,
+
+    pub fn of(x: i32, y: i32, w: usize, h: usize) Region {
+        return Region{ .x = x, .y = y, .w = w, .h = h };
+    }
+
+    pub fn intersects(self: Region, other: Region) bool {
+        var r1Right = self.x + self.w;
+        var r1Bottom = self.y + self.h;
+        var r2Right = other.x + other.w;
+        var r2Bottom = other.y + other.h;
+
+        return !(other.x >= r1Right or
+            r2Right <= self.x or
+            other.y >= r1Bottom or
+            r2Bottom <= self.y);
+    }
+
+    pub fn intersection(self: Region, other: Region) Region {
+        var x1 = @max(self.x, other.x);
+        var y1 = @max(self.y, other.y);
+        var x2 = @min(self.x + self.width - 1, other.x + other.w - 1);
+        var y2 = @min(self.y + self.height - 1, other.y + other.h - 1);
+        return Region.of(x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1));
+    }
+};
+
 /// Color as Vector4u8
 pub const Color = @Vector(4, Byte);
 
@@ -49,6 +82,19 @@ pub const Direction = struct {
     pub const WEST = Direction{ Orientation.WEST, Orientation.NONE };
     pub const NORTH_WEST = Direction{ Orientation.WEST, Orientation.NORTH };
 };
+
+fn angleX(v: Vector2f) Float {
+    std.math.atan2(Float, v.y, v.x);
+}
+fn angleY(v: Vector2f) Float {
+    std.math.atan2(Float, v.x, v.y);
+}
+fn radToDeg(r: Float, invert: bool) Float {
+    return if (invert)
+        -r * (180.0 / std.math.pi)
+    else
+        r * (180.0 / std.math.pi);
+}
 
 // vec math...
 pub fn magnitude2i(v: *Vector2i) f32 {
@@ -572,3 +618,226 @@ const PolyInOutEasing = struct {
 //////////////////////////////////////////////////////////////
 //// Bezier Curve
 //////////////////////////////////////////////////////////////
+
+pub const CubicBezierFunction = struct {
+    p0: Vector2f,
+    p1: Vector2f,
+    p2: Vector2f,
+    p3: Vector2f,
+
+    pub fn fp(self: *CubicBezierFunction, t: Float, invert: bool) Vector2f {
+        return if (invert)
+            vt(self.p3, self.p2, self.p1, self.p0, t)
+        else
+            vt(self.p0, self.p1, self.p2, self.p3, t);
+    }
+
+    pub fn fax(self: *CubicBezierFunction, t: Float, invert: bool) Vector2f {
+        return if (invert)
+            ax(self.p3, self.p2, self.p1, self.p0, t)
+        else
+            ax(self.p0, self.p1, self.p2, self.p3, t);
+    }
+
+    //  u = 1f - t
+    //
+    //  s0 = u * u * u
+    //  s1 = 3.0 * u * u * t
+    //  s2 = 3.0 * u * t * t
+    //  s3 = t * t * t
+    //
+    //  v(t) = s0 * v0 + s1 * v1 + s2 * v2 + s3 * v3
+    fn vt(v0: Vector2f, v1: Vector2f, v2: Vector2f, v3: Vector2f, t: Float) Vector2f {
+        var u: Float = 1.0 - t;
+        var s0: Vector2f = @splat(u * u * u);
+        var s1: Vector2f = @splat(3.0 * u * u * t);
+        var s2: Vector2f = @splat(3.0 * u * t * t);
+        var s3: Vector2f = @splat(t * t * t);
+
+        return v0 * s0 + v1 * s1 + v2 * s2 + v3 * s3;
+    }
+
+    // v′(t)=u^2 (v1−v0) + 2tu (v2−v1) + t^2 (v3−v2)
+    // ax(rad) = atan2(v'.y(t), v'.x(t))
+    //
+    fn ax(v0: Vector2f, v1: Vector2f, v2: Vector2f, v3: Vector2f, t: Float) Float {
+        var u: Float = 1.0 - t;
+        var s0: Vector2f = @splat(std.math.pow(Float, u, 2));
+        var s1: Vector2f = @splat(2.0 * t * u);
+        var s2: Vector2f = @splat(std.math.pow(Float, t, 2.0));
+
+        return angleX(s0 * (v1 - v0) + s1 * (v2 - v1) + s2 * (v3 - v2));
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Bit Mask
+//////////////////////////////////////////////////////////////
+
+pub const BitMask = struct {
+
+    // BitMask properties
+    width: usize,
+    height: usize,
+    bits: BitSet,
+
+    // internal references
+    _length: usize,
+    _temp_bits: BitSet,
+    _allocator: std.mem.Allocator,
+
+    pub fn new(allocator: std.mem.Allocator, width: usize, height: usize) BitMask {
+        const l = width * height;
+        return BitMask{
+            .width = width,
+            .height = height,
+            .bits = BitSet.newEmpty(allocator, l) catch unreachable,
+            ._length = l,
+            ._temp_bits = BitSet.newEmpty(allocator, l) catch unreachable,
+            ._allocator = allocator,
+        };
+    }
+
+    pub fn deinit(self: *BitMask) void {
+        self.bits.deinit();
+        self._temp_bits.deinit();
+        self.width = 0;
+        self.height = 0;
+        self.bits = undefined;
+        self._allocator = undefined;
+    }
+
+    pub fn isSet(self: BitMask, x: usize, y: usize) bool {
+        if (x < 0 or x >= self.width or y < 0 or y >= self.height)
+            return false;
+
+        return self.bits.isSet(y * self.width + x);
+    }
+
+    pub fn setBit(self: *BitMask, index: usize) void {
+        self.bits.set(index);
+    }
+
+    pub fn setBitAt(self: *BitMask, x: usize, y: usize) void {
+        self.setBitValueAt(x, y, true);
+    }
+
+    pub fn setBitValueAt(self: *BitMask, x: usize, y: usize, bit: bool) void {
+        if (x < 0 or x >= self.width or y < 0 or y >= self.height)
+            return;
+
+        self.bits.setValue(y * self.width + x, bit);
+    }
+
+    pub fn setBits(self: *BitMask, bits: []u8) void {
+        for (0..bits.len) |i| {
+            if (bits[i] == 1)
+                self.bits.set(i)
+            else
+                self.bits.setValue(i, false);
+        }
+    }
+
+    pub fn setRegion(self: *BitMask, region: Region, bit: bool) void {
+        for (0..region.h) |y| {
+            for (0..region.w) |x| {
+                const rel_x: i32 = region.x + @as(i32, @intCast(x));
+                const rel_y: i32 = region.y + @as(i32, @intCast(y));
+                if (rel_x >= 0 and rel_y >= 0) {
+                    self.setBitValueAt(
+                        @as(usize, @intCast(rel_x)),
+                        @as(usize, @intCast(rel_y)),
+                        bit,
+                    );
+                }
+            }
+        }
+    }
+
+    pub fn setRegionFrom(self: *BitMask, region: Region, bits: []const u8) void {
+        for (0..region.h) |y| {
+            for (0..region.w) |x| {
+                const rel_x: i32 = region.x + @as(i32, @intCast(x));
+                const rel_y: i32 = region.y + @as(i32, @intCast(y));
+                if (rel_x >= 0 and rel_y >= 0) {
+                    self.setBitValueAt(
+                        @as(usize, @intCast(rel_x)),
+                        @as(usize, @intCast(rel_y)),
+                        bits[y * region.w + x] != 0,
+                    );
+                }
+            }
+        }
+    }
+
+    // pub fn createRegionMask(self: *BitMask, region: Region) BitMask {
+    //     for (0..region.h) |y| {
+    //         for (0..region.w) |x| {
+    //             const rel_x: i32 = region.x + @as(i32, @intCast(x));
+    //             const rel_y: i32 = region.y + @as(i32, @intCast(y));
+    //             if (rel_x >= 0 and rel_y >= 0) {
+    //                 self.setBitValueAt(
+    //                     @as(usize, @intCast(rel_x)),
+    //                     @as(usize, @intCast(rel_y)),
+    //                     bits[y * region.w + x] != 0,
+    //                 );
+    //             }
+    //         }
+    //     }
+    // }
+
+    pub fn createIntersectionMask(self: BitMask, other: BitMask, x_offset: i32, y_offset: i32) BitMask {
+        var intersection_region = Region.of(
+            0,
+            0,
+            self.width,
+            self.height,
+        ).intersection(Region.of(
+            x_offset,
+            y_offset,
+            other.width,
+            other.height,
+        ));
+        var result = BitMask.new(self._allocator, intersection_region.w, intersection_region.h);
+
+        for (0..intersection_region.h) |y| {
+            for (0..intersection_region.w) |x| {
+                const rel_x: i32 = x_offset + @as(i32, @intCast(x));
+                const rel_y: i32 = y_offset + @as(i32, @intCast(y));
+                result.setBitValueAt(x, y, self.isSet(x, y) and other.isSet(rel_x, rel_y));
+            }
+        }
+    }
+
+    pub fn fill(self: *BitMask) void {
+        clearMask();
+        for (0..self._length) |i| {
+            self.bits.set(i);
+        }
+    }
+
+    pub fn clearMask(self: *BitMask) void {
+        self.bits.clear();
+        self._temp_bits.clear();
+    }
+
+    pub fn format(
+        self: BitMask,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("BitMask[{d}|{d}]\n", .{ self.width, self.height });
+        for (0..self.height) |y| {
+            try writer.writeAll("  ");
+            for (0..self.width) |x| {
+                if (self.isSet(x, y)) {
+                    try writer.writeAll("1,");
+                } else {
+                    try writer.writeAll("0,");
+                }
+            }
+            try writer.writeAll("\n");
+        }
+    }
+};

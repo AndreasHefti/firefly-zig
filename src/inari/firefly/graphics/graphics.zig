@@ -110,7 +110,7 @@ pub const ShaderAsset = struct {
 
     fn init() !void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Shader");
-        shader = try DynArray(ShaderData).init(firefly.api.COMPONENT_ALLOC, NULL_VALUE);
+        shader = try DynArray(ShaderData).new(firefly.api.COMPONENT_ALLOC, NULL_VALUE);
         Asset.subscribe(listener);
     }
 
@@ -208,7 +208,7 @@ pub const TextureAsset = struct {
 
     fn init() !void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
-        textures = try DynArray(TextureData).init(firefly.api.COMPONENT_ALLOC, NULL_VALUE);
+        textures = try DynArray(TextureData).new(firefly.api.COMPONENT_ALLOC, NULL_VALUE);
         Asset.subscribe(listener);
     }
 

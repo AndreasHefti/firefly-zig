@@ -114,19 +114,19 @@ pub fn DynArray(comptime T: type) type {
         register: Register(T) = undefined,
         slots: BitSet = undefined,
 
-        pub fn init(allocator: Allocator, comptime null_value: ?T) !Self {
+        pub fn new(allocator: Allocator, comptime null_value: ?T) !Self {
             return Self{
                 .null_value = null_value,
-                .register = Register(T).init(allocator),
-                .slots = try BitSet.initEmpty(allocator, 128),
+                .register = Register(T).new(allocator),
+                .slots = try BitSet.newEmpty(allocator, 128),
             };
         }
 
-        pub fn initWithRegisterSize(allocator: Allocator, register_size: usize, comptime null_value: ?T) !Self {
+        pub fn newWithRegisterSize(allocator: Allocator, register_size: usize, comptime null_value: ?T) !Self {
             return Self{
                 .null_value = null_value,
-                .register = Register(T).initWithRegisterSize(allocator, register_size),
-                .slots = try BitSet.initEmpty(allocator, 128),
+                .register = Register(T).newWithRegisterSize(allocator, register_size),
+                .slots = try BitSet.newEmpty(allocator, 128),
             };
         }
 
@@ -238,13 +238,13 @@ pub fn Register(comptime T: type) type {
 
         /// Initialization with allocator and an 'empty' that is used to fill and delete slots.
         /// Deinitialize with `deinit`
-        pub fn init(allocator: Allocator) Self {
+        pub fn new(allocator: Allocator) Self {
             return Self{
                 ._allocator = allocator,
             };
         }
 
-        pub fn initWithRegisterSize(allocator: Allocator, register_size: usize) Self {
+        pub fn newWithRegisterSize(allocator: Allocator, register_size: usize) Self {
             return Self{
                 ._allocator = allocator,
                 .array_size = register_size,
@@ -252,7 +252,7 @@ pub fn Register(comptime T: type) type {
         }
 
         /// Deinitialize with `deinit` or use `toOwnedSlice`.
-        pub fn initArraySize(allocator: Allocator, array_size: usize) Self {
+        pub fn newArraySize(allocator: Allocator, array_size: usize) Self {
             return Self{
                 .array_size = array_size,
                 ._allocator = allocator,

@@ -21,12 +21,12 @@ pub const BitSet = struct {
     /// The number of valid items in this bit set
     unmanaged: DynamicBitSetUnmanaged = .{},
 
-    pub fn init(allocator: Allocator) !Self {
-        return try initEmpty(allocator, 64);
+    pub fn new(allocator: Allocator) !Self {
+        return try newEmpty(allocator, 64);
     }
 
     /// Creates a bit set with no elements present.
-    pub fn initEmpty(allocator: Allocator, bit_length: usize) !Self {
+    pub fn newEmpty(allocator: Allocator, bit_length: usize) !Self {
         return Self{
             .unmanaged = try DynamicBitSetUnmanaged.initEmpty(allocator, bit_length),
             .allocator = allocator,
@@ -34,7 +34,7 @@ pub const BitSet = struct {
     }
 
     /// Creates a bit set with all elements present.
-    pub fn initFull(allocator: Allocator, bit_length: usize) !Self {
+    pub fn newFull(allocator: Allocator, bit_length: usize) !Self {
         return Self{
             .unmanaged = try DynamicBitSetUnmanaged.initFull(allocator, bit_length),
             .allocator = allocator,
@@ -47,7 +47,7 @@ pub const BitSet = struct {
         try self.unmanaged.resize(self.allocator, new_len, fill);
     }
 
-    /// deinitializes the array and releases its memory.
+    /// deinitialize the array and releases its memory.
     /// The passed allocator must be the same one used for
     /// init* or resize in the past.
     pub fn deinit(self: *Self) void {
@@ -65,6 +65,14 @@ pub const BitSet = struct {
     /// Returns the number of bits in this bit set
     pub inline fn capacity(self: Self) usize {
         return self.unmanaged.capacity();
+    }
+
+    pub fn clear(self: *Self) void {
+        var next = self.nextSetBit(0);
+        while (next) |i| {
+            self.setValue(i, false);
+            next = self.nextSetBit(i + 1);
+        }
     }
 
     pub inline fn lengthOfMaskArray(self: Self) usize {

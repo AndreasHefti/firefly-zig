@@ -101,7 +101,7 @@ pub const EntityComponent = struct {
         if (initialized)
             return;
 
-        INTERFACE_TABLE = try DynArray(ComponentTypeInterface).init(api.ENTITY_ALLOC, null);
+        INTERFACE_TABLE = try DynArray(ComponentTypeInterface).new(api.ENTITY_ALLOC, null);
         ENTITY_KIND_ASP_GROUP = try AspectGroup.new("ENTITY_KIND_ASP_GROUP");
     }
 
@@ -236,7 +236,7 @@ pub fn EntityComponentPool(comptime T: type) type {
                 Self.initialized = true;
             }
 
-            items = DynArray(T).init(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
+            items = DynArray(T).new(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
             c_aspect = EntityComponent.ENTITY_KIND_ASP_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
 
             if (has_aspect) T.type_aspect = c_aspect;
