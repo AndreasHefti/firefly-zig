@@ -9,6 +9,7 @@ const DynArray = utils.DynArray;
 const DynIndexArray = utils.DynIndexArray;
 const BitSet = utils.BitSet;
 const Kind = utils.Kind;
+const Vector2i = utils.Vector2i;
 
 test "StringBuffer" {
     var sb = StringBuffer.init(std.testing.allocator);
@@ -22,19 +23,19 @@ test "StringBuffer" {
     try std.testing.expectEqualStrings("Test12Test34Test56", str);
 }
 
-test "repl test" {
-    var v = getReadwrite();
-    v[0] = 0;
-}
+// test "repl test" {
+//     var v = getReadwrite();
+//     v[0] = 0;
+// }
 
-var v1: utils.Vector2f = Vector2f{ 0, 0 };
-pub fn getReadonly() *const Vector2f {
-    return &v1;
-}
+// var v1: utils.Vector2f = Vector2f{ 0, 0 };
+// pub fn getReadonly() *const Vector2f {
+//     return &v1;
+// }
 
-pub fn getReadwrite() *Vector2f {
-    return &v1;
-}
+// pub fn getReadwrite() *Vector2f {
+//     return &v1;
+// }
 
 test "Events and Listeners" {
     var ED = EventDispatch([]const u8).init(std.testing.allocator);
@@ -327,4 +328,98 @@ test "kind" {
     try std.testing.expect(!kind1.isExactKindOf(&kind2));
     try std.testing.expect(!kind3.isExactKindOf(&kind2));
     try std.testing.expect(!kind3.isExactKindOf(&kind1));
+}
+
+// test easing
+test "easing interface" {
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    const t = 0.5;
+    const fac = 5;
+
+    sb.print("Linear:       5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Linear.f(t)});
+    sb.print("Quad In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quad_In.f(t)});
+    sb.print("Quad Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quad_Out.f(t)});
+    sb.print("Quad InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quad_In_Out.f(t)});
+    sb.print("Cubic In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Cubic_In.f(t)});
+    sb.print("Cubic Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Cubic_Out.f(t)});
+    sb.print("Cubic InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Cubic_In_Out.f(t)});
+
+    sb.print("Quart In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quart_In.f(t)});
+    sb.print("Quart Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quart_Out.f(t)});
+    sb.print("Quart InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quart_In_Out.f(t)});
+
+    sb.print("Quint In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quint_In.f(t)});
+    sb.print("Quint Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quint_Out.f(t)});
+    sb.print("Quint InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quint_In_Out.f(t)});
+
+    sb.print("Expo In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Exponential_In.f(t)});
+    sb.print("Expo Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Exponential_Out.f(t)});
+    sb.print("Expo InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Exponential_In_Out.f(t)});
+
+    sb.print("Sin In:       5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Sin_In.f(t)});
+    sb.print("Sin Out:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Sin_Out.f(t)});
+    sb.print("Sin InOut:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Sin_In_Out.f(t)});
+
+    sb.print("Circ In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Circ_In.f(t)});
+    sb.print("Circ Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Circ_Out.f(t)});
+    sb.print("Circ InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Circ_In_Out.f(t)});
+
+    sb.print("Back In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Back_In.f(t)});
+    sb.print("Back Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Back_Out.f(t)});
+
+    sb.print("Bounce In:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Bounce_In.f(t)});
+    sb.print("Bounce Out:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Bounce_Out.f(t)});
+
+    const expected =
+        \\Linear:       5 * f(0.5) --> 2.5
+        \\Quad In:      5 * f(0.5) --> 1.25
+        \\Quad Out:     5 * f(0.5) --> 3.75
+        \\Quad InOut:   5 * f(0.5) --> 2.5
+        \\Cubic In:     5 * f(0.5) --> 0.625
+        \\Cubic Out:    5 * f(0.5) --> 4.375
+        \\Cubic InOut:  5 * f(0.5) --> 2.5
+        \\Quart In:     5 * f(0.5) --> 0.3125
+        \\Quart Out:    5 * f(0.5) --> 4.6875
+        \\Quart InOut:  5 * f(0.5) --> 2.5
+        \\Quint In:     5 * f(0.5) --> 0.15625
+        \\Quint Out:    5 * f(0.5) --> 4.84375
+        \\Quint InOut:  5 * f(0.5) --> 2.5
+        \\Expo In:      5 * f(0.5) --> 0.15625
+        \\Expo Out:     5 * f(0.5) --> 4.84375
+        \\Expo InOut:   5 * f(0.5) --> 2.5
+        \\Sin In:       5 * f(0.5) --> 1.4644660949707031
+        \\Sin Out:      5 * f(0.5) --> 3.535533905029297
+        \\Sin InOut:    5 * f(0.5) --> 2.5
+        \\Circ In:      5 * f(0.5) --> 0.669873058795929
+        \\Circ Out:     5 * f(0.5) --> 4.330126762390137
+        \\Circ InOut:   5 * f(0.5) --> 2.5
+        \\Back In:      5 * f(0.5) --> -0.43848752975463867
+        \\Back Out:     5 * f(0.5) --> 5.438487529754639
+        \\Bounce In:    5 * f(0.5) --> 1.171875
+        \\Bounce Out:   5 * f(0.5) --> 3.828125
+        \\
+    ;
+
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+// testing vec
+test "vec math" {
+    var v1 = Vector2i{ 2, 3 };
+    utils.normalize2i(&v1);
+    try std.testing.expect(v1[0] == 0);
+    try std.testing.expect(v1[1] == 1);
+
+    var v2 = Vector2f{ 2, 3 };
+    utils.normalize2f(&v2);
+    try std.testing.expect(v2[0] == 0.554700195);
+    try std.testing.expect(v2[1] == 0.832050323);
+
+    // distance
+    var p1 = Vector2i{ 1, 1 };
+    var p2 = Vector2i{ 2, 2 };
+    var dp1p2 = utils.distance2i(&p1, &p2);
+    try std.testing.expect(dp1p2 == 1.4142135381698608);
 }

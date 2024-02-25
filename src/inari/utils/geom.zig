@@ -4,7 +4,7 @@ const CInt = utils.CInt;
 const Float = utils.Float;
 const Byte = utils.Byte;
 
-pub const HALF_PI: Float = std.math.pi / 2;
+pub const HALF_PI: Float = std.math.pi / 2.0;
 pub const TAU: Float = 2 * std.math.pi;
 /// Two dimensional vector of i32 values
 pub const Vector2i = @Vector(2, CInt);
@@ -162,8 +162,8 @@ pub fn distance2f(p1: *Vector2f, p2: *Vector2f) f32 {
 //////////////////////////////////////////////////////////////
 
 pub const Easing = struct {
-    ptr: *anyopaque,
-    f: *const fn (ptr: *anyopaque, Float) Float,
+    _ptr: *anyopaque,
+    _f: *const fn (ptr: *anyopaque, Float) Float,
 
     fn init(ptr: anytype) Easing {
         const T = @TypeOf(ptr);
@@ -177,19 +177,21 @@ pub const Easing = struct {
         };
 
         return .{
-            .ptr = ptr,
-            .f = gen.f,
+            ._ptr = ptr,
+            ._f = gen.f,
         };
     }
 
-    fn get(self: Easing, t: Float) Float {
-        return self.f(self.ptr, t);
+    pub fn f(self: Easing, t: Float) Float {
+        return self._f(self._ptr, t);
     }
 };
 
 pub const Easing_Linear: Easing = LinearEasing.default.easing();
 const LinearEasing = struct {
-    var default = LinearEasing{};
+    var default = LinearEasing{ .exp = 1 };
+
+    exp: Float = 2,
 
     fn f(_: *LinearEasing, t: Float) Float {
         return t;
@@ -226,14 +228,14 @@ const ExponentialOutEasing = struct {
     }
 };
 
-pub const Easing_Exponential_InOut: Easing = ExponentialInOutEasing.default.easing();
+pub const Easing_Exponential_In_Out: Easing = ExponentialInOutEasing.default.easing();
 const ExponentialInOutEasing = struct {
     var default = ExponentialInOutEasing{};
 
     fn f(_: *ExponentialInOutEasing, t: Float) Float {
         var tt = t * 2;
         return if (tt <= 1)
-            std.math.pow(2, 10 * tt - 10) / 2
+            std.math.pow(Float, 2, 10 * tt - 10) / 2
         else
             2 - std.math.pow(Float, 2, 10.0 - 10.0 * tt) / 2;
     }
@@ -315,12 +317,12 @@ const CircInOutEasing = struct {
 
     fn f(_: *CircInOutEasing, t: Float) Float {
         var tt = t * 2;
-        return if (tt <= 1) {
-            (1 - std.math.sqrt(1 - tt * tt)) / 2;
+        if (tt <= 1) {
+            return (1 - std.math.sqrt(1 - tt * tt)) / 2.0;
         } else {
             var ttt = tt - 2;
-            (std.math.sqrt(1 - ttt * ttt) + 1) / 2;
-        };
+            return (std.math.sqrt(1 - ttt * ttt) + 1) / 2.0;
+        }
     }
 
     fn easing(self: *CircInOutEasing) Easing {
@@ -418,34 +420,33 @@ pub const Easing_Bounce_In: Easing = BounceInEasing.default.easing();
 const BounceInEasing = struct {
     var default = BounceInEasing{};
 
-    b1: Float = 4 / 11,
-    b2: Float = 6 / 11,
-    b3: Float = 8 / 11,
-    b4: Float = 3 / 4,
-    b5: Float = 9 / 11,
-    b6: Float = 10 / 11,
-    b7: Float = 15 / 16,
-    b8: Float = 21 / 22,
-    b9: Float = 63 / 64,
+    b1: Float = 4.0 / 11.0,
+    b2: Float = 6.0 / 11.0,
+    b3: Float = 8.0 / 11.0,
+    b4: Float = 3.0 / 4.0,
+    b5: Float = 9.0 / 11.0,
+    b6: Float = 10.0 / 11.0,
+    b7: Float = 15.0 / 16.0,
+    b8: Float = 21.0 / 22.0,
+    b9: Float = 63.0 / 64.0,
 
     fn f(self: *BounceInEasing, t: Float) Float {
-        var _t = 1 - t;
+        var _t: Float = 1.0 - t;
         var b0: Float = 1 / self.b1 / self.b1;
-        return 1 - switch (_t) {
-            _t < self.b1 => return self.b0 * _t * _t,
-            _t < self.b3 => {
-                var tt = _t - self.b2;
-                b0 * tt * tt + self.b4;
-            },
-            _t < self.b6 => {
-                var tt = _t - self.b5;
-                b0 * tt * tt + self.b7;
-            },
-            else => {
-                var tt = _t - self.b8;
-                b0 * tt * tt + self.b9;
-            },
-        };
+
+        if (_t < self.b1)
+            return 1.0 - (b0 * _t * _t);
+        if (_t < self.b3) {
+            var tt = _t - self.b2;
+            return 1.0 - (b0 * tt * tt + self.b4);
+        }
+        if (_t < self.b6) {
+            var tt = _t - self.b5;
+            return 1.0 - (b0 * tt * tt + self.b7);
+        }
+
+        var tt = _t - self.b8;
+        return 1.0 - (b0 * tt * tt + self.b9);
     }
 
     fn easing(self: *BounceInEasing) Easing {
@@ -460,33 +461,31 @@ pub const Easing_Bounce_Out: Easing = BounceOutEasing.default.easing();
 const BounceOutEasing = struct {
     var default = BounceOutEasing{};
 
-    b1: Float = 4 / 11,
-    b2: Float = 6 / 11,
-    b3: Float = 8 / 11,
-    b4: Float = 3 / 4,
-    b5: Float = 9 / 11,
-    b6: Float = 10 / 11,
-    b7: Float = 15 / 16,
-    b8: Float = 21 / 22,
-    b9: Float = 63 / 64,
+    b1: Float = 4.0 / 11.0,
+    b2: Float = 6.0 / 11.0,
+    b3: Float = 8.0 / 11.0,
+    b4: Float = 3.0 / 4.0,
+    b5: Float = 9.0 / 11.0,
+    b6: Float = 10.0 / 11.0,
+    b7: Float = 15.0 / 16.0,
+    b8: Float = 21.0 / 22.0,
+    b9: Float = 63.0 / 64.0,
 
     fn f(self: *BounceOutEasing, t: Float) Float {
-        var b0: Float = 1 / self.b1 / self.b1;
-        return switch (t) {
-            t < self.b1 => return self.b0 * t * t,
-            t < self.b3 => {
-                var tt = t - self.b2;
-                b0 * tt * tt + self.b4;
-            },
-            t < self.b6 => {
-                var tt = t - self.b5;
-                b0 * tt * tt + self.b7;
-            },
-            else => {
-                var tt = t - self.b8;
-                b0 * tt * tt + self.b9;
-            },
-        };
+        var b0: Float = 1.0 / self.b1 / self.b1;
+        if (t < self.b1)
+            return b0 * t * t;
+        if (t < self.b3) {
+            var tt = t - self.b2;
+            return b0 * tt * tt + self.b4;
+        }
+        if (t < self.b6) {
+            var tt = t - self.b5;
+            return b0 * tt * tt + self.b7;
+        }
+
+        var tt = t - self.b8;
+        return b0 * tt * tt + self.b9;
     }
 
     fn easing(self: *BounceOutEasing) Easing {
@@ -502,18 +501,18 @@ pub const Easing_Cubic_In: Easing = PolyInEasing.cubic.easing();
 pub const Easing_Quart_In: Easing = PolyInEasing.quart.easing();
 pub const Easing_Quint_In: Easing = PolyInEasing.quint.easing();
 const PolyInEasing = struct {
-    var quad = PolyInEasing{ .exp = 2 };
+    var quad = PolyInEasing{};
     var cubic = PolyInEasing{ .exp = 3 };
     var quart = PolyInEasing{ .exp = 4 };
     var quint = PolyInEasing{ .exp = 5 };
 
-    exp: Float,
+    exp: Float = 2,
 
     fn f(self: *PolyInEasing, t: Float) Float {
         return std.math.pow(Float, t, self.exp);
     }
 
-    fn easing(self: PolyInEasing) Easing {
+    fn easing(self: *PolyInEasing) Easing {
         return Easing.init(self);
     }
 };
@@ -537,7 +536,7 @@ const PolyOutEasing = struct {
         return 1 - (std.math.pow(Float, 1 - t, self.exp));
     }
 
-    fn easing(self: PolyOutEasing) Easing {
+    fn easing(self: *PolyOutEasing) Easing {
         return Easing.init(self);
     }
 };
@@ -560,36 +559,16 @@ const PolyInOutEasing = struct {
     fn f(self: *PolyInOutEasing, t: Float) Float {
         var tt = t * 2;
         return if (tt <= 1)
-            std.math.pow(tt, self.exp) / 2
+            std.math.pow(Float, tt, self.exp) / 2
         else
-            2 - std.math.pow(2.0 - tt, self.exp) / 2;
+            2 - std.math.pow(Float, 2.0 - tt, self.exp) / 2;
     }
 
-    fn easing(self: PolyInOutEasing) Easing {
+    fn easing(self: *PolyInOutEasing) Easing {
         return Easing.init(self);
     }
 };
 
-// test easing
-test "easing interface" {
-    try std.testing.expect(2.1230000 == Easing_Linear.get(2.123));
-}
-
-// testing vec
-test "vec math" {
-    var v1 = Vector2i{ 2, 3 };
-    normalize2i(&v1);
-    try std.testing.expect(v1[0] == 0);
-    try std.testing.expect(v1[1] == 1);
-
-    var v2 = Vector2f{ 2, 3 };
-    normalize2f(&v2);
-    try std.testing.expect(v2[0] == 0.554700195);
-    try std.testing.expect(v2[1] == 0.832050323);
-
-    // distance
-    var p1 = Vector2i{ 1, 1 };
-    var p2 = Vector2i{ 2, 2 };
-    var dp1p2 = distance2i(&p1, &p2);
-    try std.testing.expect(dp1p2 == 1.4142135381698608);
-}
+//////////////////////////////////////////////////////////////
+//// Bezier Curve
+//////////////////////////////////////////////////////////////

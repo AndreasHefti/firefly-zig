@@ -1,5 +1,5 @@
 const std = @import("std");
-const utils = @import("utils");
+pub const inari = @import("inari/inari.zig");
 
 pub fn main() !void {
     const start_time = std.time.milliTimestamp();
@@ -11,9 +11,10 @@ pub fn main() !void {
         _ = gpa.deinit();
     }
 
+    try inari.firefly.init(allocator, allocator, allocator, inari.firefly.api.InitMode.TESTING);
+    defer inari.firefly.deinit();
+
     //try dynarray.testArrayList(allocator);
-    try utils.init(allocator);
-    defer utils.deinit();
 
     const end_time = std.time.milliTimestamp();
     try stdout.print("took: {}\n", .{end_time - start_time});

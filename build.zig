@@ -19,6 +19,13 @@ pub fn build(b: *std.Build) void {
     // modules
     //const utils = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
 
+    // const firefly = b.addStaticLibrary(.{
+    //     .name = "firefly",
+    //     .root_source_file = .{ .path = "src/inari/inari.zig" },
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+
     const exe = b.addExecutable(.{
         .name = "firefly-zig",
         // In this case the main source file is merely a path, however, in more
@@ -28,6 +35,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     //exe.addModule("utils", utils);
+    // exe.linkLibrary(firefly);
+    // b.installArtifact(firefly);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
