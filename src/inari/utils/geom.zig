@@ -8,6 +8,17 @@ const BitSet = utils.BitSet;
 pub const HALF_PI: Float = std.math.pi / 2.0;
 pub const TAU: Float = 2 * std.math.pi;
 
+pub const BitOperation = *const fn (bool, bool) callconv(.Inline) bool;
+pub inline fn bitOpAND(b1: bool, b2: bool) bool {
+    return b1 and b2;
+}
+pub inline fn bitOpOR(b1: bool, b2: bool) bool {
+    return b1 or b2;
+}
+pub inline fn bitOpXOR(b1: bool, b2: bool) bool {
+    return b1 != b2;
+}
+
 /// Two dimensional vector of i32 values
 pub const Vector2i = @Vector(2, CInt);
 /// Three dimensional vector of i32 values
@@ -22,44 +33,31 @@ pub const Vector3f = @Vector(3, Float);
 /// Four Two dimensional vector of f32 values
 pub const Vector4f = @Vector(4, Float);
 
-/// Integer rectangle as Vector4i32 [0]-->x [1]-->x [2]-->width [3]-->height
+/// Integer rectangle as Vector4 i32 [0]-->x [1]-->y [2]-->width [3]-->height
 pub const RectI = Vector4i;
-/// Float rectangle as Vector4f32 [0]-->x [1]-->x [2]-->width [3]-->height
+/// Float rectangle as Vector4 f32 [0]-->x [1]-->y [2]-->width [3]-->height
 pub const RectF = Vector4f;
-
+/// Integer Position as Vector2 i32 [0]-->x [1]-->y
 pub const PosI = Vector2i;
+/// Float Position as Vector2 f32 [0]-->x [1]-->y
 pub const PosF = Vector2f;
 
-pub const Region = struct {
-    x: i32,
-    y: i32,
-    w: usize,
-    h: usize,
+pub fn intersectsRectI(r1: RectI, r2: RectI) bool {
+    return !(r2[0] >= r1[0] + r1[2] or r2[0] + r2[2] <= r1[0] or r2[1] >= r1[1] + r1[3] or r2[1] + r2[3] <= r1[1]);
+}
 
-    pub fn of(x: i32, y: i32, w: usize, h: usize) Region {
-        return Region{ .x = x, .y = y, .w = w, .h = h };
-    }
+pub fn intersectionRectI(r1: RectI, r2: RectI) RectI {
+    var x1 = @max(r1[0], r2[0]);
+    var y1 = @max(r1[1], r2[1]);
+    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
 
-    pub fn intersects(self: Region, other: Region) bool {
-        var r1Right = self.x + self.w;
-        var r1Bottom = self.y + self.h;
-        var r2Right = other.x + other.w;
-        var r2Bottom = other.y + other.h;
+    return RectI{ x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
+}
 
-        return !(other.x >= r1Right or
-            r2Right <= self.x or
-            other.y >= r1Bottom or
-            r2Bottom <= self.y);
-    }
-
-    pub fn intersection(self: Region, other: Region) Region {
-        var x1 = @max(self.x, other.x);
-        var y1 = @max(self.y, other.y);
-        var x2 = @min(self.x + self.width - 1, other.x + other.w - 1);
-        var y2 = @min(self.y + self.height - 1, other.y + other.h - 1);
-        return Region.of(x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1));
-    }
-};
+pub fn isRegionRectI(r1: RectI) bool {
+    return r1[2] > 0 and r1[3] > 0;
+}
 
 /// Color as Vector4u8
 pub const Color = @Vector(4, Byte);
@@ -82,6 +80,15 @@ pub const Direction = struct {
     pub const WEST = Direction{ Orientation.WEST, Orientation.NONE };
     pub const NORTH_WEST = Direction{ Orientation.WEST, Orientation.NORTH };
 };
+
+pub fn usize_i32(v: usize) i32 {
+    return @as(i32, @intCast(v));
+}
+
+pub fn i32_usize(v: i32) usize {
+    if (v < 0) return 0;
+    return @as(usize, @intCast(v));
+}
 
 fn angleX(v: Vector2f) Float {
     std.math.atan2(Float, v.y, v.x);
@@ -738,79 +745,81 @@ pub const BitMask = struct {
         }
     }
 
-    pub fn setRegion(self: *BitMask, region: Region, bit: bool) void {
-        for (0..region.h) |y| {
-            for (0..region.w) |x| {
-                const rel_x: i32 = region.x + @as(i32, @intCast(x));
-                const rel_y: i32 = region.y + @as(i32, @intCast(y));
-                if (rel_x >= 0 and rel_y >= 0) {
-                    self.setBitValueAt(
-                        @as(usize, @intCast(rel_x)),
-                        @as(usize, @intCast(rel_y)),
-                        bit,
-                    );
-                }
+    pub fn setRegion(self: *BitMask, region: RectI, bit: bool) void {
+        if (!isRegionRectI(region))
+            return;
+
+        for (0..i32_usize(region[3])) |y| {
+            for (0..i32_usize(region[2])) |x| {
+                const rel_x: i32 = region[0] + usize_i32(x);
+                const rel_y: i32 = region[1] + usize_i32(y);
+                if (rel_x >= 0 and rel_y >= 0 and rel_x < self.width and rel_y < self.height)
+                    self.bits.setValue(i32_usize(rel_y) * self.width + i32_usize(rel_x), bit);
             }
         }
     }
 
-    pub fn setRegionFrom(self: *BitMask, region: Region, bits: []const u8) void {
-        for (0..region.h) |y| {
-            for (0..region.w) |x| {
-                const rel_x: i32 = region.x + @as(i32, @intCast(x));
-                const rel_y: i32 = region.y + @as(i32, @intCast(y));
-                if (rel_x >= 0 and rel_y >= 0) {
-                    self.setBitValueAt(
-                        @as(usize, @intCast(rel_x)),
-                        @as(usize, @intCast(rel_y)),
-                        bits[y * region.w + x] != 0,
+    pub fn setRegionFrom(self: *BitMask, region: RectI, bits: []const u8) void {
+        if (!isRegionRectI(region))
+            return;
+
+        for (0..i32_usize(region[3])) |y| {
+            for (0..i32_usize(region[2])) |x| {
+                const rel_x: i32 = region[0] + usize_i32(x);
+                const rel_y: i32 = region[1] + usize_i32(y);
+                if (rel_x >= 0 and rel_y >= 0 and rel_x < self.width and rel_y < self.height)
+                    self.bits.setValue(
+                        i32_usize(rel_y) * self.width + i32_usize(rel_x),
+                        bits[y * i32_usize(region[2]) + x] != 0,
                     );
-                }
             }
         }
     }
 
-    // pub fn createRegionMask(self: *BitMask, region: Region) BitMask {
-    //     for (0..region.h) |y| {
-    //         for (0..region.w) |x| {
-    //             const rel_x: i32 = region.x + @as(i32, @intCast(x));
-    //             const rel_y: i32 = region.y + @as(i32, @intCast(y));
-    //             if (rel_x >= 0 and rel_y >= 0) {
-    //                 self.setBitValueAt(
-    //                     @as(usize, @intCast(rel_x)),
-    //                     @as(usize, @intCast(rel_y)),
-    //                     bits[y * region.w + x] != 0,
-    //                 );
-    //             }
-    //         }
-    //     }
-    // }
+    pub fn clip(self: BitMask, region: RectI) BitMask {
+        var empty = getEmptyIntersectionMask(self, region);
+        if (empty) |*result| {
+            defer result.deinit();
+            result.fill();
+            return createIntersectionMask(
+                self,
+                result.*,
+                if (region[0] < 0) 0 else region[0],
+                if (region[1] < 0) 0 else region[1],
+                bitOpAND,
+            );
+        } else {
+            return BitMask.new(self._allocator, 0, 0);
+        }
+    }
 
-    pub fn createIntersectionMask(self: BitMask, other: BitMask, x_offset: i32, y_offset: i32) BitMask {
-        var intersection_region = Region.of(
-            0,
-            0,
-            self.width,
-            self.height,
-        ).intersection(Region.of(
-            x_offset,
-            y_offset,
-            other.width,
-            other.height,
-        ));
-        var result = BitMask.new(self._allocator, intersection_region.w, intersection_region.h);
-
-        for (0..intersection_region.h) |y| {
-            for (0..intersection_region.w) |x| {
-                const rel_x: i32 = x_offset + @as(i32, @intCast(x));
-                const rel_y: i32 = y_offset + @as(i32, @intCast(y));
-                result.setBitValueAt(x, y, self.isSet(x, y) and other.isSet(rel_x, rel_y));
+    pub fn createIntersectionMask(
+        self: BitMask,
+        other: BitMask,
+        x_offset: i32,
+        y_offset: i32,
+        comptime bit_op: BitOperation,
+    ) BitMask {
+        var empty = getEmptyIntersectionMask(self, .{ x_offset, y_offset, usize_i32(other.width), usize_i32(other.height) });
+        if (empty) |*result| {
+            for (0..result.height) |y| {
+                for (0..result.width) |x| {
+                    var x1: usize = if (x_offset > 0) x + i32_usize(x_offset) else x;
+                    var y1: usize = if (y_offset > 0) y + i32_usize(y_offset) else y;
+                    var x2: usize = if (x_offset < 0) x + i32_usize(x_offset) else x;
+                    var y2: usize = if (y_offset < 0) y + i32_usize(y_offset) else y;
+                    result.setBitValueAt(x, y, bit_op(self.isSet(x1, y1), other.isSet(x2, y2)));
+                }
             }
+
+            return result.*;
+        } else {
+            return BitMask.new(self._allocator, 0, 0);
         }
     }
 
     pub fn fill(self: *BitMask) void {
-        clearMask();
+        clearMask(self);
         for (0..self._length) |i| {
             self.bits.set(i);
         }
@@ -839,5 +848,21 @@ pub const BitMask = struct {
             }
             try writer.writeAll("\n");
         }
+    }
+
+    fn getEmptyIntersectionMask(self: BitMask, region: RectI) ?BitMask {
+        var intersection_region = intersectionRectI(
+            .{ 0, 0, usize_i32(self.width), usize_i32(self.height) },
+            region,
+        );
+
+        if (!isRegionRectI(intersection_region))
+            return null;
+
+        return BitMask.new(
+            self._allocator,
+            i32_usize(intersection_region[2]),
+            i32_usize(intersection_region[3]),
+        );
     }
 };
