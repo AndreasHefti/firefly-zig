@@ -1,5 +1,4 @@
 const std = @import("std");
-const assert = std.debug.assert;
 const inari = @import("../../inari.zig");
 const utils = inari.utils;
 const api = inari.firefly.api;
@@ -33,8 +32,8 @@ const UNDEF_INDEX = utils.UNDEF_INDEX;
 //////////////////////////////////////////////////////////////
 
 test "TextureAsset init/deinit" {
-    try graphics.initTesting();
-    defer graphics.deinit();
+    try inari.firefly.initTesting();
+    defer inari.firefly.deinit();
 
     try std.testing.expectEqual(
         @as(String, "Texture"),
@@ -44,8 +43,8 @@ test "TextureAsset init/deinit" {
 }
 
 test "TextureAsset load/unload" {
-    try graphics.initTesting();
-    defer graphics.deinit();
+    try inari.firefly.initTesting();
+    defer inari.firefly.deinit();
 
     var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
@@ -134,8 +133,8 @@ test "TextureAsset load/unload" {
 }
 
 test "TextureAsset dispose" {
-    try graphics.initTesting();
-    defer graphics.deinit();
+    try inari.firefly.initTesting();
+    defer inari.firefly.deinit();
 
     var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
@@ -159,8 +158,8 @@ test "TextureAsset dispose" {
 }
 
 test "get resources is const" {
-    try graphics.initTesting();
-    defer graphics.deinit();
+    try inari.firefly.initTesting();
+    defer inari.firefly.deinit();
 
     var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
@@ -179,8 +178,8 @@ test "get resources is const" {
 //// TESTING ShaderAsset
 //////////////////////////////////////////////////////////////
 test "ShaderAsset load/unload" {
-    try graphics.initTesting();
-    defer graphics.deinit();
+    try inari.firefly.initTesting();
+    defer inari.firefly.deinit();
 
     var shader_asset: *Asset = ShaderAsset.new(.{
         .asset_name = "Shader123",

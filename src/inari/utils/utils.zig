@@ -47,6 +47,28 @@ pub const CInt = i32;
 pub const Float = f32;
 pub const Byte = u8;
 
+pub fn usize_i32(v: usize) i32 {
+    return @as(i32, @intCast(v));
+}
+
+pub fn i32_usize(v: i32) usize {
+    if (v < 0) return 0;
+    return @as(usize, @intCast(v));
+}
+
+pub fn i64_usize(v: i64) usize {
+    if (v < 0) return 0;
+    return @as(usize, @intCast(v));
+}
+
+pub fn usize_i64(v: usize) i64 {
+    return @as(i64, @intCast(v));
+}
+
+pub fn usize_f32(v: usize) f32 {
+    return @as(f32, @floatFromInt(v));
+}
+
 pub const Aspect = aspect.Aspect;
 pub const AspectGroup = aspect.AspectGroup;
 pub const Kind = aspect.Kind;

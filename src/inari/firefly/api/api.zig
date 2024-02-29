@@ -42,7 +42,6 @@ pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
 pub const EntityComponent = entity.EntityComponent;
 pub const EntityEventSubscription = entity.EntityEventSubscription;
-//pub const EntityComponentPool = entity.EntityComponentPool;
 
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
@@ -57,14 +56,6 @@ pub var ALLOC: Allocator = undefined;
 pub var RENDERING_API: RenderAPI() = undefined;
 
 var initialized = false;
-pub fn initTesting() !void {
-    try init(
-        std.testing.allocator,
-        std.testing.allocator,
-        std.testing.allocator,
-        InitMode.TESTING,
-    );
-}
 
 pub fn init(
     component_allocator: Allocator,

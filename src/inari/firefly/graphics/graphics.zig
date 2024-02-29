@@ -45,7 +45,7 @@ pub const ViewRenderListener = view.ViewRenderListener;
 pub const ViewRenderer = view.ViewRenderer;
 
 //////////////////////////////////////////////////////////////
-//// global
+//// module init
 //////////////////////////////////////////////////////////////
 
 var initialized = false;
@@ -53,12 +53,6 @@ var api_init = false;
 
 var textures: DynArray(TextureData) = undefined;
 var shader: DynArray(ShaderData) = undefined;
-
-pub fn initTesting() !void {
-    try firefly.api.initTesting();
-    try init(firefly.api.InitMode.TESTING);
-    api_init = true;
-}
 
 pub fn init(_: firefly.api.InitMode) !void {
     defer initialized = true;

@@ -28,6 +28,7 @@ const SpriteAsset = firefly.graphics.SpriteAsset;
 test {
     std.testing.refAllDecls(@import("api/testing.zig"));
     std.testing.refAllDecls(@import("graphics/testing.zig"));
+    std.testing.refAllDecls(@import("physics/testing.zig"));
 }
 
 // //////////////////////////////////////////////////////////////
@@ -64,9 +65,10 @@ test "Firefly init" {
         \\Components:
         \\  Asset size: 0
         \\  Entity size: 0
-        \\  System size: 2
+        \\  System size: 3
         \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
+        \\    (a) AnimationSystem [ id:2, info:Updates all active animations ]
         \\  Layer size: 0
         \\  View size: 0
     ;
@@ -369,9 +371,10 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\    (a) Asset[1|Aspect[ASSET_TYPE_ASPECT_GROUP|Sprite|2]|TestSprite| resource_id=0, parent_asset_id=0 ]
         \\  Entity size: 1
         \\    (a) Entity[0|TestEntity|Kind[ group: ENTITY_KIND_ASP_GROUP, aspects: ETransform ESprite ]]
-        \\  System size: 2
+        \\  System size: 3
         \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
+        \\    (a) AnimationSystem [ id:2, info:Updates all active animations ]
         \\  Layer size: 0
         \\  View size: 0
     ;

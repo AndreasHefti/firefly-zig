@@ -81,15 +81,6 @@ pub const Direction = struct {
     pub const NORTH_WEST = Direction{ Orientation.WEST, Orientation.NORTH };
 };
 
-pub fn usize_i32(v: usize) i32 {
-    return @as(i32, @intCast(v));
-}
-
-pub fn i32_usize(v: i32) usize {
-    if (v < 0) return 0;
-    return @as(usize, @intCast(v));
-}
-
 fn angleX(v: Vector2f) Float {
     std.math.atan2(Float, v.y, v.x);
 }
@@ -749,12 +740,12 @@ pub const BitMask = struct {
         if (!isRegionRectI(region))
             return;
 
-        for (0..i32_usize(region[3])) |y| {
-            for (0..i32_usize(region[2])) |x| {
-                const rel_x: i32 = region[0] + usize_i32(x);
-                const rel_y: i32 = region[1] + usize_i32(y);
+        for (0..utils.i32_usize(region[3])) |y| {
+            for (0..utils.i32_usize(region[2])) |x| {
+                const rel_x: i32 = region[0] + utils.usize_i32(x);
+                const rel_y: i32 = region[1] + utils.usize_i32(y);
                 if (rel_x >= 0 and rel_y >= 0 and rel_x < self.width and rel_y < self.height)
-                    self.bits.setValue(i32_usize(rel_y) * self.width + i32_usize(rel_x), bit);
+                    self.bits.setValue(utils.i32_usize(rel_y) * self.width + utils.i32_usize(rel_x), bit);
             }
         }
     }
@@ -763,14 +754,14 @@ pub const BitMask = struct {
         if (!isRegionRectI(region))
             return;
 
-        for (0..i32_usize(region[3])) |y| {
-            for (0..i32_usize(region[2])) |x| {
-                const rel_x: i32 = region[0] + usize_i32(x);
-                const rel_y: i32 = region[1] + usize_i32(y);
+        for (0..utils.i32_usize(region[3])) |y| {
+            for (0..utils.i32_usize(region[2])) |x| {
+                const rel_x: i32 = region[0] + utils.usize_i32(x);
+                const rel_y: i32 = region[1] + utils.usize_i32(y);
                 if (rel_x >= 0 and rel_y >= 0 and rel_x < self.width and rel_y < self.height)
                     self.bits.setValue(
-                        i32_usize(rel_y) * self.width + i32_usize(rel_x),
-                        bits[y * i32_usize(region[2]) + x] != 0,
+                        utils.i32_usize(rel_y) * self.width + utils.i32_usize(rel_x),
+                        bits[y * utils.i32_usize(region[2]) + x] != 0,
                     );
             }
         }
@@ -800,14 +791,19 @@ pub const BitMask = struct {
         y_offset: i32,
         comptime bit_op: BitOperation,
     ) BitMask {
-        var empty = getEmptyIntersectionMask(self, .{ x_offset, y_offset, usize_i32(other.width), usize_i32(other.height) });
+        var empty = getEmptyIntersectionMask(self, .{
+            x_offset,
+            y_offset,
+            utils.usize_i32(other.width),
+            utils.usize_i32(other.height),
+        });
         if (empty) |*result| {
             for (0..result.height) |y| {
                 for (0..result.width) |x| {
-                    var x1: usize = if (x_offset > 0) x + i32_usize(x_offset) else x;
-                    var y1: usize = if (y_offset > 0) y + i32_usize(y_offset) else y;
-                    var x2: usize = if (x_offset < 0) x + i32_usize(x_offset) else x;
-                    var y2: usize = if (y_offset < 0) y + i32_usize(y_offset) else y;
+                    var x1: usize = if (x_offset > 0) x + utils.i32_usize(x_offset) else x;
+                    var y1: usize = if (y_offset > 0) y + utils.i32_usize(y_offset) else y;
+                    var x2: usize = if (x_offset < 0) x + utils.i32_usize(x_offset) else x;
+                    var y2: usize = if (y_offset < 0) y + utils.i32_usize(y_offset) else y;
                     result.setBitValueAt(x, y, bit_op(self.isSet(x1, y1), other.isSet(x2, y2)));
                 }
             }
@@ -852,7 +848,7 @@ pub const BitMask = struct {
 
     fn getEmptyIntersectionMask(self: BitMask, region: RectI) ?BitMask {
         var intersection_region = intersectionRectI(
-            .{ 0, 0, usize_i32(self.width), usize_i32(self.height) },
+            .{ 0, 0, utils.usize_i32(self.width), utils.usize_i32(self.height) },
             region,
         );
 
@@ -861,8 +857,8 @@ pub const BitMask = struct {
 
         return BitMask.new(
             self._allocator,
-            i32_usize(intersection_region[2]),
-            i32_usize(intersection_region[3]),
+            utils.i32_usize(intersection_region[2]),
+            utils.i32_usize(intersection_region[3]),
         );
     }
 };

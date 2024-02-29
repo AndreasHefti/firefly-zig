@@ -10,7 +10,7 @@ const Aspect = utils.Aspect;
 const Kind = utils.Kind;
 const Asset = api.Asset;
 const Condition = utils.Condition;
-const EntityEventSubscription = api.EntityEventSubscription;
+
 const DynArray = utils.DynArray;
 const SpriteData = api.SpriteData;
 const RenderData = api.RenderData;
@@ -22,6 +22,7 @@ const TextureData = api.TextureData;
 const TextureAsset = graphics.TextureAsset;
 const Entity = api.Entity;
 const EntityComponent = api.EntityComponent;
+const EntityEventSubscription = api.EntityEventSubscription;
 const ETransform = graphics.ETransform;
 const EMultiplier = graphics.EMultiplier;
 const View = graphics.View;
@@ -38,7 +39,7 @@ const RectF = utils.RectF;
 const Vec2f = utils.Vector2f;
 
 //////////////////////////////////////////////////////////////
-//// global
+//// sprite init
 //////////////////////////////////////////////////////////////
 
 var sprites: DynArray(SpriteData) = undefined;

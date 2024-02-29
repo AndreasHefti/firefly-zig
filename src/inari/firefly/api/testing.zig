@@ -299,8 +299,8 @@ pub const DebugRenderAPI = struct {
 // //////////////////////////////////////////////////////////////
 
 test "RenderAPI debug init" {
-    try api.initTesting();
-    defer api.deinit();
+    try inari.firefly.initTesting();
+    defer inari.firefly.deinit();
 
     var width = api.RENDERING_API.screenWidth();
     var height = api.RENDERING_API.screenHeight();
