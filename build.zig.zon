@@ -1,4 +1,17 @@
 .{
     .name = "firefly",
     .version = "0.1.0",
+
+    .dependencies = .{
+        .raylib = .{
+            .url = "https://github.com/raysan5/raylib/archive/e52ae870f297961b9ac23d2e6eca4937a24ac6c0.tar.gz",
+            .hash = "1220b9dc848ba1359453ce8a68fa844bcbc2cacda462b47498f12d3fd932c63390ee",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+        "src",
+    },
 }

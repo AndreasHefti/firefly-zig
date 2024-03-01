@@ -1,23 +1,33 @@
 const std = @import("std");
 pub const inari = @import("inari/inari.zig");
+const rl = @cImport(@cInclude("raylib.h"));
 
 pub fn main() !void {
-    const start_time = std.time.milliTimestamp();
+    // raylib binding
+    rl.InitWindow(960, 540, "Hello Zig Hello Firefly");
+    rl.SetTargetFPS(60);
+    defer rl.CloseWindow();
 
-    const stdout = std.io.getStdOut().writer();
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        _ = gpa.deinit();
+    while (!rl.WindowShouldClose()) {
+        rl.BeginDrawing();
+        rl.BeginMode2D(rl.Camera2D{
+            .offset = rl.Vector2{
+                .x = 0,
+                .y = 0,
+            },
+            .target = rl.Vector2{
+                .x = 0,
+                .y = 0,
+            },
+            .rotation = 10,
+            .zoom = 1,
+        });
+        rl.ClearBackground(rl.BLACK);
+        rl.DrawFPS(10, 10);
+        rl.DrawText("Hello Zig Hello Firefly", 100, 100, 100, rl.RED);
+        rl.EndMode2D();
+        rl.EndDrawing();
     }
-
-    try inari.firefly.init(allocator, allocator, allocator, inari.firefly.api.InitMode.TESTING);
-    defer inari.firefly.deinit();
-
-    //try dynarray.testArrayList(allocator);
-
-    const end_time = std.time.milliTimestamp();
-    try stdout.print("took: {}\n", .{end_time - start_time});
 }
 
 test {
