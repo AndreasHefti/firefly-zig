@@ -24,6 +24,8 @@ const BitSet = utils.BitSet;
 const StringHashMap = std.StringHashMap;
 const DynArray = utils.DynArray;
 const String = utils.String;
+const SpriteSetAsset = firefly.graphics.SpriteSetAsset;
+const SpriteSet = firefly.graphics.SpriteSet;
 
 //////////////////////////////////////////////////////////////
 //// animation init
@@ -36,8 +38,9 @@ pub fn init() void {
     if (initialized)
         return;
 
+    IndexFrame.init();
     AnimationSystem.init();
-    Animation(EasedValueIntegration).init();
+    AnimationSystem.registerAnimationType(EasedValueIntegration);
 }
 
 pub fn deinit() void {
@@ -45,8 +48,8 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    Animation(EasedValueIntegration).deinit();
     AnimationSystem.deinit();
+    IndexFrame.deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -90,6 +93,11 @@ pub const IAnimation = struct {
     }
 };
 
+const AnimationTypeReference = struct {
+    _update_all: *const fn () void = undefined,
+    _deinit: *const fn () void = undefined,
+};
+
 pub fn Animation(comptime Integration: type) type {
     return struct {
         const Self = @This();
@@ -119,13 +127,16 @@ pub fn Animation(comptime Integration: type) type {
         // interface reference
         _interface: IAnimation = undefined,
 
-        fn init() void {
+        fn init() AnimationTypeReference {
             defer Self.initialized = true;
             if (Self.initialized)
-                return;
+                @panic("Animation Type already initialized: " ++ @typeName(Integration));
 
             animations = DynArray(Self).new(api.COMPONENT_ALLOC, Self{}) catch undefined;
-            AnimationSystem.registerAnimationUpdate(updateAll);
+            return AnimationTypeReference{
+                ._update_all = Self.updateAll,
+                ._deinit = Self.deinit,
+            };
         }
 
         fn deinit() void {
@@ -133,7 +144,6 @@ pub fn Animation(comptime Integration: type) type {
             if (!Self.initialized)
                 return;
 
-            AnimationSystem.unregisterAnimationUpdate(updateAll);
             animations.deinit();
         }
 
@@ -269,14 +279,19 @@ pub const EAnimation = struct {
 //////////////////////////////////////////////////////////////
 //// Animation System
 //////////////////////////////////////////////////////////////
-const UpdateRef = *const fn () void;
+
 pub const AnimationSystem = struct {
     const sys_name = "AnimationSystem ";
 
-    var update_refs: DynArray(UpdateRef) = undefined;
+    var animation_type_refs: DynArray(AnimationTypeReference) = undefined;
 
     fn init() void {
-        update_refs = DynArray(UpdateRef).new(api.ALLOC, null) catch unreachable;
+        animation_type_refs = DynArray(AnimationTypeReference).newWithRegisterSize(
+            api.ALLOC,
+            10,
+            null,
+        ) catch unreachable;
+
         _ = System.new(System{
             .name = sys_name,
             .info = "Updates all active animations",
@@ -287,15 +302,16 @@ pub const AnimationSystem = struct {
 
     fn deinit() void {
         System.disposeByName(sys_name);
-        update_refs.deinit();
+        var next = animation_type_refs.slots.nextSetBit(0);
+        while (next) |i| {
+            animation_type_refs.get(i)._deinit();
+            next = animation_type_refs.slots.nextSetBit(i + 1);
+        }
+        animation_type_refs.deinit();
     }
 
-    fn registerAnimationUpdate(update_ref: UpdateRef) void {
-        _ = update_refs.add(update_ref);
-    }
-
-    fn unregisterAnimationUpdate(update_ref: UpdateRef) void {
-        update_refs.remove(update_ref);
+    pub fn registerAnimationType(comptime Integration: type) void {
+        _ = animation_type_refs.add(Animation(Integration).init());
     }
 
     fn onActivation(active: bool) void {
@@ -303,10 +319,10 @@ pub const AnimationSystem = struct {
     }
 
     fn update(_: UpdateEvent) void {
-        var next = update_refs.slots.nextSetBit(0);
+        var next = animation_type_refs.slots.nextSetBit(0);
         while (next) |i| {
-            update_refs.get(i).*();
-            next = update_refs.slots.nextSetBit(i + 1);
+            animation_type_refs.get(i)._update_all();
+            next = animation_type_refs.slots.nextSetBit(i + 1);
         }
     }
 };
@@ -351,5 +367,113 @@ pub const EasedValueIntegration = struct {
                 a.integration.end_value,
                 a.integration.easing.f(a._t_normalized),
             );
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Index Frame Animation
+//////////////////////////////////////////////////////////////
+
+pub const IndexFrame = struct {
+    var frames: DynArray(IndexFrame) = undefined;
+
+    index: Index = UNDEF_INDEX,
+    duration: usize = 0,
+
+    fn init() void {
+        frames = DynArray(IndexFrame).new(
+            api.COMPONENT_ALLOC,
+            IndexFrame{},
+        ) catch unreachable;
+    }
+
+    fn deinit() void {
+        frames.deinit();
+        frames = undefined;
+    }
+
+    pub fn createFromSpriteSet(name: String, duration: usize) IndexFrameList {
+        const asset: *api.Asset = api.Asset.byName(name);
+        api.Asset.activate(asset.id, true);
+        const sprite_set: SpriteSet = asset.getResource(SpriteSetAsset);
+        var result = IndexFrameList.new();
+
+        for (sprite_set.sprites_indices.items) |spi| {
+            var index = frames.add(IndexFrame{
+                .index = sprite_set.byListIndex(spi).texture_binding,
+                .duration = duration,
+            });
+            result.indices.set(index);
+        }
+        return result;
+    }
+
+    pub fn createListFromArrayData(data: []usize) IndexFrameList {
+        if (@mod(data.len, 2) != 0)
+            @panic("data must have even length");
+
+        var result = IndexFrameList.new();
+        var i: usize = 0;
+        while (i < data.len) {
+            var index = frames.add(IndexFrame{
+                .index = data[i],
+                .duration = data[i + 1],
+            });
+            result.indices.set(index);
+            i = i + 2;
+        }
+        return result;
+    }
+};
+
+pub const IndexFrameList = struct {
+    indices: BitSet = undefined,
+    _state_pointer: Index = 0,
+
+    fn new() IndexFrameList {
+        return IndexFrameList{ .indices = BitSet.new(api.COMPONENT_ALLOC) catch unreachable };
+    }
+
+    fn deinit(self: *IndexFrameList) void {
+        var _next = self.indices.nextSetBit(0);
+        while (_next) |i| {
+            IndexFrame.frames.reset(i);
+            _next = self.indices.nextSetBit(i + 1);
+        }
+
+        self.indices.deinit();
+        self.indices = undefined;
+    }
+
+    pub fn duration(self: *IndexFrameList) usize {
+        var d: usize = 0;
+        var _next = self.indices.nextSetBit(0);
+        while (_next) |i| {
+            d += IndexFrame.frames.get(i).duration;
+            _next = self.indices.nextSetBit(i + 1);
+        }
+        return d;
+    }
+
+    pub fn reset(self: *IndexFrameList) void {
+        self._state_pointer = 0;
+    }
+
+    pub fn next(self: *IndexFrameList) ?*IndexFrame {
+        var _next = self.indices.nextSetBit(self._state_pointer + 1);
+        if (_next) |n| {
+            self._state_pointer = n;
+            return IndexFrame.frames.get(n);
+        }
+        return null;
+    }
+
+    pub fn prev(self: *IndexFrameList) ?*IndexFrame {
+        var _next = self.indices.prevSetBit(self._state_pointer - 1);
+        if (_next) |n| {
+            self._state_pointer = n;
+            return IndexFrame.frames.get(n);
+        }
+        return null;
     }
 };

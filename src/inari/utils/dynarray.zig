@@ -126,7 +126,7 @@ pub fn DynArray(comptime T: type) type {
             return Self{
                 .null_value = null_value,
                 .register = Register(T).newWithRegisterSize(allocator, register_size),
-                .slots = try BitSet.newEmpty(allocator, 128),
+                .slots = try BitSet.newEmpty(allocator, register_size),
             };
         }
 
@@ -135,8 +135,18 @@ pub fn DynArray(comptime T: type) type {
             self.slots.deinit();
         }
 
-        pub fn size(self: Self) usize {
+        pub fn capacity(self: Self) usize {
             return self.register.size();
+        }
+
+        pub fn size(self: Self) usize {
+            var i: usize = 0;
+            var next = self.slots.nextSetBit(0);
+            while (next) |n| {
+                i += 1;
+                next = self.slots.nextSetBit(n + 1);
+            }
+            return i;
         }
 
         pub fn nextFreeSlot(self: *Self) usize {

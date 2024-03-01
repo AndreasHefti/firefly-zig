@@ -95,7 +95,20 @@ pub const BitSet = struct {
             if (i >= c) return null;
             is_set = self.unmanaged.isSet(i);
         }
+        return i;
+    }
 
+    pub fn prevSetBit(self: Self, index: usize) ?usize {
+        if (index >= self.unmanaged.capacity())
+            return null;
+
+        var i = index;
+        var is_set = self.unmanaged.isSet(i);
+        while (!is_set) {
+            i -= 1;
+            if (i >= 0) return null;
+            is_set = self.unmanaged.isSet(i);
+        }
         return i;
     }
 

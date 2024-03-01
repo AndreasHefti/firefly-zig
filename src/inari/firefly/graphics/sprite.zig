@@ -30,6 +30,7 @@ const ViewLayerMapping = graphics.ViewLayerMapping;
 const ViewRenderEvent = graphics.ViewRenderEvent;
 const ViewRenderListener = graphics.ViewRenderListener;
 const System = api.System;
+const DynIndexArray = utils.DynIndexArray;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
@@ -46,16 +47,31 @@ var sprites: DynArray(SpriteData) = undefined;
 var sprite_sets: DynArray(SpriteSet) = undefined;
 
 pub const SpriteSet = struct {
-    sprites: ArrayList(Index) = undefined,
+    sprites_indices: DynIndexArray = undefined,
     name_mapping: StringHashMap(Index) = undefined,
 
-    fn byListIndex(self: *SpriteSet, index: Index) *const SpriteData {
-        return sprites.get(self.sprites.items[index]);
+    fn new() SpriteSet {
+        return SpriteSet{
+            .sprites_indices = DynIndexArray.init(api.COMPONENT_ALLOC),
+            .name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC),
+        };
     }
 
-    fn byName(self: *SpriteSet, name: String) *const SpriteData {
+    fn deinit(self: *SpriteSet) void {
+        for (self.sprites_indices.items) |id| {
+            sprites.reset(id);
+        }
+        self.name_mapping.deinit();
+        self.sprites_indices.deinit();
+    }
+
+    pub fn byListIndex(self: *SpriteSet, index: Index) *const SpriteData {
+        return sprites.get(self.sprites_indices.items[index]);
+    }
+
+    pub fn byName(self: *SpriteSet, name: String) *const SpriteData {
         if (self.name_mapping.get(name)) |index| {
-            return sprites.get(self.sprites.items[index]);
+            return sprites.get(self.sprites_indices.items[index]);
         } else {
             std.log.err("No sprite with name: {s} found", .{name});
             @panic("not found");
@@ -178,13 +194,13 @@ pub const SpriteAsset = struct {
         return sprites.get(res_id);
     }
 
-    pub fn getResourceForIndex(res_id: Index, _: Index) *const SpriteData {
-        return sprites.get(res_id);
-    }
+    // pub fn getResourceForIndex(res_id: Index, _: Index) *const SpriteData {
+    //     return sprites.get(res_id);
+    // }
 
-    pub fn getResourceForName(res_id: Index, _: String) *const SpriteData {
-        return sprites.get(res_id);
-    }
+    // pub fn getResourceForName(res_id: Index, _: String) *const SpriteData {
+    //     return sprites.get(res_id);
+    // }
 
     fn listener(e: ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
@@ -284,12 +300,7 @@ pub const SpriteSetAsset = struct {
         var asset: *Asset = Asset.new(Asset{
             .asset_type = asset_type,
             .name = data.asset_name,
-            .resource_id = sprite_sets.add(
-                SpriteSet{
-                    .sprites = ArrayList(Index).init(api.COMPONENT_ALLOC),
-                    .name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC),
-                },
-            ),
+            .resource_id = sprite_sets.add(SpriteSet.new()),
             .parent_asset_id = data.texture_asset_id,
         });
 
@@ -323,13 +334,13 @@ pub const SpriteSetAsset = struct {
         return &sprite_sets.get(res_id).byListIndex(0);
     }
 
-    pub fn getResourceForIndex(res_id: Index, list_index: Index) *SpriteSet {
-        return &sprite_sets.get(res_id).byListIndex(list_index);
-    }
+    // pub fn getResourceForIndex(res_id: Index, list_index: Index) *SpriteSet {
+    //     return &sprite_sets.get(res_id).byListIndex(list_index);
+    // }
 
-    pub fn getResourceForName(res_id: Index, name: String) *SpriteSet {
-        return sprite_sets.get(res_id).byName(name);
-    }
+    // pub fn getResourceForName(res_id: Index, name: String) *SpriteSet {
+    //     return sprite_sets.get(res_id).byName(name);
+    // }
 
     fn listener(e: ComponentEvent) void {
         var asset: *Asset = Asset.pool.get(e.c_id);
@@ -359,7 +370,7 @@ pub const SpriteSetAsset = struct {
         }
 
         var data: *SpriteSet = sprite_sets.get(asset.resource_id);
-        for (data.sprites.items) |id| {
+        for (data.sprites_indices.items) |id| {
             sprites.get(id).texture_binding = texData.binding;
         }
     }
@@ -369,18 +380,16 @@ pub const SpriteSetAsset = struct {
             return;
 
         const data: *SpriteSet = sprite_sets.get(asset.resource_id);
-        for (data.sprites.items) |id| {
+        for (data.sprites_indices.items) |id| {
             sprites.get(id).texture_binding = NO_BINDING;
         }
     }
 
     fn delete(asset: *Asset) void {
         Asset.activateById(asset.id, false);
-        const data: *SpriteSet = sprite_sets.get(asset.resource_id);
-        for (data.sprites.items) |id| {
-            sprites.reset(id);
-        }
+        sprite_sets.get(asset.resource_id).deinit();
         sprite_sets.reset(asset.resource_id);
+        asset.resource_id = UNDEF_INDEX;
     }
 };
 

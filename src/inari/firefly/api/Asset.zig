@@ -49,17 +49,17 @@ pub fn getResource(asset: *Asset, comptime asset_type: anytype) *const @TypeOf(a
     return asset_type.getResource(asset.resource_id);
 }
 
-pub fn getResourceForIndex(asset: *Asset, asset_type: anytype, comptime T: type, index: usize) ?*T {
-    if (asset.resource_id == UNDEF_INDEX)
-        return null;
-    return asset_type.getResourceForIndex(asset.resource_id, index);
-}
+// pub fn getResourceForIndex(asset: *Asset, asset_type: anytype, comptime T: type, index: usize) ?*T {
+//     if (asset.resource_id == UNDEF_INDEX)
+//         return null;
+//     return asset_type.getResourceForIndex(asset.resource_id, index);
+// }
 
-pub fn getResourceForName(asset: *Asset, asset_type: anytype, comptime T: type, name: String) ?*T {
-    if (asset.resource_id == UNDEF_INDEX)
-        return null;
-    return asset_type.getResourceForName(asset.resource_id, name);
-}
+// pub fn getResourceForName(asset: *Asset, asset_type: anytype, comptime T: type, name: String) ?*T {
+//     if (asset.resource_id == UNDEF_INDEX)
+//         return null;
+//     return asset_type.getResourceForName(asset.resource_id, name);
+// }
 
 pub fn format(
     self: Asset,
