@@ -69,6 +69,10 @@ pub fn usize_f32(v: usize) f32 {
     return @as(f32, @floatFromInt(v));
 }
 
+pub fn f32_usize(v: f32) usize {
+    return @as(usize, @intFromFloat(v));
+}
+
 pub const Aspect = aspect.Aspect;
 pub const AspectGroup = aspect.AspectGroup;
 pub const Kind = aspect.Kind;

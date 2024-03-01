@@ -250,6 +250,27 @@ pub fn Animation(comptime Integration: type) type {
     };
 }
 
+fn AnimationResolver(comptime Integration: type) type {
+    return struct {
+        pub fn get(animation_interface: *IAnimation) *Animation(Integration) {
+            return @alignCast(@ptrCast(animation_interface.animation));
+        }
+
+        pub fn byName(name: String) ?*Animation(Integration) {
+            var a = Animation(Integration);
+            var next = a.animations.slots.nextSetBit(0);
+            while (next) |i| {
+                const a_ptr: *IAnimation = a.animations.get(i);
+                if (std.mem.eql(u8, a_ptr.name, name)) {
+                    return get(a_ptr);
+                }
+                next = a.animations.slots.nextSetBit(i + 1);
+            }
+            return null;
+        }
+    };
+}
+
 //////////////////////////////////////////////////////////////
 //// EAnimation Entity Component
 //////////////////////////////////////////////////////////////
@@ -332,27 +353,12 @@ pub const AnimationSystem = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EasedValueIntegration = struct {
+    pub const resolver = AnimationResolver(EasedValueIntegration);
+
     start_value: Float = 0.0,
     end_value: Float = 0.0,
     easing: utils.Easing = utils.Easing_Linear,
     property_ref: *Float,
-
-    pub fn getAnimation(animation_interface: *IAnimation) *Animation(EasedValueIntegration) {
-        return @alignCast(@ptrCast(animation_interface.animation));
-    }
-
-    pub fn getAnimationByName(name: String) ?*Animation(EasedValueIntegration) {
-        var a = Animation(EasedValueIntegration);
-        var next = a.animations.slots.nextSetBit(0);
-        while (next) |i| {
-            const a_ptr: *IAnimation = a.animations.get(i);
-            if (std.mem.eql(u8, a_ptr.name, name)) {
-                return getAnimation(a_ptr);
-            }
-            next = a.animations.slots.nextSetBit(i + 1);
-        }
-        return null;
-    }
 
     pub fn integrate(a: *Animation(EasedValueIntegration)) void {
         if (a._inverted)
@@ -429,6 +435,7 @@ pub const IndexFrame = struct {
 pub const IndexFrameList = struct {
     indices: BitSet = undefined,
     _state_pointer: Index = 0,
+    _duration: usize = UNDEF_INDEX,
 
     fn new() IndexFrameList {
         return IndexFrameList{ .indices = BitSet.new(api.COMPONENT_ALLOC) catch unreachable };
@@ -446,17 +453,47 @@ pub const IndexFrameList = struct {
     }
 
     pub fn duration(self: *IndexFrameList) usize {
+        if (self._duration != UNDEF_INDEX)
+            return self._duration;
+
         var d: usize = 0;
         var _next = self.indices.nextSetBit(0);
         while (_next) |i| {
             d += IndexFrame.frames.get(i).duration;
             _next = self.indices.nextSetBit(i + 1);
         }
+        self._duration = d;
         return d;
+    }
+
+    pub fn getIndexAt(self: *IndexFrameList, t_normalized: Float, invert: bool) Index {
+        var d: usize = self.duration();
+        var t: usize = utils.f32_usize(t_normalized * utils.usize_f32(d));
+
+        if (invert) {
+            var _t: usize = d;
+            var _next = self.indices.prevSetBit(self.indices.capacity());
+            while (_next) |i| {
+                _t -= IndexFrame.frames.get(i).duration;
+                if (_t <= t) return i;
+                _next = self.indices.prevSetBit(i - 1);
+            }
+        } else {
+            var _t: usize = 0;
+            var _next = self.indices.nextSetBit(0);
+            while (_next) |i| {
+                _t += IndexFrame.frames.get(i).duration;
+                if (_t >= t) return i;
+                _next = self.indices.nextSetBit(i + 1);
+            }
+        }
+
+        return 0;
     }
 
     pub fn reset(self: *IndexFrameList) void {
         self._state_pointer = 0;
+        self._duration = UNDEF_INDEX;
     }
 
     pub fn next(self: *IndexFrameList) ?*IndexFrame {
@@ -475,5 +512,40 @@ pub const IndexFrameList = struct {
             return IndexFrame.frames.get(n);
         }
         return null;
+    }
+};
+
+pub const IndexFrameIntegrator = struct {
+    pub const resolver = AnimationResolver(IndexFrameIntegrator);
+
+    timeline: IndexFrameList = undefined,
+    property_ref: *Index = UNDEF_INDEX,
+
+    pub fn integrate(a: *Animation(IndexFrameIntegrator)) void {
+        return a.integration.timeline.getIndexAt(a._t_normalized, a._inverted);
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Bezier Curve Animation
+//////////////////////////////////////////////////////////////
+
+pub const BezierCurveIntegrator = struct {
+    pub const resolver = AnimationResolver(BezierCurveIntegrator);
+
+    bezier_function: utils.CubicBezierFunction = undefined,
+    easing: utils.Easing = utils.Easing_Linear,
+    property_ref_x: *Float,
+    property_ref_y: *Float,
+    property_ref_a: *Float,
+
+    pub fn integrate(a: *Animation(BezierCurveIntegrator)) void {
+        var pos = a.integration.bezier_function.fp(a.easing(a._t_normalized), a._inverted);
+        a.integration.property_ref_x = pos[0];
+        a.integration.property_ref_y = pos[1];
+        a.integration.property_ref_a = std.math.radiansToDegrees(Float, a.integration.bezier_function.fax(
+            a.easing(a._t_normalized),
+            a._inverted,
+        ));
     }
 };
