@@ -307,7 +307,7 @@ pub const ShaderData = struct {
     vertex_shader_resource: String = NO_NAME,
     fragment_shader_resource: String = NO_NAME,
     file_resource: bool = true,
-    shaderUpdate: ShaderUpdate = undefined,
+    shader_update: ShaderUpdate = undefined,
 
     pub fn format(
         self: ShaderData,

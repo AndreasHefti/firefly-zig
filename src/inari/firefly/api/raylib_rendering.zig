@@ -8,6 +8,8 @@ const RenderAPI = api.RenderAPI;
 const Vector2f = utils.Vector2f;
 const RenderData = api.RenderData;
 const TextureData = api.TextureData;
+const ShaderData = api.ShaderData;
+const RenderTextureData = api.RenderTextureData;
 const Projection = api.Projection;
 const BindingId = api.BindingId;
 const DynArray = utils.DynArray;
@@ -74,14 +76,6 @@ const RaylibRenderAPI = struct {
     var currentOffset: *const Vector2f = &default_offset;
     var currentRenderData: *const RenderData = &default_render_data;
 
-    // pub const struct_Texture = extern struct {
-    //     id: c_uint,
-    //     width: c_int,
-    //     height: c_int,
-    //     mipmaps: c_int,
-    //     format: c_int,
-    // };
-
     pub fn screenWidth() CInt {
         return rl.GetScreenWidth();
     }
@@ -94,36 +88,80 @@ const RaylibRenderAPI = struct {
         rl.DrawFPS(@bitCast(pos[0]), @bitCast(pos[1]));
     }
 
-    pub fn loadTexture(textureData: *TextureData) void {
-        var tex = rl.LoadTexture(@ptrCast(textureData.resource));
-        textureData.width = @bitCast(tex.width);
-        textureData.height = @bitCast(tex.height);
+    pub fn loadTexture(td: *TextureData) void {
+        var tex = rl.LoadTexture(@ptrCast(td.resource));
+        td.width = @bitCast(tex.width);
+        td.height = @bitCast(tex.height);
 
-        if (textureData.is_mipmap) {
+        if (td.is_mipmap) {
             rl.GenTextureMipmaps(&tex);
         }
 
-        if (textureData.mag_filter > 0) {
-            SetTextureFilter(tex, textureData.mag_filter);
+        if (td.mag_filter > 0) {
+            rl.SetTextureFilter(tex, td.mag_filter);
         }
-        if (textureData.min_filter > 0) {
-            SetTextureFilter(tex, textureData.min_filter);
+        if (td.min_filter > 0) {
+            rl.SetTextureFilter(tex, td.min_filter);
         }
-        if (textureData.s_wrap > 0) {
-            SetTextureWrap(tex, textureData.s_wrap);
+        if (td.s_wrap > 0) {
+            rl.SetTextureWrap(tex, td.s_wrap);
         }
-        if (textureData.t_wrap > 0) {
-            SetTextureWrap(tex, textureData.t_wrap);
+        if (td.t_wrap > 0) {
+            rl.SetTextureWrap(tex, td.t_wrap);
         }
 
-        textureData.binding = textures.add(tex);
+        td.binding = textures.add(tex);
     }
 
-    pub fn disposeTexture(textureData: *TextureData) void {
-        if (textureData.binding == NO_BINDING) 
+    pub fn disposeTexture(td: *TextureData) void {
+        if (td.binding == NO_BINDING)
             return;
 
-        textures.re
-        UnloadTexture
+        var tex = textures.get(td.binding);
+        rl.UnloadTexture(tex);
+        textures.reset(td.binding);
+        td.binding = NO_BINDING;
+    }
+
+    pub fn createRenderTexture(td: *RenderTextureData) void {
+        var tex = rl.LoadRenderTexture(td.width, td.height);
+        td.binding = renderTextures.add(tex);
+    }
+
+    pub fn disposeRenderTexture(td: *RenderTextureData) void {
+        if (td.binding == NO_BINDING)
+            return;
+
+        var tex = textures.get(td.binding);
+        rl.UnloadRenderTexture(tex);
+        renderTextures.remove(td.binding);
+        td.binding = NO_BINDING;
+    }
+
+    pub fn createShader(sd: *ShaderData) void {
+        var shader: Shader = undefined;
+        if (sd.file_resource) {
+            shader = rl.LoadShader(
+                @ptrCast(sd.vertex_shader_resource),
+                @ptrCast(sd.fragment_shader_resource),
+            );
+        } else {
+            shader = rl.LoadShaderFromMemory(
+                @ptrCast(sd.vertex_shader_resource),
+                @ptrCast(sd.fragment_shader_resource),
+            );
+        }
+
+        sd.binding = shaders.add(shader);
+    }
+
+    pub fn disposeShader(sd: *ShaderData) void {
+        if (sd.binding == NO_BINDING)
+            return;
+
+        var shader = shaders.get(sd.binding);
+        rl.UnloadShader(shader);
+        shaders.reset(sd.binding);
+        sd.binding = NO_BINDING;
     }
 };
