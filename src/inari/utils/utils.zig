@@ -37,15 +37,17 @@ pub usingnamespace @import("geom.zig");
 pub usingnamespace @import("event.zig");
 pub usingnamespace @import("dynarray.zig");
 pub usingnamespace @import("bitset.zig");
-pub const String = []const u8;
-pub const EMPTY_STRING: String = "";
-pub const NO_NAME: String = EMPTY_STRING;
-pub const Index = usize;
-pub const UNDEF_INDEX = std.math.maxInt(Index);
 
+pub const String = []const u8;
+pub const CString = [*c]const u8;
+pub const Index = usize;
 pub const CInt = i32;
 pub const Float = f32;
 pub const Byte = u8;
+
+pub const EMPTY_STRING: String = "";
+pub const NO_NAME: String = EMPTY_STRING;
+pub const UNDEF_INDEX = std.math.maxInt(Index);
 
 pub fn usize_i32(v: usize) i32 {
     return @as(i32, @intCast(v));
@@ -71,6 +73,14 @@ pub fn usize_f32(v: usize) f32 {
 
 pub fn f32_usize(v: f32) usize {
     return @as(usize, @intFromFloat(v));
+}
+
+pub fn cint_usize(v: c_int) usize {
+    return @as(usize, @intCast(v));
+}
+
+pub fn usize_cint(v: usize) c_int {
+    return @as(c_int, @intCast(v));
 }
 
 pub const Aspect = aspect.Aspect;

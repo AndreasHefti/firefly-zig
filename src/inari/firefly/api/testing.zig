@@ -94,8 +94,6 @@ pub const DebugRenderAPI = struct {
         shaders = DynArray(ShaderData).new(api.ALLOC, null) catch unreachable;
         renderActionQueue = DynArray(RenderAction).new(api.ALLOC, null) catch unreachable;
 
-        interface.deinit = deinit;
-
         interface.screenWidth = screenWidth;
         interface.screenHeight = screenHeight;
         interface.showFPS = showFPS;
@@ -134,7 +132,6 @@ pub const DebugRenderAPI = struct {
         textures.deinit();
         renderTextures.deinit();
         shaders.deinit();
-        initialized = false;
     }
 
     pub fn screenWidth() CInt {

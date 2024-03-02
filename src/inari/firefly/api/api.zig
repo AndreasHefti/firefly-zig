@@ -77,8 +77,8 @@ pub fn init(
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
-        // TODO
-
+        // TODO integrate raylib
+        rendering = try testing.createTestRenderAPI();
     }
 
     //Engine.init();
