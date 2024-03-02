@@ -17,7 +17,7 @@ const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 const Entity = api.Entity;
-const Engine = api.Engine;
+const Engine = firefly.Engine;
 const ETransform = firefly.graphics.ETransform;
 const TransformData = firefly.api.TransformData;
 const ESprite = firefly.graphics.ESprite;
@@ -401,7 +401,7 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\ render actions:
         \\
     ;
-    api.RENDERING_API.printDebug(&sb);
+    api.rendering.printDebug(&sb);
     try std.testing.expectEqualStrings(api_out, sb.toString());
 
     // simulate one tick
@@ -429,6 +429,6 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\     offset:{ 0.0e+00, 0.0e+00 }
         \\
     ;
-    api.RENDERING_API.printDebug(&sb);
+    api.rendering.printDebug(&sb);
     try std.testing.expectEqualStrings(api_out, sb.toString());
 }

@@ -4,12 +4,18 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 
-// TODO make modules
+//////////////////////////////////////////////////////////////
+//// Public declarations
+//////////////////////////////////////////////////////////////
+
+// packages
 pub const api = @import("api/api.zig");
 pub const graphics = @import("graphics/graphics.zig");
 pub const physics = @import("physics/physics.zig");
 
-//pub var RENDER_API: rendering_api.RenderAPI() = undefined;
+// API
+pub const Engine = @import("Engine.zig");
+
 var initialized = false;
 
 pub fn initTesting() !void {
@@ -39,6 +45,7 @@ pub fn init(
         return;
 
     try api.init(component_allocator, entity_allocator, allocator, initMode);
+    Engine.init();
     try graphics.init(initMode);
     try physics.init(initMode);
 }
@@ -51,4 +58,5 @@ pub fn deinit() void {
     physics.deinit();
     graphics.deinit();
     api.deinit();
+    Engine.deinit();
 }

@@ -84,7 +84,7 @@ test "TextureAsset load/unload" {
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    api.RENDERING_API.printDebug(&sb);
+    api.rendering.printDebug(&sb);
     //std.debug.print("\n{s}", .{sb.toString()});
     const render_state1: String =
         \\
@@ -112,7 +112,7 @@ test "TextureAsset load/unload" {
     try std.testing.expect(res.height == -1);
 
     sb.clear();
-    api.RENDERING_API.printDebug(&sb);
+    api.rendering.printDebug(&sb);
     const render_state2: String =
         \\
         \\******************************
@@ -207,7 +207,7 @@ test "ShaderAsset load/unload" {
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    api.RENDERING_API.printDebug(&sb);
+    api.rendering.printDebug(&sb);
     //std.debug.print("\n{s}", .{sb.toString()});
     const render_state1: String =
         \\
@@ -233,7 +233,7 @@ test "ShaderAsset load/unload" {
     try std.testing.expect(res.binding == NO_BINDING); // not loaded
 
     sb.clear();
-    api.RENDERING_API.printDebug(&sb);
+    api.rendering.printDebug(&sb);
     const render_state2: String =
         \\
         \\******************************

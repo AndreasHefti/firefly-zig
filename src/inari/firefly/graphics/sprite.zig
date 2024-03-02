@@ -449,7 +449,7 @@ const SimpleSpriteRenderer = struct {
             while (i) |id| {
                 // render the sprite
                 var s = ESprite.byId(id);
-                api.RENDERING_API.renderSprite(
+                api.rendering.renderSprite(
                     sprites.get(s.sprite_ref),
                     &ETransform.byId(id).transform,
                     &s.render_data,

@@ -213,7 +213,7 @@ pub const View = struct {
 
         addViewMapping(view);
 
-        api.RENDERING_API.createRenderTexture(&view.render_texture);
+        api.rendering.createRenderTexture(&view.render_texture);
     }
 
     fn deactivate(view: *View) void {
@@ -222,7 +222,7 @@ pub const View = struct {
             return; // screen, no render texture dispose needed
 
         removeViewMapping(view);
-        api.RENDERING_API.disposeRenderTexture(&view.render_texture);
+        api.rendering.disposeRenderTexture(&view.render_texture);
     }
 
     fn onLayerAction(event: Component.ComponentEvent) void {
@@ -432,13 +432,13 @@ pub const ViewRenderer = struct {
         if (View.ordered_active_views.slots.nextSetBit(0) == null) {
             // in this case we have only the screen, no FBO
             if (View.screen_shader_binding != NO_BINDING)
-                api.RENDERING_API.setActiveShader(View.screen_shader_binding);
+                api.rendering.setActiveShader(View.screen_shader_binding);
 
-            api.RENDERING_API.startRendering(null, &View.screen_projection);
+            api.rendering.startRendering(null, &View.screen_projection);
             VIEW_RENDER_EVENT.view_id = UNDEF_INDEX;
             VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
             VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
-            api.RENDERING_API.endRendering();
+            api.rendering.endRendering();
         } else {
             // render to all FBO
             var view_it = View.ordered_active_views.iterator();
@@ -450,13 +450,13 @@ pub const ViewRenderer = struct {
             view_it = View.ordered_active_views.iterator();
             // set shader if needed
             if (View.screen_shader_binding != NO_BINDING)
-                api.RENDERING_API.setActiveShader(View.screen_shader_binding);
+                api.rendering.setActiveShader(View.screen_shader_binding);
             // activate render to screen
-            api.RENDERING_API.startRendering(null, &View.screen_projection);
+            api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
             while (view_it.next()) |view_id| {
                 var view: *const View = View.byId(view_id.*);
-                api.RENDERING_API.renderTexture(
+                api.rendering.renderTexture(
                     view.render_texture.binding,
                     &view.transform,
                     &view.render_data,
@@ -464,7 +464,7 @@ pub const ViewRenderer = struct {
                 );
             }
             // end rendering to screen
-            api.RENDERING_API.endRendering();
+            api.rendering.endRendering();
         }
     }
 
@@ -472,9 +472,9 @@ pub const ViewRenderer = struct {
         // start rendering to view (FBO)
         // set shader...
         if (view.shader_binding != NO_BINDING)
-            api.RENDERING_API.setActiveShader(view.shader_binding);
+            api.rendering.setActiveShader(view.shader_binding);
         // activate FBO
-        api.RENDERING_API.startRendering(view.render_texture.binding, &view.projection);
+        api.rendering.startRendering(view.render_texture.binding, &view.projection);
         // emit render events for all layers of the view in order to render to FBO
         if (view.ordered_active_layer != null) {
             var it = view.ordered_active_layer.?.slots.nextSetBit(0);
@@ -482,15 +482,15 @@ pub const ViewRenderer = struct {
                 var layer: *const Layer = Layer.byId(layer_id);
                 // apply layer shader to render engine if set
                 if (layer.shader_binding != NO_BINDING)
-                    api.RENDERING_API.setActiveShader(layer.shader_binding);
+                    api.rendering.setActiveShader(layer.shader_binding);
                 // add layer offset to render engine
-                api.RENDERING_API.addOffset(layer.offset);
+                api.rendering.addOffset(layer.offset);
                 // send layer render event
                 VIEW_RENDER_EVENT.view_id = view.id;
                 VIEW_RENDER_EVENT.layer_id = layer_id;
                 VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
                 // remove layer offset form render engine
-                api.RENDERING_API.removeOffset(layer.offset);
+                api.rendering.removeOffset(layer.offset);
                 it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
             }
         } else {
@@ -500,6 +500,6 @@ pub const ViewRenderer = struct {
             VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
         }
         // end rendering to FBO
-        api.RENDERING_API.endRendering();
+        api.rendering.endRendering();
     }
 };

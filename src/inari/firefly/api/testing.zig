@@ -302,15 +302,15 @@ test "RenderAPI debug init" {
     try inari.firefly.initTesting();
     defer inari.firefly.deinit();
 
-    var width = api.RENDERING_API.screenWidth();
-    var height = api.RENDERING_API.screenHeight();
+    var width = api.rendering.screenWidth();
+    var height = api.rendering.screenHeight();
 
     try std.testing.expect(width == 800);
     try std.testing.expect(height == 600);
 
     var fpsPos = PosI{ 10, 10 };
 
-    api.RENDERING_API.showFPS(&fpsPos);
+    api.rendering.showFPS(&fpsPos);
 
     var t1 = TextureData{ .resource = "t1" };
     var t2 = RenderTextureData{};
@@ -321,18 +321,18 @@ test "RenderAPI debug init" {
     transform.position[1] = 100;
 
     try std.testing.expect(t1.binding == NO_BINDING);
-    api.RENDERING_API.loadTexture(&t1);
+    api.rendering.loadTexture(&t1);
     try std.testing.expect(t1.binding != NO_BINDING);
     try std.testing.expect(t2.binding == NO_BINDING);
-    api.RENDERING_API.createRenderTexture(&t2);
+    api.rendering.createRenderTexture(&t2);
     try std.testing.expect(t2.binding != NO_BINDING);
 
     sprite.texture_binding = t1.binding;
-    api.RENDERING_API.renderSprite(&sprite, &transform, &renderData, null);
+    api.rendering.renderSprite(&sprite, &transform, &renderData, null);
 
     // test creating another DebugGraphics will get the same instance back
     var debugGraphics2 = try createTestRenderAPI();
-    try std.testing.expectEqual(api.RENDERING_API, debugGraphics2);
+    try std.testing.expectEqual(api.rendering, debugGraphics2);
     var offset = Vector2f{ 10, 10 };
     debugGraphics2.setOffset(offset);
     debugGraphics2.renderSprite(&sprite, &transform, &renderData, offset);
@@ -366,7 +366,7 @@ test "RenderAPI debug init" {
         \\     offset:{ 1.0e+01, 1.0e+01 }
         \\
     ;
-    api.RENDERING_API.printDebug(&sb);
+    api.rendering.printDebug(&sb);
     //std.debug.print("\n{s}", .{sb.toString()});
     try std.testing.expectEqualStrings(api_out, sb.toString());
 }

@@ -167,7 +167,7 @@ pub const ShaderAsset = struct {
         if (shaderData.binding != NO_BINDING)
             return; // already loaded
 
-        firefly.api.RENDERING_API.createShader(shaderData);
+        firefly.api.rendering.createShader(shaderData);
     }
 
     fn unload(asset: *Asset) void {
@@ -175,7 +175,7 @@ pub const ShaderAsset = struct {
             return;
 
         var shaderData: *ShaderData = shader.get(asset.resource_id);
-        firefly.api.RENDERING_API.disposeShader(shaderData);
+        firefly.api.rendering.disposeShader(shaderData);
     }
 
     fn delete(asset: *Asset) void {
@@ -269,7 +269,7 @@ pub const TextureAsset = struct {
         if (tex_data.binding != NO_BINDING)
             return; // already loaded
 
-        firefly.api.RENDERING_API.loadTexture(tex_data);
+        firefly.api.rendering.loadTexture(tex_data);
     }
 
     fn unload(asset: *Asset) void {
@@ -283,7 +283,7 @@ pub const TextureAsset = struct {
         if (tex_data.binding == NO_BINDING)
             return; // already disposed
 
-        firefly.api.RENDERING_API.disposeTexture(tex_data);
+        firefly.api.rendering.disposeTexture(tex_data);
 
         assert(tex_data.binding == NO_BINDING);
         assert(tex_data.width == -1);

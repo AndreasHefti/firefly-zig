@@ -1,11 +1,11 @@
 const std = @import("std");
 const inari = @import("../../inari.zig");
+const firefly = inari.firefly;
 const utils = inari.utils;
 
 const Allocator = std.mem.Allocator;
 const testing = @import("testing.zig");
 const asset = @import("Asset.zig");
-const engine = @import("Engine.zig");
 const component = @import("Component.zig");
 const system = @import("System.zig");
 const timer = @import("Timer.zig");
@@ -30,8 +30,14 @@ const StringBuffer = utils.StringBuffer;
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
+pub const InitMode = enum { TESTING, DEVELOPMENT, PRODUCTION };
+pub var COMPONENT_ALLOC: Allocator = undefined;
+pub var ENTITY_ALLOC: Allocator = undefined;
+pub var ALLOC: Allocator = undefined;
+
+pub var rendering: RenderAPI() = undefined;
+
 pub const Asset = asset;
-pub const Engine = engine;
 pub const Component = component;
 pub const ComponentEvent = component.ComponentEvent;
 pub const ComponentActionType = component.ActionType;
@@ -49,11 +55,6 @@ pub const NO_BINDING: BindingId = std.math.maxInt(usize);
 //////////////////////////////////////////////////////////////
 //// Initialization
 //////////////////////////////////////////////////////////////
-pub const InitMode = enum { TESTING, DEVELOPMENT, PRODUCTION };
-pub var COMPONENT_ALLOC: Allocator = undefined;
-pub var ENTITY_ALLOC: Allocator = undefined;
-pub var ALLOC: Allocator = undefined;
-pub var RENDERING_API: RenderAPI() = undefined;
 
 var initialized = false;
 
@@ -74,13 +75,13 @@ pub fn init(
     try utils.init(allocator);
 
     if (initMode == InitMode.TESTING) {
-        RENDERING_API = try testing.createTestRenderAPI();
+        rendering = try testing.createTestRenderAPI();
     } else {
         // TODO
 
     }
 
-    Engine.init();
+    //Engine.init();
     try Component.init();
     Timer.init();
 
@@ -96,15 +97,16 @@ pub fn deinit() void {
         return;
 
     Component.deinit();
-    RENDERING_API.deinit();
+    rendering.deinit();
     Timer.deinit();
-    Engine.deinit();
+    //Engine.deinit();
     utils.deinit();
 }
 
 //////////////////////////////////////////////////////////////
 //// Update Event and Render Event declarations
 //////////////////////////////////////////////////////////////
+
 pub const UpdateEvent = struct {};
 pub const UpdateListener = *const fn (UpdateEvent) void;
 pub const RenderEventType = enum {
@@ -133,12 +135,12 @@ pub fn RenderEventSubscription(comptime _: type) type {
         }
 
         pub fn subscribe(self: Self) Self {
-            Engine.subscribeRender(adapt);
+            firefly.Engine.subscribeRender(adapt);
             return self;
         }
 
         pub fn unsubscribe(self: Self) Self {
-            Engine.unsubscribeRender(adapt);
+            firefly.Engine.unsubscribeRender(adapt);
             return self;
         }
 
@@ -170,12 +172,12 @@ pub fn UpdateEventSubscription(comptime _: type) type {
         }
 
         pub fn subscribe(self: Self) Self {
-            Engine.subscribeUpdate(adapt);
+            firefly.Engine.subscribeUpdate(adapt);
             return self;
         }
 
         pub fn unsubscribe(self: Self) Self {
-            Engine.unsubscribeUpdate(adapt);
+            firefly.Engine.unsubscribeUpdate(adapt);
             return self;
         }
 
