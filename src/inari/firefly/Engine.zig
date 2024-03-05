@@ -74,7 +74,7 @@ pub fn unsubscribeRender(listener: RenderListener) void {
 }
 
 /// Performs a tick.Update the Timer, notify UpdateEvent, notify Pre-Render, Render, Post-Render events
-fn tick() void {
+pub fn tick() void {
     // update
     Timer.tick();
     UPDATE_EVENT_DISPATCHER.notify(UPDATE_EVENT);

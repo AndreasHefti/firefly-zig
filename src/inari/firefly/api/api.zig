@@ -78,6 +78,7 @@ pub fn init(
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
+        //rendering = try testing.createTestRenderAPI(); // try @import("raylib_rendering.zig").createRenderAPI();
         rendering = try @import("raylib_rendering.zig").createRenderAPI();
     }
 

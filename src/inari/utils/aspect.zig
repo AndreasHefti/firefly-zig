@@ -183,18 +183,25 @@ pub const Kind = struct {
     }
 
     pub fn with(self: Kind, aspect: *Aspect) Kind {
-        if (self.group != aspect.group) {
+        if (self.group != aspect.group)
             return self;
-        }
+
         var kind = self;
         kind._mask |= maskBit(aspect.index);
         return kind;
     }
 
+    pub fn hasAspect(self: *Kind, aspect: *Aspect) bool {
+        if (self.group != aspect.group)
+            return false;
+
+        return self._mask & maskBit(aspect.index) > 0;
+    }
+
     pub fn unionKind(self: *Kind, other: *const Kind) Kind {
-        if (self.group != other.group) {
+        if (self.group != other.group)
             return copy(self);
-        }
+
         return Kind{
             .group = self.group,
             ._mask = self._mask | other._mask,
@@ -202,9 +209,9 @@ pub const Kind = struct {
     }
 
     pub fn intersectionKind(self: *Kind, other: *const Kind) Kind {
-        if (self.group != other.group) {
+        if (self.group != other.group)
             return copy(self);
-        }
+
         return Kind{
             .group = self.group,
             ._mask = self._mask & other._mask,

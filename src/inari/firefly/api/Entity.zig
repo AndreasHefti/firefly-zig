@@ -50,6 +50,16 @@ pub const Entity = struct {
         return self;
     }
 
+    pub fn withComponentAnd(self: *Entity, c: anytype) *@TypeOf(c) {
+        _ = self.withComponent(c);
+        const T = @TypeOf(c);
+        return EntityComponentPool(T).get(self.id);
+    }
+
+    pub fn activation(self: *Entity, active: bool) void {
+        EntityComponent.activateEntityComponents(self, active);
+    }
+
     pub fn activate(self: *Entity) *Entity {
         if (self.id == UNDEF_INDEX)
             return self;
@@ -126,6 +136,15 @@ pub const EntityComponent = struct {
         EntityComponentPool(T).init();
     }
 
+    fn activateEntityComponents(entity: *Entity, active: bool) void {
+        for (0..ENTITY_KIND_ASP_GROUP._size) |i| {
+            var aspect = &ENTITY_KIND_ASP_GROUP.aspects[i];
+            if (entity.kind.hasAspect(aspect)) {
+                INTERFACE_TABLE.get(aspect.index).activate(entity.id, active);
+            }
+        }
+    }
+
     pub const API = struct {
         pub fn Adapter(comptime T: type, comptime type_name: String) type {
             return struct {
@@ -166,11 +185,6 @@ pub const EntityComponent = struct {
                 return false;
             }
 
-            // if (any_component.id == utils.UNDEF_INDEX) {
-            //     std.log.err("No valid entity component. Undefined id: {any}", .{any_component});
-            //     return false;
-            // }
-
             return true;
         }
     };
@@ -188,6 +202,7 @@ pub fn EntityComponentPool(comptime T: type) type {
     // component struct based interceptors / methods
     comptime var has_construct: bool = false;
     comptime var has_destruct: bool = false;
+    comptime var has_activation: bool = false;
 
     comptime {
         if (!trait.is(.Struct)(T))
@@ -208,6 +223,7 @@ pub fn EntityComponentPool(comptime T: type) type {
 
         has_construct = trait.hasDecls(T, .{"construct"});
         has_destruct = trait.hasDecls(T, .{"destruct"});
+        has_activation = trait.hasDecls(T, .{"activation"});
     }
 
     return struct {
@@ -227,6 +243,7 @@ pub fn EntityComponentPool(comptime T: type) type {
             defer {
                 EntityComponent.INTERFACE_TABLE.set(
                     ComponentTypeInterface{
+                        .activate = Self.activate,
                         .clear = Self.clear,
                         .deinit = Self.deinit,
                         .to_string = toString,
@@ -273,11 +290,12 @@ pub fn EntityComponentPool(comptime T: type) type {
             checkComponentTrait(c);
 
             items.set(c, id);
-            if (has_construct)
-                c.construct();
-
             var comp: *T = items.get(id);
             comp.id = id;
+
+            if (has_construct)
+                comp.construct();
+
             return comp;
         }
 
@@ -287,6 +305,12 @@ pub fn EntityComponentPool(comptime T: type) type {
 
         pub fn byId(id: Index) *const T {
             return items.get(id);
+        }
+
+        pub fn activate(id: Index, active: bool) void {
+            if (has_activation) {
+                items.get(id).activation(active);
+            }
         }
 
         pub fn clearAll() void {

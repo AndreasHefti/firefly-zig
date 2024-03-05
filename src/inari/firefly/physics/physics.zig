@@ -11,6 +11,7 @@ const firefly = inari.firefly;
 pub const EasedValueIntegration = animation.EasedValueIntegration;
 pub const IAnimation = animation.IAnimation;
 pub const Animation = animation.Animation;
+pub const EAnimation = animation.EAnimation;
 
 //////////////////////////////////////////////////////////////
 //// module init

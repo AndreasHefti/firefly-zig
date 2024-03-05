@@ -8,6 +8,9 @@ const SpriteAsset = firefly.graphics.SpriteAsset;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
+const EAnimation = firefly.physics.EAnimation;
+const Animation = firefly.physics.Animation;
+const EasedValueIntegration = firefly.physics.EasedValueIntegration;
 
 pub fn main() !void {
     //try Example_Test_Hello_Zig_Window();
@@ -56,8 +59,33 @@ fn _Example_One_Entity_No_Views() void {
     });
 
     _ = Entity.new(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .transform = .{ .position = .{ 64, 64 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 } })
+        .withComponent(ETransform{ .transform = .{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 } })
         .withComponent(ESprite.fromAsset(sprite_asset))
+        .withComponentAnd(EAnimation{})
+        .withAnimation(Animation(EasedValueIntegration).new(
+        1000,
+        true,
+        true,
+        true,
+        EasedValueIntegration{
+            .start_value = 164.0,
+            .end_value = 264.0,
+            .easing = utils.Easing_Linear,
+            .property_ref = &ETransform.get(Entity.byName("TestEntity").id).transform.position[0],
+        },
+    ))
+        .withAnimationAnd(Animation(EasedValueIntegration).new(
+        2000,
+        true,
+        true,
+        true,
+        EasedValueIntegration{
+            .start_value = 0.0,
+            .end_value = 180.0,
+            .easing = utils.Easing_Linear,
+            .property_ref = &ETransform.get(Entity.byName("TestEntity").id).transform.rotation,
+        },
+    ))
         .activate();
 }
 

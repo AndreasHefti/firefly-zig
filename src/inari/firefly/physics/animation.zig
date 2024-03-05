@@ -41,6 +41,7 @@ pub fn init() void {
     IndexFrame.init();
     AnimationSystem.init();
     AnimationSystem.registerAnimationType(EasedValueIntegration);
+    EntityComponent.registerEntityComponent(EAnimation);
 }
 
 pub fn deinit() void {
@@ -66,12 +67,17 @@ pub const IAnimation = struct {
     fn_suspend_it: *const fn (Index) void = undefined,
     fn_loop_callback: *const fn (Index, *const fn (usize) void) void = undefined,
     fn_finish_callback: *const fn (Index, *const fn (Index) void) void = undefined,
+    fn_reset: *const fn (Index) void = undefined,
     fn_dispose: *const fn (Index) void = undefined,
 
     //update: *const fn (Index, Float) void,
 
     pub fn activate(self: *IAnimation, active: bool) void {
         self.fn_activate(self.id, active);
+    }
+
+    pub fn reset(self: *IAnimation) void {
+        self.fn_reset(self.id);
     }
 
     pub fn suspendIt(self: *IAnimation) void {
@@ -111,6 +117,7 @@ pub fn Animation(comptime Integration: type) type {
         looping: bool = false,
         inverse_on_loop: bool = false,
         reset_on_finish: bool = true,
+        active_on_init: bool = true,
         integration: Integration = undefined,
 
         // callbacks
@@ -171,6 +178,7 @@ pub fn Animation(comptime Integration: type) type {
                 .fn_suspend_it = suspendIt,
                 .fn_loop_callback = withLoopCallback,
                 .fn_finish_callback = withFinishCallback,
+                .fn_reset = reset,
                 .fn_dispose = dispose,
             };
             return &self._interface;
@@ -178,6 +186,12 @@ pub fn Animation(comptime Integration: type) type {
 
         pub fn activate(index: Index, active: bool) void {
             animations.get(index)._active = active;
+        }
+
+        pub fn reset(index: Index) void {
+            var a = animations.get(index);
+            a.resetIntegration();
+            a._active = a.active_on_init;
         }
 
         pub fn suspendIt(index: Index) void {
@@ -196,7 +210,7 @@ pub fn Animation(comptime Integration: type) type {
         }
 
         fn update(self: *Self) void {
-            self._t_normalized += 1.0 * utils.usize_f32(Timer.timeElapsed / self.duration);
+            self._t_normalized += 1.0 * utils.usize_f32(Timer.timeElapsed) / utils.usize_f32(self.duration);
             if (self._t_normalized >= 1.0) {
                 self._t_normalized = 0.0;
                 if (self._suspending or !self.looping) {
@@ -220,13 +234,13 @@ pub fn Animation(comptime Integration: type) type {
         fn finish(self: *Self) void {
             self._active = false;
             if (self.reset_on_finish)
-                reset(self);
+                resetIntegration(self);
             if (self.finish_callback) |c| {
                 c(self._interface.id);
             }
         }
 
-        fn reset(self: *Self) void {
+        fn resetIntegration(self: *Self) void {
             self._loop_count = 0;
             self._t_normalized = 0.0;
         }
@@ -285,10 +299,33 @@ pub const EAnimation = struct {
         self.animations = DynArray(*IAnimation).new(api.ENTITY_ALLOC, null) catch unreachable;
     }
 
+    pub fn withAnimation(self: *EAnimation, animation: *IAnimation) *EAnimation {
+        _ = self.animations.add(animation);
+        return self;
+    }
+
+    pub fn withAnimationAnd(self: *EAnimation, animation: *IAnimation) *Entity {
+        _ = self.animations.add(animation);
+        return Entity.pool.get(self.id);
+    }
+
+    pub fn activation(self: *EAnimation, active: bool) void {
+        var next = self.animations.slots.nextSetBit(0);
+        while (next) |i| {
+            var a: *IAnimation = self.animations.get(i).*;
+            if (active) {
+                a.reset();
+            } else {
+                a.activate(false);
+            }
+            next = self.animations.slots.nextSetBit(i + 1);
+        }
+    }
+
     pub fn destruct(self: *EAnimation) void {
         var next = self.animations.slots.nextSetBit(0);
         while (next) |i| {
-            self.animations.get(i).dispose();
+            self.animations.get(i).*.dispose();
             next = self.animations.slots.nextSetBit(i + 1);
         }
 
@@ -361,6 +398,7 @@ pub const EasedValueIntegration = struct {
     property_ref: *Float,
 
     pub fn integrate(a: *Animation(EasedValueIntegration)) void {
+        //std.log.info("****** integrate: {any}", .{a._t_normalized});
         if (a._inverted)
             a.integration.property_ref.* = std.math.lerp(
                 a.integration.end_value,

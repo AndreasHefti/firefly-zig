@@ -57,6 +57,7 @@ pub const API = struct {
     const UNSUBSCRIBE_DECL = *const fn (ComponentListener) void;
 
     pub const ComponentTypeInterface = struct {
+        activate: *const fn (Index, bool) void,
         clear: *const fn (Index) void,
         deinit: *const fn () void,
         to_string: *const fn (*StringBuffer) void,
@@ -285,6 +286,7 @@ pub fn ComponentPool(comptime T: type) type {
             defer {
                 API.COMPONENT_INTERFACE_TABLE.set(
                     API.ComponentTypeInterface{
+                        .activate = Self.activate,
                         .clear = Self.clear,
                         .deinit = Self.deinit,
                         .to_string = toString,
