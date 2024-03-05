@@ -6,20 +6,55 @@ const api = inari.firefly.api;
 
 const RenderAPI = api.RenderAPI;
 const Vector2f = utils.Vector2f;
+const Color = utils.Color;
+const BlendMode = api.BlendMode;
 const RenderData = api.RenderData;
 const TextureData = api.TextureData;
+const TransformData = api.TransformData;
 const ShaderData = api.ShaderData;
+const SpriteData = api.SpriteData;
 const RenderTextureData = api.RenderTextureData;
 const Projection = api.Projection;
 const BindingId = api.BindingId;
 const DynArray = utils.DynArray;
+const StringBuffer = utils.StringBuffer;
 const CInt = utils.CInt;
+const CUInt = utils.CUInt;
+const Float = utils.Float;
 const PosI = utils.PosI;
+const PosF = utils.PosF;
 const NO_BINDING = api.NO_BINDING;
 
 const Texture2D = rl.Texture2D;
 const RenderTexture2D = rl.RenderTexture2D;
 const Shader = rl.Shader;
+
+// Texture parameters: filter mode
+// NOTE 1: Filtering considers mipmaps if available in the texture
+// NOTE 2: Filter is accordingly set for minification and magnification
+pub const TextureFilter = enum(CUInt) {
+    TEXTURE_FILTER_POINT = 0, // No filter, just pixel approximation
+    TEXTURE_FILTER_BILINEAR, // Linear filtering
+    TEXTURE_FILTER_TRILINEAR, // Trilinear filtering (linear with mipmaps)
+    TEXTURE_FILTER_ANISOTROPIC_4X, // Anisotropic filtering 4x
+    TEXTURE_FILTER_ANISOTROPIC_8X, // Anisotropic filtering 8x
+    TEXTURE_FILTER_ANISOTROPIC_16X, // Anisotropic filtering 16x
+};
+
+// Texture parameters: wrap mode
+pub const TextureWrap = enum(CUInt) {
+    TEXTURE_WRAP_REPEAT = 0, // Repeats texture in tiled mode
+    TEXTURE_WRAP_CLAMP, // Clamps texture to edge pixel in tiled mode
+    TEXTURE_WRAP_MIRROR_REPEAT, // Mirrors and repeats the texture in tiled mode
+    TEXTURE_WRAP_MIRROR_CLAMP, // Mirrors and clamps to border the texture in tiled mode
+};
+
+// Singleton Debug RenderAPI
+var singleton: RenderAPI() = undefined;
+pub fn createRenderAPI() !RenderAPI() {
+    singleton = RenderAPI().init(RaylibRenderAPI.initImpl);
+    return singleton;
+}
 
 const RaylibRenderAPI = struct {
     var initialized = false;
@@ -29,13 +64,20 @@ const RaylibRenderAPI = struct {
         if (initialized)
             return;
 
+        //active_projection = default_projection;
+        active_offset = default_offset;
+        active_blend_mode = default_blend_mode;
+
         textures = DynArray(Texture2D).new(api.ALLOC, null) catch unreachable;
-        renderTextures = DynArray(RenderTexture2D).new(api.ALLOC, null) catch unreachable;
+        render_textures = DynArray(RenderTexture2D).new(api.ALLOC, null) catch unreachable;
         shaders = DynArray(Shader).new(api.ALLOC, null) catch unreachable;
 
         interface.screenWidth = screenWidth;
         interface.screenHeight = screenHeight;
         interface.showFPS = showFPS;
+        interface.setOffset = setOffset;
+        interface.addOffset = addOffset;
+        interface.setBaseProjection = setBaseProjection;
 
         interface.loadTexture = loadTexture;
         interface.disposeTexture = disposeTexture;
@@ -44,11 +86,8 @@ const RaylibRenderAPI = struct {
         interface.createShader = createShader;
         interface.disposeShader = disposeShader;
 
-        interface.startRendering = startRendering;
         interface.setActiveShader = setActiveShader;
-        interface.setOffset = setOffset;
-        interface.addOffset = addOffset;
-        interface.removeOffset = removeOffset;
+        interface.startRendering = startRendering;
         interface.renderTexture = renderTexture;
         interface.renderSprite = renderSprite;
         interface.endRendering = endRendering;
@@ -63,18 +102,32 @@ const RaylibRenderAPI = struct {
             return;
     }
 
-    const default_offset = Vector2f{ 0, 0 };
-    const default_render_data = RenderData{};
+    var default_offset = Vector2f{ 0, 0 };
+    var default_render_data = RenderData{};
+    var default_projection = Projection{};
+    var default_blend_mode = BlendMode.ALPHA;
 
     var textures: DynArray(Texture2D) = undefined;
-    var renderTextures: DynArray(RenderTexture2D) = undefined;
+    var render_textures: DynArray(RenderTexture2D) = undefined;
     var shaders: DynArray(Shader) = undefined;
 
-    var currentRenderTexture: ?BindingId = null;
-    var currentShader: ?BindingId = null;
-    var currentProjection: *const Projection = &Projection{};
-    var currentOffset: *const Vector2f = &default_offset;
-    var currentRenderData: *const RenderData = &default_render_data;
+    var active_shader: ?BindingId = null;
+    var active_render_texture: ?BindingId = null;
+    //var active_projection: Projection = undefined;
+    var active_offset: Vector2f = undefined;
+    var active_tint_color: rl.Color = rl.Color{ .r = 0, .g = 0, .b = 0, .a = 255 };
+    var active_clear_color: ?rl.Color = rl.Color{ .r = 0, .g = 0, .b = 0, .a = 255 };
+    var active_blend_mode: BlendMode = undefined;
+    var active_camera = rl.Camera2D{
+        .offset = rl.Vector2{ .x = 0, .y = 0 },
+        .target = rl.Vector2{ .x = 0, .y = 0 },
+        .rotation = 0,
+        .zoom = 1,
+    };
+
+    var temp_source_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
+    var temp_dest_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
+    var temp_pivot = rl.Vector2{ .x = 0, .y = 0 };
 
     pub fn screenWidth() CInt {
         return rl.GetScreenWidth();
@@ -88,6 +141,18 @@ const RaylibRenderAPI = struct {
         rl.DrawFPS(@bitCast(pos[0]), @bitCast(pos[1]));
     }
 
+    pub fn setOffset(offset: Vector2f) void {
+        active_offset = offset;
+    }
+
+    pub fn addOffset(offset: Vector2f) void {
+        active_offset += offset;
+    }
+
+    pub fn setBaseProjection(projection: Projection) void {
+        default_projection = projection;
+    }
+
     pub fn loadTexture(td: *TextureData) void {
         var tex = rl.LoadTexture(@ptrCast(td.resource));
         td.width = @bitCast(tex.width);
@@ -97,12 +162,13 @@ const RaylibRenderAPI = struct {
             rl.GenTextureMipmaps(&tex);
         }
 
-        if (td.mag_filter > 0) {
-            rl.SetTextureFilter(tex, td.mag_filter);
-        }
-        if (td.min_filter > 0) {
-            rl.SetTextureFilter(tex, td.min_filter);
-        }
+        rl.SetTextureFilter(tex, @intFromEnum(TextureFilter.TEXTURE_FILTER_POINT));
+        // if (td.mag_filter > 0) {
+        //     rl.SetTextureFilter(tex, td.mag_filter);
+        // }
+        // if (td.min_filter > 0) {
+        //     rl.SetTextureFilter(tex, td.min_filter);
+        // }
         if (td.s_wrap > 0) {
             rl.SetTextureWrap(tex, td.s_wrap);
         }
@@ -118,23 +184,23 @@ const RaylibRenderAPI = struct {
             return;
 
         var tex = textures.get(td.binding);
-        rl.UnloadTexture(tex);
+        rl.UnloadTexture(tex.*);
         textures.reset(td.binding);
         td.binding = NO_BINDING;
     }
 
     pub fn createRenderTexture(td: *RenderTextureData) void {
         var tex = rl.LoadRenderTexture(td.width, td.height);
-        td.binding = renderTextures.add(tex);
+        td.binding = render_textures.add(tex);
     }
 
     pub fn disposeRenderTexture(td: *RenderTextureData) void {
         if (td.binding == NO_BINDING)
             return;
 
-        var tex = textures.get(td.binding);
-        rl.UnloadRenderTexture(tex);
-        renderTextures.remove(td.binding);
+        var tex = render_textures.get(td.binding);
+        rl.UnloadRenderTexture(tex.*);
+        render_textures.reset(td.binding);
         td.binding = NO_BINDING;
     }
 
@@ -160,8 +226,187 @@ const RaylibRenderAPI = struct {
             return;
 
         var shader = shaders.get(sd.binding);
-        rl.UnloadShader(shader);
+        rl.UnloadShader(shader.*);
         shaders.reset(sd.binding);
         sd.binding = NO_BINDING;
+    }
+
+    pub fn setActiveShader(binding_id: BindingId) void {
+        if (active_shader != null and active_shader.? != binding_id) {
+            if (active_shader == NO_BINDING) {
+                rl.EndShaderMode();
+            } else {
+                var shader = shaders.get(active_shader.?);
+                rl.BeginShaderMode(shader.*);
+            }
+            active_shader = binding_id;
+        }
+    }
+
+    pub fn startRendering(binding_id: ?BindingId, projection: ?*const Projection) void {
+        active_render_texture = binding_id;
+        if (projection) |p| {
+            active_camera.offset = @bitCast(p.offset);
+            active_camera.target = @bitCast(p.pivot);
+            active_camera.rotation = p.rotation;
+            active_camera.zoom = p.zoom;
+            active_clear_color = if (p.clear_color != null) @bitCast(p.clear_color.?) else null;
+        } else {
+            active_camera.offset = @bitCast(default_projection.offset);
+            active_camera.target = @bitCast(default_projection.pivot);
+            active_camera.rotation = default_projection.rotation;
+            active_camera.zoom = default_projection.zoom;
+            active_clear_color = if (default_projection.clear_color != null) @bitCast(default_projection.clear_color.?) else null;
+        }
+
+        if (active_render_texture) |tex_id| {
+            var tex = render_textures.get(tex_id);
+            if (!rl.IsRenderTextureReady(tex.*))
+                @panic("Render Texture not ready!?");
+
+            rl.BeginTextureMode(tex.*);
+        } else {
+            rl.BeginDrawing();
+        }
+        rl.BeginMode2D(active_camera);
+
+        if (active_clear_color) |cc|
+            rl.ClearBackground(@bitCast(cc));
+
+        rl.BeginBlendMode(@intFromEnum(active_blend_mode));
+    }
+
+    pub fn renderTexture(
+        binding_id: BindingId,
+        transform: *const TransformData,
+        render_data: ?*const RenderData,
+        offset: ?Vector2f,
+    ) void {
+        var tex = render_textures.get(binding_id);
+
+        // set offset
+        if (offset) |o|
+            active_offset += o;
+        active_offset += transform.position;
+
+        // set render data
+        if (render_data) |rd| {
+            active_tint_color = @bitCast(rd.tint_color);
+            if (active_blend_mode != rd.blend_mode) {
+                rl.BeginBlendMode(@intFromEnum(active_blend_mode));
+                active_blend_mode = rd.blend_mode;
+            }
+        }
+
+        // set source rect
+        temp_source_rect.x = 0;
+        temp_source_rect.y = 0;
+        temp_source_rect.width = @floatFromInt(tex.texture.width);
+        temp_source_rect.height = @floatFromInt(tex.texture.height);
+        // set destination rect
+        if (transform.scale[0] != 1 or transform.scale[1] != 1) {
+            temp_dest_rect.x = active_offset[0];
+            temp_dest_rect.y = active_offset[1];
+            temp_dest_rect.width = transform.scale[0] * @as(Float, @floatFromInt(tex.texture.width));
+            temp_dest_rect.height = transform.scale[1] * @as(Float, @floatFromInt(tex.texture.height));
+            temp_pivot = @bitCast(transform.pivot * transform.scale);
+        } else {
+            temp_dest_rect.x = active_offset[0];
+            temp_dest_rect.y = active_offset[1];
+            temp_dest_rect.width = @floatFromInt(tex.texture.width);
+            temp_dest_rect.height = @floatFromInt(tex.texture.height);
+            temp_pivot = @bitCast(transform.pivot);
+        }
+
+        //void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
+        rl.DrawTexturePro(tex.texture, temp_source_rect, temp_dest_rect, temp_pivot, transform.rotation, active_tint_color);
+
+        // reset offset
+        if (offset) |o|
+            active_offset -= o;
+        active_offset -= transform.position;
+    }
+
+    pub fn renderSprite(
+        sprite_data: *const SpriteData,
+        transform: *const TransformData,
+        render_data: ?*const RenderData,
+        offset: ?Vector2f,
+    ) void {
+        var tex = textures.get(sprite_data.texture_binding);
+        // set offset
+        if (offset) |o|
+            active_offset += o;
+        active_offset += transform.position;
+
+        // set render data
+        if (render_data) |rd| {
+            active_tint_color = @bitCast(rd.tint_color);
+            if (active_blend_mode != rd.blend_mode) {
+                rl.BeginBlendMode(@intFromEnum(active_blend_mode));
+                active_blend_mode = rd.blend_mode;
+            }
+        }
+
+        // set source rect
+        // TODO try to directly set value with cast
+        temp_source_rect.x = sprite_data.texture_bounds[0];
+        temp_source_rect.y = sprite_data.texture_bounds[1];
+        temp_source_rect.width = sprite_data.texture_bounds[2];
+        temp_source_rect.height = sprite_data.texture_bounds[3];
+        // set destination rect
+        if (transform.scale[0] != 1 or transform.scale[1] != 1) {
+            temp_dest_rect.x = active_offset[0]; // + (transform.pivot[0] * transform.scale[0]);
+            temp_dest_rect.y = active_offset[1]; // + (transform.pivot[1] * transform.scale[1]);
+            temp_dest_rect.width = sprite_data.texture_bounds[2] * transform.scale[0];
+            temp_dest_rect.height = sprite_data.texture_bounds[3] * transform.scale[1];
+            temp_pivot = @bitCast(transform.pivot * transform.scale);
+        } else {
+            temp_dest_rect.x = active_offset[0];
+            temp_dest_rect.y = active_offset[1];
+            temp_dest_rect.width = sprite_data.texture_bounds[2];
+            temp_dest_rect.height = sprite_data.texture_bounds[3];
+            temp_pivot = @bitCast(transform.pivot);
+        }
+
+        //void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
+        //std.log.info("***************** renderSprite: temp_source_rect {any} temp_dest_rect {any}", .{ temp_source_rect, temp_dest_rect });
+        rl.DrawTexturePro(tex.*, temp_source_rect, temp_dest_rect, temp_pivot, transform.rotation, active_tint_color);
+
+        // reset offset
+        if (offset) |o|
+            active_offset -= o;
+        active_offset -= transform.position;
+    }
+
+    pub fn endRendering() void {
+        if (active_render_texture) |_| {
+            rl.EndTextureMode();
+            active_render_texture = null;
+        }
+        rl.EndMode2D();
+        rl.EndDrawing();
+
+        // TODO something else?
+    }
+
+    pub fn printDebug(buffer: *StringBuffer) void {
+        buffer.append("Raylib Renderer:\n");
+        buffer.print("  default_offset: {any}\n", .{default_offset});
+        buffer.print("  default_render_data: {any}\n", .{default_render_data});
+        buffer.print("  default_projection: {any}\n", .{default_projection});
+        buffer.print("  default_blend_mode: {any}\n\n", .{default_blend_mode});
+
+        buffer.print("  textures: {any}\n", .{textures});
+        buffer.print("  render_textures: {any}\n", .{default_projection});
+        buffer.print("  shaders: {any}\n\n", .{shaders});
+
+        buffer.print("  active_camera: {any}\n", .{active_camera});
+        buffer.print("  active_shader: {any}\n", .{active_shader});
+        buffer.print("  active_render_texture: {any}\n", .{active_render_texture});
+        buffer.print("  active_offset: {any}\n", .{active_offset});
+        buffer.print("  active_tint_color: {any}\n", .{active_tint_color});
+        buffer.print("  active_clear_color: {any}\n", .{active_clear_color});
+        buffer.print("  active_blend_mode: {any}\n", .{active_blend_mode});
     }
 };

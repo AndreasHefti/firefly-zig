@@ -41,7 +41,8 @@ pub usingnamespace @import("bitset.zig");
 pub const String = []const u8;
 pub const CString = [*c]const u8;
 pub const Index = usize;
-pub const CInt = i32;
+pub const CInt = c_int;
+pub const CUInt = c_uint;
 pub const Float = f32;
 pub const Byte = u8;
 

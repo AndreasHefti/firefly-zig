@@ -490,7 +490,7 @@ pub const ViewRenderer = struct {
                 VIEW_RENDER_EVENT.layer_id = layer_id;
                 VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
                 // remove layer offset form render engine
-                api.rendering.removeOffset(layer.offset);
+                api.rendering.addOffset(layer.offset * @as(Vector2f, @splat(-1)));
                 it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
             }
         } else {

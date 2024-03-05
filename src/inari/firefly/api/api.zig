@@ -15,6 +15,7 @@ const Condition = utils.Condition;
 const String = utils.String;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
+const CUInt = utils.CUInt;
 const Float = utils.Float;
 const PosI = utils.PosI;
 const PosF = utils.PosF;
@@ -77,8 +78,7 @@ pub fn init(
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
-        // TODO integrate raylib
-        rendering = try testing.createTestRenderAPI();
+        rendering = try @import("raylib_rendering.zig").createRenderAPI();
     }
 
     //Engine.init();
@@ -376,7 +376,7 @@ pub const TransformData = struct {
     }
 
     pub fn hasScale(self: *TransformData) bool {
-        return self.scale[0] != 1 or self.scale[2] != 1;
+        return self.scale[0] != 1 or self.scale[1] != 1;
     }
 
     pub fn format(
@@ -447,6 +447,12 @@ pub fn RenderAPI() type {
         screenHeight: *const fn () CInt = undefined,
         /// Show actual frame rate per second at given position on the screen
         showFPS: *const fn (*PosI) void = undefined,
+        /// Set rendering offset
+        setOffset: *const fn (Vector2f) void = undefined,
+        /// Adds given offset to actual offset of the rendering engine
+        addOffset: *const fn (Vector2f) void = undefined,
+        /// Set the projection and clear color of the base view
+        setBaseProjection: *const fn (Projection) void = undefined,
 
         /// Loads image data from file system and create new texture data loaded into GPU
         /// @param textureData The texture DAO. Sets binding, width and height to the DAO
@@ -468,12 +474,6 @@ pub fn RenderAPI() type {
         /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
         /// @param shaderId The instance identifier of the shader.
         setActiveShader: *const fn (BindingId) void = undefined,
-        /// Set rendering offset
-        setOffset: *const fn (Vector2f) void = undefined,
-        /// Adds given offset to actual offset of the rendering engine
-        addOffset: *const fn (Vector2f) void = undefined,
-        /// Remove the given offset from actual offset of the rendering engine
-        removeOffset: *const fn (Vector2f) void = undefined,
         /// This renders a given RenderTextureData (BindingId) to the actual render target that can be
         /// rendering texture or the screen
         renderTexture: *const fn (BindingId, *const TransformData, ?*const RenderData, ?Vector2f) void = undefined,

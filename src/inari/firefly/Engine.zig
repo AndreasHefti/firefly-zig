@@ -31,32 +31,21 @@ pub fn deinit() void {
     RENDER_EVENT_DISPATCHER.deinit();
 }
 
-pub fn start(w: c_int, h: c_int, fps: c_int, title: CString) void {
+pub fn start(
+    w: c_int,
+    h: c_int,
+    fps: c_int,
+    title: CString,
+    init_callback: *const fn () void,
+) void {
     rl.InitWindow(w, h, title);
     rl.SetTargetFPS(fps);
     defer rl.CloseWindow();
 
-    // const camera = rl.Camera2D{
-    //     .offset = rl.Vector2{
-    //         .x = 0,
-    //         .y = 0,
-    //     },
-    //     .target = rl.Vector2{
-    //         .x = 0,
-    //         .y = 0,
-    //     },
-    //     .rotation = 10,
-    //     .zoom = 1,
-    // };
+    init_callback();
 
     while (!rl.WindowShouldClose()) {
-        rl.BeginDrawing();
-        //rl.BeginMode2D(camera);
-        //rl.ClearBackground(rl.BLACK);
-        //rl.DrawFPS(10, 10);
-        // TODO tick()
-        //rl.EndMode2D();
-        rl.EndDrawing();
+        tick();
     }
 }
 
@@ -85,7 +74,7 @@ pub fn unsubscribeRender(listener: RenderListener) void {
 }
 
 /// Performs a tick.Update the Timer, notify UpdateEvent, notify Pre-Render, Render, Post-Render events
-pub fn tick() void {
+fn tick() void {
     // update
     Timer.tick();
     UPDATE_EVENT_DISPATCHER.notify(UPDATE_EVENT);

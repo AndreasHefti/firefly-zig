@@ -97,6 +97,9 @@ pub const DebugRenderAPI = struct {
         interface.screenWidth = screenWidth;
         interface.screenHeight = screenHeight;
         interface.showFPS = showFPS;
+        interface.setOffset = setOffset;
+        interface.addOffset = addOffset;
+        interface.setBaseProjection = setBaseProjection;
 
         interface.loadTexture = loadTexture;
         interface.disposeTexture = disposeTexture;
@@ -107,9 +110,6 @@ pub const DebugRenderAPI = struct {
 
         interface.startRendering = startRendering;
         interface.setActiveShader = setActiveShader;
-        interface.setOffset = setOffset;
-        interface.addOffset = addOffset;
-        interface.removeOffset = removeOffset;
         interface.renderTexture = renderTexture;
         interface.renderSprite = renderSprite;
         interface.endRendering = endRendering;
@@ -210,10 +210,7 @@ pub const DebugRenderAPI = struct {
         currentOffset[1] += offset[1];
     }
 
-    pub fn removeOffset(offset: Vector2f) void {
-        currentOffset[0] -= offset[0];
-        currentOffset[1] -= offset[1];
-    }
+    pub fn setBaseProjection(_: Projection) void {}
 
     pub fn renderTexture(
         textureId: BindingId,
