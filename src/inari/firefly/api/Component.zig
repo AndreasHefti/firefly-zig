@@ -37,7 +37,9 @@ pub fn deinit() void {
 
     // deinit all registered component pools via aspect interface mapping
     for (0..API.COMPONENT_ASPECT_GROUP._size) |i| {
-        API.COMPONENT_INTERFACE_TABLE.get(API.COMPONENT_ASPECT_GROUP.aspects[i].index).deinit();
+        var aspect = API.COMPONENT_ASPECT_GROUP.aspects[i];
+        API.COMPONENT_INTERFACE_TABLE.get(aspect.index).deinit();
+        API.COMPONENT_INTERFACE_TABLE.delete(aspect.index);
     }
     API.COMPONENT_INTERFACE_TABLE.deinit();
     API.COMPONENT_INTERFACE_TABLE = undefined;
@@ -136,20 +138,20 @@ pub const API = struct {
         };
 
         if (!@hasField(c_type, "id")) {
-            std.log.err("Invalid component. No id field: {any}", .{any_component});
+            std.log.warn("Invalid component. No id field: {any}", .{any_component});
             return false;
         }
 
         if (@intFromPtr(c_type.type_aspect) == 0) {
-            std.log.err("Invalid component. aspect not initialized: {any}", .{any_component});
+            std.log.warn("Invalid component. aspect not initialized: {any}", .{any_component});
             return false;
         } else if (!c_type.type_aspect.isOfGroup(COMPONENT_ASPECT_GROUP)) {
-            std.log.err("Invalid component. AspectGroup mismatch: {any}", .{any_component});
+            std.log.warn("Invalid component. AspectGroup mismatch: {any}", .{any_component});
             return false;
         }
 
         if (any_component.id == utils.UNDEF_INDEX) {
-            std.log.err("Invalid component. Undefined id: {any}", .{any_component});
+            std.log.warn("Invalid component. Undefined id: {any}", .{any_component});
             return false;
         }
 
@@ -335,6 +337,7 @@ pub fn ComponentPool(comptime T: type) type {
                 T.deinit();
 
             c_aspect = undefined;
+            items.clear();
             items.deinit();
             active_mapping.deinit();
 
@@ -470,7 +473,7 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_destruct)
                 get(id).destruct();
             active_mapping.setValue(id, false);
-            items.reset(id);
+            items.delete(id);
         }
 
         pub fn clearByName(name: String) void {

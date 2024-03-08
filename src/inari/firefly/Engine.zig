@@ -36,12 +36,13 @@ pub fn start(
     h: c_int,
     fps: c_int,
     title: CString,
-    init_callback: *const fn () void,
+    init_callback: ?*const fn () void,
 ) void {
     api.window.openWindow(.{ .width = w, .height = h, .title = title, .fps = fps });
     defer api.window.closeWindow();
 
-    init_callback();
+    if (init_callback) |ic|
+        ic();
 
     while (!api.window.hasWindowClosed()) {
         tick();

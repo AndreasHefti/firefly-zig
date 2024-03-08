@@ -131,6 +131,9 @@ pub fn DynArray(comptime T: type) type {
         }
 
         pub fn deinit(self: *Self) void {
+            // if (self.slots.nextSetBit(0) != null)
+            //     @panic("Dynarray still has data!");
+
             self.register.deinit();
             self.slots.deinit();
         }
@@ -164,7 +167,7 @@ pub fn DynArray(comptime T: type) type {
             var i: usize = 0;
             while (self.slots.nextSetBit(i)) |next| {
                 if (std.meta.eql(t, self.get(next).*)) {
-                    reset(self, i);
+                    delete(self, i);
                     return;
                 }
                 i = next + 1;
@@ -201,7 +204,7 @@ pub fn DynArray(comptime T: type) type {
             }
         }
 
-        pub fn reset(self: *Self, index: usize) void {
+        pub fn delete(self: *Self, index: usize) void {
             if (exists(self, index)) {
                 if (self.null_value) |nv| {
                     self.register.set(nv, index);
@@ -213,8 +216,7 @@ pub fn DynArray(comptime T: type) type {
         pub fn clear(self: *Self) void {
             var next = self.slots.nextSetBit(0);
             while (next) |i| {
-                self.reset(i);
-                self.slots.setValue(i, false);
+                self.delete(i);
                 next = self.slots.nextSetBit(i + 1);
             }
         }
@@ -288,6 +290,9 @@ pub fn Register(comptime T: type) type {
         }
 
         pub fn inBounds(self: *Self, index: usize) bool {
+            if (self._num_arrays <= 0)
+                return false;
+
             const y = index / self.array_size;
             const x = index % self.array_size;
             return y < self.register.len and x < self.register[y].len;

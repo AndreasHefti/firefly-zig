@@ -10,16 +10,21 @@ const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const EAnimation = firefly.physics.EAnimation;
 const Animation = firefly.physics.Animation;
+const AnimationSystem = firefly.physics.AnimationSystem;
+const IAnimation = firefly.physics.IAnimation;
 const EasedValueIntegration = firefly.physics.EasedValueIntegration;
+const Allocator = std.mem.Allocator;
 
 pub fn main() !void {
-    //try Example_Test_Hello_Zig_Window();
-    try Example_One_Entity_No_Views();
-}
-
-fn Example_Test_Hello_Zig_Window() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
+    defer _ = gpa.deinit();
+
+    //try Example_Test_Hello_Zig_Window(allocator);
+    try Example_One_Entity_No_Views(allocator);
+}
+
+fn Example_Test_Hello_Zig_Window(allocator: Allocator) !void {
     try firefly.init(
         allocator,
         allocator,
@@ -28,12 +33,10 @@ fn Example_Test_Hello_Zig_Window() !void {
     );
     defer firefly.deinit();
 
-    firefly.Engine.start(600, 400, 60, "Hello Zig");
+    firefly.Engine.start(600, 400, 60, "Hello Zig", null);
 }
 
-fn Example_One_Entity_No_Views() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
+fn Example_One_Entity_No_Views(allocator: Allocator) !void {
     try firefly.init(
         allocator,
         allocator,
@@ -87,6 +90,13 @@ fn _Example_One_Entity_No_Views() void {
         },
     ))
         .activate();
+
+    AnimationSystem.activateById(0, false);
+    AnimationSystem.setLoopCallbackById(1, loopCallback1);
+}
+
+fn loopCallback1(count: usize) void {
+    std.log.info("Loop: {any}", .{count});
 }
 
 test "API Tests" {

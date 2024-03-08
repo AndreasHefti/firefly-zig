@@ -247,6 +247,19 @@ test "DynArray scale up" {
     try testing.expect(-1 == dyn_array.get(200001).*);
 }
 
+test "DynArray delete" {
+    const allocator = std.testing.allocator;
+    const testing = std.testing;
+
+    var dyn_array = try DynArray(i32).new(allocator, -1);
+    defer dyn_array.deinit();
+
+    dyn_array.set(100, 0);
+    try testing.expect(100 == dyn_array.get(0).*);
+    dyn_array.delete(0);
+    try testing.expect(-1 == dyn_array.get(0).*);
+}
+
 test "DynArray consistency checks" {
     var dyn_array = try DynArray(i32).new(std.testing.allocator, -1);
     defer dyn_array.deinit();

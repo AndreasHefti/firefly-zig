@@ -38,22 +38,22 @@ pub fn build(b: *std.Build) void {
     // exe.linkLibrary(firefly);
     // b.installArtifact(firefly);
 
-    const raylib_optimize = b.option(
-        std.builtin.OptimizeMode,
-        "raylib-optimize",
-        "Prioritize performance, safety, or binary size (-O flag), defaults to value of optimize option",
-    ) orelse std.builtin.OptimizeMode.ReleaseSmall;
+    // const raylib_optimize = b.option(
+    //     std.builtin.OptimizeMode,
+    //     "raylib-optimize",
+    //     "Prioritize performance, safety, or binary size (-O flag), defaults to value of optimize option",
+    // ) orelse std.builtin.OptimizeMode.Debug;
 
-    const strip = b.option(
-        bool,
-        "strip",
-        "Strip debug info to reduce binary size, defaults to false",
-    ) orelse true;
-    exe.strip = strip;
+    // const strip = b.option(
+    //     bool,
+    //     "strip",
+    //     "Strip debug info to reduce binary size, defaults to false",
+    // ) orelse true;
+    // exe.strip = strip;
 
     const raylib_dep = b.dependency("raylib", .{
         .target = target,
-        .optimize = raylib_optimize,
+        .optimize = optimize,
     });
     exe.linkLibrary(raylib_dep.artifact("raylib"));
 
@@ -89,11 +89,12 @@ pub fn build(b: *std.Build) void {
     // but does not run it.
     const unit_tests = b.addTest(.{
         .name = "firefly_test",
-        .root_source_file = .{ .path = "src/inari/libtest.zig" },
+        .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
         .single_threaded = true,
     });
+    unit_tests.linkLibrary(raylib_dep.artifact("raylib"));
     //unit_tests.addModule("utils", utils);
 
     const run_unit_tests = b.addRunArtifact(unit_tests);

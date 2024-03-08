@@ -107,17 +107,17 @@ pub const ViewLayerMapping = struct {
         getIdMapping(self, view_id, layer_id).setValue(id, false);
     }
 
-    pub fn clear(self: *ViewLayerMapping) void {
-        var it = self.mapping.iterator();
-        while (it.next()) |*next| {
-            var itt = next.iterator();
-            while (itt.next()) |*n| {
-                n.clearAndFree();
-            }
-            next.clear();
-        }
-        self.mapping.clear();
-    }
+    // pub fn clear(self: *ViewLayerMapping) void {
+    //     var it = self.mapping.iterator();
+    //     while (it.next()) |*next| {
+    //         var itt = next.iterator();
+    //         while (itt.next()) |*n| {
+    //             n.clearAndFree();
+    //         }
+    //         next.clear();
+    //     }
+    //     self.mapping.clear();
+    // }
 
     fn getIdMapping(self: *ViewLayerMapping, view_id: Index, layer_id: Index) *BitSet {
         if (view_id == UNDEF_INDEX) {
@@ -252,7 +252,7 @@ pub const View = struct {
         }
 
         // clear view mapping
-        ordered_active_views.reset(view.order);
+        ordered_active_views.delete(view.order);
     }
 
     fn addLayerMapping(layer: *const Layer) void {
@@ -275,7 +275,7 @@ pub const View = struct {
     fn removeLayerMapping(layer: *const Layer) void {
         var view: *View = View.get(layer.view_id);
         if (view.ordered_active_layer) |*l| {
-            l.reset(layer.order);
+            l.delete(layer.order);
         }
     }
 };

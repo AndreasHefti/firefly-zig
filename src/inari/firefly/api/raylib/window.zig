@@ -54,10 +54,12 @@ const RaylibWindowAPI = struct {
     }
 
     fn closeWindow() void {
+        defer initialized = false;
         if (!initialized)
             @panic("Not initialized");
 
         rl.CloseWindow();
+        singleton = null;
     }
 
     fn showFPS(x: CInt, y: CInt) void {

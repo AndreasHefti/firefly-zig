@@ -80,7 +80,7 @@ pub fn init(
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
-        //rendering = try testing.createTestRenderAPI(); // try @import("raylib_rendering.zig").createRenderAPI();
+        //rendering = try testing.createTestRenderAPI();
         rendering = try @import("raylib/rendering.zig").createRenderAPI();
         window = try @import("raylib/window.zig").createWindowAPI();
     }
@@ -102,6 +102,9 @@ pub fn deinit() void {
 
     Component.deinit();
     rendering.deinit();
+    rendering = undefined;
+    //window.deinit();
+    window = undefined;
     Timer.deinit();
     //Engine.deinit();
     utils.deinit();
@@ -461,23 +464,6 @@ pub const SpriteData = struct {
         );
     }
 };
-
-// pub const WindowHandle = struct {
-//     original_width: CInt,
-//     original_hight: CInt,
-//     /// return the actual screen width
-//     screen_width: CInt,
-//     /// return the actual screen height
-//     screen_height: CInt,
-//     /// indicates if the window has been closed by user interaction
-//     closed: bool,
-
-//     update: *const fn () void = undefined,
-//     /// Show actual frame rate per second at given position on the screen
-//     showFPS: *const fn (*PosI) void = undefined,
-
-//     closeWindow: *const fn () void = undefined,
-// };
 
 pub const WindowData = struct {
     width: CInt,

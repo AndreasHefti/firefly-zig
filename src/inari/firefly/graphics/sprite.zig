@@ -59,7 +59,7 @@ pub const SpriteSet = struct {
 
     fn deinit(self: *SpriteSet) void {
         for (self.sprites_indices.items) |id| {
-            sprites.reset(id);
+            sprites.delete(id);
         }
         self.name_mapping.deinit();
         self.sprites_indices.deinit();
@@ -101,8 +101,10 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    sprites.clear();
     sprites.deinit();
     sprites = undefined;
+    sprite_sets.clear();
     sprite_sets.deinit();
     sprite_sets = undefined;
     // deinit renderer
@@ -246,7 +248,7 @@ pub const SpriteAsset = struct {
 
     fn delete(asset: *Asset) void {
         Asset.activateById(asset.id, false);
-        sprites.reset(asset.resource_id);
+        sprites.delete(asset.resource_id);
     }
 };
 
@@ -388,7 +390,7 @@ pub const SpriteSetAsset = struct {
     fn delete(asset: *Asset) void {
         Asset.activateById(asset.id, false);
         sprite_sets.get(asset.resource_id).deinit();
-        sprite_sets.reset(asset.resource_id);
+        sprite_sets.delete(asset.resource_id);
         asset.resource_id = UNDEF_INDEX;
     }
 };
@@ -424,6 +426,7 @@ const SimpleSpriteRenderer = struct {
         _ = ee_subscription.unsubscribe();
         ee_subscription = undefined;
         sprite_refs.deinit();
+        sprite_refs = undefined;
     }
 
     fn onActivation(active: bool) void {

@@ -49,8 +49,8 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    AnimationSystem.deinit();
     IndexFrame.deinit();
+    AnimationSystem.deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -65,37 +65,17 @@ pub const IAnimation = struct {
 
     fn_activate: *const fn (Index, bool) void = undefined,
     fn_suspend_it: *const fn (Index) void = undefined,
-    fn_loop_callback: *const fn (Index, *const fn (usize) void) void = undefined,
-    fn_finish_callback: *const fn (Index, *const fn (Index) void) void = undefined,
+    fn_set_loop_callback: *const fn (Index, *const fn (usize) void) void = undefined,
+    fn_set_finish_callback: *const fn (Index, *const fn () void) void = undefined,
     fn_reset: *const fn (Index) void = undefined,
     fn_dispose: *const fn (Index) void = undefined,
 
-    //update: *const fn (Index, Float) void,
-
-    pub fn activate(self: *IAnimation, active: bool) void {
-        self.fn_activate(self.id, active);
-    }
-
-    pub fn reset(self: *IAnimation) void {
-        self.fn_reset(self.id);
-    }
-
-    pub fn suspendIt(self: *IAnimation) void {
-        self.fn_suspend_it(self.id);
-    }
-
-    pub fn setLoopCallback(self: *IAnimation, callback: *const fn (usize) void) void {
-        self.fn_loop_callback(self.id, callback);
-    }
-
-    pub fn setFinishCallback(self: *IAnimation, callback: *const fn (Index) void) void {
-        self.fn_finish_callback(self.id, callback);
-    }
-
     pub fn dispose(self: *IAnimation) void {
-        self.fn_dispose(self.id);
-        self.id = UNDEF_INDEX;
-        self.animation = undefined;
+        if (self.id != UNDEF_INDEX) {
+            self.fn_dispose(self.id);
+            self.id = UNDEF_INDEX;
+            self.animation = undefined;
+        }
     }
 };
 
@@ -107,6 +87,7 @@ const AnimationTypeReference = struct {
 pub fn Animation(comptime Integration: type) type {
     return struct {
         const Self = @This();
+        const null_value = Self{};
 
         // type state
         var initialized = false;
@@ -122,7 +103,7 @@ pub fn Animation(comptime Integration: type) type {
 
         // callbacks
         loop_callback: ?*const fn (usize) void = null,
-        finish_callback: ?*const fn (Index) void = null,
+        finish_callback: ?*const fn () void = null,
 
         // object state
         _active: bool = false,
@@ -131,15 +112,12 @@ pub fn Animation(comptime Integration: type) type {
         _inverted: bool = false,
         _loop_count: usize = 0,
 
-        // interface reference
-        _interface: IAnimation = undefined,
-
         fn init() AnimationTypeReference {
             defer Self.initialized = true;
             if (Self.initialized)
                 @panic("Animation Type already initialized: " ++ @typeName(Integration));
 
-            animations = DynArray(Self).new(api.COMPONENT_ALLOC, Self{}) catch undefined;
+            animations = DynArray(Self).new(api.COMPONENT_ALLOC, null_value) catch undefined;
             return AnimationTypeReference{
                 ._update_all = Self.updateAll,
                 ._deinit = Self.deinit,
@@ -151,6 +129,13 @@ pub fn Animation(comptime Integration: type) type {
             if (!Self.initialized)
                 return;
 
+            var next = animations.slots.nextSetBit(0);
+            while (next) |i| {
+                dispose(i);
+                animations.delete(i);
+                next = animations.slots.nextSetBit(i + 1);
+            }
+            animations.clear();
             animations.deinit();
         }
 
@@ -160,7 +145,7 @@ pub fn Animation(comptime Integration: type) type {
             inverse_on_loop: bool,
             reset_on_finish: bool,
             integration: Integration,
-        ) *IAnimation {
+        ) IAnimation {
             var _new = Self{
                 .duration = duration,
                 .looping = looping,
@@ -171,17 +156,16 @@ pub fn Animation(comptime Integration: type) type {
             var index = animations.add(_new);
 
             var self = animations.get(index);
-            self._interface = IAnimation{
+            return IAnimation{
                 .id = index,
                 .animation = self,
                 .fn_activate = activate,
                 .fn_suspend_it = suspendIt,
-                .fn_loop_callback = withLoopCallback,
-                .fn_finish_callback = withFinishCallback,
+                .fn_set_loop_callback = withLoopCallback,
+                .fn_set_finish_callback = withFinishCallback,
                 .fn_reset = reset,
                 .fn_dispose = dispose,
             };
-            return &self._interface;
         }
 
         pub fn activate(index: Index, active: bool) void {
@@ -233,11 +217,8 @@ pub fn Animation(comptime Integration: type) type {
 
         fn finish(self: *Self) void {
             self._active = false;
-            if (self.reset_on_finish)
-                resetIntegration(self);
-            if (self.finish_callback) |c| {
-                c(self._interface.id);
-            }
+            if (self.reset_on_finish) resetIntegration(self);
+            if (self.finish_callback) |c| c();
         }
 
         fn resetIntegration(self: *Self) void {
@@ -250,7 +231,7 @@ pub fn Animation(comptime Integration: type) type {
             Integration.integrate(self);
         }
 
-        pub fn withFinishCallback(index: Index, finish_callback: ?*const fn (Index) void) void {
+        pub fn withFinishCallback(index: Index, finish_callback: ?*const fn () void) void {
             animations.get(index).finish_callback = finish_callback;
         }
 
@@ -259,7 +240,7 @@ pub fn Animation(comptime Integration: type) type {
         }
 
         pub fn dispose(index: Index) void {
-            animations.reset(index);
+            animations.delete(index);
         }
     };
 }
@@ -293,40 +274,40 @@ pub const EAnimation = struct {
     pub usingnamespace EntityComponent.API.Adapter(@This(), "EAnimation");
 
     id: Index = UNDEF_INDEX,
-    animations: DynArray(*IAnimation) = undefined,
+    animations: BitSet = undefined,
+    //animations: DynArray(IAnimation) = undefined,
 
     pub fn construct(self: *EAnimation) void {
-        self.animations = DynArray(*IAnimation).new(api.ENTITY_ALLOC, null) catch unreachable;
+        self.animations = BitSet.new(api.ENTITY_ALLOC) catch unreachable;
     }
 
-    pub fn withAnimation(self: *EAnimation, animation: *IAnimation) *EAnimation {
-        _ = self.animations.add(animation);
+    pub fn withAnimation(self: *EAnimation, animation: IAnimation) *EAnimation {
+        self.animations.set(AnimationSystem.animation_refs.add(animation));
         return self;
     }
 
-    pub fn withAnimationAnd(self: *EAnimation, animation: *IAnimation) *Entity {
-        _ = self.animations.add(animation);
+    pub fn withAnimationAnd(self: *EAnimation, animation: IAnimation) *Entity {
+        self.animations.set(AnimationSystem.animation_refs.add(animation));
         return Entity.pool.get(self.id);
     }
 
     pub fn activation(self: *EAnimation, active: bool) void {
-        var next = self.animations.slots.nextSetBit(0);
+        var next = self.animations.nextSetBit(0);
         while (next) |i| {
-            var a: *IAnimation = self.animations.get(i).*;
             if (active) {
-                a.reset();
+                AnimationSystem.resetById(i);
             } else {
-                a.activate(false);
+                AnimationSystem.activateById(i, false);
             }
-            next = self.animations.slots.nextSetBit(i + 1);
+            next = self.animations.nextSetBit(i + 1);
         }
     }
 
     pub fn destruct(self: *EAnimation) void {
-        var next = self.animations.slots.nextSetBit(0);
+        var next = self.animations.nextSetBit(0);
         while (next) |i| {
-            self.animations.get(i).*.dispose();
-            next = self.animations.slots.nextSetBit(i + 1);
+            AnimationSystem.disposeAnimation(i);
+            next = self.animations.nextSetBit(i + 1);
         }
 
         self.animations.deinit();
@@ -342,11 +323,17 @@ pub const AnimationSystem = struct {
     const sys_name = "AnimationSystem ";
 
     var animation_type_refs: DynArray(AnimationTypeReference) = undefined;
+    var animation_refs: DynArray(IAnimation) = undefined;
 
     fn init() void {
         animation_type_refs = DynArray(AnimationTypeReference).newWithRegisterSize(
             api.ALLOC,
             10,
+            null,
+        ) catch unreachable;
+
+        animation_refs = DynArray(IAnimation).new(
+            api.COMPONENT_ALLOC,
             null,
         ) catch unreachable;
 
@@ -360,12 +347,49 @@ pub const AnimationSystem = struct {
 
     fn deinit() void {
         System.disposeByName(sys_name);
-        var next = animation_type_refs.slots.nextSetBit(0);
+
+        var next = animation_refs.slots.nextSetBit(0);
+        while (next) |i| {
+            animation_refs.get(i).dispose();
+            next = animation_refs.slots.nextSetBit(i + 1);
+        }
+        animation_refs.clear();
+        animation_refs.deinit();
+        animation_refs = undefined;
+
+        next = animation_type_refs.slots.nextSetBit(0);
         while (next) |i| {
             animation_type_refs.get(i)._deinit();
             next = animation_type_refs.slots.nextSetBit(i + 1);
         }
+        animation_type_refs.clear();
         animation_type_refs.deinit();
+        animation_type_refs = undefined;
+    }
+
+    pub fn activateById(id: Index, active: bool) void {
+        if (initialized and animation_refs.exists(id))
+            animation_refs.get(id).fn_activate(id, active);
+    }
+
+    pub fn resetById(id: Index) void {
+        if (initialized and animation_refs.exists(id))
+            animation_refs.get(id).fn_reset(id);
+    }
+
+    pub fn suspendById(id: Index) void {
+        if (initialized and animation_refs.exists(id))
+            animation_refs.get(id).fn_suspend_it(id);
+    }
+
+    pub fn setLoopCallbackById(id: Index, callback: *const fn (usize) void) void {
+        if (initialized and animation_refs.exists(id))
+            animation_refs.get(id).fn_set_loop_callback(id, callback);
+    }
+
+    pub fn setFinishCallbackById(id: Index, callback: *const fn (Index) void) void {
+        if (initialized and animation_refs.exists(id))
+            animation_refs.get(id).fn_set_finish_callback(id, callback);
     }
 
     pub fn registerAnimationType(comptime Integration: type) void {
@@ -373,7 +397,17 @@ pub const AnimationSystem = struct {
     }
 
     fn onActivation(active: bool) void {
-        if (active) Engine.subscribeUpdate(update) else Engine.unsubscribeUpdate(update);
+        if (active)
+            Engine.subscribeUpdate(update)
+        else
+            Engine.unsubscribeUpdate(update);
+    }
+
+    fn disposeAnimation(id: Index) void {
+        if (initialized and animation_refs.exists(id)) {
+            animation_refs.get(id).dispose();
+            animation_refs.delete(id);
+        }
     }
 
     fn update(_: UpdateEvent) void {
@@ -482,7 +516,7 @@ pub const IndexFrameList = struct {
     fn deinit(self: *IndexFrameList) void {
         var _next = self.indices.nextSetBit(0);
         while (_next) |i| {
-            IndexFrame.frames.reset(i);
+            IndexFrame.frames.delete(i);
             _next = self.indices.nextSetBit(i + 1);
         }
 

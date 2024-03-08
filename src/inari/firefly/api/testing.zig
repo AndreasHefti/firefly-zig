@@ -152,7 +152,7 @@ pub const DebugRenderAPI = struct {
 
     pub fn disposeTexture(textureData: *TextureData) void {
         if (textureData.binding != NO_BINDING) {
-            textures.reset(textureData.binding);
+            textures.delete(textureData.binding);
             textureData.binding = NO_BINDING;
             textureData.width = -1;
             textureData.height = -1;
@@ -166,7 +166,7 @@ pub const DebugRenderAPI = struct {
 
     pub fn disposeRenderTexture(textureData: *RenderTextureData) void {
         if (textureData.binding != NO_BINDING) {
-            renderTextures.reset(textureData.binding);
+            renderTextures.delete(textureData.binding);
             textureData.binding = NO_BINDING;
         }
     }
@@ -178,7 +178,7 @@ pub const DebugRenderAPI = struct {
 
     pub fn disposeShader(shaderData: *ShaderData) void {
         if (shaderData.binding != NO_BINDING) {
-            shaders.reset(shaderData.binding);
+            shaders.delete(shaderData.binding);
             shaderData.binding = NO_BINDING;
         }
     }
@@ -292,16 +292,6 @@ pub const DebugRenderAPI = struct {
 test "RenderAPI debug init" {
     try inari.firefly.initTesting();
     defer inari.firefly.deinit();
-
-    var width = api.rendering.screenWidth();
-    var height = api.rendering.screenHeight();
-
-    try std.testing.expect(width == 800);
-    try std.testing.expect(height == 600);
-
-    var fpsPos = PosI{ 10, 10 };
-
-    api.rendering.showFPS(&fpsPos);
 
     var t1 = TextureData{ .resource = "t1" };
     var t2 = RenderTextureData{};

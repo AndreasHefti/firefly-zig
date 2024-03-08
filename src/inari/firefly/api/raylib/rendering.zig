@@ -43,6 +43,8 @@ const RaylibRenderAPI = struct {
         if (initialized)
             return;
 
+        std.log.info("***************** init", .{});
+
         active_offset = default_offset;
         active_blend_mode = default_blend_mode;
 
@@ -76,9 +78,13 @@ const RaylibRenderAPI = struct {
         if (!initialized)
             return;
 
+        textures.clear();
         textures.deinit();
+        render_textures.clear();
         render_textures.deinit();
+        shaders.clear();
         shaders.deinit();
+        singleton = null;
     }
 
     var window_handle: ?api.WindowHandle = null;
@@ -123,6 +129,8 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadTexture(td: *TextureData) void {
+        std.log.info("***************** load Texture: {any}", .{td});
+
         var tex = rl.LoadTexture(@ptrCast(td.resource));
         td.width = @bitCast(tex.width);
         td.height = @bitCast(tex.height);
@@ -146,9 +154,11 @@ const RaylibRenderAPI = struct {
         if (td.binding == NO_BINDING)
             return;
 
+        std.log.info("***************** dispose Texture: {any}", .{td});
+
         var tex = textures.get(td.binding);
         rl.UnloadTexture(tex.*);
-        textures.reset(td.binding);
+        textures.delete(td.binding);
         td.binding = NO_BINDING;
     }
 
@@ -163,7 +173,7 @@ const RaylibRenderAPI = struct {
 
         var tex = render_textures.get(td.binding);
         rl.UnloadRenderTexture(tex.*);
-        render_textures.reset(td.binding);
+        render_textures.delete(td.binding);
         td.binding = NO_BINDING;
     }
 
@@ -190,7 +200,7 @@ const RaylibRenderAPI = struct {
 
         var shader = shaders.get(sd.binding);
         rl.UnloadShader(shader.*);
-        shaders.reset(sd.binding);
+        shaders.delete(sd.binding);
         sd.binding = NO_BINDING;
     }
 

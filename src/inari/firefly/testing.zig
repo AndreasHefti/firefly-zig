@@ -61,6 +61,7 @@ test "Firefly init" {
         \\    Aspect[ETransform|0]
         \\    Aspect[EMultiplier|1]
         \\    Aspect[ESprite|2]
+        \\    Aspect[EAnimation|3]
         \\
         \\Components:
         \\  Asset size: 0
@@ -267,7 +268,7 @@ test "event propagation" {
 }
 
 fn testListener(event: Component.ComponentEvent) void {
-    std.debug.print("received: {any}\n", .{event});
+    std.log.info("received: {any}\n", .{event});
 }
 
 test "get poll and process" {
@@ -315,11 +316,11 @@ fn process() void {
 }
 
 fn processOne(c: *const ExampleComponent) void {
-    std.debug.print("process {any}\n", .{c});
+    std.log.info("process {any}\n", .{c});
 }
 
 fn processOneUnknown(c: anytype) void {
-    std.debug.print("process {any}\n", .{c});
+    std.log.info("process {any}\n", .{c});
 }
 
 test "testStructFnc" {

@@ -180,7 +180,7 @@ pub const ShaderAsset = struct {
 
     fn delete(asset: *Asset) void {
         Asset.activateById(asset.id, false);
-        shader.reset(asset.resource_id);
+        shader.delete(asset.resource_id);
     }
 };
 
@@ -209,6 +209,7 @@ pub const TextureAsset = struct {
     fn deinit() void {
         Asset.unsubscribe(listener);
         asset_type = undefined;
+        textures.clear();
         textures.deinit();
         textures = undefined;
     }
@@ -292,6 +293,6 @@ pub const TextureAsset = struct {
 
     fn delete(asset: *Asset) void {
         Asset.activateById(asset.id, false);
-        textures.reset(asset.resource_id);
+        textures.delete(asset.resource_id);
     }
 };

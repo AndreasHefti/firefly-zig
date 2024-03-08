@@ -40,6 +40,12 @@ pub const Entity = struct {
         self.kind = Kind.ofGroup(EntityComponent.ENTITY_KIND_ASP_GROUP);
     }
 
+    pub fn destruct(self: *Entity) void {
+        for (0..EntityComponent.ENTITY_KIND_ASP_GROUP._size) |i| {
+            EntityComponent.INTERFACE_TABLE.get(EntityComponent.ENTITY_KIND_ASP_GROUP.aspects[i].index).clear(self.id);
+        }
+    }
+
     pub fn withComponent(self: *Entity, c: anytype) *Entity {
         EntityComponent.API.checkValid(c);
 
@@ -74,12 +80,6 @@ pub const Entity = struct {
 
         Entity.activateById(self.id, false);
         return self;
-    }
-
-    pub fn onDispose(id: Index) void {
-        for (0..EntityComponent.TYPE_ASPECT_GROUP._size) |i| {
-            EntityComponent.INTERFACE_TABLE.get(EntityComponent.TYPE_ASPECT_GROUP.aspects[i].index).clear(id);
-        }
     }
 
     pub fn format(
@@ -124,6 +124,7 @@ pub const EntityComponent = struct {
         // deinit all registered entity component pools via aspect interface mapping
         for (0..ENTITY_KIND_ASP_GROUP._size) |i| {
             INTERFACE_TABLE.get(ENTITY_KIND_ASP_GROUP.aspects[i].index).deinit();
+            INTERFACE_TABLE.delete(ENTITY_KIND_ASP_GROUP.aspects[i].index);
         }
         INTERFACE_TABLE.deinit();
         INTERFACE_TABLE = undefined;
@@ -267,8 +268,17 @@ pub fn EntityComponentPool(comptime T: type) type {
             if (!Self.initialized)
                 return;
 
+            if (has_destruct) {
+                var next = items.slots.nextSetBit(0);
+                while (next) |i| {
+                    items.get(i).destruct();
+                    next = items.slots.nextSetBit(i + 1);
+                }
+            }
+
             if (has_deinit) T.deinit();
             c_aspect = undefined;
+            items.clear();
             items.deinit();
 
             if (has_aspect) T.type_aspect = undefined;
@@ -322,10 +332,13 @@ pub fn EntityComponentPool(comptime T: type) type {
         }
 
         pub fn clear(id: Index) void {
+            if (!items.slots.isSet(id))
+                return;
+
             if (has_destruct) {
                 get(id).destruct();
             }
-            items.reset(id);
+            items.delete(id);
         }
 
         fn toString(string_buffer: *StringBuffer) void {
