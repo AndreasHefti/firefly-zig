@@ -12,7 +12,7 @@ const EventDispatch = utils.EventDispatch;
 const UpdateListener = api.UpdateListener;
 const RenderListener = api.RenderListener;
 const Timer = api.Timer;
-const rl = @cImport(@cInclude("raylib.h"));
+//const rl = @cImport(@cInclude("raylib.h"));
 
 // private state
 var UPDATE_EVENT_DISPATCHER: EventDispatch(UpdateEvent) = undefined;
@@ -38,13 +38,12 @@ pub fn start(
     title: CString,
     init_callback: *const fn () void,
 ) void {
-    rl.InitWindow(w, h, title);
-    rl.SetTargetFPS(fps);
-    defer rl.CloseWindow();
+    api.window.openWindow(.{ .width = w, .height = h, .title = title, .fps = fps });
+    defer api.window.closeWindow();
 
     init_callback();
 
-    while (!rl.WindowShouldClose()) {
+    while (!api.window.hasWindowClosed()) {
         tick();
     }
 }

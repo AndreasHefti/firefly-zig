@@ -13,6 +13,7 @@ const entity = @import("Entity.zig");
 const EventDispatch = utils.EventDispatch;
 const Condition = utils.Condition;
 const String = utils.String;
+const CString = utils.CString;
 const NO_NAME = utils.NO_NAME;
 const CInt = utils.CInt;
 const CUInt = utils.CUInt;
@@ -36,7 +37,8 @@ pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
 
-pub var rendering: RenderAPI() = undefined;
+pub var rendering: IRenderAPI() = undefined;
+pub var window: IWindowAPI() = undefined;
 
 pub const Asset = asset;
 pub const Component = component;
@@ -79,7 +81,8 @@ pub fn init(
         rendering = try testing.createTestRenderAPI();
     } else {
         //rendering = try testing.createTestRenderAPI(); // try @import("raylib_rendering.zig").createRenderAPI();
-        rendering = try @import("raylib_rendering.zig").createRenderAPI();
+        rendering = try @import("raylib/rendering.zig").createRenderAPI();
+        window = try @import("raylib/window.zig").createWindowAPI();
     }
 
     //Engine.init();
@@ -231,6 +234,26 @@ pub const BlendMode = enum(CInt) {
             .CUSTOM_SEPARATE => "CUSTOM_SEPARATE",
         });
     }
+};
+
+// Texture parameters: filter mode
+// NOTE 1: Filtering considers mipmaps if available in the texture
+// NOTE 2: Filter is accordingly set for minification and magnification
+pub const TextureFilter = enum(CUInt) {
+    TEXTURE_FILTER_POINT = 0, // No filter, just pixel approximation
+    TEXTURE_FILTER_BILINEAR = 1, // Linear filtering
+    TEXTURE_FILTER_TRILINEAR = 2, // Trilinear filtering (linear with mipmaps)
+    TEXTURE_FILTER_ANISOTROPIC_4X = 3, // Anisotropic filtering 4x
+    TEXTURE_FILTER_ANISOTROPIC_8X = 4, // Anisotropic filtering 8x
+    TEXTURE_FILTER_ANISOTROPIC_16X = 5, // Anisotropic filtering 16x
+};
+
+// Texture parameters: wrap mode
+pub const TextureWrap = enum(CUInt) {
+    TEXTURE_WRAP_REPEAT = 0, // Repeats texture in tiled mode
+    TEXTURE_WRAP_CLAMP = 1, // Clamps texture to edge pixel in tiled mode
+    TEXTURE_WRAP_MIRROR_REPEAT = 2, // Mirrors and repeats the texture in tiled mode
+    TEXTURE_WRAP_MIRROR_CLAMP = 3, // Mirrors and clamps to border the texture in tiled mode
 };
 
 pub const TextureData = struct {
@@ -439,15 +462,56 @@ pub const SpriteData = struct {
     }
 };
 
-pub fn RenderAPI() type {
+// pub const WindowHandle = struct {
+//     original_width: CInt,
+//     original_hight: CInt,
+//     /// return the actual screen width
+//     screen_width: CInt,
+//     /// return the actual screen height
+//     screen_height: CInt,
+//     /// indicates if the window has been closed by user interaction
+//     closed: bool,
+
+//     update: *const fn () void = undefined,
+//     /// Show actual frame rate per second at given position on the screen
+//     showFPS: *const fn (*PosI) void = undefined,
+
+//     closeWindow: *const fn () void = undefined,
+// };
+
+pub const WindowData = struct {
+    width: CInt,
+    height: CInt,
+    fps: CInt,
+    title: CString,
+    flags: CUInt = 0,
+};
+
+pub fn IWindowAPI() type {
     return struct {
         const Self = @This();
-        /// return the actual screen width
-        screenWidth: *const fn () CInt = undefined,
-        /// return the actual screen height
-        screenHeight: *const fn () CInt = undefined,
-        /// Show actual frame rate per second at given position on the screen
-        showFPS: *const fn (*PosI) void = undefined,
+
+        openWindow: *const fn (WindowData) void = undefined,
+        hasWindowClosed: *const fn () bool = undefined,
+        getWindowData: *const fn () *WindowData = undefined,
+        closeWindow: *const fn () void = undefined,
+
+        showFPS: *const fn (CInt, CInt) void = undefined,
+        toggleFullscreen: *const fn () void = undefined,
+        toggleBorderlessWindowed: *const fn () void = undefined,
+
+        pub fn init(initImpl: *const fn (*IWindowAPI()) void) Self {
+            var self = Self{};
+            _ = initImpl(&self);
+            return self;
+        }
+    };
+}
+
+pub fn IRenderAPI() type {
+    return struct {
+        const Self = @This();
+
         /// Set rendering offset
         setOffset: *const fn (Vector2f) void = undefined,
         /// Adds given offset to actual offset of the rendering engine
@@ -488,7 +552,7 @@ pub fn RenderAPI() type {
 
         deinit: *const fn () void = undefined,
 
-        pub fn init(initImpl: *const fn (*RenderAPI()) void) Self {
+        pub fn init(initImpl: *const fn (*IRenderAPI()) void) Self {
             var self = Self{};
             _ = initImpl(&self);
             return self;

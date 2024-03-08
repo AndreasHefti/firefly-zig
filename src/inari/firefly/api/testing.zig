@@ -19,15 +19,15 @@ const PosI = utils.PosI;
 const CInt = utils.CInt;
 const Vector2f = utils.Vector2f;
 const Projection = api.Projection;
-const RenderAPI = api.RenderAPI;
+const IRenderAPI = api.IRenderAPI;
 
 // Singleton Debug RenderAPI
-var singletonDebugRenderAPI: RenderAPI() = undefined;
-pub fn createTestRenderAPI() !RenderAPI() {
+var singletonDebugRenderAPI: IRenderAPI() = undefined;
+pub fn createTestRenderAPI() !IRenderAPI() {
     if (DebugRenderAPI.initialized) {
         return singletonDebugRenderAPI;
     }
-    singletonDebugRenderAPI = RenderAPI().init(DebugRenderAPI.initImpl);
+    singletonDebugRenderAPI = IRenderAPI().init(DebugRenderAPI.initImpl);
     return singletonDebugRenderAPI;
 }
 
@@ -84,7 +84,7 @@ pub const DebugRenderAPI = struct {
     var currentOffset: Vector2f = defaultOffset;
     var currentRenderData: *const RenderData = &defaultRenderData;
 
-    fn initImpl(interface: *RenderAPI()) void {
+    fn initImpl(interface: *IRenderAPI()) void {
         defer initialized = true;
         if (initialized)
             return;
@@ -94,9 +94,6 @@ pub const DebugRenderAPI = struct {
         shaders = DynArray(ShaderData).new(api.ALLOC, null) catch unreachable;
         renderActionQueue = DynArray(RenderAction).new(api.ALLOC, null) catch unreachable;
 
-        interface.screenWidth = screenWidth;
-        interface.screenHeight = screenHeight;
-        interface.showFPS = showFPS;
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
         interface.setBaseProjection = setBaseProjection;

@@ -1,10 +1,11 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
+const inari = @import("../../../inari.zig");
 const rl = @cImport(@cInclude("raylib.h"));
+
 const utils = inari.utils;
 const api = inari.firefly.api;
 
-const RenderAPI = api.RenderAPI;
+const IRenderAPI = api.IRenderAPI;
 const Vector2f = utils.Vector2f;
 const Color = utils.Color;
 const BlendMode = api.BlendMode;
@@ -18,53 +19,30 @@ const Projection = api.Projection;
 const BindingId = api.BindingId;
 const DynArray = utils.DynArray;
 const StringBuffer = utils.StringBuffer;
-const CInt = utils.CInt;
 const CUInt = utils.CUInt;
 const Float = utils.Float;
-const PosI = utils.PosI;
-const PosF = utils.PosF;
 const NO_BINDING = api.NO_BINDING;
 
 const Texture2D = rl.Texture2D;
 const RenderTexture2D = rl.RenderTexture2D;
 const Shader = rl.Shader;
 
-// Texture parameters: filter mode
-// NOTE 1: Filtering considers mipmaps if available in the texture
-// NOTE 2: Filter is accordingly set for minification and magnification
-pub const TextureFilter = enum(CUInt) {
-    TEXTURE_FILTER_POINT = 0, // No filter, just pixel approximation
-    TEXTURE_FILTER_BILINEAR, // Linear filtering
-    TEXTURE_FILTER_TRILINEAR, // Trilinear filtering (linear with mipmaps)
-    TEXTURE_FILTER_ANISOTROPIC_4X, // Anisotropic filtering 4x
-    TEXTURE_FILTER_ANISOTROPIC_8X, // Anisotropic filtering 8x
-    TEXTURE_FILTER_ANISOTROPIC_16X, // Anisotropic filtering 16x
-};
+var singleton: ?IRenderAPI() = null;
+pub fn createRenderAPI() !IRenderAPI() {
+    if (singleton == null)
+        singleton = IRenderAPI().init(RaylibRenderAPI.initImpl);
 
-// Texture parameters: wrap mode
-pub const TextureWrap = enum(CUInt) {
-    TEXTURE_WRAP_REPEAT = 0, // Repeats texture in tiled mode
-    TEXTURE_WRAP_CLAMP, // Clamps texture to edge pixel in tiled mode
-    TEXTURE_WRAP_MIRROR_REPEAT, // Mirrors and repeats the texture in tiled mode
-    TEXTURE_WRAP_MIRROR_CLAMP, // Mirrors and clamps to border the texture in tiled mode
-};
-
-// Singleton Debug RenderAPI
-var singleton: RenderAPI() = undefined;
-pub fn createRenderAPI() !RenderAPI() {
-    singleton = RenderAPI().init(RaylibRenderAPI.initImpl);
-    return singleton;
+    return singleton.?;
 }
 
 const RaylibRenderAPI = struct {
     var initialized = false;
 
-    fn initImpl(interface: *RenderAPI()) void {
+    fn initImpl(interface: *IRenderAPI()) void {
         defer initialized = true;
         if (initialized)
             return;
 
-        //active_projection = default_projection;
         active_offset = default_offset;
         active_blend_mode = default_blend_mode;
 
@@ -72,9 +50,6 @@ const RaylibRenderAPI = struct {
         render_textures = DynArray(RenderTexture2D).new(api.ALLOC, null) catch unreachable;
         shaders = DynArray(Shader).new(api.ALLOC, null) catch unreachable;
 
-        interface.screenWidth = screenWidth;
-        interface.screenHeight = screenHeight;
-        interface.showFPS = showFPS;
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
         interface.setBaseProjection = setBaseProjection;
@@ -100,7 +75,13 @@ const RaylibRenderAPI = struct {
         defer initialized = false;
         if (!initialized)
             return;
+
+        textures.deinit();
+        render_textures.deinit();
+        shaders.deinit();
     }
+
+    var window_handle: ?api.WindowHandle = null;
 
     var default_offset = Vector2f{ 0, 0 };
     var default_render_data = RenderData{};
@@ -129,31 +110,19 @@ const RaylibRenderAPI = struct {
     var temp_dest_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
     var temp_pivot = rl.Vector2{ .x = 0, .y = 0 };
 
-    pub fn screenWidth() CInt {
-        return rl.GetScreenWidth();
-    }
-
-    pub fn screenHeight() CInt {
-        return rl.GetScreenHeight();
-    }
-
-    pub fn showFPS(pos: *PosI) void {
-        rl.DrawFPS(@bitCast(pos[0]), @bitCast(pos[1]));
-    }
-
-    pub fn setOffset(offset: Vector2f) void {
+    fn setOffset(offset: Vector2f) void {
         active_offset = offset;
     }
 
-    pub fn addOffset(offset: Vector2f) void {
+    fn addOffset(offset: Vector2f) void {
         active_offset += offset;
     }
 
-    pub fn setBaseProjection(projection: Projection) void {
+    fn setBaseProjection(projection: Projection) void {
         default_projection = projection;
     }
 
-    pub fn loadTexture(td: *TextureData) void {
+    fn loadTexture(td: *TextureData) void {
         var tex = rl.LoadTexture(@ptrCast(td.resource));
         td.width = @bitCast(tex.width);
         td.height = @bitCast(tex.height);
@@ -162,13 +131,7 @@ const RaylibRenderAPI = struct {
             rl.GenTextureMipmaps(&tex);
         }
 
-        rl.SetTextureFilter(tex, @intFromEnum(TextureFilter.TEXTURE_FILTER_POINT));
-        // if (td.mag_filter > 0) {
-        //     rl.SetTextureFilter(tex, td.mag_filter);
-        // }
-        // if (td.min_filter > 0) {
-        //     rl.SetTextureFilter(tex, td.min_filter);
-        // }
+        rl.SetTextureFilter(tex, @intFromEnum(api.TextureFilter.TEXTURE_FILTER_POINT));
         if (td.s_wrap > 0) {
             rl.SetTextureWrap(tex, td.s_wrap);
         }
@@ -179,7 +142,7 @@ const RaylibRenderAPI = struct {
         td.binding = textures.add(tex);
     }
 
-    pub fn disposeTexture(td: *TextureData) void {
+    fn disposeTexture(td: *TextureData) void {
         if (td.binding == NO_BINDING)
             return;
 
@@ -189,12 +152,12 @@ const RaylibRenderAPI = struct {
         td.binding = NO_BINDING;
     }
 
-    pub fn createRenderTexture(td: *RenderTextureData) void {
+    fn createRenderTexture(td: *RenderTextureData) void {
         var tex = rl.LoadRenderTexture(td.width, td.height);
         td.binding = render_textures.add(tex);
     }
 
-    pub fn disposeRenderTexture(td: *RenderTextureData) void {
+    fn disposeRenderTexture(td: *RenderTextureData) void {
         if (td.binding == NO_BINDING)
             return;
 
@@ -204,7 +167,7 @@ const RaylibRenderAPI = struct {
         td.binding = NO_BINDING;
     }
 
-    pub fn createShader(sd: *ShaderData) void {
+    fn createShader(sd: *ShaderData) void {
         var shader: Shader = undefined;
         if (sd.file_resource) {
             shader = rl.LoadShader(
@@ -221,7 +184,7 @@ const RaylibRenderAPI = struct {
         sd.binding = shaders.add(shader);
     }
 
-    pub fn disposeShader(sd: *ShaderData) void {
+    fn disposeShader(sd: *ShaderData) void {
         if (sd.binding == NO_BINDING)
             return;
 
@@ -231,7 +194,7 @@ const RaylibRenderAPI = struct {
         sd.binding = NO_BINDING;
     }
 
-    pub fn setActiveShader(binding_id: BindingId) void {
+    fn setActiveShader(binding_id: BindingId) void {
         if (active_shader != null and active_shader.? != binding_id) {
             if (active_shader == NO_BINDING) {
                 rl.EndShaderMode();
@@ -243,7 +206,7 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    pub fn startRendering(binding_id: ?BindingId, projection: ?*const Projection) void {
+    fn startRendering(binding_id: ?BindingId, projection: ?*const Projection) void {
         active_render_texture = binding_id;
         if (projection) |p| {
             active_camera.offset = @bitCast(p.offset);
@@ -276,7 +239,7 @@ const RaylibRenderAPI = struct {
         rl.BeginBlendMode(@intFromEnum(active_blend_mode));
     }
 
-    pub fn renderTexture(
+    fn renderTexture(
         binding_id: BindingId,
         transform: *const TransformData,
         render_data: ?*const RenderData,
@@ -327,7 +290,7 @@ const RaylibRenderAPI = struct {
         active_offset -= transform.position;
     }
 
-    pub fn renderSprite(
+    fn renderSprite(
         sprite_data: *const SpriteData,
         transform: *const TransformData,
         render_data: ?*const RenderData,
@@ -379,7 +342,7 @@ const RaylibRenderAPI = struct {
         active_offset -= transform.position;
     }
 
-    pub fn endRendering() void {
+    fn endRendering() void {
         if (active_render_texture) |_| {
             rl.EndTextureMode();
             active_render_texture = null;
@@ -390,7 +353,7 @@ const RaylibRenderAPI = struct {
         // TODO something else?
     }
 
-    pub fn printDebug(buffer: *StringBuffer) void {
+    fn printDebug(buffer: *StringBuffer) void {
         buffer.append("Raylib Renderer:\n");
         buffer.print("  default_offset: {any}\n", .{default_offset});
         buffer.print("  default_render_data: {any}\n", .{default_render_data});
