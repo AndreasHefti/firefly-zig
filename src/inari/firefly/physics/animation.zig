@@ -69,14 +69,6 @@ pub const IAnimation = struct {
     fn_set_finish_callback: *const fn (Index, *const fn () void) void = undefined,
     fn_reset: *const fn (Index) void = undefined,
     fn_dispose: *const fn (Index) void = undefined,
-
-    pub fn dispose(self: *IAnimation) void {
-        if (self.id != UNDEF_INDEX) {
-            self.fn_dispose(self.id);
-            self.id = UNDEF_INDEX;
-            self.animation = undefined;
-        }
-    }
 };
 
 const AnimationTypeReference = struct {
@@ -350,7 +342,7 @@ pub const AnimationSystem = struct {
 
         var next = animation_refs.slots.nextSetBit(0);
         while (next) |i| {
-            animation_refs.get(i).dispose();
+            animation_refs.get(i).fn_dispose(i);
             next = animation_refs.slots.nextSetBit(i + 1);
         }
         animation_refs.clear();
@@ -405,7 +397,7 @@ pub const AnimationSystem = struct {
 
     fn disposeAnimation(id: Index) void {
         if (initialized and animation_refs.exists(id)) {
-            animation_refs.get(id).dispose();
+            animation_refs.get(id).fn_dispose(id);
             animation_refs.delete(id);
         }
     }
