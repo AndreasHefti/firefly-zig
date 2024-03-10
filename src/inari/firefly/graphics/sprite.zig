@@ -85,8 +85,8 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    sprites = try DynArray(SpriteData).new(api.COMPONENT_ALLOC, SpriteAsset.NULL_VALUE);
-    sprite_sets = try DynArray(SpriteSet).new(api.COMPONENT_ALLOC, SpriteSetAsset.NULL_VALUE);
+    sprites = try DynArray(SpriteData).new(api.COMPONENT_ALLOC);
+    sprite_sets = try DynArray(SpriteSet).new(api.COMPONENT_ALLOC);
     // init Asset
     SpriteAsset.init();
     SpriteSetAsset.init();
@@ -151,7 +151,6 @@ pub const ESprite = struct {
 
 pub const SpriteAsset = struct {
     pub var asset_type: *Aspect = undefined;
-    pub const NULL_VALUE = SpriteData{};
 
     name: String = NO_NAME,
     texture_asset_id: Index,
@@ -173,7 +172,7 @@ pub const SpriteAsset = struct {
         if (!initialized)
             @panic("Firefly module not initialized");
 
-        if (data.texture_asset_id == UNDEF_INDEX or !Asset.pool.exists(data.texture_asset_id))
+        if (data.texture_asset_id == UNDEF_INDEX or !Asset.exists(data.texture_asset_id))
             @panic("Sprite has invalid TextureAsset reference id");
 
         var spriteData = SpriteData{
@@ -196,16 +195,8 @@ pub const SpriteAsset = struct {
         return sprites.get(res_id);
     }
 
-    // pub fn getResourceForIndex(res_id: Index, _: Index) *const SpriteData {
-    //     return sprites.get(res_id);
-    // }
-
-    // pub fn getResourceForName(res_id: Index, _: String) *const SpriteData {
-    //     return sprites.get(res_id);
-    // }
-
     fn listener(e: ComponentEvent) void {
-        var asset: *Asset = Asset.pool.get(e.c_id);
+        var asset: *Asset = Asset.byId(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
 
@@ -221,29 +212,19 @@ pub const SpriteAsset = struct {
         if (!initialized)
             return;
 
-        var spriteData: *SpriteData = sprites.get(asset.resource_id);
-        if (spriteData.texture_binding != NO_BINDING)
-            return; // already loaded
+        if (sprites.get(asset.resource_id)) |s| {
+            if (s.texture_binding != NO_BINDING)
+                return; // already loaded
 
-        // check if texture asset is loaded, if not try to load
-        const texData: *const TextureData = Asset.get(asset.parent_asset_id).getResource(TextureAsset);
-        if (texData.binding == NO_BINDING) {
-            Asset.activateById(asset.parent_asset_id, true);
-            if (texData.binding == NO_BINDING) {
-                std.log.err("Failed to load/activate dependent TextureAsset: {any}", .{Asset.byId(asset.parent_asset_id)});
-                return;
-            }
+            s.texture_binding = TextureAsset.getBindingByAssetId(asset.parent_asset_id);
         }
-
-        spriteData.texture_binding = texData.binding;
     }
 
     fn unload(asset: *Asset) void {
         if (!initialized)
             return;
 
-        var spriteData: *SpriteData = sprites.get(asset.resource_id);
-        spriteData.texture_binding = NO_BINDING;
+        if (sprites.get(asset.resource_id)) |s| s.texture_binding = NO_BINDING;
     }
 
     fn delete(asset: *Asset) void {
@@ -258,7 +239,6 @@ pub const SpriteAsset = struct {
 
 pub const SpriteSetAsset = struct {
     pub var asset_type: *Aspect = undefined;
-    pub const NULL_VALUE = SpriteSet{};
 
     pub const SpriteStamp = struct {
         name: String = NO_NAME,
@@ -336,16 +316,8 @@ pub const SpriteSetAsset = struct {
         return &sprite_sets.get(res_id).byListIndex(0);
     }
 
-    // pub fn getResourceForIndex(res_id: Index, list_index: Index) *SpriteSet {
-    //     return &sprite_sets.get(res_id).byListIndex(list_index);
-    // }
-
-    // pub fn getResourceForName(res_id: Index, name: String) *SpriteSet {
-    //     return sprite_sets.get(res_id).byName(name);
-    // }
-
     fn listener(e: ComponentEvent) void {
-        var asset: *Asset = Asset.pool.get(e.c_id);
+        var asset: *Asset = Asset.byId(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
 
@@ -362,18 +334,11 @@ pub const SpriteSetAsset = struct {
             return;
 
         // check if texture asset is loaded, if not try to load
-        const texData: *const TextureData = Asset.get(asset.parent_asset_id).getResource(TextureAsset);
-        if (texData.binding == NO_BINDING) {
-            Asset.activateById(asset.parent_asset_id, true);
-            if (texData.binding == NO_BINDING) {
-                std.log.err("Failed to load/activate dependent TextureAsset: {any}", .{Asset.byId(asset.parent_asset_id)});
-                return;
+        const tex_binding_id = TextureAsset.getBindingByAssetId(asset.parent_asset_id);
+        if (sprite_sets.get(asset.resource_id)) |ss| {
+            for (ss.sprites_indices.items) |id| {
+                if (sprites.get(id)) |s| s.texture_binding = tex_binding_id;
             }
-        }
-
-        var data: *SpriteSet = sprite_sets.get(asset.resource_id);
-        for (data.sprites_indices.items) |id| {
-            sprites.get(id).texture_binding = texData.binding;
         }
     }
 
@@ -381,15 +346,16 @@ pub const SpriteSetAsset = struct {
         if (!initialized)
             return;
 
-        const data: *SpriteSet = sprite_sets.get(asset.resource_id);
-        for (data.sprites_indices.items) |id| {
-            sprites.get(id).texture_binding = NO_BINDING;
+        if (sprite_sets.get(asset.resource_id)) |ss| {
+            for (ss.sprites_indices.items) |id| {
+                if (sprites.get(id)) |s| s.texture_binding = NO_BINDING;
+            }
         }
     }
 
     fn delete(asset: *Asset) void {
         Asset.activateById(asset.id, false);
-        sprite_sets.get(asset.resource_id).deinit();
+        if (sprite_sets.get(asset.resource_id)) |ss| ss.deinit();
         sprite_sets.delete(asset.resource_id);
         asset.resource_id = UNDEF_INDEX;
     }
@@ -451,13 +417,11 @@ const SimpleSpriteRenderer = struct {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the sprite
-                var s = ESprite.byId(id);
-                api.rendering.renderSprite(
-                    sprites.get(s.sprite_ref),
-                    &ETransform.byId(id).transform,
-                    &s.render_data,
-                    s.offset,
-                );
+                var es = ESprite.byId(id);
+                var et = ETransform.byId(id).transform;
+                if (sprites.get(es.sprite_ref)) |s| {
+                    api.rendering.renderSprite(s, &et, &es.render_data, es.offset);
+                }
                 i = all.nextSetBit(id + 1);
             }
         }

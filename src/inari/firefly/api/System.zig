@@ -26,7 +26,7 @@ const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 const System = @This();
 
-pub usingnamespace Component.API.Adapter(System, .{ .name = "System", .subscription = false });
+pub usingnamespace Component.API.ComponentTrait(System, .{ .name = "System", .subscription = false });
 
 // struct fields of a System
 id: Index = UNDEF_INDEX,

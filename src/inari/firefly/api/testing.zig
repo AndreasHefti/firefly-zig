@@ -89,10 +89,10 @@ pub const DebugRenderAPI = struct {
         if (initialized)
             return;
 
-        textures = DynArray(TextureData).new(api.ALLOC, null) catch unreachable;
-        renderTextures = DynArray(RenderTextureData).new(api.ALLOC, null) catch unreachable;
-        shaders = DynArray(ShaderData).new(api.ALLOC, null) catch unreachable;
-        renderActionQueue = DynArray(RenderAction).new(api.ALLOC, null) catch unreachable;
+        textures = DynArray(TextureData).new(api.ALLOC) catch unreachable;
+        renderTextures = DynArray(RenderTextureData).new(api.ALLOC) catch unreachable;
+        shaders = DynArray(ShaderData).new(api.ALLOC) catch unreachable;
+        renderActionQueue = DynArray(RenderAction).new(api.ALLOC) catch unreachable;
 
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
@@ -147,7 +147,7 @@ pub const DebugRenderAPI = struct {
         textureData.width = 1;
         textureData.height = 1;
         textureData.binding = textures.add(textureData.*);
-        textures.get(textureData.binding).binding = textureData.binding;
+        if (textures.get(textureData.binding)) |tex| tex.binding = textureData.binding;
     }
 
     pub fn disposeTexture(textureData: *TextureData) void {
@@ -161,7 +161,7 @@ pub const DebugRenderAPI = struct {
 
     pub fn createRenderTexture(textureData: *RenderTextureData) void {
         textureData.binding = renderTextures.add(textureData.*);
-        renderTextures.get(textureData.binding).binding = textureData.binding;
+        if (renderTextures.get(textureData.binding)) |tex| tex.binding = textureData.binding;
     }
 
     pub fn disposeRenderTexture(textureData: *RenderTextureData) void {
@@ -173,7 +173,7 @@ pub const DebugRenderAPI = struct {
 
     pub fn createShader(shaderData: *ShaderData) void {
         shaderData.binding = shaders.add(shaderData.*);
-        shaders.get(shaderData.binding).binding = shaderData.binding;
+        if (shaders.get(shaderData.binding)) |s| s.binding = shaderData.binding;
     }
 
     pub fn disposeShader(shaderData: *ShaderData) void {

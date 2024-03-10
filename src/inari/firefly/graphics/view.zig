@@ -68,7 +68,7 @@ pub const ViewLayerMapping = struct {
     pub fn new() ViewLayerMapping {
         return ViewLayerMapping{
             .undef_mapping = BitSet.new(api.ALLOC) catch unreachable,
-            .mapping = DynArray(DynArray(BitSet)).new(api.ALLOC, null) catch unreachable,
+            .mapping = DynArray(DynArray(BitSet)).new(api.ALLOC) catch unreachable,
         };
     }
 
@@ -93,11 +93,9 @@ pub const ViewLayerMapping = struct {
         if (view_id == UNDEF_INDEX) {
             return &self.undef_mapping;
         }
-        if (self.mapping.getIfExists(view_id)) |lmap| {
+        if (self.mapping.get(view_id)) |lmap| {
             if (layer_id != UNDEF_INDEX) {
-                return lmap.getIfExists(layer_id);
-            } else {
-                return lmap.getIfExists(0);
+                if (lmap.get(layer_id)) |m| return m;
             }
         }
         return null;
@@ -120,25 +118,26 @@ pub const ViewLayerMapping = struct {
     // }
 
     fn getIdMapping(self: *ViewLayerMapping, view_id: Index, layer_id: Index) *BitSet {
-        if (view_id == UNDEF_INDEX) {
-            return &self.undef_mapping;
+        if (view_id != UNDEF_INDEX) {
+            var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, view_id);
+            var l_id = if (layer_id == UNDEF_INDEX) 0 else layer_id;
+            if (!layer_mapping.exists(l_id)) {
+                return layer_mapping.set(BitSet.new(api.ALLOC) catch unreachable, l_id);
+            }
+            return layer_mapping.get(l_id).?;
         }
-        var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, view_id);
-        var l_id = if (layer_id == UNDEF_INDEX) 0 else layer_id;
-        if (!layer_mapping.exists(l_id)) {
-            layer_mapping.set(BitSet.new(api.ALLOC) catch unreachable, l_id);
-        }
-        return layer_mapping.get(l_id);
+
+        return &self.undef_mapping;
     }
 
     fn getLayerMapping(self: *ViewLayerMapping, view_id: Index) *DynArray(BitSet) {
         if (!self.mapping.exists(view_id)) {
-            self.mapping.set(
-                DynArray(BitSet).new(api.ALLOC, null) catch unreachable,
+            return self.mapping.set(
+                DynArray(BitSet).new(api.ALLOC) catch unreachable,
                 view_id,
             );
         }
-        return self.mapping.get(view_id);
+        return self.mapping.get(view_id).?;
     }
 };
 
@@ -147,7 +146,7 @@ pub const ViewLayerMapping = struct {
 //////////////////////////////////////////////////////////////
 
 pub const View = struct {
-    pub usingnamespace Component.API.Adapter(View, .{ .name = "View" });
+    pub usingnamespace Component.API.ComponentTrait(View, .{ .name = "View" });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -170,7 +169,6 @@ pub const View = struct {
         ordered_active_views = try DynArray(Index).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             10,
-            UNDEF_INDEX,
         );
         Layer.subscribe(onLayerAction);
     }
@@ -256,12 +254,11 @@ pub const View = struct {
     }
 
     fn addLayerMapping(layer: *const Layer) void {
-        var view: *View = View.get(layer.view_id);
+        var view: *View = View.byId(layer.view_id);
         if (view.ordered_active_layer == null) {
             view.ordered_active_layer = DynArray(Index).newWithRegisterSize(
                 api.COMPONENT_ALLOC,
                 10,
-                UNDEF_INDEX,
             ) catch unreachable;
         }
         if (view.ordered_active_layer.?.slots.isSet(layer.order)) {
@@ -269,11 +266,11 @@ pub const View = struct {
             @panic("message: []const u8");
         }
 
-        view.ordered_active_layer.?.set(layer.order, layer.id);
+        _ = view.ordered_active_layer.?.set(layer.order, layer.id);
     }
 
     fn removeLayerMapping(layer: *const Layer) void {
-        var view: *View = View.get(layer.view_id);
+        var view: *View = View.byId(layer.view_id);
         if (view.ordered_active_layer) |*l| {
             l.delete(layer.order);
         }
@@ -285,7 +282,7 @@ pub const View = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Layer = struct {
-    pub usingnamespace Component.API.Adapter(Layer, .{ .name = "Layer" });
+    pub usingnamespace Component.API.ComponentTrait(Layer, .{ .name = "Layer" });
 
     // struct fields
     id: Index = UNDEF_INDEX,

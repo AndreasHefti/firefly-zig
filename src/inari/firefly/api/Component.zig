@@ -26,7 +26,7 @@ pub fn init() !void {
     if (INIT)
         return;
 
-    API.COMPONENT_INTERFACE_TABLE = try DynArray(API.ComponentTypeInterface).new(api.COMPONENT_ALLOC, null);
+    API.COMPONENT_INTERFACE_TABLE = try DynArray(API.ComponentTypeInterface).new(api.COMPONENT_ALLOC);
     API.COMPONENT_ASPECT_GROUP = try AspectGroup.new("COMPONENT_ASPECT_GROUP");
 }
 
@@ -38,7 +38,7 @@ pub fn deinit() void {
     // deinit all registered component pools via aspect interface mapping
     for (0..API.COMPONENT_ASPECT_GROUP._size) |i| {
         var aspect = API.COMPONENT_ASPECT_GROUP.aspects[i];
-        API.COMPONENT_INTERFACE_TABLE.get(aspect.index).deinit();
+        API.COMPONENT_INTERFACE_TABLE.get(aspect.index).?.deinit();
         API.COMPONENT_INTERFACE_TABLE.delete(aspect.index);
     }
     API.COMPONENT_INTERFACE_TABLE.deinit();
@@ -55,9 +55,6 @@ pub const API = struct {
     var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
     pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
-    const SUBSCRIBE_DECL = *const fn (ComponentListener) void;
-    const UNSUBSCRIBE_DECL = *const fn (ComponentListener) void;
-
     pub const ComponentTypeInterface = struct {
         activate: *const fn (Index, bool) void,
         clear: *const fn (Index) void,
@@ -70,50 +67,143 @@ pub const API = struct {
         activation: bool = true,
         name_mapping: bool = true,
         subscription: bool = true,
+        processing: bool = true,
     };
 
-    fn SubscriptionAPI(comptime _: type) type {
+    fn SubscriptionTrait(comptime _: type, comptime adapter: anytype) type {
         return struct {
-            pub var subscribe: SUBSCRIBE_DECL = undefined;
-            pub var unsubscribe: UNSUBSCRIBE_DECL = undefined;
+            pub fn subscribe(listener: ComponentListener) void {
+                if (adapter.pool.eventDispatch) |*ed| ed.register(listener);
+            }
+
+            pub fn unsubscribe(listener: ComponentListener) void {
+                if (adapter.pool.eventDispatch) |*ed| ed.unregister(listener);
+            }
         };
     }
 
-    fn NameMappingAPI(comptime T: type) type {
+    fn NameMappingTrait(comptime T: type, comptime adapter: anytype) type {
         return struct {
-            pub var existsName: *const fn (String) bool = undefined;
-            pub var byName: *const fn (String) *const T = undefined;
-            pub var disposeByName: *const fn (String) void = undefined;
+            pub fn existsName(name: String) bool {
+                if (adapter.pool.name_mapping) |*nm| {
+                    return nm.contains(name);
+                }
+                return false;
+            }
+
+            pub fn byName(name: String) ?*T {
+                if (adapter.pool.name_mapping) |*nm| {
+                    if (nm.get(name)) |id|
+                        return adapter.pool.items.get(id);
+                }
+                return null;
+            }
+            pub fn disposeByName(name: String) void {
+                if (adapter.pool.name_mapping) |*nm| {
+                    if (nm.get(name)) |id| adapter.pool.clear(id);
+                }
+            }
         };
     }
 
-    fn ActivationAPI(comptime _: type) type {
+    fn ActivationTrait(comptime _: type, comptime adapter: anytype) type {
         return struct {
-            pub var activateById: *const fn (Index, bool) void = undefined;
-            pub var activateByName: *const fn (String, bool) void = undefined;
+            pub fn activateById(id: Index, active: bool) void {
+                adapter.pool.activate(id, active);
+            }
+            pub fn activateByName(name: String, active: bool) void {
+                if (adapter.pool.name_mapping) |*nm| {
+                    if (nm.get(name)) |id| {
+                        adapter.pool.activate(id, active);
+                    }
+                }
+            }
+            pub fn isActive(index: Index) bool {
+                return adapter.pool.active_mapping.isSet(index);
+            }
         };
     }
 
-    pub fn Adapter(comptime T: type, comptime context: Context) type {
+    fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
+        return struct {
+            pub fn processActive(f: *const fn (*const T) void) void {
+                var i: Index = 0;
+                while (adapter.pool.active_mapping.nextSetBit(i)) |next| {
+                    f(adapter.pool.items.get(next).?);
+                    i = next + 1;
+                }
+            }
+
+            pub fn processBitSet(indices: *BitSet, f: *const fn (*const T) void) void {
+                var i: Index = 0;
+                while (indices.nextSetBit(i)) |next| {
+                    f(adapter.pool.items.get(next));
+                    i = next + 1;
+                }
+            }
+
+            fn processIndexed(indices: []Index, f: *const fn (*const T) void) void {
+                for (indices) |i| {
+                    f(adapter.pool.items.get(i));
+                }
+            }
+        };
+    }
+
+    pub fn ComponentTrait(comptime T: type, comptime context: Context) type {
         return struct {
 
             // component type fields
-            pub const NULL_VALUE = T{};
             pub const COMPONENT_TYPE_NAME = context.name;
             pub const pool = ComponentPool(T);
             pub var type_aspect: *Aspect = undefined;
 
-            // component type pool function references
-            pub var new: *const fn (T) *T = undefined;
-            pub var exists: *const fn (Index) bool = undefined;
-            pub var get: *const fn (Index) *T = undefined;
-            pub var byId: *const fn (Index) *const T = undefined;
-            pub var disposeById: *const fn (Index) void = undefined;
+            pub fn typeCheck(a: *Aspect) bool {
+                if (!pool.initialized)
+                    return false;
 
-            // optional component type feature function references
-            pub usingnamespace if (context.name_mapping) NameMappingAPI(T) else struct {};
-            pub usingnamespace if (context.activation) ActivationAPI(T) else struct {};
-            pub usingnamespace if (context.subscription) SubscriptionAPI(T) else struct {};
+                return type_aspect.index == a.index;
+            }
+
+            pub fn count() usize {
+                return pool.items.slots.count();
+            }
+
+            pub fn activeCount() usize {
+                return pool.active_mapping.count();
+            }
+
+            // component type pool function references
+            pub fn new(t: T) *T {
+                return pool.register(t);
+            }
+
+            pub fn exists(id: Index) bool {
+                return pool.items.exists(id);
+            }
+
+            // TODO make it optional?
+            pub fn byId(id: Index) *T {
+                return pool.items.get(id).?;
+            }
+
+            pub fn nextId(id: Index) ?Index {
+                return pool.items.slots.nextSetBit(id);
+            }
+
+            pub fn nextActiveId(id: Index) ?Index {
+                return pool.active_mapping.nextSetBit(id);
+            }
+
+            pub fn disposeById(id: Index) void {
+                pool.clear(id);
+            }
+
+            // optional component type features
+            pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This()) else struct {};
+            pub usingnamespace if (context.activation) ActivationTrait(T, @This()) else struct {};
+            pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This()) else struct {};
+            pub usingnamespace if (context.processing) ProcessingTrait(T, @This()) else struct {};
         };
     }
 
@@ -212,7 +302,6 @@ pub fn ComponentPool(comptime T: type) type {
     comptime var has_new: bool = false;
     comptime var has_exists: bool = false;
     comptime var has_existsName: bool = false;
-    comptime var has_get: bool = false;
     comptime var has_byId: bool = false;
     comptime var has_byName: bool = false;
     comptime var has_activateById: bool = false;
@@ -234,8 +323,6 @@ pub fn ComponentPool(comptime T: type) type {
     comptime {
         if (!trait.is(.Struct)(T))
             @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"NULL_VALUE"}))
-            @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
         if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
             @compileError("Expects component type to have member named 'COMPONENT_TYPE_NAME' that defines a unique name of the component type.");
         if (!trait.hasField("id")(T))
@@ -246,18 +333,13 @@ pub fn ComponentPool(comptime T: type) type {
         has_new = trait.hasDecls(T, .{"new"});
         has_exists = trait.hasDecls(T, .{"exists"});
         has_existsName = trait.hasDecls(T, .{"existsName"});
-        has_get = trait.hasDecls(T, .{"get"});
         has_disposeById = trait.hasDecls(T, .{"disposeById"});
         has_disposeByName = trait.hasDecls(T, .{"disposeByName"});
         has_byId = trait.hasDecls(T, .{"byId"});
         has_byName = has_name_mapping and trait.hasDecls(T, .{"byName"});
         has_activateById = trait.hasDecls(T, .{"activateById"});
         has_activateByName = has_name_mapping and trait.hasDecls(T, .{"activateByName"});
-        has_subscribe = trait.hasDecls(T, .{"subscribe"}) and @TypeOf(T.subscribe) == API.SUBSCRIBE_DECL;
-        if (has_subscribe)
-            if (!trait.hasDecls(T, .{"unsubscribe"}) or @TypeOf(T.unsubscribe) != API.UNSUBSCRIBE_DECL)
-                @compileError("Expects component type to have member named 'unsubscribe' when there is subscribe.");
-
+        has_subscribe = trait.hasDecls(T, .{"subscribe"});
         has_init = trait.hasDecls(T, .{"init"});
         has_deinit = trait.hasDecls(T, .{"deinit"});
         has_construct = trait.hasDecls(T, .{"construct"});
@@ -286,7 +368,7 @@ pub fn ComponentPool(comptime T: type) type {
 
             errdefer Self.deinit();
             defer {
-                API.COMPONENT_INTERFACE_TABLE.set(
+                _ = API.COMPONENT_INTERFACE_TABLE.set(
                     API.ComponentTypeInterface{
                         .activate = Self.activate,
                         .clear = Self.clear,
@@ -298,29 +380,17 @@ pub fn ComponentPool(comptime T: type) type {
                 initialized = true;
             }
 
-            items = DynArray(T).new(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
+            items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
             active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
             c_aspect = API.COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
 
             if (has_subscribe) {
                 event = ComponentEvent{};
                 eventDispatch = EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
-                T.subscribe = Self.subscribe;
-                T.unsubscribe = Self.unsubscribe;
             }
 
             if (has_name_mapping) name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
             if (has_aspect) T.type_aspect = c_aspect;
-            if (has_new) T.new = Self.register;
-            if (has_exists) T.exists = Self.exists;
-            if (has_existsName) T.existsName = Self.existsName;
-            if (has_get) T.get = Self.get;
-            if (has_disposeById) T.disposeById = Self.clear;
-            if (has_name_mapping and has_disposeByName) T.disposeByName = Self.clearByName;
-            if (has_byId) T.byId = Self.byId;
-            if (has_name_mapping and has_byName) T.byName = Self.byName;
-            if (has_activateById) T.activateById = Self.activate;
-            if (has_name_mapping and has_activateByName) T.activateByName = Self.activateByName;
 
             if (has_init) T.init() catch {
                 std.log.err("Failed to initialize component of type: {any}", .{T});
@@ -349,116 +419,34 @@ pub fn ComponentPool(comptime T: type) type {
 
             if (name_mapping) |*nm| nm.deinit();
             if (has_aspect) T.type_aspect = undefined;
-            if (has_new) T.new = undefined;
-            if (has_disposeById) T.disposeById = undefined;
-            if (has_name_mapping and has_disposeByName) T.disposeByName = undefined;
-            if (has_byId) T.byId = undefined;
-            if (has_name_mapping and has_byName) T.byName = undefined;
-            if (has_activateById) T.activateById = undefined;
-            if (has_name_mapping and has_activateByName) T.activateByName = undefined;
         }
 
-        pub fn typeCheck(a: *Aspect) bool {
-            if (!initialized)
-                return false;
-
-            return c_aspect.index == a.index;
-        }
-
-        pub fn count() usize {
-            return items.slots.count();
-        }
-
-        pub fn activeCount() usize {
-            return active_mapping.count();
-        }
-
-        pub fn subscribe(listener: ComponentListener) void {
-            if (eventDispatch) |*ed| ed.register(listener);
-        }
-
-        pub fn unsubscribe(listener: ComponentListener) void {
-            if (eventDispatch) |*ed| ed.unregister(listener);
-        }
-
-        pub fn register(c: T) *T {
+        fn register(c: T) *T {
             var id = items.add(c);
-            var result = items.get(id);
-            result.id = id;
+            if (items.get(id)) |result| {
+                result.id = id;
 
-            if (name_mapping) |*nm| {
-                if (!std.mem.eql(u8, c.name, NO_NAME))
-                    nm.put(result.name, id) catch unreachable;
-            }
-
-            if (has_construct)
-                result.construct();
-
-            notify(ActionType.CREATED, id);
-            return result;
-        }
-
-        pub fn nextId(index: usize) ?usize {
-            return items.slots.nextSetBit(index);
-        }
-
-        pub fn nextActiveId(index: usize) ?usize {
-            return active_mapping.nextSetBit(index);
-        }
-
-        pub fn exists(id: Index) bool {
-            return items.exists(id);
-        }
-
-        pub fn get(id: Index) *T {
-            const ret = items.get(id);
-            if (ret.id == UNDEF_INDEX) {
-                std.log.err("No Component with id: {d} of type: {s}", .{ id, T.COMPONENT_TYPE_NAME });
-                @panic("Component does not exist");
-            }
-            return ret;
-        }
-
-        pub fn byId(id: Index) *const T {
-            return items.get(id);
-        }
-
-        pub fn existsName(name: String) bool {
-            if (name_mapping) |*nm| {
-                return nm.contains(name);
-            }
-            return false;
-        }
-
-        pub fn byName(name: String) *const T {
-            if (name_mapping) |*nm| {
-                if (nm.get(name)) |id| {
-                    return items.get(id);
+                if (name_mapping) |*nm| {
+                    if (!std.mem.eql(u8, c.name, NO_NAME))
+                        nm.put(result.name, id) catch unreachable;
                 }
-            }
-            return &T.NULL_VALUE;
+
+                if (has_construct)
+                    result.construct();
+
+                notify(ActionType.CREATED, id);
+                return result;
+            } else unreachable;
         }
 
-        pub fn activate(id: Index, a: bool) void {
+        fn activate(id: Index, a: bool) void {
             active_mapping.setValue(id, a);
             if (has_activation)
-                get(id).activation(a);
+                if (items.get(id)) |v| v.activation(a);
             notify(if (a) ActionType.ACTIVATED else ActionType.DEACTIVATING, id);
         }
 
-        pub fn activateByName(name: String, a: bool) void {
-            if (name_mapping) |*nm| {
-                if (nm.get(name)) |id| {
-                    activate(id, a);
-                }
-            }
-        }
-
-        pub fn isActive(id: Index) bool {
-            return active_mapping.isSet(id);
-        }
-
-        pub fn clearAll() void {
+        fn clearAll() void {
             var i: Index = 0;
             while (items.slots.nextSetBit(i)) |next| {
                 clear(next);
@@ -466,41 +454,25 @@ pub fn ComponentPool(comptime T: type) type {
             }
         }
 
-        pub fn clear(id: Index) void {
-            if (isActive(id))
+        fn clear(id: Index) void {
+            if (active_mapping.isSet(id))
                 activate(id, false);
             notify(ActionType.DISPOSING, id);
-            if (has_destruct)
-                get(id).destruct();
-            active_mapping.setValue(id, false);
-            items.delete(id);
-        }
 
-        pub fn clearByName(name: String) void {
-            if (name_mapping) |*nm| {
-                if (nm.get(name)) |id| clear(id);
-            }
-        }
+            if (items.get(id)) |val| {
+                if (has_destruct)
+                    val.destruct();
 
-        pub fn processActive(f: *const fn (*const T) void) void {
-            var i: Index = 0;
-            while (active_mapping.nextSetBit(i)) |next| {
-                f(items.get(next));
-                i = next + 1;
-            }
-        }
+                if (name_mapping) |*nm| {
+                    if (!std.mem.eql(u8, val.name, NO_NAME)) {
+                        _ = nm.remove(val.name);
+                        val.name = NO_NAME;
+                    }
+                }
 
-        pub fn processBitSet(indices: *BitSet, f: *const fn (*const T) void) void {
-            var i: Index = 0;
-            while (indices.nextSetBit(i)) |next| {
-                f(items.get(next));
-                i = next + 1;
-            }
-        }
-
-        pub fn processIndexed(indices: []Index, f: *const fn (*const T) void) void {
-            for (indices) |i| {
-                f(items.get(i));
+                val.id = UNDEF_INDEX;
+                active_mapping.setValue(id, false);
+                items.delete(id);
             }
         }
 
@@ -530,7 +502,7 @@ pub fn print(string_buffer: *StringBuffer) void {
     string_buffer.print("\nComponents:", .{});
     var next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
     while (next) |i| {
-        API.COMPONENT_INTERFACE_TABLE.get(i).to_string(string_buffer);
+        if (API.COMPONENT_INTERFACE_TABLE.get(i)) |interface| interface.to_string(string_buffer);
         next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
     }
 }

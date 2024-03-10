@@ -74,7 +74,7 @@ fn _Example_One_Entity_No_Views() void {
             .start_value = 164.0,
             .end_value = 264.0,
             .easing = utils.Easing_Linear,
-            .property_ref = &ETransform.get(Entity.byName("TestEntity").id).transform.position[0],
+            .property_ref = &ETransform.byId(Entity.byName("TestEntity").?.id).transform.position[0],
         },
     ))
         .withAnimationAnd(Animation(EasedValueIntegration).new(
@@ -86,7 +86,7 @@ fn _Example_One_Entity_No_Views() void {
             .start_value = 0.0,
             .end_value = 180.0,
             .easing = utils.Easing_Linear,
-            .property_ref = &ETransform.get(Entity.byName("TestEntity").id).transform.rotation,
+            .property_ref = &ETransform.byId(Entity.byName("TestEntity").?.id).transform.rotation,
         },
     ))
         .activate();

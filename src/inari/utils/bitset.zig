@@ -68,11 +68,12 @@ pub const BitSet = struct {
     }
 
     pub fn clear(self: *Self) void {
-        var next = self.nextSetBit(0);
-        while (next) |i| {
-            self.setValue(i, false);
-            next = self.nextSetBit(i + 1);
-        }
+        self.unmanaged.setRangeValue(.{ .start = 0, .end = self.unmanaged.bit_length }, false);
+        // var next = self.nextSetBit(0);
+        // while (next) |i| {
+        //     self.setValue(i, false);
+        //     next = self.nextSetBit(i + 1);
+        // }
     }
 
     pub inline fn lengthOfMaskArray(self: Self) usize {

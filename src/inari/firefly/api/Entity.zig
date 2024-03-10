@@ -22,7 +22,7 @@ const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 
 pub const Entity = struct {
-    pub usingnamespace Component.API.Adapter(Entity, .{ .name = "Entity" });
+    pub usingnamespace Component.API.ComponentTrait(Entity, .{ .name = "Entity" });
 
     id: Index = UNDEF_INDEX,
     name: String = NO_NAME,
@@ -42,7 +42,8 @@ pub const Entity = struct {
 
     pub fn destruct(self: *Entity) void {
         for (0..EntityComponent.ENTITY_KIND_ASP_GROUP._size) |i| {
-            EntityComponent.INTERFACE_TABLE.get(EntityComponent.ENTITY_KIND_ASP_GROUP.aspects[i].index).clear(self.id);
+            var index = EntityComponent.ENTITY_KIND_ASP_GROUP.aspects[i].index;
+            if (EntityComponent.INTERFACE_TABLE.get(index)) |ref| ref.clear(self.id);
         }
     }
 
@@ -59,7 +60,7 @@ pub const Entity = struct {
     pub fn withComponentAnd(self: *Entity, c: anytype) *@TypeOf(c) {
         _ = self.withComponent(c);
         const T = @TypeOf(c);
-        return EntityComponentPool(T).get(self.id);
+        return EntityComponentPool(T).byId(self.id);
     }
 
     pub fn activation(self: *Entity, active: bool) void {
@@ -111,7 +112,7 @@ pub const EntityComponent = struct {
         if (initialized)
             return;
 
-        INTERFACE_TABLE = try DynArray(ComponentTypeInterface).new(api.ENTITY_ALLOC, null);
+        INTERFACE_TABLE = try DynArray(ComponentTypeInterface).new(api.ENTITY_ALLOC);
         ENTITY_KIND_ASP_GROUP = try AspectGroup.new("ENTITY_KIND_ASP_GROUP");
     }
 
@@ -123,8 +124,9 @@ pub const EntityComponent = struct {
 
         // deinit all registered entity component pools via aspect interface mapping
         for (0..ENTITY_KIND_ASP_GROUP._size) |i| {
-            INTERFACE_TABLE.get(ENTITY_KIND_ASP_GROUP.aspects[i].index).deinit();
-            INTERFACE_TABLE.delete(ENTITY_KIND_ASP_GROUP.aspects[i].index);
+            var index = ENTITY_KIND_ASP_GROUP.aspects[i].index;
+            if (INTERFACE_TABLE.get(index)) |ref| ref.deinit();
+            INTERFACE_TABLE.delete(index);
         }
         INTERFACE_TABLE.deinit();
         INTERFACE_TABLE = undefined;
@@ -141,7 +143,8 @@ pub const EntityComponent = struct {
         for (0..ENTITY_KIND_ASP_GROUP._size) |i| {
             var aspect = &ENTITY_KIND_ASP_GROUP.aspects[i];
             if (entity.kind.hasAspect(aspect)) {
-                INTERFACE_TABLE.get(aspect.index).activate(entity.id, active);
+                if (INTERFACE_TABLE.get(aspect.index)) |ref|
+                    ref.activate(entity.id, active);
             }
         }
     }
@@ -155,8 +158,7 @@ pub const EntityComponent = struct {
                 pub const pool = Entity.EntityComponentPool(T);
                 // component type pool function references
                 pub var type_aspect: *Aspect = undefined;
-                pub var get: *const fn (Index) *T = undefined;
-                pub var byId: *const fn (Index) *const T = undefined;
+                pub var byId: *const fn (Index) *T = undefined;
             };
         }
 
@@ -195,7 +197,6 @@ pub fn EntityComponentPool(comptime T: type) type {
 
     // check component type constraints
     comptime var has_aspect: bool = false;
-    comptime var has_get: bool = false;
     comptime var has_byId: bool = false;
     // component function interceptors
     comptime var has_init: bool = false;
@@ -216,7 +217,6 @@ pub fn EntityComponentPool(comptime T: type) type {
             @compileError("Expects component type to have field named id");
 
         has_aspect = trait.hasDecls(T, .{"type_aspect"});
-        has_get = trait.hasDecls(T, .{"get"});
         has_byId = trait.hasDecls(T, .{"byId"});
 
         has_init = trait.hasDecls(T, .{"init"});
@@ -242,7 +242,7 @@ pub fn EntityComponentPool(comptime T: type) type {
 
             errdefer Self.deinit();
             defer {
-                EntityComponent.INTERFACE_TABLE.set(
+                _ = EntityComponent.INTERFACE_TABLE.set(
                     ComponentTypeInterface{
                         .activate = Self.activate,
                         .clear = Self.clear,
@@ -254,11 +254,10 @@ pub fn EntityComponentPool(comptime T: type) type {
                 Self.initialized = true;
             }
 
-            items = DynArray(T).new(api.COMPONENT_ALLOC, T.NULL_VALUE) catch @panic("Init items failed");
+            items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
             c_aspect = EntityComponent.ENTITY_KIND_ASP_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
 
             if (has_aspect) T.type_aspect = c_aspect;
-            if (has_get) T.get = Self.get;
             if (has_byId) T.byId = Self.byId;
             if (has_init) T.init();
         }
@@ -271,7 +270,7 @@ pub fn EntityComponentPool(comptime T: type) type {
             if (has_destruct) {
                 var next = items.slots.nextSetBit(0);
                 while (next) |i| {
-                    items.get(i).destruct();
+                    if (items.get(i)) |item| item.destruct();
                     next = items.slots.nextSetBit(i + 1);
                 }
             }
@@ -299,28 +298,22 @@ pub fn EntityComponentPool(comptime T: type) type {
         pub fn register(c: T, id: Index) *T {
             checkComponentTrait(c);
 
-            items.set(c, id);
-            var comp: *T = items.get(id);
+            var comp = items.set(c, id);
             comp.id = id;
-
             if (has_construct)
                 comp.construct();
 
             return comp;
         }
 
-        pub fn get(id: Index) *T {
-            return items.get(id);
-        }
-
-        pub fn byId(id: Index) *const T {
-            return items.get(id);
+        // TODO make optional?
+        pub fn byId(id: Index) *T {
+            return items.get(id).?;
         }
 
         pub fn activate(id: Index, active: bool) void {
-            if (has_activation) {
-                items.get(id).activation(active);
-            }
+            if (has_activation)
+                byId(id).activation(active);
         }
 
         pub fn clearAll() void {
@@ -336,7 +329,7 @@ pub fn EntityComponentPool(comptime T: type) type {
                 return;
 
             if (has_destruct) {
-                get(id).destruct();
+                byId(id).destruct();
             }
             items.delete(id);
         }

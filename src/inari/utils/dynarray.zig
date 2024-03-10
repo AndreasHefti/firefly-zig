@@ -110,21 +110,19 @@ pub fn DynArray(comptime T: type) type {
             }
         };
 
-        null_value: ?T = undefined,
+        //null_value: ?T = undefined,
         register: Register(T) = undefined,
         slots: BitSet = undefined,
 
-        pub fn new(allocator: Allocator, comptime null_value: ?T) !Self {
+        pub fn new(allocator: Allocator) !Self {
             return Self{
-                .null_value = null_value,
                 .register = Register(T).new(allocator),
                 .slots = try BitSet.newEmpty(allocator, 128),
             };
         }
 
-        pub fn newWithRegisterSize(allocator: Allocator, register_size: usize, comptime null_value: ?T) !Self {
+        pub fn newWithRegisterSize(allocator: Allocator, register_size: usize) !Self {
             return Self{
-                .null_value = null_value,
                 .register = Register(T).newWithRegisterSize(allocator, register_size),
                 .slots = try BitSet.newEmpty(allocator, register_size),
             };
@@ -163,6 +161,11 @@ pub fn DynArray(comptime T: type) type {
             return index;
         }
 
+        pub fn addAndGet(self: *Self, t: T) struct { i: usize, ref: *T } {
+            var index = add(self, t);
+            return .{ .i = index, .ref = get(self, index).? };
+        }
+
         pub fn remove(self: *Self, t: T) void {
             var i: usize = 0;
             while (self.slots.nextSetBit(i)) |next| {
@@ -174,9 +177,10 @@ pub fn DynArray(comptime T: type) type {
             }
         }
 
-        pub fn set(self: *Self, t: T, index: usize) void {
+        pub fn set(self: *Self, t: T, index: usize) *T {
             self.register.set(t, index);
             self.slots.set(index);
+            return self.register.get(index);
         }
 
         pub fn inBounds(self: *Self, index: usize) bool {
@@ -187,38 +191,33 @@ pub fn DynArray(comptime T: type) type {
             return inBounds(self, index) and self.slots.isSet(index);
         }
 
-        pub fn getIfExists(self: *Self, index: usize) ?*T {
+        // pub fn getIfExists(self: *Self, index: usize) ?*T {
+        //     if (exists(self, index)) {
+        //         return self.register.get(index);
+        //     }
+        //     return null;
+        // }
+
+        // TODO use ?*T here as return type and ged rid of getIfExists
+        pub fn get(self: *Self, index: usize) ?*T {
             if (exists(self, index)) {
                 return self.register.get(index);
             }
             return null;
         }
 
-        pub fn get(self: *Self, index: usize) *T {
-            if (exists(self, index)) {
-                return self.register.get(index);
-            } else if (self.null_value != null) {
-                return &self.null_value.?;
-            } else {
-                @panic("Illegal array access");
-            }
-        }
-
         pub fn delete(self: *Self, index: usize) void {
-            if (exists(self, index)) {
-                if (self.null_value) |nv| {
-                    self.register.set(nv, index);
-                }
+            if (exists(self, index))
                 self.slots.setValue(index, false);
-            }
         }
 
         pub fn clear(self: *Self) void {
-            var next = self.slots.nextSetBit(0);
-            while (next) |i| {
-                self.delete(i);
-                next = self.slots.nextSetBit(i + 1);
-            }
+            self.slots.clear();
+            // var next = self.slots.nextSetBit(0);
+            // while (next) |i| {
+            //     self.delete(i);
+            //     next = self.slots.nextSetBit(i + 1);
+            // }
         }
 
         pub fn iterator(self: *Self) Iterator {

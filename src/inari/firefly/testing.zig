@@ -82,7 +82,7 @@ test "Firefly init" {
 // //////////////////////////////////////////////////////////////
 
 const ExampleComponent = struct {
-    pub usingnamespace Component.API.Adapter(@This(), .{ .name = "ExampleComponent" });
+    pub usingnamespace Component.API.ComponentTrait(@This(), .{ .name = "ExampleComponent" });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -92,7 +92,7 @@ const ExampleComponent = struct {
 
     // methods
     pub fn activate(self: ExampleComponent, active: bool) void {
-        @This().pool.activate(self.id, active);
+        ExampleComponent.activateById(self.id, active);
     }
 
     // following methods will automatically be called by Component interface when defined
@@ -151,7 +151,6 @@ test "valid component" {
     try std.testing.expect(Component.API.checkComponentValidity(newC));
     try std.testing.expect(Component.API.checkComponentValidity(newCPtr));
     try std.testing.expect(!Component.API.checkComponentValidity(invalid1));
-    //try std.testing.expect(!Component.isValid(firefly.graphics.ETransform{}));
 }
 
 test "create/dispose component" {
@@ -166,8 +165,8 @@ test "create/dispose component" {
 
     try std.testing.expect(cPtr.id == 0);
 
-    try std.testing.expect(ExampleComponent.pool.count() == 1);
-    try std.testing.expect(ExampleComponent.pool.activeCount() == 0);
+    try std.testing.expect(ExampleComponent.count() == 1);
+    try std.testing.expect(ExampleComponent.activeCount() == 0);
 
     try std.testing.expect(cPtr.color[0] == 0);
     try std.testing.expect(cPtr.color[1] == 0);
@@ -187,10 +186,10 @@ test "create/dispose component" {
 
     cPtr.activate(true);
 
-    try std.testing.expect(ExampleComponent.pool.count() == 1);
-    try std.testing.expect(ExampleComponent.pool.activeCount() == 1);
+    try std.testing.expect(ExampleComponent.count() == 1);
+    try std.testing.expect(ExampleComponent.activeCount() == 1);
 
-    var editableCPtr = ExampleComponent.get(cPtr.id);
+    var editableCPtr = ExampleComponent.byId(cPtr.id);
 
     try std.testing.expect(editableCPtr.id == 0);
     try std.testing.expect(editableCPtr.color[0] == 0);
@@ -211,15 +210,10 @@ test "create/dispose component" {
 
     ExampleComponent.disposeById(editableCPtr.id);
 
-    try std.testing.expect(cPtr.color[0] == 0);
-    try std.testing.expect(cPtr.color[1] == 0);
-    try std.testing.expect(cPtr.color[2] == 0);
-    try std.testing.expect(cPtr.color[3] == 255);
-    try std.testing.expect(cPtr.position[0] == 0);
-    try std.testing.expect(cPtr.position[1] == 0);
-
-    try std.testing.expect(ExampleComponent.pool.count() == 0);
-    try std.testing.expect(ExampleComponent.pool.activeCount() == 0);
+    // also the other pointer gets invalid
+    try std.testing.expect(cPtr.id == UNDEF_INDEX);
+    try std.testing.expect(ExampleComponent.count() == 0);
+    try std.testing.expect(ExampleComponent.activeCount() == 0);
 }
 
 test "name mapping" {
@@ -243,12 +237,10 @@ test "name mapping" {
     try std.testing.expect(!ExampleComponent.existsName("c1"));
 
     var _c2 = ExampleComponent.byName("c2");
-    var c3 = ExampleComponent.byName("c3"); // c3 doesn't exists so it gives back the NULL VALUE
+    var c3 = ExampleComponent.byName("c3");
 
-    try std.testing.expect(_c2.id != ExampleComponent.NULL_VALUE.id);
-    try std.testing.expectEqual(c2.*, _c2.*);
-    try std.testing.expect(c3.id == ExampleComponent.NULL_VALUE.id);
-    try std.testing.expectEqual(c3.*, ExampleComponent.NULL_VALUE);
+    try std.testing.expect(c3 == null); // c3 doesn't exists
+    try std.testing.expectEqual(c2.*, _c2.?.*);
 }
 
 test "event propagation" {
@@ -312,7 +304,7 @@ test "function pointer equality op" {
 // }
 
 fn process() void {
-    ExampleComponent.pool.processActive(processOne);
+    ExampleComponent.processActive(processOne);
 }
 
 fn processOne(c: *const ExampleComponent) void {

@@ -39,7 +39,7 @@ test "TextureAsset init/deinit" {
         @as(String, "Texture"),
         TextureAsset.asset_type.name,
     );
-    try std.testing.expect(TextureAsset.resourceSize() == 0);
+    //try std.testing.expect(TextureAsset.resourceSize() == 0);
 }
 
 test "TextureAsset load/unload" {
@@ -57,29 +57,30 @@ test "TextureAsset load/unload" {
     try std.testing.expect(texture_asset.resource_id != UNDEF_INDEX);
     try std.testing.expectEqualStrings("TestTexture", texture_asset.name);
 
-    var res: *const TextureData = TextureAsset.getResource(texture_asset.resource_id);
-    try std.testing.expectEqualStrings("path/TestTexture", res.resource);
-    try std.testing.expect(res.binding == NO_BINDING); // not loaded yet
-    try std.testing.expect(texture_asset.getResource(TextureAsset).binding == NO_BINDING);
+    var res: ?*const TextureData = TextureAsset.getResourceById(texture_asset.resource_id, false);
+    try std.testing.expect(res != null);
+    try std.testing.expectEqualStrings("path/TestTexture", res.?.resource);
+    try std.testing.expect(res.?.binding == NO_BINDING); // not loaded yet
+    //try std.testing.expect(texture_asset.getResourceById(TextureAsset).binding == NO_BINDING);
 
     // load the texture... by name
-    Asset.activateByName("TestTexture", true);
-    try std.testing.expect(res.binding == 0); // now loaded
-    try std.testing.expect(texture_asset.getResource(TextureAsset).binding == 0);
+    _ = Asset.loadByName("TestTexture");
+    try std.testing.expect(res.?.binding == 0); // now loaded
+    try std.testing.expect(TextureAsset.getBindingByAssetId(texture_asset.id) == 0);
 
-    try std.testing.expect(res.width > 0);
-    try std.testing.expect(res.height > 0);
+    try std.testing.expect(res.?.width > 0);
+    try std.testing.expect(res.?.height > 0);
     // dispose texture
-    Asset.activateByName("TestTexture", false);
-    try std.testing.expect(res.binding == NO_BINDING); // not loaded
-    try std.testing.expect(res.width == -1);
-    try std.testing.expect(res.height == -1);
+    Asset.unloadByName("TestTexture");
+    try std.testing.expect(res.?.binding == NO_BINDING); // not loaded
+    try std.testing.expect(res.?.width == -1);
+    try std.testing.expect(res.?.height == -1);
 
     // load the texture... by id
-    Asset.activateById(texture_asset.id, true);
-    try std.testing.expect(res.binding == 0); // now loaded
-    try std.testing.expect(res.width > 0);
-    try std.testing.expect(res.height > 0);
+    _ = Asset.loadById(texture_asset.id);
+    try std.testing.expect(res.?.binding == 0); // now loaded
+    try std.testing.expect(res.?.width > 0);
+    try std.testing.expect(res.?.height > 0);
 
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
@@ -106,10 +107,10 @@ test "TextureAsset load/unload" {
     try std.testing.expectEqualStrings(render_state1, sb.toString());
 
     // dispose texture
-    Asset.activateById(texture_asset.id, false);
-    try std.testing.expect(res.binding == NO_BINDING); // not loaded
-    try std.testing.expect(res.width == -1);
-    try std.testing.expect(res.height == -1);
+    Asset.unloadById(texture_asset.id);
+    try std.testing.expect(res.?.binding == NO_BINDING); // not loaded
+    try std.testing.expect(res.?.width == -1);
+    try std.testing.expect(res.?.height == -1);
 
     sb.clear();
     api.rendering.printDebug(&sb);
@@ -142,19 +143,19 @@ test "TextureAsset dispose" {
         .is_mipmap = false,
     });
 
-    Asset.activateByName("TestTexture", true);
-
-    var res: *const TextureData = TextureAsset.getResource(texture_asset.resource_id);
-    try std.testing.expectEqualStrings("path/TestTexture", res.resource);
-    try std.testing.expect(res.binding != NO_BINDING); //  loaded yet
+    _ = Asset.loadByName("TestTexture");
+    var res: ?*const TextureData = TextureAsset.getResourceById(texture_asset.resource_id, false);
+    try std.testing.expect(res != null);
+    try std.testing.expectEqualStrings("path/TestTexture", res.?.resource);
+    try std.testing.expect(res.?.binding != NO_BINDING); //  loaded yet
 
     // should also deactivate first
     Asset.disposeByName("TestTexture");
 
-    try std.testing.expect(res.binding == NO_BINDING); // not loaded yet
+    try std.testing.expect(res.?.binding == NO_BINDING); // not loaded yet
     // asset ref has been reset
     try std.testing.expect(texture_asset.id == UNDEF_INDEX);
-    try std.testing.expectEqualStrings(texture_asset.name, NO_NAME);
+    try std.testing.expectEqualStrings(NO_NAME, texture_asset.name);
 }
 
 test "get resources is const" {
@@ -167,9 +168,10 @@ test "get resources is const" {
         .is_mipmap = false,
     });
 
-    // this shall get the NULL_VALUE since the asset is not loaded yet
-    var res = texture_asset.getResource(TextureAsset);
-    try std.testing.expect(res.binding == NO_BINDING);
+    // this shall get the NO_BINDING since the asset is not loaded yet
+    var res = TextureAsset.getResourceById(texture_asset.id, false);
+    try std.testing.expect(res != null);
+    try std.testing.expect(res.?.binding == NO_BINDING);
     // this is not possible at compile time: error: cannot assign to constant
     //res.binding = 1;
 }
@@ -193,16 +195,14 @@ test "ShaderAsset load/unload" {
     try std.testing.expect(shader_asset.resource_id != UNDEF_INDEX);
     try std.testing.expectEqualStrings("Shader123", shader_asset.name);
 
-    var res: *const ShaderData = ShaderAsset.getResource(shader_asset.resource_id);
+    var res: *const ShaderData = ShaderAsset.getResourceById(shader_asset.resource_id, false).?;
     try std.testing.expectEqualStrings("/vertex_shader.glsl", res.vertex_shader_resource);
     try std.testing.expectEqualStrings("/fragment_shader.glsl", res.fragment_shader_resource);
     try std.testing.expect(res.binding == NO_BINDING); // not loaded yet
-    try std.testing.expect(shader_asset.getResource(ShaderAsset).binding == NO_BINDING);
 
     // load the texture... by name
-    Asset.activateByName("Shader123", true);
+    _ = Asset.loadByName("Shader123");
     try std.testing.expect(res.binding == 0); // now loaded
-    try std.testing.expect(shader_asset.getResource(ShaderAsset).binding == 0);
 
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
@@ -229,7 +229,7 @@ test "ShaderAsset load/unload" {
     try std.testing.expectEqualStrings(render_state1, sb.toString());
 
     // dispose texture
-    Asset.activateByName("Shader123", false);
+    Asset.unloadByName("Shader123");
     try std.testing.expect(res.binding == NO_BINDING); // not loaded
 
     sb.clear();

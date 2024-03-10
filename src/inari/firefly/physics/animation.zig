@@ -79,7 +79,6 @@ const AnimationTypeReference = struct {
 pub fn Animation(comptime Integration: type) type {
     return struct {
         const Self = @This();
-        const null_value = Self{};
 
         // type state
         var initialized = false;
@@ -109,7 +108,7 @@ pub fn Animation(comptime Integration: type) type {
             if (Self.initialized)
                 @panic("Animation Type already initialized: " ++ @typeName(Integration));
 
-            animations = DynArray(Self).new(api.COMPONENT_ALLOC, null_value) catch undefined;
+            animations = DynArray(Self).new(api.COMPONENT_ALLOC) catch undefined;
             return AnimationTypeReference{
                 ._update_all = Self.updateAll,
                 ._deinit = Self.deinit,
@@ -147,7 +146,7 @@ pub fn Animation(comptime Integration: type) type {
             };
             var index = animations.add(_new);
 
-            var self = animations.get(index);
+            var self = animations.get(index).?;
             return IAnimation{
                 .id = index,
                 .animation = self,
@@ -161,26 +160,26 @@ pub fn Animation(comptime Integration: type) type {
         }
 
         pub fn activate(index: Index, active: bool) void {
-            animations.get(index)._active = active;
+            if (animations.get(index)) |a| a._active = active;
         }
 
         pub fn reset(index: Index) void {
-            var a = animations.get(index);
-            a.resetIntegration();
-            a._active = a.active_on_init;
+            if (animations.get(index)) |a| {
+                a.resetIntegration();
+                a._active = a.active_on_init;
+            }
         }
 
         pub fn suspendIt(index: Index) void {
-            animations.get(index)._suspending = true;
+            if (animations.get(index)) |a| a._suspending = true;
         }
 
         fn updateAll() void {
             var next = animations.slots.nextSetBit(0);
             while (next) |i| {
-                var a_ptr: *Self = animations.get(i);
-                if (a_ptr._active)
-                    a_ptr.update();
-
+                if (animations.get(i)) |a| {
+                    if (a._active) a.update();
+                }
                 next = animations.slots.nextSetBit(i + 1);
             }
         }
@@ -224,11 +223,11 @@ pub fn Animation(comptime Integration: type) type {
         }
 
         pub fn withFinishCallback(index: Index, finish_callback: ?*const fn () void) void {
-            animations.get(index).finish_callback = finish_callback;
+            if (animations.get(index)) |a| a.finish_callback = finish_callback;
         }
 
         pub fn withLoopCallback(index: Index, loop_callback: ?*const fn (usize) void) void {
-            animations.get(index).loop_callback = loop_callback;
+            if (animations.get(index)) |a| a.loop_callback = loop_callback;
         }
 
         pub fn dispose(index: Index) void {
@@ -280,7 +279,7 @@ pub const EAnimation = struct {
 
     pub fn withAnimationAnd(self: *EAnimation, animation: IAnimation) *Entity {
         self.animations.set(AnimationSystem.animation_refs.add(animation));
-        return Entity.pool.get(self.id);
+        return Entity.byId(self.id);
     }
 
     pub fn activation(self: *EAnimation, active: bool) void {
@@ -321,13 +320,9 @@ pub const AnimationSystem = struct {
         animation_type_refs = DynArray(AnimationTypeReference).newWithRegisterSize(
             api.ALLOC,
             10,
-            null,
         ) catch unreachable;
 
-        animation_refs = DynArray(IAnimation).new(
-            api.COMPONENT_ALLOC,
-            null,
-        ) catch unreachable;
+        animation_refs = DynArray(IAnimation).new(api.COMPONENT_ALLOC) catch unreachable;
 
         _ = System.new(System{
             .name = sys_name,
@@ -342,7 +337,7 @@ pub const AnimationSystem = struct {
 
         var next = animation_refs.slots.nextSetBit(0);
         while (next) |i| {
-            animation_refs.get(i).fn_dispose(i);
+            if (animation_refs.get(i)) |ar| ar.fn_dispose(i);
             next = animation_refs.slots.nextSetBit(i + 1);
         }
         animation_refs.clear();
@@ -351,7 +346,7 @@ pub const AnimationSystem = struct {
 
         next = animation_type_refs.slots.nextSetBit(0);
         while (next) |i| {
-            animation_type_refs.get(i)._deinit();
+            if (animation_type_refs.get(i)) |ar| ar._deinit();
             next = animation_type_refs.slots.nextSetBit(i + 1);
         }
         animation_type_refs.clear();
@@ -360,28 +355,28 @@ pub const AnimationSystem = struct {
     }
 
     pub fn activateById(id: Index, active: bool) void {
-        if (initialized and animation_refs.exists(id))
-            animation_refs.get(id).fn_activate(id, active);
+        if (initialized)
+            if (animation_refs.get(id)) |ar| ar.fn_activate(id, active);
     }
 
     pub fn resetById(id: Index) void {
-        if (initialized and animation_refs.exists(id))
-            animation_refs.get(id).fn_reset(id);
+        if (initialized)
+            if (animation_refs.get(id)) |ar| ar.fn_reset(id);
     }
 
     pub fn suspendById(id: Index) void {
-        if (initialized and animation_refs.exists(id))
-            animation_refs.get(id).fn_suspend_it(id);
+        if (initialized)
+            if (animation_refs.get(id)) |ar| ar.fn_suspend_it(id);
     }
 
     pub fn setLoopCallbackById(id: Index, callback: *const fn (usize) void) void {
-        if (initialized and animation_refs.exists(id))
-            animation_refs.get(id).fn_set_loop_callback(id, callback);
+        if (initialized)
+            if (animation_refs.get(id)) |ar| ar.fn_set_loop_callback(id, callback);
     }
 
     pub fn setFinishCallbackById(id: Index, callback: *const fn (Index) void) void {
-        if (initialized and animation_refs.exists(id))
-            animation_refs.get(id).fn_set_finish_callback(id, callback);
+        if (initialized)
+            if (animation_refs.get(id)) |ar| ar.fn_set_finish_callback(id, callback);
     }
 
     pub fn registerAnimationType(comptime Integration: type) void {
@@ -396,8 +391,8 @@ pub const AnimationSystem = struct {
     }
 
     fn disposeAnimation(id: Index) void {
-        if (initialized and animation_refs.exists(id)) {
-            animation_refs.get(id).fn_dispose(id);
+        if (initialized) {
+            if (animation_refs.get(id)) |ar| ar.fn_dispose(id);
             animation_refs.delete(id);
         }
     }
@@ -405,7 +400,7 @@ pub const AnimationSystem = struct {
     fn update(_: UpdateEvent) void {
         var next = animation_type_refs.slots.nextSetBit(0);
         while (next) |i| {
-            animation_type_refs.get(i)._update_all();
+            if (animation_type_refs.get(i)) |ar| ar._update_all();
             next = animation_type_refs.slots.nextSetBit(i + 1);
         }
     }
@@ -451,10 +446,7 @@ pub const IndexFrame = struct {
     duration: usize = 0,
 
     fn init() void {
-        frames = DynArray(IndexFrame).new(
-            api.COMPONENT_ALLOC,
-            IndexFrame{},
-        ) catch unreachable;
+        frames = DynArray(IndexFrame).new(api.COMPONENT_ALLOC) catch unreachable;
     }
 
     fn deinit() void {

@@ -93,7 +93,6 @@ pub fn deinit() void {
 
 pub const ShaderAsset = struct {
     pub var asset_type: *Aspect = undefined;
-    pub const NULL_VALUE = ShaderData{};
 
     pub const Shader = struct {
         asset_name: String = NO_NAME,
@@ -104,7 +103,7 @@ pub const ShaderAsset = struct {
 
     fn init() !void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Shader");
-        shader = try DynArray(ShaderData).new(firefly.api.COMPONENT_ALLOC, NULL_VALUE);
+        shader = try DynArray(ShaderData).new(firefly.api.COMPONENT_ALLOC);
         Asset.subscribe(listener);
     }
 
@@ -130,24 +129,8 @@ pub const ShaderAsset = struct {
         });
     }
 
-    pub fn resourceSize() usize {
-        return shader.size();
-    }
-
-    pub fn getResource(res_id: Index) *const ShaderData {
-        return shader.get(res_id);
-    }
-
-    pub fn getResourceForIndex(res_id: Index, _: Index) *const ShaderData {
-        return shader.get(res_id);
-    }
-
-    pub fn getResourceForName(res_id: Index, _: String) *const ShaderData {
-        return shader.get(res_id);
-    }
-
     fn listener(e: ComponentEvent) void {
-        var asset: *Asset = Asset.pool.get(e.c_id);
+        var asset: *Asset = Asset.byId(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
 
@@ -159,23 +142,45 @@ pub const ShaderAsset = struct {
         }
     }
 
+    pub fn getResourceById(asset_id: Index, auto_load: bool) ?*const ShaderData {
+        var asset: *Asset = Asset.byId(asset_id);
+        // check if the asset is loaded, if not, try to auto-load it
+        if (!asset.isLoaded() and auto_load) {
+            if (!asset.load()) {
+                std.log.err("Failed to load/activate dependent ShaderAsset: {any}", .{Asset.byId(asset.parent_asset_id)});
+                return null;
+            }
+        }
+
+        return shader.get(asset.resource_id);
+    }
+
+    pub fn getBindingByAssetId(asset_id: Index) BindingId {
+        if (getResourceById(asset_id, true)) |res| {
+            return res.binding;
+        }
+        return NO_BINDING;
+    }
+
     fn load(asset: *Asset) void {
         if (!initialized)
             return;
 
-        var shaderData: *ShaderData = shader.get(asset.resource_id);
-        if (shaderData.binding != NO_BINDING)
-            return; // already loaded
+        if (shader.get(asset.resource_id)) |sd| {
+            if (sd.binding != NO_BINDING)
+                return; // already loaded
 
-        firefly.api.rendering.createShader(shaderData);
+            firefly.api.rendering.createShader(sd);
+        }
     }
 
     fn unload(asset: *Asset) void {
         if (!initialized)
             return;
 
-        var shaderData: *ShaderData = shader.get(asset.resource_id);
-        firefly.api.rendering.disposeShader(shaderData);
+        if (shader.get(asset.resource_id)) |s| {
+            firefly.api.rendering.disposeShader(s);
+        }
     }
 
     fn delete(asset: *Asset) void {
@@ -190,7 +195,6 @@ pub const ShaderAsset = struct {
 
 pub const TextureAsset = struct {
     pub var asset_type: *Aspect = undefined;
-    pub const NULL_VALUE = TextureData{};
 
     name: String = NO_NAME,
     resource_path: String,
@@ -202,7 +206,7 @@ pub const TextureAsset = struct {
 
     fn init() !void {
         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Texture");
-        textures = try DynArray(TextureData).new(firefly.api.COMPONENT_ALLOC, NULL_VALUE);
+        textures = try DynArray(TextureData).new(firefly.api.COMPONENT_ALLOC);
         Asset.subscribe(listener);
     }
 
@@ -233,24 +237,28 @@ pub const TextureAsset = struct {
         });
     }
 
-    pub fn resourceSize() usize {
-        return textures.size();
+    pub fn getResourceById(asset_id: Index, auto_load: bool) ?*const TextureData {
+        var asset: *Asset = Asset.byId(asset_id);
+        // check if the asset is loaded, if not, try to auto-load it
+        if (!asset.isLoaded() and auto_load) {
+            if (!asset.load()) {
+                std.log.err("Failed to load/activate dependent TextureAsset: {any}", .{Asset.byId(asset.parent_asset_id)});
+                return null;
+            }
+        }
+
+        return textures.get(asset.resource_id);
     }
 
-    pub fn getResource(res_id: Index) *const TextureData {
-        return textures.get(res_id);
-    }
-
-    pub fn getResourceForIndex(res_id: Index, _: Index) *const TextureData {
-        return textures.get(res_id);
-    }
-
-    pub fn getResourceForName(res_id: Index, _: String) *const TextureData {
-        return textures.get(res_id);
+    pub fn getBindingByAssetId(asset_id: Index) BindingId {
+        if (getResourceById(asset_id, true)) |res| {
+            return res.binding;
+        }
+        return NO_BINDING;
     }
 
     fn listener(e: ComponentEvent) void {
-        var asset: *Asset = Asset.pool.get(e.c_id);
+        var asset: *Asset = Asset.byId(e.c_id);
         if (asset_type.index != asset.asset_type.index)
             return;
 
@@ -266,11 +274,12 @@ pub const TextureAsset = struct {
         if (!initialized)
             return;
 
-        var tex_data = textures.get(asset.resource_id);
-        if (tex_data.binding != NO_BINDING)
-            return; // already loaded
+        if (textures.get(asset.resource_id)) |tex| {
+            if (tex.binding != NO_BINDING)
+                return; // already loaded
 
-        firefly.api.rendering.loadTexture(tex_data);
+            firefly.api.rendering.loadTexture(tex);
+        }
     }
 
     fn unload(asset: *Asset) void {
@@ -280,15 +289,16 @@ pub const TextureAsset = struct {
         if (asset.resource_id == UNDEF_INDEX)
             return;
 
-        var tex_data: *TextureData = textures.get(asset.resource_id);
-        if (tex_data.binding == NO_BINDING)
-            return; // already disposed
+        if (textures.get(asset.resource_id)) |tex| {
+            if (tex.binding == NO_BINDING)
+                return; // already disposed
 
-        firefly.api.rendering.disposeTexture(tex_data);
+            firefly.api.rendering.disposeTexture(tex);
 
-        assert(tex_data.binding == NO_BINDING);
-        assert(tex_data.width == -1);
-        assert(tex_data.height == -1);
+            assert(tex.binding == NO_BINDING);
+            assert(tex.width == -1);
+            assert(tex.height == -1);
+        }
     }
 
     fn delete(asset: *Asset) void {

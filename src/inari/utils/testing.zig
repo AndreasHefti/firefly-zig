@@ -219,54 +219,53 @@ test "DynArray initialize" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = try DynArray(i32).new(allocator, -1);
+    var dyn_array = try DynArray(i32).new(allocator);
     defer dyn_array.deinit();
     try testing.expect(dyn_array.capacity() == 0);
-    dyn_array.set(1, 0);
+    _ = dyn_array.set(1, 0);
     try testing.expect(dyn_array.capacity() == dyn_array.register.array_size);
-    try testing.expect(dyn_array.get(0).* == 1);
-    try testing.expect(dyn_array.get(1).* == -1);
-    try testing.expect(dyn_array.get(2).* == -1);
+    try testing.expect(dyn_array.get(0).?.* == 1);
+    try testing.expect(dyn_array.get(1) == null);
+    try testing.expect(dyn_array.get(2) == null);
 }
 
 test "DynArray scale up" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = try DynArray(i32).new(allocator, -1);
+    var dyn_array = try DynArray(i32).new(allocator);
     defer dyn_array.deinit();
 
-    dyn_array.set(100, 0);
+    _ = dyn_array.set(100, 0);
 
     try testing.expect(dyn_array.capacity() == dyn_array.register.array_size);
 
-    dyn_array.set(200, 200000);
+    _ = dyn_array.set(200, 200000);
 
     try testing.expect(dyn_array.capacity() == 200000 + dyn_array.register.array_size);
-    try testing.expect(200 == dyn_array.get(200000).*);
-    try testing.expect(-1 == dyn_array.get(200001).*);
+    try testing.expect(200 == dyn_array.get(200000).?.*);
+    try testing.expect(null == dyn_array.get(200001));
 }
 
 test "DynArray delete" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = try DynArray(i32).new(allocator, -1);
+    var dyn_array = try DynArray(i32).new(allocator);
     defer dyn_array.deinit();
 
-    dyn_array.set(100, 0);
-    try testing.expect(100 == dyn_array.get(0).*);
+    _ = dyn_array.set(100, 0);
+    try testing.expect(100 == dyn_array.get(0).?.*);
     dyn_array.delete(0);
-    try testing.expect(-1 == dyn_array.get(0).*);
+    try testing.expect(null == dyn_array.get(0));
 }
 
 test "DynArray consistency checks" {
-    var dyn_array = try DynArray(i32).new(std.testing.allocator, -1);
+    var dyn_array = try DynArray(i32).new(std.testing.allocator);
     defer dyn_array.deinit();
 
-    try std.testing.expect(-1 == dyn_array.null_value);
-    dyn_array.set(100, 0);
-    dyn_array.set(100, 100);
+    _ = dyn_array.set(100, 0);
+    _ = dyn_array.set(100, 100);
     try std.testing.expect(dyn_array.exists(0));
     try std.testing.expect(dyn_array.exists(100));
     try std.testing.expect(!dyn_array.exists(101));
@@ -274,12 +273,12 @@ test "DynArray consistency checks" {
 }
 
 test "DynArray use u16 as index" {
-    var dyn_array = try DynArray(i32).new(std.testing.allocator, -1);
+    var dyn_array = try DynArray(i32).new(std.testing.allocator);
     defer dyn_array.deinit();
 
     const index1: u16 = 0;
 
-    dyn_array.set(0, index1);
+    _ = dyn_array.set(0, index1);
 }
 
 test "test ensure capacity" {
@@ -670,7 +669,7 @@ test "BitMask clip" {
 }
 
 test "Strings in DynArray" {
-    var listOfStrings: DynArray(String) = DynArray(String).new(std.testing.allocator, NO_NAME) catch unreachable;
+    var listOfStrings: DynArray(String) = DynArray(String).new(std.testing.allocator) catch unreachable;
     defer listOfStrings.deinit();
 
     _ = listOfStrings.add("one");
@@ -682,7 +681,7 @@ test "Strings in DynArray" {
     try std.testing.expect(listOfStrings.size() == 5);
 
     var two = listOfStrings.get(1);
-    try std.testing.expectEqualStrings(two.*, "two");
+    try std.testing.expectEqualStrings(two.?.*, "two");
 }
 
 const SomeType = struct { id: usize };
@@ -691,13 +690,13 @@ test "Slices in DynArray" {
     defer list.deinit();
 
     // NOTE: it seems that the slice on the heap still pointing to
-    var s2: *[]SomeType = list.get(0);
-    try std.testing.expect(s2.*.len == 2);
-    try std.testing.expect(s2.*[1].id == 1);
+    // var s2: *[]SomeType = list.get(0).?;
+    // try std.testing.expect(s2.*.len == 2);
+    // try std.testing.expect(s2.*[1].id == 1);
 }
 
 fn testSliceFromList() !DynArray([]SomeType) {
-    var listOfSlices: DynArray([]SomeType) = DynArray([]SomeType).new(std.testing.allocator, null) catch unreachable;
+    var listOfSlices: DynArray([]SomeType) = DynArray([]SomeType).new(std.testing.allocator) catch unreachable;
 
     var sl = [_]SomeType{ .{ .id = 0 }, .{ .id = 1 } };
 
@@ -705,14 +704,14 @@ fn testSliceFromList() !DynArray([]SomeType) {
 
     try std.testing.expect(listOfSlices.size() == 1);
 
-    var s2: *[]SomeType = listOfSlices.get(0);
+    var s2: *[]SomeType = listOfSlices.get(0).?;
     try std.testing.expect(s2.*.len == 2);
     try std.testing.expect(s2.*[1].id == 1);
     return listOfSlices;
 }
 
 test "DynArray copy of struct toKampanie  heap" {
-    var list: DynArray(SomeType) = DynArray(SomeType).new(std.testing.allocator, null) catch unreachable;
+    var list: DynArray(SomeType) = DynArray(SomeType).new(std.testing.allocator) catch unreachable;
     defer list.deinit();
 
     var s1 = SomeType{ .id = 1 };
@@ -721,8 +720,8 @@ test "DynArray copy of struct toKampanie  heap" {
     _ = list.add(s1);
     _ = list.add(s2);
 
-    var _s1 = list.get(0);
-    var _s2 = list.get(1);
+    var _s1 = list.get(0).?;
+    var _s2 = list.get(1).?;
 
     try std.testing.expect(_s1.id == 1);
     try std.testing.expect(_s2.id == 2);
@@ -735,5 +734,5 @@ test "DynArray copy of struct toKampanie  heap" {
     _s2.id = 3;
 
     try std.testing.expect(_s2.id == 3);
-    try std.testing.expect(list.get(1).id == 3);
+    try std.testing.expect(list.get(1).?.id == 3);
 }

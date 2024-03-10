@@ -43,14 +43,12 @@ const RaylibRenderAPI = struct {
         if (initialized)
             return;
 
-        std.log.info("***************** init", .{});
-
         active_offset = default_offset;
         active_blend_mode = default_blend_mode;
 
-        textures = DynArray(Texture2D).new(api.ALLOC, null) catch unreachable;
-        render_textures = DynArray(RenderTexture2D).new(api.ALLOC, null) catch unreachable;
-        shaders = DynArray(Shader).new(api.ALLOC, null) catch unreachable;
+        textures = DynArray(Texture2D).new(api.ALLOC) catch unreachable;
+        render_textures = DynArray(RenderTexture2D).new(api.ALLOC) catch unreachable;
+        shaders = DynArray(Shader).new(api.ALLOC) catch unreachable;
 
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
@@ -129,8 +127,6 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadTexture(td: *TextureData) void {
-        std.log.info("***************** load Texture: {any}", .{td});
-
         var tex = rl.LoadTexture(@ptrCast(td.resource));
         td.width = @bitCast(tex.width);
         td.height = @bitCast(tex.height);
@@ -154,12 +150,11 @@ const RaylibRenderAPI = struct {
         if (td.binding == NO_BINDING)
             return;
 
-        std.log.info("***************** dispose Texture: {any}", .{td});
-
-        var tex = textures.get(td.binding);
-        rl.UnloadTexture(tex.*);
-        textures.delete(td.binding);
-        td.binding = NO_BINDING;
+        if (textures.get(td.binding)) |tex| {
+            rl.UnloadTexture(tex.*);
+            textures.delete(td.binding);
+            td.binding = NO_BINDING;
+        }
     }
 
     fn createRenderTexture(td: *RenderTextureData) void {
@@ -171,10 +166,11 @@ const RaylibRenderAPI = struct {
         if (td.binding == NO_BINDING)
             return;
 
-        var tex = render_textures.get(td.binding);
-        rl.UnloadRenderTexture(tex.*);
-        render_textures.delete(td.binding);
-        td.binding = NO_BINDING;
+        if (render_textures.get(td.binding)) |tex| {
+            rl.UnloadRenderTexture(tex.*);
+            render_textures.delete(td.binding);
+            td.binding = NO_BINDING;
+        }
     }
 
     fn createShader(sd: *ShaderData) void {
@@ -198,10 +194,11 @@ const RaylibRenderAPI = struct {
         if (sd.binding == NO_BINDING)
             return;
 
-        var shader = shaders.get(sd.binding);
-        rl.UnloadShader(shader.*);
-        shaders.delete(sd.binding);
-        sd.binding = NO_BINDING;
+        if (shaders.get(sd.binding)) |shader| {
+            rl.UnloadShader(shader.*);
+            shaders.delete(sd.binding);
+            sd.binding = NO_BINDING;
+        }
     }
 
     fn setActiveShader(binding_id: BindingId) void {
@@ -209,8 +206,9 @@ const RaylibRenderAPI = struct {
             if (active_shader == NO_BINDING) {
                 rl.EndShaderMode();
             } else {
-                var shader = shaders.get(active_shader.?);
-                rl.BeginShaderMode(shader.*);
+                if (shaders.get(active_shader.?)) |shader| {
+                    rl.BeginShaderMode(shader.*);
+                }
             }
             active_shader = binding_id;
         }
@@ -233,11 +231,12 @@ const RaylibRenderAPI = struct {
         }
 
         if (active_render_texture) |tex_id| {
-            var tex = render_textures.get(tex_id);
-            if (!rl.IsRenderTextureReady(tex.*))
-                @panic("Render Texture not ready!?");
+            if (render_textures.get(tex_id)) |tex| {
+                if (!rl.IsRenderTextureReady(tex.*))
+                    @panic("Render Texture not ready!?");
 
-            rl.BeginTextureMode(tex.*);
+                rl.BeginTextureMode(tex.*);
+            }
         } else {
             rl.BeginDrawing();
         }
@@ -255,49 +254,50 @@ const RaylibRenderAPI = struct {
         render_data: ?*const RenderData,
         offset: ?Vector2f,
     ) void {
-        var tex = render_textures.get(binding_id);
+        if (render_textures.get(binding_id)) |tex| {
 
-        // set offset
-        if (offset) |o|
-            active_offset += o;
-        active_offset += transform.position;
+            // set offset
+            if (offset) |o|
+                active_offset += o;
+            active_offset += transform.position;
 
-        // set render data
-        if (render_data) |rd| {
-            active_tint_color = @bitCast(rd.tint_color);
-            if (active_blend_mode != rd.blend_mode) {
-                rl.BeginBlendMode(@intFromEnum(active_blend_mode));
-                active_blend_mode = rd.blend_mode;
+            // set render data
+            if (render_data) |rd| {
+                active_tint_color = @bitCast(rd.tint_color);
+                if (active_blend_mode != rd.blend_mode) {
+                    rl.BeginBlendMode(@intFromEnum(active_blend_mode));
+                    active_blend_mode = rd.blend_mode;
+                }
             }
+
+            // set source rect
+            temp_source_rect.x = 0;
+            temp_source_rect.y = 0;
+            temp_source_rect.width = @floatFromInt(tex.texture.width);
+            temp_source_rect.height = @floatFromInt(tex.texture.height);
+            // set destination rect
+            if (transform.scale[0] != 1 or transform.scale[1] != 1) {
+                temp_dest_rect.x = active_offset[0];
+                temp_dest_rect.y = active_offset[1];
+                temp_dest_rect.width = transform.scale[0] * @as(Float, @floatFromInt(tex.texture.width));
+                temp_dest_rect.height = transform.scale[1] * @as(Float, @floatFromInt(tex.texture.height));
+                temp_pivot = @bitCast(transform.pivot * transform.scale);
+            } else {
+                temp_dest_rect.x = active_offset[0];
+                temp_dest_rect.y = active_offset[1];
+                temp_dest_rect.width = @floatFromInt(tex.texture.width);
+                temp_dest_rect.height = @floatFromInt(tex.texture.height);
+                temp_pivot = @bitCast(transform.pivot);
+            }
+
+            //void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
+            rl.DrawTexturePro(tex.texture, temp_source_rect, temp_dest_rect, temp_pivot, transform.rotation, active_tint_color);
+
+            // reset offset
+            if (offset) |o|
+                active_offset -= o;
+            active_offset -= transform.position;
         }
-
-        // set source rect
-        temp_source_rect.x = 0;
-        temp_source_rect.y = 0;
-        temp_source_rect.width = @floatFromInt(tex.texture.width);
-        temp_source_rect.height = @floatFromInt(tex.texture.height);
-        // set destination rect
-        if (transform.scale[0] != 1 or transform.scale[1] != 1) {
-            temp_dest_rect.x = active_offset[0];
-            temp_dest_rect.y = active_offset[1];
-            temp_dest_rect.width = transform.scale[0] * @as(Float, @floatFromInt(tex.texture.width));
-            temp_dest_rect.height = transform.scale[1] * @as(Float, @floatFromInt(tex.texture.height));
-            temp_pivot = @bitCast(transform.pivot * transform.scale);
-        } else {
-            temp_dest_rect.x = active_offset[0];
-            temp_dest_rect.y = active_offset[1];
-            temp_dest_rect.width = @floatFromInt(tex.texture.width);
-            temp_dest_rect.height = @floatFromInt(tex.texture.height);
-            temp_pivot = @bitCast(transform.pivot);
-        }
-
-        //void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
-        rl.DrawTexturePro(tex.texture, temp_source_rect, temp_dest_rect, temp_pivot, transform.rotation, active_tint_color);
-
-        // reset offset
-        if (offset) |o|
-            active_offset -= o;
-        active_offset -= transform.position;
     }
 
     fn renderSprite(
@@ -306,50 +306,51 @@ const RaylibRenderAPI = struct {
         render_data: ?*const RenderData,
         offset: ?Vector2f,
     ) void {
-        var tex = textures.get(sprite_data.texture_binding);
-        // set offset
-        if (offset) |o|
-            active_offset += o;
-        active_offset += transform.position;
+        if (textures.get(sprite_data.texture_binding)) |tex| {
+            // set offset
+            if (offset) |o|
+                active_offset += o;
+            active_offset += transform.position;
 
-        // set render data
-        if (render_data) |rd| {
-            active_tint_color = @bitCast(rd.tint_color);
-            if (active_blend_mode != rd.blend_mode) {
-                rl.BeginBlendMode(@intFromEnum(active_blend_mode));
-                active_blend_mode = rd.blend_mode;
+            // set render data
+            if (render_data) |rd| {
+                active_tint_color = @bitCast(rd.tint_color);
+                if (active_blend_mode != rd.blend_mode) {
+                    rl.BeginBlendMode(@intFromEnum(active_blend_mode));
+                    active_blend_mode = rd.blend_mode;
+                }
             }
+
+            // set source rect
+            // TODO try to directly set value with cast
+            temp_source_rect.x = sprite_data.texture_bounds[0];
+            temp_source_rect.y = sprite_data.texture_bounds[1];
+            temp_source_rect.width = sprite_data.texture_bounds[2];
+            temp_source_rect.height = sprite_data.texture_bounds[3];
+            // set destination rect
+            if (transform.scale[0] != 1 or transform.scale[1] != 1) {
+                temp_dest_rect.x = active_offset[0]; // + (transform.pivot[0] * transform.scale[0]);
+                temp_dest_rect.y = active_offset[1]; // + (transform.pivot[1] * transform.scale[1]);
+                temp_dest_rect.width = sprite_data.texture_bounds[2] * transform.scale[0];
+                temp_dest_rect.height = sprite_data.texture_bounds[3] * transform.scale[1];
+                temp_pivot = @bitCast(transform.pivot * transform.scale);
+            } else {
+                temp_dest_rect.x = active_offset[0];
+                temp_dest_rect.y = active_offset[1];
+                temp_dest_rect.width = sprite_data.texture_bounds[2];
+                temp_dest_rect.height = sprite_data.texture_bounds[3];
+                temp_pivot = @bitCast(transform.pivot);
+            }
+
+            //void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
+            //std.log.info("***************** renderSprite: temp_source_rect {any} temp_dest_rect {any}", .{ temp_source_rect, temp_dest_rect });
+            rl.DrawTexturePro(tex.*, temp_source_rect, temp_dest_rect, temp_pivot, transform.rotation, active_tint_color);
+
+            // reset offset
+            if (offset) |o|
+                active_offset -= o;
+            active_offset -= transform.position;
         }
-
-        // set source rect
-        // TODO try to directly set value with cast
-        temp_source_rect.x = sprite_data.texture_bounds[0];
-        temp_source_rect.y = sprite_data.texture_bounds[1];
-        temp_source_rect.width = sprite_data.texture_bounds[2];
-        temp_source_rect.height = sprite_data.texture_bounds[3];
-        // set destination rect
-        if (transform.scale[0] != 1 or transform.scale[1] != 1) {
-            temp_dest_rect.x = active_offset[0]; // + (transform.pivot[0] * transform.scale[0]);
-            temp_dest_rect.y = active_offset[1]; // + (transform.pivot[1] * transform.scale[1]);
-            temp_dest_rect.width = sprite_data.texture_bounds[2] * transform.scale[0];
-            temp_dest_rect.height = sprite_data.texture_bounds[3] * transform.scale[1];
-            temp_pivot = @bitCast(transform.pivot * transform.scale);
-        } else {
-            temp_dest_rect.x = active_offset[0];
-            temp_dest_rect.y = active_offset[1];
-            temp_dest_rect.width = sprite_data.texture_bounds[2];
-            temp_dest_rect.height = sprite_data.texture_bounds[3];
-            temp_pivot = @bitCast(transform.pivot);
-        }
-
-        //void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
-        //std.log.info("***************** renderSprite: temp_source_rect {any} temp_dest_rect {any}", .{ temp_source_rect, temp_dest_rect });
-        rl.DrawTexturePro(tex.*, temp_source_rect, temp_dest_rect, temp_pivot, transform.rotation, active_tint_color);
-
-        // reset offset
-        if (offset) |o|
-            active_offset -= o;
-        active_offset -= transform.position;
     }
 
     fn endRendering() void {

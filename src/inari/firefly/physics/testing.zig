@@ -21,7 +21,7 @@ test "EasedValueIntegration" {
 
     // creating an animation gives you a animation interface with opaque integration type back.
     // Most functions are exposed to the opaque interface and systems or components can work with the interface
-    var interface: *IAnimation = Animation(EasedValueIntegration).new(
+    var interface: IAnimation = Animation(EasedValueIntegration).new(
         5000,
         true,
         true,
@@ -36,7 +36,7 @@ test "EasedValueIntegration" {
     // If one need the concrete animation struct, one can explicit cast is by using the getAnimation
     // function provided by the corresponding integration type.
     //var animation: *Animation(EasedValueIntegration) = EasedValueIntegration.animation(interface);
-    var animation = EasedValueIntegration.resolver.get(interface);
+    var animation = EasedValueIntegration.resolver.get(&interface);
 
     try std.testing.expect(value[1] == 0.0);
     for (0..100) |i| {

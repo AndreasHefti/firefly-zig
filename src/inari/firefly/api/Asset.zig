@@ -14,7 +14,7 @@ const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const Asset = @This();
 
-pub usingnamespace Component.API.Adapter(@This(), .{ .name = "Asset" });
+pub usingnamespace Component.API.ComponentTrait(@This(), .{ .name = "Asset" });
 
 // type aspects
 var initialized = false;
@@ -41,24 +41,57 @@ asset_type: *Aspect = undefined,
 name: String = utils.NO_NAME,
 
 resource_id: Index = UNDEF_INDEX,
+//loaded: bool = false,
 parent_asset_id: Index = UNDEF_INDEX,
 
-pub fn getResource(asset: *Asset, comptime asset_type: anytype) *const @TypeOf(asset_type.NULL_VALUE) {
-    if (asset.resource_id == UNDEF_INDEX or !@hasDecl(asset_type, "getResource"))
-        return &asset_type.NULL_VALUE;
-    return asset_type.getResource(asset.resource_id);
+pub fn isLoadedById(id: Index) bool {
+    return Asset.exists(id) and Asset.isActive(id);
 }
 
-// pub fn getResourceForIndex(asset: *Asset, asset_type: anytype, comptime T: type, index: usize) ?*T {
-//     if (asset.resource_id == UNDEF_INDEX)
-//         return null;
-//     return asset_type.getResourceForIndex(asset.resource_id, index);
-// }
+pub fn isLoaded(self: *Asset) bool {
+    return Asset.isActive(self.id);
+}
 
-// pub fn getResourceForName(asset: *Asset, asset_type: anytype, comptime T: type, name: String) ?*T {
-//     if (asset.resource_id == UNDEF_INDEX)
-//         return null;
-//     return asset_type.getResourceForName(asset.resource_id, name);
+pub fn loadById(id: Index) bool {
+    if (Asset.exists(id)) {
+        Asset.activateById(id, true);
+        return true;
+    }
+    return false;
+}
+
+pub fn loadByName(name: String) bool {
+    if (Asset.byName(name)) |asset| {
+        return asset.load();
+    }
+    return false;
+}
+
+pub fn load(self: *Asset) bool {
+    if (self.isLoaded())
+        return true;
+    Asset.activateById(self.id, true);
+    return self.isLoaded();
+}
+
+pub fn unload(self: *Asset) void {
+    Asset.activateById(self.id, false);
+}
+
+pub fn unloadById(id: Index) void {
+    if (Asset.exists(id)) {
+        Asset.activateById(id, false);
+    }
+}
+
+pub fn unloadByName(name: String) void {
+    if (Asset.byName(name)) |a| a.unload();
+}
+
+// pub fn getResource(asset: *Asset, comptime asset_type: anytype) *const @TypeOf(asset_type.VALUE_TYPE) {
+//     if (asset.resource_id == UNDEF_INDEX or !@hasDecl(asset_type, "getResource"))
+//         return &asset_type.NULL_VALUE;
+//     return asset_type.getResource(asset.resource_id);
 // }
 
 pub fn format(
