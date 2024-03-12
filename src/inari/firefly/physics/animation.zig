@@ -96,7 +96,7 @@ pub fn Animation(comptime Integration: type) type {
         loop_callback: ?*const fn (usize) void = null,
         finish_callback: ?*const fn () void = null,
 
-        // object state
+        // internal state
         _active: bool = false,
         _suspending: bool = false,
         _t_normalized: Float = 0,
@@ -135,6 +135,8 @@ pub fn Animation(comptime Integration: type) type {
             looping: bool,
             inverse_on_loop: bool,
             reset_on_finish: bool,
+            loop_callback: ?*const fn (usize) void,
+            finish_callback: ?*const fn () void,
             integration: Integration,
         ) IAnimation {
             var _new = Self{
@@ -142,6 +144,8 @@ pub fn Animation(comptime Integration: type) type {
                 .looping = looping,
                 .inverse_on_loop = inverse_on_loop,
                 .reset_on_finish = reset_on_finish,
+                .loop_callback = loop_callback,
+                .finish_callback = finish_callback,
                 .integration = integration,
             };
             var index = animations.add(_new);
@@ -266,19 +270,56 @@ pub const EAnimation = struct {
 
     id: Index = UNDEF_INDEX,
     animations: BitSet = undefined,
-    //animations: DynArray(IAnimation) = undefined,
 
     pub fn construct(self: *EAnimation) void {
         self.animations = BitSet.new(api.ENTITY_ALLOC) catch unreachable;
     }
 
-    pub fn withAnimation(self: *EAnimation, animation: IAnimation) *EAnimation {
-        self.animations.set(AnimationSystem.animation_refs.add(animation));
+    pub const AnimationTemplate = struct {
+        duration: usize,
+        looping: bool = false,
+        inverse_on_loop: bool = false,
+        reset_on_finish: bool = true,
+        active_on_init: bool = true,
+        loop_callback: ?*const fn (usize) void = null,
+        finish_callback: ?*const fn () void = null,
+    };
+
+    pub fn withAnimation(
+        self: *EAnimation,
+        animation: AnimationTemplate,
+        integration: anytype,
+    ) *EAnimation {
+        var i = integration;
+        i.init(self.id);
+        self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
+            animation.duration,
+            animation.looping,
+            animation.inverse_on_loop,
+            animation.reset_on_finish,
+            animation.loop_callback,
+            animation.finish_callback,
+            i,
+        )));
         return self;
     }
 
-    pub fn withAnimationAnd(self: *EAnimation, animation: IAnimation) *Entity {
-        self.animations.set(AnimationSystem.animation_refs.add(animation));
+    pub fn withAnimationAnd(
+        self: *EAnimation,
+        animation: AnimationTemplate,
+        integration: anytype,
+    ) *Entity {
+        var i = integration;
+        i.init(self.id);
+        self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
+            animation.duration,
+            animation.looping,
+            animation.inverse_on_loop,
+            animation.reset_on_finish,
+            animation.loop_callback,
+            animation.finish_callback,
+            i,
+        )));
         return Entity.byId(self.id);
     }
 
@@ -416,18 +457,24 @@ pub const EasedValueIntegration = struct {
     start_value: Float = 0.0,
     end_value: Float = 0.0,
     easing: utils.Easing = utils.Easing_Linear,
-    property_ref: *Float,
+    property_ref: ?*const fn (Index) *Float = null,
+    _property: *Float = undefined,
+
+    pub fn init(self: *EasedValueIntegration, id: Index) void {
+        if (self.property_ref) |i| {
+            self._property = i(id);
+        }
+    }
 
     pub fn integrate(a: *Animation(EasedValueIntegration)) void {
-        //std.log.info("****** integrate: {any}", .{a._t_normalized});
         if (a._inverted)
-            a.integration.property_ref.* = std.math.lerp(
+            a.integration._property.* = std.math.lerp(
                 a.integration.end_value,
                 a.integration.start_value,
                 a.integration.easing.f(a._t_normalized),
             )
         else
-            a.integration.property_ref.* = std.math.lerp(
+            a.integration._property.* = std.math.lerp(
                 a.integration.start_value,
                 a.integration.end_value,
                 a.integration.easing.f(a._t_normalized),

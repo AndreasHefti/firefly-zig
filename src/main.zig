@@ -62,36 +62,39 @@ fn _Example_One_Entity_No_Views() void {
     });
 
     _ = Entity.new(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .transform = .{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 } })
+        .withComponent(ETransform{ .transform = .{
+        .position = .{ 64, 164 },
+        .scale = .{ 4, 4 },
+        .pivot = .{ 16, 16 },
+        .rotation = 180,
+    } })
         .withComponent(ESprite.fromAsset(sprite_asset))
         .withComponentAnd(EAnimation{})
-        .withAnimation(Animation(EasedValueIntegration).new(
-        1000,
-        true,
-        true,
-        true,
-        EasedValueIntegration{
-            .start_value = 164.0,
-            .end_value = 264.0,
-            .easing = utils.Easing_Linear,
-            .property_ref = &ETransform.byId(Entity.byName("TestEntity").?.id).transform.position[0],
-        },
-    ))
-        .withAnimationAnd(Animation(EasedValueIntegration).new(
-        2000,
-        true,
-        true,
-        true,
-        EasedValueIntegration{
-            .start_value = 0.0,
-            .end_value = 180.0,
-            .easing = utils.Easing_Linear,
-            .property_ref = &ETransform.byId(Entity.byName("TestEntity").?.id).transform.rotation,
-        },
-    ))
+        .withAnimation(.{
+        .duration = 1000,
+        .looping = true,
+        .inverse_on_loop = true,
+        .active_on_init = true,
+    }, EasedValueIntegration{
+        .start_value = 164.0,
+        .end_value = 264.0,
+        .easing = utils.Easing_Linear,
+        .property_ref = ETransform.PropertyRef.xPos,
+    })
+        .withAnimationAnd(.{
+        .duration = 2000,
+        .looping = true,
+        .inverse_on_loop = true,
+        .active_on_init = true,
+    }, EasedValueIntegration{
+        .start_value = 0.0,
+        .end_value = 180.0,
+        .easing = utils.Easing_Linear,
+        .property_ref = ETransform.PropertyRef.rotation,
+    })
         .activate();
 
-    AnimationSystem.activateById(0, false);
+    //AnimationSystem.activateById(0, false);
     AnimationSystem.setLoopCallbackById(1, loopCallback1);
 }
 

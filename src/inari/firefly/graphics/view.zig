@@ -26,6 +26,7 @@ const RenderEventSubscription = api.RenderEventSubscription;
 const System = api.System;
 
 const Index = utils.Index;
+const Float = utils.Float;
 const BindingId = api.BindingId;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_BINDING = api.NO_BINDING;
@@ -338,6 +339,24 @@ pub const ETransform = struct {
         copy.transform = data;
         return copy;
     }
+
+    pub const PropertyRef = struct {
+        pub fn xPos(id: Index) *Float {
+            return &ETransform.byId(id).transform.position[0];
+        }
+        pub fn yPos(id: Index) *Float {
+            return &ETransform.byId(id).transform.position[1];
+        }
+        pub fn xScale(id: Index) *Float {
+            return &ETransform.byId(id).transform.scale[1];
+        }
+        pub fn yScale(id: Index) *Float {
+            return &ETransform.byId(id).transform.scale[1];
+        }
+        pub fn rotation(id: Index) *Float {
+            return &ETransform.byId(id).transform.rotation;
+        }
+    };
 };
 
 //////////////////////////////////////////////////////////////////////////
