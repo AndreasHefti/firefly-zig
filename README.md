@@ -1,5 +1,7 @@
 # firefly-zig
 
+![](inari.gif)
+
 Example Code:
 
 ``` zig
