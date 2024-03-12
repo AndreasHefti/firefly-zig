@@ -39,7 +39,7 @@ pub fn main() !void {
     }, EasedValueIntegration{
         .start_value = 164.0,
         .end_value = 264.0,
-        .easing = utils.Easing_Linear,
+        .easing = Easing.Linear,
         .property_ref = ETransform.Property.XPos,
     })
         .withAnimationAnd(.{
@@ -50,7 +50,7 @@ pub fn main() !void {
     }, EasedValueIntegration{
         .start_value = 0.0,
         .end_value = 180.0,
-        .easing = utils.Easing_Linear,
+        .easing = Easing.Linear,
         .property_ref = ETransform.Property.Rotation,
     })
         .activate();
