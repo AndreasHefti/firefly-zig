@@ -340,20 +340,20 @@ pub const ETransform = struct {
         return copy;
     }
 
-    pub const PropertyRef = struct {
-        pub fn xPos(id: Index) *Float {
+    pub const Property = struct {
+        pub fn XPos(id: Index) *Float {
             return &ETransform.byId(id).transform.position[0];
         }
-        pub fn yPos(id: Index) *Float {
+        pub fn YPos(id: Index) *Float {
             return &ETransform.byId(id).transform.position[1];
         }
-        pub fn xScale(id: Index) *Float {
+        pub fn XScale(id: Index) *Float {
             return &ETransform.byId(id).transform.scale[1];
         }
-        pub fn yScale(id: Index) *Float {
+        pub fn YScale(id: Index) *Float {
             return &ETransform.byId(id).transform.scale[1];
         }
-        pub fn rotation(id: Index) *Float {
+        pub fn Rotation(id: Index) *Float {
             return &ETransform.byId(id).transform.rotation;
         }
     };

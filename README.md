@@ -1,16 +1,58 @@
 # firefly-zig
 
-TODO:
+Example Code:
 
-- Better duck-typing in Components, Systems and Events by declaring expected functions references globally within the namespace and use this declarations as types as well as for comptime checks like: 
+```
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    defer _ = gpa.deinit();
 
-    ``
-    if (@TypeOf(Self.read) != fn(*Self, []const u8) ReadError!usize) {
-        error handling...
-    }
-    ``
+    var texture_asset: *Asset = TextureAsset.new(.{
+        .name = "TestTexture",
+        .resource_path = "resources/logo.png",
+        .is_mipmap = false,
+    });
 
-    - Added API Mixins for Component and Entity Components. Works well only downside: no code - completion anymore when working with components. Maybe this will change in the future by improving ZLS. Anyway there are just a few functions to remember.
-    - TODO: Decision to make declarations for API functions and use them for type safety check or just use the bare function pointer declarations?
+    var sprite_asset: *Asset = SpriteAsset.new(.{
+        .name = "TestSprite",
+        .texture_asset_id = texture_asset.id,
+        .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
+    });
 
-- Create utils and firefly global namespace API declarations that can be used for easy import and that declares all sub-name spaces (modules) and all main types on the same level. Check if usingnamespace can be used to import them without the need of a prefix. https://ziglang.org/documentation/master/#usingnamespace
+    _ = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{ .transform = .{
+        .position = .{ 64, 164 },
+        .scale = .{ 4, 4 },
+        .pivot = .{ 16, 16 },
+        .rotation = 180,
+    } })
+        .withComponent(ESprite.fromAsset(sprite_asset))
+        .withComponentAnd(EAnimation{})
+        .withAnimation(.{
+        .duration = 1000,
+        .looping = true,
+        .inverse_on_loop = true,
+        .active_on_init = true,
+    }, EasedValueIntegration{
+        .start_value = 164.0,
+        .end_value = 264.0,
+        .easing = utils.Easing_Linear,
+        .property_ref = ETransform.Property.XPos,
+    })
+        .withAnimationAnd(.{
+        .duration = 2000,
+        .looping = true,
+        .inverse_on_loop = true,
+        .active_on_init = true,
+    }, EasedValueIntegration{
+        .start_value = 0.0,
+        .end_value = 180.0,
+        .easing = utils.Easing_Linear,
+        .property_ref = ETransform.Property.Rotation,
+    })
+        .activate();
+
+}
+```
+

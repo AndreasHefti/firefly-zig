@@ -79,7 +79,7 @@ fn _Example_One_Entity_No_Views() void {
         .start_value = 164.0,
         .end_value = 264.0,
         .easing = utils.Easing_Linear,
-        .property_ref = ETransform.PropertyRef.xPos,
+        .property_ref = ETransform.Property.XPos,
     })
         .withAnimationAnd(.{
         .duration = 2000,
@@ -90,7 +90,7 @@ fn _Example_One_Entity_No_Views() void {
         .start_value = 0.0,
         .end_value = 180.0,
         .easing = utils.Easing_Linear,
-        .property_ref = ETransform.PropertyRef.rotation,
+        .property_ref = ETransform.Property.Rotation,
     })
         .activate();
 
