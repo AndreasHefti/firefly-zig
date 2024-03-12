@@ -10,6 +10,15 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
+    try firefly.init(
+        allocator,
+        allocator,
+        allocator,
+        firefly.api.InitMode.DEVELOPMENT,
+    );
+    defer firefly.deinit();
+    firefly.Engine.start(600, 400, 60, "Hello Sprite", _Example_One_Entity_No_Views);
+
     var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
         .resource_path = "resources/logo.png",
