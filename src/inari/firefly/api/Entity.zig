@@ -47,7 +47,7 @@ pub const Entity = struct {
         }
     }
 
-    pub fn withComponent(self: *Entity, c: anytype) *Entity {
+    pub fn with(self: *Entity, c: anytype) *Entity {
         EntityComponent.API.checkValid(c);
 
         const T = @TypeOf(c);
@@ -57,8 +57,8 @@ pub const Entity = struct {
         return self;
     }
 
-    pub fn withComponentAnd(self: *Entity, c: anytype) *@TypeOf(c) {
-        _ = self.withComponent(c);
+    pub fn withAnd(self: *Entity, c: anytype) *@TypeOf(c) {
+        _ = self.with(c);
         const T = @TypeOf(c);
         return EntityComponentPool(T).items.get(self.id).?;
     }

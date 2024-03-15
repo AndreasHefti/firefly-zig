@@ -5,11 +5,11 @@ const utils = inari.utils;
 
 const Allocator = std.mem.Allocator;
 const testing = @import("testing.zig");
-const asset = @import("Asset.zig");
+const asset = @import("asset.zig");
 const component = @import("Component.zig");
 const system = @import("System.zig");
 const timer = @import("Timer.zig");
-const entity = @import("Entity.zig");
+const entity = @import("entity.zig");
 const EventDispatch = utils.EventDispatch;
 const Condition = utils.Condition;
 const String = utils.String;
@@ -42,7 +42,8 @@ pub var ALLOC: Allocator = undefined;
 pub var rendering: IRenderAPI() = undefined;
 pub var window: IWindowAPI() = undefined;
 
-pub const Asset = asset;
+pub const Asset = asset.Asset;
+pub const AssetTrait = asset.AssetTrait;
 pub const Component = component;
 pub const ComponentEvent = component.ComponentEvent;
 pub const ComponentActionType = component.ActionType;
@@ -87,12 +88,12 @@ pub fn init(
         window = try @import("raylib/window.zig").createWindowAPI();
     }
 
-    //Engine.init();
     try Component.init();
     Timer.init();
+    try asset.init();
 
     // register api based components and entity components
-    Component.API.registerComponent(Asset);
+
     Component.API.registerComponent(Entity);
     Component.API.registerComponent(System);
 }
@@ -102,13 +103,12 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    asset.deinit();
     Component.deinit();
     rendering.deinit();
     rendering = undefined;
-    //window.deinit();
     window = undefined;
     Timer.deinit();
-    //Engine.deinit();
     utils.deinit();
 }
 
@@ -244,7 +244,7 @@ pub const BlendMode = enum(CInt) {
 // Texture parameters: filter mode
 // NOTE 1: Filtering considers mipmaps if available in the texture
 // NOTE 2: Filter is accordingly set for minification and magnification
-pub const TextureFilter = enum(CUInt) {
+pub const TextureFilter = enum(CInt) {
     TEXTURE_FILTER_POINT = 0, // No filter, just pixel approximation
     TEXTURE_FILTER_BILINEAR = 1, // Linear filtering
     TEXTURE_FILTER_TRILINEAR = 2, // Trilinear filtering (linear with mipmaps)
@@ -254,35 +254,17 @@ pub const TextureFilter = enum(CUInt) {
 };
 
 // Texture parameters: wrap mode
-pub const TextureWrap = enum(CUInt) {
+pub const TextureWrap = enum(CInt) {
     TEXTURE_WRAP_REPEAT = 0, // Repeats texture in tiled mode
     TEXTURE_WRAP_CLAMP = 1, // Clamps texture to edge pixel in tiled mode
     TEXTURE_WRAP_MIRROR_REPEAT = 2, // Mirrors and repeats the texture in tiled mode
     TEXTURE_WRAP_MIRROR_CLAMP = 3, // Mirrors and clamps to border the texture in tiled mode
 };
 
-pub const TextureData = struct {
-    resource: String = NO_NAME,
-    binding: BindingId = NO_BINDING,
+pub const TextureBinding = struct {
+    id: BindingId = NO_BINDING,
     width: CInt = 0,
     height: CInt = 0,
-    is_mipmap: bool = false,
-    s_wrap: CInt = -1,
-    t_wrap: CInt = -1,
-    min_filter: CInt = -1,
-    mag_filter: CInt = -1,
-
-    pub fn format(
-        self: TextureData,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "TextureData[ res:{s}, bind:{d}, w:{d}, h:{d}, mipmap:{}, wrap:{}|{}, minmag:{}|{}]",
-            self,
-        );
-    }
 };
 
 pub const Projection = struct {
@@ -509,10 +491,15 @@ pub fn IRenderAPI() type {
 
         /// Loads image data from file system and create new texture data loaded into GPU
         /// @param textureData The texture DAO. Sets binding, width and height to the DAO
-        loadTexture: *const fn (*TextureData) void = undefined,
+        loadTexture: *const fn (
+            resource: String,
+            is_mipmap: bool,
+            filter: TextureFilter,
+            wrap: TextureWrap,
+        ) TextureBinding = undefined,
         /// Disposes the texture with given texture binding id from GPU memory
         /// @param textureId binding identifier of the texture to dispose.
-        disposeTexture: *const fn (*TextureData) void = undefined,
+        disposeTexture: *const fn (binding: BindingId) void = undefined,
 
         createRenderTexture: *const fn (*RenderTextureData) void = undefined,
         disposeRenderTexture: *const fn (*RenderTextureData) void = undefined,

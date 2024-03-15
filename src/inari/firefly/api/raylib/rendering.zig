@@ -5,13 +5,16 @@ const rl = @cImport(@cInclude("raylib.h"));
 const utils = inari.utils;
 const api = inari.firefly.api;
 
+const String = utils.String;
 const IRenderAPI = api.IRenderAPI;
 const Vector2f = utils.Vector2f;
 const Color = utils.Color;
 const BlendMode = api.BlendMode;
 const RenderData = api.RenderData;
-const TextureData = api.TextureData;
+const TextureBinding = api.TextureBinding;
 const TransformData = api.TransformData;
+const TextureFilter = api.TextureFilter;
+const TextureWrap = api.TextureWrap;
 const ShaderData = api.ShaderData;
 const SpriteData = api.SpriteData;
 const RenderTextureData = api.RenderTextureData;
@@ -126,34 +129,34 @@ const RaylibRenderAPI = struct {
         default_projection = projection;
     }
 
-    fn loadTexture(td: *TextureData) void {
-        var tex = rl.LoadTexture(@ptrCast(td.resource));
-        td.width = @bitCast(tex.width);
-        td.height = @bitCast(tex.height);
-
-        if (td.is_mipmap) {
+    fn loadTexture(
+        resource: String,
+        is_mipmap: bool,
+        filter: TextureFilter,
+        wrap: TextureWrap,
+    ) TextureBinding {
+        var tex = rl.LoadTexture(@ptrCast(resource));
+        if (is_mipmap) {
             rl.GenTextureMipmaps(&tex);
         }
 
-        rl.SetTextureFilter(tex, @intFromEnum(api.TextureFilter.TEXTURE_FILTER_POINT));
-        if (td.s_wrap > 0) {
-            rl.SetTextureWrap(tex, td.s_wrap);
-        }
-        if (td.t_wrap > 0) {
-            rl.SetTextureWrap(tex, td.t_wrap);
-        }
+        rl.SetTextureFilter(tex, @intFromEnum(filter));
+        rl.SetTextureWrap(tex, @intFromEnum(wrap));
 
-        td.binding = textures.add(tex);
+        return TextureBinding{
+            .width = @bitCast(tex.width),
+            .height = @bitCast(tex.height),
+            .id = textures.add(tex),
+        };
     }
 
-    fn disposeTexture(td: *TextureData) void {
-        if (td.binding == NO_BINDING)
+    fn disposeTexture(binding: BindingId) void {
+        if (binding == NO_BINDING)
             return;
 
-        if (textures.get(td.binding)) |tex| {
+        if (textures.get(binding)) |tex| {
             rl.UnloadTexture(tex.*);
-            textures.delete(td.binding);
-            td.binding = NO_BINDING;
+            textures.delete(binding);
         }
     }
 

@@ -106,7 +106,7 @@ pub const API = struct {
         };
     }
 
-    fn ActivationTrait(comptime _: type, comptime adapter: anytype) type {
+    fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
         return struct {
             pub fn activateById(id: Index, active: bool) void {
                 adapter.pool.activate(id, active);
@@ -118,8 +118,11 @@ pub const API = struct {
                     }
                 }
             }
-            pub fn isActive(index: Index) bool {
+            pub fn isActiveById(index: Index) bool {
                 return adapter.pool.active_mapping.isSet(index);
+            }
+            pub fn isActive(self: T) bool {
+                return adapter.pool.active_mapping.isSet(self.id);
             }
         };
     }
@@ -174,7 +177,11 @@ pub const API = struct {
             }
 
             // component type pool function references
-            pub fn new(t: T) *T {
+            pub fn new(t: T) Index {
+                return pool.register(t).id;
+            }
+
+            pub fn newAnd(t: T) *T {
                 return pool.register(t);
             }
 

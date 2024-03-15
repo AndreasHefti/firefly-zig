@@ -106,18 +106,6 @@ pub const ViewLayerMapping = struct {
         getIdMapping(self, view_id, layer_id).setValue(id, false);
     }
 
-    // pub fn clear(self: *ViewLayerMapping) void {
-    //     var it = self.mapping.iterator();
-    //     while (it.next()) |*next| {
-    //         var itt = next.iterator();
-    //         while (itt.next()) |*n| {
-    //             n.clearAndFree();
-    //         }
-    //         next.clear();
-    //     }
-    //     self.mapping.clear();
-    // }
-
     fn getIdMapping(self: *ViewLayerMapping, view_id: Index, layer_id: Index) *BitSet {
         if (view_id != UNDEF_INDEX) {
             var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, view_id);
@@ -179,21 +167,14 @@ pub const View = struct {
         ordered_active_views.deinit();
     }
 
-    pub fn withNewLayer(self: *View, layer: Layer) *View {
-        Component.checkValid(self);
-
-        Layer.new(layer).view_ref = self.id;
+    pub fn withLayer(self: *View, layer: Layer) *View {
+        Layer.newAnd(layer).view_ref = self.id;
         return self;
     }
 
-    pub fn withShader(self: *View, id: Index) void {
-        const shader_asset: *api.Asset = api.Asset.byId(id);
-        self.shader_binding = graphics.ShaderAsset.getResource(shader_asset.resource_id).binding;
-    }
-
-    pub fn withShaderByName(self: *View, name: String) void {
-        const shader_asset: *api.Asset = api.Asset.byIdName(name);
-        self.shader_binding = graphics.ShaderAsset.getResource(shader_asset.resource_id).binding;
+    pub fn withLayerByName(self: *View, name: String) *View {
+        if (Layer.byName(name)) |l| l.view_ref = self.id;
+        return self;
     }
 
     pub fn onActivation(id: Index, active: bool) void {

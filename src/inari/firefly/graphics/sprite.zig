@@ -24,7 +24,7 @@ const String = utils.String;
 const Component = api.Component;
 const ComponentEvent = api.Component.ComponentEvent;
 const ActionType = api.Component.ActionType;
-const TextureAsset = graphics.TextureAsset;
+const Texture = graphics.Texture;
 const EntityComponent = api.EntityComponent;
 const EntityEventSubscription = api.EntityEventSubscription;
 const ETransform = graphics.ETransform;
@@ -90,17 +90,15 @@ pub const SpriteTemplate = struct {
     sprite_data: SpriteData,
 
     pub fn init() !void {
-        Asset.subscribe(notifyAssetEvent);
+        Asset(Texture).subscribe(notifyAssetEvent);
     }
 
     pub fn deinit() void {
-        Asset.unsubscribe(notifyAssetEvent);
+        Asset(Texture).unsubscribe(notifyAssetEvent);
     }
 
     fn notifyAssetEvent(e: ComponentEvent) void {
-        var asset: *Asset = Asset.byId(e.c_id);
-        if (asset.asset_type.index != TextureAsset.asset_type.index)
-            return;
+        var asset: *Asset(Texture) = Asset(Texture).byId(e.c_id);
         if (utils.stringEquals(asset.name, NO_NAME))
             return;
 
@@ -112,19 +110,20 @@ pub const SpriteTemplate = struct {
         }
     }
 
-    fn onTextureLoad(asset: *Asset) void {
-        const tex_binding_id = TextureAsset.getBindingByAssetId(asset.id);
-        var next = SpriteTemplate.nextId(0);
-        while (next) |id| {
-            var template = SpriteTemplate.byId(id);
-            if (utils.stringEquals(template.texture_asset_name, asset.name)) {
-                template.sprite_data.texture_binding = tex_binding_id;
+    fn onTextureLoad(asset: *Asset(Texture)) void {
+        if (asset.getResource()._binding) |b| {
+            var next = SpriteTemplate.nextId(0);
+            while (next) |id| {
+                var template = SpriteTemplate.byId(id);
+                if (utils.stringEquals(template.texture_asset_name, asset.name)) {
+                    template.sprite_data.texture_binding = b.id;
+                }
+                next = SpriteTemplate.nextId(id + 1);
             }
-            next = SpriteTemplate.nextId(id + 1);
         }
     }
 
-    fn onTextureUnload(asset: *Asset) void {
+    fn onTextureUnload(asset: *Asset(Texture)) void {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
@@ -135,7 +134,7 @@ pub const SpriteTemplate = struct {
         }
     }
 
-    fn onTextureDispose(asset: *Asset) void {
+    fn onTextureDispose(asset: *Asset(Texture)) void {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
