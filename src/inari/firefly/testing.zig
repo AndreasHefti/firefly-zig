@@ -47,16 +47,14 @@ test "Firefly init" {
     var output: utils.String =
         \\Aspects:
         \\  Group[COMPONENT_ASPECT_GROUP|0]:
-        \\    Aspect[Asset|0]
-        \\    Aspect[Entity|1]
-        \\    Aspect[System|2]
+        \\    Aspect[Entity|0]
+        \\    Aspect[System|1]
+        \\    Aspect[Asset:Texture|2]
         \\    Aspect[Layer|3]
         \\    Aspect[View|4]
+        \\    Aspect[SpriteTemplate|5]
         \\  Group[ASSET_TYPE_ASPECT_GROUP|1]:
         \\    Aspect[Texture|0]
-        \\    Aspect[Shader|1]
-        \\    Aspect[Sprite|2]
-        \\    Aspect[SpriteSet|3]
         \\  Group[ENTITY_KIND_ASP_GROUP|2]:
         \\    Aspect[ETransform|0]
         \\    Aspect[EMultiplier|1]
@@ -64,14 +62,15 @@ test "Firefly init" {
         \\    Aspect[EAnimation|3]
         \\
         \\Components:
-        \\  Asset size: 0
         \\  Entity size: 0
         \\  System size: 3
         \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
         \\    (a) AnimationSystem [ id:2, info:Updates all active animations ]
+        \\  Asset:Texture size: 0
         \\  Layer size: 0
         \\  View size: 0
+        \\  SpriteTemplate size: 0
     ;
 
     try std.testing.expectEqualStrings(output, sb.toString());
@@ -331,18 +330,18 @@ test "Init Rendering one sprite entity with no view and layer" {
     var sb = utils.StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    _ = Texture.new(.{
-        .name = "TestTexture",
-        .resource = "path/TestTexture",
-        .is_mipmap = false,
-    });
-
     var sprite_data: api.SpriteData = .{ .texture_bounds = utils.RectF{ 0, 0, 20, 20 } };
     sprite_data.flip_x();
     var sprite_id = SpriteTemplate.new(.{
-        .texture_asset_name = "TestTexture",
+        .texture_name = "TestTexture",
         .sprite_data = sprite_data,
     });
+
+    _ = Texture.newAnd(.{
+        .name = "TestTexture",
+        .resource = "path/TestTexture",
+        .is_mipmap = false,
+    }).load();
 
     _ = Entity.newAnd(.{ .name = "TestEntity" })
         .with(ETransform{ .transform = .{ .position = .{ 50, 50 } } })
@@ -352,17 +351,18 @@ test "Init Rendering one sprite entity with no view and layer" {
     var output: utils.String =
         \\
         \\Components:
-        \\  Asset size: 2
-        \\    (a) Asset[0|Aspect[ASSET_TYPE_ASPECT_GROUP|Texture|0]|TestTexture| resource_id=0, parent_asset_id=18446744073709551615 ]
-        \\    (a) Asset[1|Aspect[ASSET_TYPE_ASPECT_GROUP|Sprite|2]|TestSprite| resource_id=0, parent_asset_id=0 ]
         \\  Entity size: 1
         \\    (a) Entity[0|TestEntity|Kind[ group: ENTITY_KIND_ASP_GROUP, aspects: ETransform ESprite ]]
         \\  System size: 3
         \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
         \\    (a) AnimationSystem [ id:2, info:Updates all active animations ]
+        \\  Asset:Texture size: 1
+        \\    (a) Asset(Texture)[0|TestTexture| resource_id=0, parent_asset_id=18446744073709551615 ]
         \\  Layer size: 0
         \\  View size: 0
+        \\  SpriteTemplate size: 1
+        \\    (x) SpriteTemplate[ id:0, name:, texture_name:TestTexture, SpriteData[ bind:0, bounds:{ 2.0e+01, 0.0e+00, -2.0e+01, 2.0e+01 } ] ]
     ;
 
     api.Component.print(&sb);
@@ -375,7 +375,7 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\******************************
         \\Debug Rendering API State:
         \\ loaded textures:
-        \\   TextureData[ res:path/TestTexture, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
+        \\   TextureBinding[ id:0, width:1, height:1 ]
         \\ loaded render textures:
         \\ loaded shaders:
         \\ current state:
@@ -399,7 +399,7 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\******************************
         \\Debug Rendering API State:
         \\ loaded textures:
-        \\   TextureData[ res:path/TestTexture, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
+        \\   TextureBinding[ id:0, width:1, height:1 ]
         \\ loaded render textures:
         \\ loaded shaders:
         \\ current state:

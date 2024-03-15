@@ -86,7 +86,7 @@ pub const SpriteTemplate = struct {
 
     id: Index = UNDEF_INDEX,
     name: String = NO_NAME,
-    texture_asset_name: String = NO_NAME,
+    texture_name: String = NO_NAME,
     sprite_data: SpriteData,
 
     pub fn init() !void {
@@ -115,7 +115,7 @@ pub const SpriteTemplate = struct {
             var next = SpriteTemplate.nextId(0);
             while (next) |id| {
                 var template = SpriteTemplate.byId(id);
-                if (utils.stringEquals(template.texture_asset_name, asset.name)) {
+                if (utils.stringEquals(template.texture_name, asset.name)) {
                     template.sprite_data.texture_binding = b.id;
                 }
                 next = SpriteTemplate.nextId(id + 1);
@@ -127,7 +127,7 @@ pub const SpriteTemplate = struct {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
-            if (utils.stringEquals(template.texture_asset_name, asset.name)) {
+            if (utils.stringEquals(template.texture_name, asset.name)) {
                 template.sprite_data.texture_binding = NO_BINDING;
             }
             next = SpriteTemplate.nextId(id + 1);
@@ -138,11 +138,23 @@ pub const SpriteTemplate = struct {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
-            if (utils.stringEquals(template.texture_asset_name, asset.name)) {
+            if (utils.stringEquals(template.texture_name, asset.name)) {
                 SpriteTemplate.disposeById(id);
             }
             next = SpriteTemplate.nextId(id + 1);
         }
+    }
+
+    pub fn format(
+        self: SpriteTemplate,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "SpriteTemplate[ id:{d}, name:{s}, texture_name:{s}, {any} ]",
+            self,
+        );
     }
 };
 

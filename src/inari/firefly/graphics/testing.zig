@@ -63,18 +63,18 @@ test "TextureAsset load/unload" {
     //try std.testing.expect(texture_asset.getResourceById(TextureAsset).binding == NO_BINDING);
 
     // load the texture... by name
-    _ = Texture.loadByName("TestTexture");
+    _ = Asset(Texture).loadByName("TestTexture");
     try std.testing.expect(res.?._binding != null);
     try std.testing.expect(res.?._binding.?.id == 0); // now loaded
     try std.testing.expect(res.?._binding.?.width > 0);
     try std.testing.expect(res.?._binding.?.height > 0);
 
     // dispose texture
-    Texture.unloadByName("TestTexture");
+    Asset(Texture).unloadByName("TestTexture");
     try std.testing.expect(res.?._binding == null); // not loaded
 
     // load the texture... by id
-    _ = Texture.loadById(texture_asset.id);
+    _ = Asset(Texture).loadById(texture_asset.id);
     try std.testing.expect(res.?._binding != null); // now loaded
     try std.testing.expect(res.?._binding.?.id == 0); // now loaded
     try std.testing.expect(res.?._binding.?.width > 0);
@@ -90,7 +90,7 @@ test "TextureAsset load/unload" {
         \\******************************
         \\Debug Rendering API State:
         \\ loaded textures:
-        \\   TextureData[ res:path/TestTexture, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
+        \\   TextureBinding[ id:0, width:1, height:1 ]
         \\ loaded render textures:
         \\ loaded shaders:
         \\ current state:
@@ -105,7 +105,7 @@ test "TextureAsset load/unload" {
     try std.testing.expectEqualStrings(render_state1, sb.toString());
 
     // dispose texture
-    Texture.unloadById(texture_asset.id);
+    Asset(Texture).unloadById(texture_asset.id);
     try std.testing.expect(res.?._binding == null); // not loaded
 
     sb.clear();
@@ -139,7 +139,7 @@ test "TextureAsset dispose" {
         .is_mipmap = false,
     });
 
-    _ = Texture.loadByName("TestTexture");
+    _ = Asset(Texture).loadByName("TestTexture");
     var res: ?*Texture = texture_asset.getResource();
     try std.testing.expect(res != null);
     try std.testing.expectEqualStrings("path/TestTexture", res.?.resource);

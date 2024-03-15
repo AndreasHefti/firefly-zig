@@ -155,9 +155,10 @@ pub const DebugRenderAPI = struct {
             .width = 1,
             .height = 1,
         };
-        binding.id = textures.add(binding);
-
-        return binding;
+        var id = textures.add(binding);
+        var b = textures.get(id).?;
+        b.id = id;
+        return b.*;
     }
 
     pub fn disposeTexture(binding: BindingId) void {
@@ -331,7 +332,7 @@ test "RenderAPI debug init" {
         \\******************************
         \\Debug Rendering API State:
         \\ loaded textures:
-        \\   TextureData[ res:t1, bind:0, w:1, h:1, mipmap:false, wrap:-1|-1, minmag:-1|-1]
+        \\   TextureBinding[ id:0, width:1, height:1 ]
         \\ loaded render textures:
         \\   RenderTextureData[ bind:0, w:0, h:0 ]
         \\ loaded shaders:

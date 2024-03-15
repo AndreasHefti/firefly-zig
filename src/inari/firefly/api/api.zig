@@ -265,6 +265,18 @@ pub const TextureBinding = struct {
     id: BindingId = NO_BINDING,
     width: CInt = 0,
     height: CInt = 0,
+
+    pub fn format(
+        self: TextureBinding,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "TextureBinding[ id:{any}, width:{any}, height:{any} ]",
+            self,
+        );
+    }
 };
 
 pub const Projection = struct {
