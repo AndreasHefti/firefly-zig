@@ -1,5 +1,7 @@
 # firefly-zig
 
+![](inari.gif)
+
 Example Code:
 
 ``` zig
@@ -7,6 +9,15 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
+
+    try firefly.init(
+        allocator,
+        allocator,
+        allocator,
+        firefly.api.InitMode.DEVELOPMENT,
+    );
+    defer firefly.deinit();
+    firefly.Engine.start(600, 400, 60, "Hello Sprite", _Example_One_Entity_No_Views);
 
     var texture_asset: *Asset = TextureAsset.new(.{
         .name = "TestTexture",
@@ -37,7 +48,7 @@ pub fn main() !void {
     }, EasedValueIntegration{
         .start_value = 164.0,
         .end_value = 264.0,
-        .easing = utils.Easing_Linear,
+        .easing = Easing.Linear,
         .property_ref = ETransform.Property.XPos,
     })
         .withAnimationAnd(.{
@@ -48,7 +59,7 @@ pub fn main() !void {
     }, EasedValueIntegration{
         .start_value = 0.0,
         .end_value = 180.0,
-        .easing = utils.Easing_Linear,
+        .easing = Easing.Linear,
         .property_ref = ETransform.Property.Rotation,
     })
         .activate();
