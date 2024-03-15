@@ -1,7 +1,5 @@
 # firefly-zig
 
-![](inari.gif)
-
 TODO:
 
   - Refactor System like Asset but for singletons
@@ -11,6 +9,8 @@ TODO:
   - Go on with porting from FlyKo
 
 Example Code:
+
+![](inari.gif)
 
 ``` zig
 pub fn main() !void {
