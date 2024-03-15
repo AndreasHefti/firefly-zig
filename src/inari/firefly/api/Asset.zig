@@ -28,22 +28,25 @@ pub fn deinit() void {
     ASSET_TYPE_ASPECT_GROUP = undefined;
 }
 
-pub fn AssetTrait(comptime _: type, comptime type_name: String) type {
+pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
     return struct {
         pub const ASSET_TYPE_NAME = type_name;
         pub var asset_type: *Aspect = undefined;
-        // pub fn loadByName(name: String) void {
-        //     Asset(T).byName(name).load();
-        // }
-        // pub fn loadById(id: Index) void {
-        //     Asset(T).byId(id).load();
-        // }
-        // pub fn unloadByName(name: String) void {
-        //     Asset(T).byName(name).unload();
-        // }
-        // pub fn unloadById(id: Index) void {
-        //     Asset(T).byId(id).unload();
-        // }
+        pub fn loadByName(name: String) void {
+            Asset(T).loadByName(name);
+        }
+        pub fn loadById(id: Index) void {
+            Asset(T).loadById(id);
+        }
+        pub fn unloadByName(name: String) void {
+            Asset(T).unloadByName(name);
+        }
+        pub fn unloadById(id: Index) void {
+            Asset(T).unloadById(id);
+        }
+        pub fn disposeByName(name: String) void {
+            Asset(T).disposeByName(name);
+        }
     };
 }
 

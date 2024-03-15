@@ -192,7 +192,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const Texture = struct {
-    pub usingnamespace firefly.api.AssetTrait(Asset(Texture), "Texture");
+    pub usingnamespace firefly.api.AssetTrait(Texture, "Texture");
 
     var textures: DynArray(Texture) = undefined;
     var type_init = false;

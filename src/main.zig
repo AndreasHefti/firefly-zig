@@ -52,7 +52,7 @@ fn Example_One_Entity_No_Views(allocator: Allocator) !void {
 
 fn _Example_One_Entity_No_Views() void {
     var sprite_id = SpriteTemplate.new(.{
-        .texture_asset_name = "TestTexture",
+        .texture_name = "TestTexture",
         .sprite_data = .{ .texture_bounds = utils.RectF{ 0, 0, 32, 32 } },
     });
 

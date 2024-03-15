@@ -63,18 +63,18 @@ test "TextureAsset load/unload" {
     //try std.testing.expect(texture_asset.getResourceById(TextureAsset).binding == NO_BINDING);
 
     // load the texture... by name
-    _ = Asset(Texture).loadByName("TestTexture");
+    _ = Texture.loadByName("TestTexture");
     try std.testing.expect(res.?._binding != null);
     try std.testing.expect(res.?._binding.?.id == 0); // now loaded
     try std.testing.expect(res.?._binding.?.width > 0);
     try std.testing.expect(res.?._binding.?.height > 0);
 
     // dispose texture
-    Asset(Texture).unloadByName("TestTexture");
+    Texture.unloadByName("TestTexture");
     try std.testing.expect(res.?._binding == null); // not loaded
 
     // load the texture... by id
-    _ = Asset(Texture).loadById(texture_asset.id);
+    _ = Texture.loadById(texture_asset.id);
     try std.testing.expect(res.?._binding != null); // now loaded
     try std.testing.expect(res.?._binding.?.id == 0); // now loaded
     try std.testing.expect(res.?._binding.?.width > 0);
@@ -105,7 +105,7 @@ test "TextureAsset load/unload" {
     try std.testing.expectEqualStrings(render_state1, sb.toString());
 
     // dispose texture
-    Asset(Texture).unloadById(texture_asset.id);
+    Texture.unloadById(texture_asset.id);
     try std.testing.expect(res.?._binding == null); // not loaded
 
     sb.clear();
@@ -139,7 +139,7 @@ test "TextureAsset dispose" {
         .is_mipmap = false,
     });
 
-    _ = Asset(Texture).loadByName("TestTexture");
+    _ = Texture.loadByName("TestTexture");
     var res: ?*Texture = texture_asset.getResource();
     try std.testing.expect(res != null);
     try std.testing.expectEqualStrings("path/TestTexture", res.?.resource);
@@ -147,31 +147,13 @@ test "TextureAsset dispose" {
     try std.testing.expect(res.?._binding.?.id != NO_BINDING); //  loaded yet
 
     // should also deactivate first
-    Asset(Texture).disposeByName("TestTexture");
+    Texture.disposeByName("TestTexture");
 
     try std.testing.expect(res.?._binding == null); // not loaded yet
     // asset ref has been reset
     try std.testing.expect(texture_asset.id == UNDEF_INDEX);
     try std.testing.expectEqualStrings(NO_NAME, texture_asset.name);
 }
-
-// test "get resources is const" {
-//     try inari.firefly.initTesting();
-//     defer inari.firefly.deinit();
-
-//     var texture_asset: *Asset(Texture) = Texture.newAnd(.{
-//         .name = "TestTexture",
-//         .resource = "path/TestTexture",
-//         .is_mipmap = false,
-//     });
-
-//     // this shall get the NO_BINDING since the asset is not loaded yet
-//     var res = texture_asset.getResource();
-//     try std.testing.expect(res != null);
-//     try std.testing.expect(res.?._binding == null);
-//     // this is not possible at compile time: error: cannot assign to constant
-//     //res.binding = 1;
-// }
 
 //////////////////////////////////////////////////////////////
 //// TESTING ShaderAsset
