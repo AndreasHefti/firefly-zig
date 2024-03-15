@@ -50,6 +50,12 @@ pub const EMPTY_STRING: String = "";
 pub const NO_NAME: String = EMPTY_STRING;
 pub const UNDEF_INDEX = std.math.maxInt(Index);
 
+pub const Test = struct { array: []Index = &[_]Index{ 1, 2, 3 } };
+
+pub fn stringEquals(s1: String, s2: String) bool {
+    return std.mem.eql(u8, s1, s2);
+}
+
 pub fn usize_i32(v: usize) i32 {
     return @as(i32, @intCast(v));
 }

@@ -456,7 +456,7 @@ pub const EasedValueIntegration = struct {
 
     start_value: Float = 0.0,
     end_value: Float = 0.0,
-    easing: utils.Easing = utils.Easing_Linear,
+    easing: Easing = Easing.Linear,
     property_ref: ?*const fn (Index) *Float = null,
     _property: *Float = undefined,
 
@@ -621,11 +621,14 @@ pub const IndexFrameList = struct {
 pub const IndexFrameIntegrator = struct {
     pub const resolver = AnimationResolver(IndexFrameIntegrator);
 
-    timeline: IndexFrameList = undefined,
-    property_ref: *Index = UNDEF_INDEX,
+    timeline: IndexFrameList,
+    property_ref: *const fn (Index) void,
 
     pub fn integrate(a: *Animation(IndexFrameIntegrator)) void {
-        return a.integration.timeline.getIndexAt(a._t_normalized, a._inverted);
+        a.integration.property_ref(a.integration.timeline.getIndexAt(
+            a._t_normalized,
+            a._inverted,
+        ));
     }
 };
 
@@ -637,18 +640,37 @@ pub const BezierCurveIntegrator = struct {
     pub const resolver = AnimationResolver(BezierCurveIntegrator);
 
     bezier_function: utils.CubicBezierFunction = undefined,
-    easing: utils.Easing = utils.Easing_Linear,
-    property_ref_x: *Float,
-    property_ref_y: *Float,
-    property_ref_a: *Float,
+    easing: Easing = Easing.Linear,
+    property_ref_x: ?*const fn (Index) *Float,
+    property_ref_y: ?*const fn (Index) *Float,
+    property_ref_a: ?*const fn (Index) *Float,
+
+    _property_x: *Float = undefined,
+    _property_y: *Float = undefined,
+    _property_a: *Float = undefined,
+
+    pub fn init(self: *BezierCurveIntegrator, id: Index) void {
+        if (self.property_ref_x) |i| {
+            self._property_x = i(id);
+        }
+        if (self.property_ref_y) |i| {
+            self._property_y = i(id);
+        }
+        if (self.property_ref_a) |i| {
+            self._property_a = i(id);
+        }
+    }
 
     pub fn integrate(a: *Animation(BezierCurveIntegrator)) void {
         var pos = a.integration.bezier_function.fp(a.easing(a._t_normalized), a._inverted);
-        a.integration.property_ref_x = pos[0];
-        a.integration.property_ref_y = pos[1];
-        a.integration.property_ref_a = std.math.radiansToDegrees(Float, a.integration.bezier_function.fax(
-            a.easing(a._t_normalized),
-            a._inverted,
-        ));
+        a.integration._property_x = pos[0];
+        a.integration._property_y = pos[1];
+        a.integration._property_a = std.math.radiansToDegrees(
+            Float,
+            a.integration.bezier_function.fax(
+                a.easing(a._t_normalized),
+                a._inverted,
+            ),
+        );
     }
 };

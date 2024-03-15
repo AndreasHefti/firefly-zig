@@ -278,7 +278,7 @@ pub const ActionType = enum {
 };
 
 pub const ComponentEvent = struct {
-    event_type: ActionType = ActionType.NONE,
+    event_type: ActionType = .NONE,
     c_id: Index = UNDEF_INDEX,
 
     pub fn format(
@@ -392,9 +392,11 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_name_mapping) name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
             if (has_aspect) T.type_aspect = c_aspect;
 
-            if (has_init) T.init() catch {
-                std.log.err("Failed to initialize component of type: {any}", .{T});
-            };
+            if (has_init) {
+                T.init() catch {
+                    std.log.err("Failed to initialize component of type: {any}", .{T});
+                };
+            }
         }
 
         /// Release all allocated memory.
@@ -427,7 +429,7 @@ pub fn ComponentPool(comptime T: type) type {
                 result.id = id;
 
                 if (name_mapping) |*nm| {
-                    if (!std.mem.eql(u8, c.name, NO_NAME))
+                    if (!utils.stringEquals(c.name, NO_NAME))
                         nm.put(result.name, id) catch unreachable;
                 }
 

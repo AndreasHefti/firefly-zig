@@ -60,7 +60,7 @@ pub const Entity = struct {
     pub fn withComponentAnd(self: *Entity, c: anytype) *@TypeOf(c) {
         _ = self.withComponent(c);
         const T = @TypeOf(c);
-        return EntityComponentPool(T).byId(self.id);
+        return EntityComponentPool(T).items.get(self.id).?;
     }
 
     pub fn activation(self: *Entity, active: bool) void {
@@ -153,12 +153,23 @@ pub const EntityComponent = struct {
         pub fn Adapter(comptime T: type, comptime type_name: String) type {
             return struct {
                 // component type fields
-                pub const NULL_VALUE = T{};
                 pub const COMPONENT_TYPE_NAME = type_name;
-                pub const pool = Entity.EntityComponentPool(T);
+                pub const pool = EntityComponentPool(T);
                 // component type pool function references
                 pub var type_aspect: *Aspect = undefined;
-                pub var byId: *const fn (Index) *T = undefined;
+                pub fn byId(id: Index) *T {
+                    return pool.items.get(id).?;
+                }
+                pub fn typeCheck(a: *Aspect) bool {
+                    if (!pool.initialized)
+                        return false;
+
+                    return pool.c_aspect.index == a.index;
+                }
+
+                pub fn count() usize {
+                    return pool.items.slots.count();
+                }
             };
         }
 
@@ -209,8 +220,6 @@ pub fn EntityComponentPool(comptime T: type) type {
     comptime {
         if (!trait.is(.Struct)(T))
             @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"NULL_VALUE"}))
-            @compileError("Expects component type to have member named 'NULL_VALUE' that is the types null value.");
         if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
             @compileError("Expects component type to have member named 'COMPONENT_TYPE_NAME' that defines a unique name of the component type.");
         if (!trait.hasField("id")(T))
@@ -258,7 +267,6 @@ pub fn EntityComponentPool(comptime T: type) type {
             c_aspect = EntityComponent.ENTITY_KIND_ASP_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
 
             if (has_aspect) T.type_aspect = c_aspect;
-            if (has_byId) T.byId = Self.byId;
             if (has_init) T.init();
         }
 
@@ -281,21 +289,9 @@ pub fn EntityComponentPool(comptime T: type) type {
             items.deinit();
 
             if (has_aspect) T.type_aspect = undefined;
-            if (has_byId) T.byId = undefined;
         }
 
-        pub fn typeCheck(a: *Aspect) bool {
-            if (!Self.initialized)
-                return false;
-
-            return c_aspect.index == a.index;
-        }
-
-        pub fn count() usize {
-            return items.slots.count();
-        }
-
-        pub fn register(c: T, id: Index) *T {
+        fn register(c: T, id: Index) *T {
             checkComponentTrait(c);
 
             if (c.id != UNDEF_INDEX) @panic("Entity Component id mismatch");
@@ -307,17 +303,13 @@ pub fn EntityComponentPool(comptime T: type) type {
             return comp;
         }
 
-        // TODO make optional?
-        pub fn byId(id: Index) *T {
-            return items.get(id).?;
+        fn activate(id: Index, active: bool) void {
+            if (has_activation) {
+                if (items.get(id)) |item| item.activation(active);
+            }
         }
 
-        pub fn activate(id: Index, active: bool) void {
-            if (has_activation)
-                byId(id).activation(active);
-        }
-
-        pub fn clearAll() void {
+        fn clearAll() void {
             var i: usize = 0;
             while (items.slots.nextSetBit(i)) |next| {
                 clear(i);
@@ -325,12 +317,14 @@ pub fn EntityComponentPool(comptime T: type) type {
             }
         }
 
-        pub fn clear(id: Index) void {
+        fn clear(id: Index) void {
             if (!items.slots.isSet(id))
                 return;
 
             if (has_destruct) {
-                byId(id).destruct();
+                if (items.get(id)) |item| {
+                    item.destruct();
+                }
             }
             items.delete(id);
         }

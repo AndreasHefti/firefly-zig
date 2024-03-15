@@ -15,6 +15,8 @@ const Condition = utils.Condition;
 const String = utils.String;
 const CString = utils.CString;
 const NO_NAME = utils.NO_NAME;
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const CInt = utils.CInt;
 const CUInt = utils.CUInt;
 const Float = utils.Float;
@@ -284,9 +286,9 @@ pub const TextureData = struct {
 };
 
 pub const Projection = struct {
-    clear_color: ?Color = Color{ 0, 0, 0, 255 },
-    offset: PosF = PosF{ 0, 0 },
-    pivot: PosF = PosF{ 0, 0 },
+    clear_color: ?Color = .{ 0, 0, 0, 255 },
+    offset: PosF = .{ 0, 0 },
+    pivot: PosF = .{ 0, 0 },
     zoom: Float = 1,
     rotation: Float = 0,
 
@@ -350,15 +352,15 @@ pub const ShaderData = struct {
 };
 
 pub const TransformData = struct {
-    position: PosF = PosF{ 0, 0 },
-    pivot: PosF = PosF{ 0, 0 },
-    scale: PosF = PosF{ 1, 1 },
+    position: PosF = .{ 0, 0 },
+    pivot: PosF = .{ 0, 0 },
+    scale: PosF = .{ 1, 1 },
     rotation: Float = 0,
 
     pub fn clear(self: *TransformData) void {
-        self.position = PosF{ 0, 0 };
-        self.pivot = PosF{ 0, 0 };
-        self.scale = PosF{ 1, 1 };
+        self.position = .{ 0, 0 };
+        self.pivot = .{ 0, 0 };
+        self.scale = .{ 1, 1 };
         self.rotation = 0;
     }
 
@@ -420,7 +422,7 @@ pub const TransformData = struct {
 };
 
 pub const RenderData = struct {
-    tint_color: Color = Color{ 255, 255, 255, 255 },
+    tint_color: Color = .{ 255, 255, 255, 255 },
     blend_mode: BlendMode = BlendMode.ALPHA,
 
     pub fn format(
@@ -438,7 +440,7 @@ pub const RenderData = struct {
 
 pub const SpriteData = struct {
     texture_binding: BindingId = NO_BINDING,
-    texture_bounds: RectF = RectF{ 0, 0, 0, 0 },
+    texture_bounds: RectF = .{ 0, 0, 0, 0 },
 
     // x = x + width / width = -width
     pub fn flip_x(self: *SpriteData) void {

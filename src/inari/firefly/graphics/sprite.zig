@@ -4,34 +4,34 @@ const utils = inari.utils;
 const api = inari.firefly.api;
 const graphics = inari.firefly.graphics;
 
-const ArrayList = std.ArrayList;
-const StringHashMap = std.StringHashMap;
-const Aspect = utils.Aspect;
+//const ArrayList = std.ArrayList;
+//const StringHashMap = std.StringHashMap;
+//const Aspect = utils.Aspect;
+//const Condition = utils.Condition;
+//const DynArray = utils.DynArray;
+//const BindingId = api.BindingId;
+//const TextureData = api.TextureData;
+//const Entity = api.Entity;
+//const View = graphics.View;
+//const ViewRenderListener = graphics.ViewRenderListener;
+//const DynIndexArray = utils.DynIndexArray;
+
 const Kind = utils.Kind;
 const Asset = api.Asset;
-const Condition = utils.Condition;
-
-const DynArray = utils.DynArray;
 const SpriteData = api.SpriteData;
 const RenderData = api.RenderData;
-const BindingId = api.BindingId;
 const String = utils.String;
+const Component = api.Component;
 const ComponentEvent = api.Component.ComponentEvent;
 const ActionType = api.Component.ActionType;
-const TextureData = api.TextureData;
 const TextureAsset = graphics.TextureAsset;
-const Entity = api.Entity;
 const EntityComponent = api.EntityComponent;
 const EntityEventSubscription = api.EntityEventSubscription;
 const ETransform = graphics.ETransform;
 const EMultiplier = graphics.EMultiplier;
-const View = graphics.View;
 const ViewLayerMapping = graphics.ViewLayerMapping;
 const ViewRenderEvent = graphics.ViewRenderEvent;
-const ViewRenderListener = graphics.ViewRenderListener;
 const System = api.System;
-const DynIndexArray = utils.DynIndexArray;
-
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
 const Index = utils.Index;
@@ -43,54 +43,16 @@ const Vec2f = utils.Vector2f;
 //// sprite init
 //////////////////////////////////////////////////////////////
 
-var sprites: DynArray(SpriteData) = undefined;
-var sprite_sets: DynArray(SpriteSet) = undefined;
-
-pub const SpriteSet = struct {
-    sprites_indices: DynIndexArray = undefined,
-    name_mapping: StringHashMap(Index) = undefined,
-
-    fn new() SpriteSet {
-        return SpriteSet{
-            .sprites_indices = DynIndexArray.init(api.COMPONENT_ALLOC),
-            .name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC),
-        };
-    }
-
-    fn deinit(self: *SpriteSet) void {
-        for (self.sprites_indices.items) |id| {
-            sprites.delete(id);
-        }
-        self.name_mapping.deinit();
-        self.sprites_indices.deinit();
-    }
-
-    pub fn byListIndex(self: *SpriteSet, index: Index) *const SpriteData {
-        return sprites.get(self.sprites_indices.items[index]);
-    }
-
-    pub fn byName(self: *SpriteSet, name: String) *const SpriteData {
-        if (self.name_mapping.get(name)) |index| {
-            return sprites.get(self.sprites_indices.items[index]);
-        } else {
-            std.log.err("No sprite with name: {s} found", .{name});
-            @panic("not found");
-        }
-    }
-};
-
 var initialized = false;
 pub fn init() !void {
     defer initialized = true;
     if (initialized)
         return;
 
-    sprites = try DynArray(SpriteData).new(api.COMPONENT_ALLOC);
-    sprite_sets = try DynArray(SpriteSet).new(api.COMPONENT_ALLOC);
     // init Asset
-    SpriteAsset.init();
-    SpriteSetAsset.init();
+    //SpriteSetAsset.init();
     // init components and entities
+    Component.API.registerComponent(SpriteTemplate);
     EntityComponent.registerEntityComponent(ESprite);
     // init renderer
     SimpleSpriteRenderer.init();
@@ -101,18 +63,89 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    sprites.clear();
-    sprites.deinit();
-    sprites = undefined;
-    sprite_sets.clear();
-    sprite_sets.deinit();
-    sprite_sets = undefined;
     // deinit renderer
     SimpleSpriteRenderer.deinit();
     // deinit Assets
-    SpriteSetAsset.deinit();
-    SpriteAsset.deinit();
+    //SpriteSetAsset.deinit();
 }
+
+//////////////////////////////////////////////////////////////
+//// Sprite Template Components
+//////////////////////////////////////////////////////////////
+
+pub const SpriteTemplate = struct {
+    pub usingnamespace Component.API.ComponentTrait(
+        @This(),
+        .{
+            .name = "SpriteTemplate",
+            .activation = false,
+            .processing = false,
+            .subscription = false,
+        },
+    );
+
+    id: Index = UNDEF_INDEX,
+    name: String = NO_NAME,
+    texture_asset_name: String = NO_NAME,
+    sprite_data: SpriteData,
+
+    pub fn init() !void {
+        Asset.subscribe(notifyAssetEvent);
+    }
+
+    pub fn deinit() void {
+        Asset.unsubscribe(notifyAssetEvent);
+    }
+
+    fn notifyAssetEvent(e: ComponentEvent) void {
+        var asset: *Asset = Asset.byId(e.c_id);
+        if (asset.asset_type.index != TextureAsset.asset_type.index)
+            return;
+        if (utils.stringEquals(asset.name, NO_NAME))
+            return;
+
+        switch (e.event_type) {
+            ActionType.ACTIVATED => onTextureLoad(asset),
+            ActionType.DEACTIVATING => onTextureUnload(asset),
+            ActionType.DISPOSING => onTextureDispose(asset),
+            else => {},
+        }
+    }
+
+    fn onTextureLoad(asset: *Asset) void {
+        const tex_binding_id = TextureAsset.getBindingByAssetId(asset.id);
+        var next = SpriteTemplate.nextId(0);
+        while (next) |id| {
+            var template = SpriteTemplate.byId(id);
+            if (utils.stringEquals(template.texture_asset_name, asset.name)) {
+                template.sprite_data.texture_binding = tex_binding_id;
+            }
+            next = SpriteTemplate.nextId(id + 1);
+        }
+    }
+
+    fn onTextureUnload(asset: *Asset) void {
+        var next = SpriteTemplate.nextId(0);
+        while (next) |id| {
+            var template = SpriteTemplate.byId(id);
+            if (utils.stringEquals(template.texture_asset_name, asset.name)) {
+                template.sprite_data.texture_binding = NO_BINDING;
+            }
+            next = SpriteTemplate.nextId(id + 1);
+        }
+    }
+
+    fn onTextureDispose(asset: *Asset) void {
+        var next = SpriteTemplate.nextId(0);
+        while (next) |id| {
+            var template = SpriteTemplate.byId(id);
+            if (utils.stringEquals(template.texture_asset_name, asset.name)) {
+                SpriteTemplate.disposeById(id);
+            }
+            next = SpriteTemplate.nextId(id + 1);
+        }
+    }
+};
 
 //////////////////////////////////////////////////////////////
 //// ESprite Sprite Entity Component
@@ -122,114 +155,14 @@ pub const ESprite = struct {
     pub usingnamespace EntityComponent.API.Adapter(@This(), "ESprite");
 
     id: Index = UNDEF_INDEX,
-    sprite_ref: BindingId = NO_BINDING,
-    render_data: RenderData = RenderData{},
-    offset: Vec2f = Vec2f{ 0, 0 },
-
-    pub fn setSpriteByAssetName(self: *ESprite, view_name: String) *ESprite {
-        self.view_id = View.byName(view_name).id;
-        return self;
-    }
+    template_id: Index,
+    render_data: RenderData = .{},
+    offset: Vec2f = .{ 0, 0 },
 
     pub fn destruct(self: *ESprite) void {
-        self.sprite_ref = NO_BINDING;
-        self.render_data = RenderData{};
-        self.offset = Vec2f{ 0, 0 };
-    }
-
-    pub fn fromAsset(asset: *Asset) ESprite {
-        Asset.activateById(asset.id, true);
-        return ESprite{
-            .sprite_ref = asset.resource_id,
-        };
-    }
-};
-
-//////////////////////////////////////////////////////////////
-//// Sprite Asset
-//////////////////////////////////////////////////////////////
-
-pub const SpriteAsset = struct {
-    pub var asset_type: *Aspect = undefined;
-
-    name: String = NO_NAME,
-    texture_asset_id: Index,
-    texture_bounds: RectF,
-    flip_x: bool = false,
-    flip_y: bool = false,
-
-    fn init() void {
-        asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Sprite");
-        Asset.subscribe(listener);
-    }
-
-    fn deinit() void {
-        Asset.unsubscribe(listener);
-        asset_type = undefined;
-    }
-
-    pub fn new(data: SpriteAsset) *Asset {
-        if (!initialized)
-            @panic("Firefly module not initialized");
-
-        if (data.texture_asset_id == UNDEF_INDEX or !Asset.exists(data.texture_asset_id))
-            @panic("Sprite has invalid TextureAsset reference id");
-
-        var spriteData = SpriteData{
-            .texture_bounds = data.texture_bounds,
-        };
-        if (data.flip_x)
-            spriteData.flip_x();
-        if (data.flip_y)
-            spriteData.flip_y();
-
-        return Asset.new(Asset{
-            .asset_type = asset_type,
-            .name = data.name,
-            .resource_id = sprites.add(spriteData),
-            .parent_asset_id = data.texture_asset_id,
-        });
-    }
-
-    pub fn getResource(res_id: Index) *const SpriteData {
-        return sprites.get(res_id);
-    }
-
-    fn listener(e: ComponentEvent) void {
-        var asset: *Asset = Asset.byId(e.c_id);
-        if (asset_type.index != asset.asset_type.index)
-            return;
-
-        switch (e.event_type) {
-            ActionType.ACTIVATED => load(asset),
-            ActionType.DEACTIVATING => unload(asset),
-            ActionType.DISPOSING => delete(asset),
-            else => {},
-        }
-    }
-
-    fn load(asset: *Asset) void {
-        if (!initialized)
-            return;
-
-        if (sprites.get(asset.resource_id)) |s| {
-            if (s.texture_binding != NO_BINDING)
-                return; // already loaded
-
-            s.texture_binding = TextureAsset.getBindingByAssetId(asset.parent_asset_id);
-        }
-    }
-
-    fn unload(asset: *Asset) void {
-        if (!initialized)
-            return;
-
-        if (sprites.get(asset.resource_id)) |s| s.texture_binding = NO_BINDING;
-    }
-
-    fn delete(asset: *Asset) void {
-        Asset.activateById(asset.id, false);
-        sprites.delete(asset.resource_id);
+        self.template_id = UNDEF_INDEX;
+        self.render_data = .{};
+        self.offset = .{ 0, 0 };
     }
 };
 
@@ -237,129 +170,129 @@ pub const SpriteAsset = struct {
 //// Sprite Set Asset
 //////////////////////////////////////////////////////////////
 
-pub const SpriteSetAsset = struct {
-    pub var asset_type: *Aspect = undefined;
+// pub const SpriteSetAsset = struct {
+//     pub var asset_type: *Aspect = undefined;
 
-    pub const SpriteStamp = struct {
-        name: String = NO_NAME,
-        flip_x: bool = false,
-        flip_y: bool = false,
-        offset: Vec2f = Vec2f{ 0, 0 },
-    };
+//     pub const SpriteStamp = struct {
+//         name: String = NO_NAME,
+//         flip_x: bool = false,
+//         flip_y: bool = false,
+//         offset: Vec2f = Vec2f{ 0, 0 },
+//     };
 
-    texture_asset_id: Index,
-    stamp_region: RectF,
-    sprite_dim: Vec2f,
-    stamps: ?[]?SpriteStamp = null,
+//     texture_asset_id: Index,
+//     stamp_region: RectF,
+//     sprite_dim: Vec2f,
+//     stamps: ?[]?SpriteStamp = null,
 
-    fn getStamp(self: *SpriteSetAsset, x: usize, y: usize) ?SpriteStamp {
-        if (self.stamps) |sp| {
-            const index = y * self.stamp_region[2] + x;
-            if (index < sp.len) {
-                return sp[index];
-            }
-        }
-        return null;
-    }
+//     fn getStamp(self: *SpriteSetAsset, x: usize, y: usize) ?SpriteStamp {
+//         if (self.stamps) |sp| {
+//             const index = y * self.stamp_region[2] + x;
+//             if (index < sp.len) {
+//                 return sp[index];
+//             }
+//         }
+//         return null;
+//     }
 
-    fn init() void {
-        asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("SpriteSet");
-        Asset.subscribe(listener);
-    }
+//     fn init() void {
+//         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("SpriteSet");
+//         Asset.subscribe(listener);
+//     }
 
-    fn deinit() void {
-        Asset.unsubscribe(listener);
-        asset_type = undefined;
-    }
+//     fn deinit() void {
+//         Asset.unsubscribe(listener);
+//         asset_type = undefined;
+//     }
 
-    pub fn new(data: SpriteSetAsset) *Asset {
-        if (!initialized)
-            @panic("Firefly module not initialized");
+//     pub fn new(data: SpriteSetAsset) *Asset {
+//         if (!initialized)
+//             @panic("Firefly module not initialized");
 
-        if (data.texture_asset_id != UNDEF_INDEX and Asset.pool.exists(data.texture_asset_id))
-            @panic("SpriteSetData has invalid TextureAsset reference id");
+//         if (data.texture_asset_id != UNDEF_INDEX and Asset.pool.exists(data.texture_asset_id))
+//             @panic("SpriteSetData has invalid TextureAsset reference id");
 
-        var asset: *Asset = Asset.new(Asset{
-            .asset_type = asset_type,
-            .name = data.asset_name,
-            .resource_id = sprite_sets.add(SpriteSet.new()),
-            .parent_asset_id = data.texture_asset_id,
-        });
+//         var asset: *Asset = Asset.new(Asset{
+//             .asset_type = asset_type,
+//             .name = data.asset_name,
+//             .resource_id = sprite_sets.add(SpriteSet.new()),
+//             .parent_asset_id = data.texture_asset_id,
+//         });
 
-        const ss: *SpriteSet = sprite_sets.get(asset.resource_id);
+//         const ss: *SpriteSet = sprite_sets.get(asset.resource_id);
 
-        for (0..data.stamp_region[3]) |y| {
-            for (0..data.stamp_region[2]) |x| {
-                var sd = SpriteData{};
+//         for (0..data.stamp_region[3]) |y| {
+//             for (0..data.stamp_region[2]) |x| {
+//                 var sd = SpriteData{};
 
-                sd.texture_bounds[0] = x * data.sprite_dim[0] + data.stamp_region[0]; // x pos
-                sd.texture_bounds[1] = y * data.sprite_dim[1] + data.stamp_region[1]; // y pos
-                sd.texture_bounds[2] = data.sprite_dim[0]; // width
-                sd.texture_bounds[3] = data.sprite_dim[1]; // height
+//                 sd.texture_bounds[0] = x * data.sprite_dim[0] + data.stamp_region[0]; // x pos
+//                 sd.texture_bounds[1] = y * data.sprite_dim[1] + data.stamp_region[1]; // y pos
+//                 sd.texture_bounds[2] = data.sprite_dim[0]; // width
+//                 sd.texture_bounds[3] = data.sprite_dim[1]; // height
 
-                if (data.getStamp(x, y)) |stamp| {
-                    sd.texture_bounds[0] = sd.texture_bounds[0] + stamp.offset[0]; // x offset
-                    sd.texture_bounds[1] = sd.texture_bounds[1] + stamp.offset[1]; // y offset
-                    if (stamp.flip_x) sd.flip_x();
-                    if (stamp.flip_y) sd.flip_y();
-                    if (stamp.name != NO_NAME) {
-                        ss.name_mapping.put(stamp.name, ss.sprites.items.len);
-                    }
-                }
+//                 if (data.getStamp(x, y)) |stamp| {
+//                     sd.texture_bounds[0] = sd.texture_bounds[0] + stamp.offset[0]; // x offset
+//                     sd.texture_bounds[1] = sd.texture_bounds[1] + stamp.offset[1]; // y offset
+//                     if (stamp.flip_x) sd.flip_x();
+//                     if (stamp.flip_y) sd.flip_y();
+//                     if (stamp.name != NO_NAME) {
+//                         ss.name_mapping.put(stamp.name, ss.sprites.items.len);
+//                     }
+//                 }
 
-                ss.sprites.append(sprites.add(sd)) catch unreachable;
-            }
-        }
-    }
+//                 ss.sprites.append(sprites.add(sd)) catch unreachable;
+//             }
+//         }
+//     }
 
-    pub fn getResource(res_id: Index) *SpriteSet {
-        return &sprite_sets.get(res_id).byListIndex(0);
-    }
+//     pub fn getResource(res_id: Index) *SpriteSet {
+//         return &sprite_sets.get(res_id);
+//     }
 
-    fn listener(e: ComponentEvent) void {
-        var asset: *Asset = Asset.byId(e.c_id);
-        if (asset_type.index != asset.asset_type.index)
-            return;
+//     fn listener(e: ComponentEvent) void {
+//         var asset: *Asset = Asset.byId(e.c_id);
+//         if (asset_type.index != asset.asset_type.index)
+//             return;
 
-        switch (e.event_type) {
-            ActionType.ACTIVATED => load(asset),
-            ActionType.DEACTIVATING => unload(asset),
-            ActionType.DISPOSING => delete(asset),
-            else => {},
-        }
-    }
+//         switch (e.event_type) {
+//             ActionType.ACTIVATED => load(asset),
+//             ActionType.DEACTIVATING => unload(asset),
+//             ActionType.DISPOSING => delete(asset),
+//             else => {},
+//         }
+//     }
 
-    fn load(asset: *Asset) void {
-        if (!initialized)
-            return;
+//     fn load(asset: *Asset) void {
+//         if (!initialized)
+//             return;
 
-        // check if texture asset is loaded, if not try to load
-        const tex_binding_id = TextureAsset.getBindingByAssetId(asset.parent_asset_id);
-        if (sprite_sets.get(asset.resource_id)) |ss| {
-            for (ss.sprites_indices.items) |id| {
-                if (sprites.get(id)) |s| s.texture_binding = tex_binding_id;
-            }
-        }
-    }
+//         // check if texture asset is loaded, if not try to load
+//         const tex_binding_id = TextureAsset.getBindingByAssetId(asset.parent_asset_id);
+//         if (sprite_sets.get(asset.resource_id)) |ss| {
+//             for (ss.sprites_indices.items) |id| {
+//                 if (sprites.get(id)) |s| s.texture_binding = tex_binding_id;
+//             }
+//         }
+//     }
 
-    fn unload(asset: *Asset) void {
-        if (!initialized)
-            return;
+//     fn unload(asset: *Asset) void {
+//         if (!initialized)
+//             return;
 
-        if (sprite_sets.get(asset.resource_id)) |ss| {
-            for (ss.sprites_indices.items) |id| {
-                if (sprites.get(id)) |s| s.texture_binding = NO_BINDING;
-            }
-        }
-    }
+//         if (sprite_sets.get(asset.resource_id)) |ss| {
+//             for (ss.sprites_indices.items) |id| {
+//                 if (sprites.get(id)) |s| s.texture_binding = NO_BINDING;
+//             }
+//         }
+//     }
 
-    fn delete(asset: *Asset) void {
-        Asset.activateById(asset.id, false);
-        if (sprite_sets.get(asset.resource_id)) |ss| ss.deinit();
-        sprite_sets.delete(asset.resource_id);
-        asset.resource_id = UNDEF_INDEX;
-    }
-};
+//     fn delete(asset: *Asset) void {
+//         Asset.activateById(asset.id, false);
+//         if (sprite_sets.get(asset.resource_id)) |ss| ss.deinit();
+//         sprite_sets.delete(asset.resource_id);
+//         asset.resource_id = UNDEF_INDEX;
+//     }
+// };
 
 //////////////////////////////////////////////////////////////
 //// Simple Sprite Renderer System
@@ -379,7 +312,7 @@ const SimpleSpriteRenderer = struct {
             .subscribe();
 
         sprite_refs = ViewLayerMapping.new();
-        _ = System.new(System{
+        _ = System.new(.{
             .name = sys_name,
             .info = "Render Entities with ETransform and ESprite components",
             .onActivation = onActivation,
@@ -418,9 +351,13 @@ const SimpleSpriteRenderer = struct {
             while (i) |id| {
                 // render the sprite
                 var es = ESprite.byId(id);
-                var et = ETransform.byId(id).transform;
-                if (sprites.get(es.sprite_ref)) |s| {
-                    api.rendering.renderSprite(s, &et, &es.render_data, es.offset);
+                if (es.template_id != UNDEF_INDEX) {
+                    api.rendering.renderSprite(
+                        &SpriteTemplate.byId(es.template_id).sprite_data,
+                        &ETransform.byId(id).transform,
+                        &es.render_data,
+                        es.offset,
+                    );
                 }
                 i = all.nextSetBit(id + 1);
             }

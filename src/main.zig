@@ -4,7 +4,8 @@ const firefly = inari.firefly;
 const utils = inari.utils;
 const Asset = firefly.api.Asset;
 const TextureAsset = firefly.graphics.TextureAsset;
-const SpriteAsset = firefly.graphics.SpriteAsset;
+const SpriteData = firefly.api.SpriteData;
+const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
@@ -14,6 +15,7 @@ const AnimationSystem = firefly.physics.AnimationSystem;
 const IAnimation = firefly.physics.IAnimation;
 const EasedValueIntegration = firefly.physics.EasedValueIntegration;
 const Allocator = std.mem.Allocator;
+const Easing = utils.Easing;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -49,49 +51,30 @@ fn Example_One_Entity_No_Views(allocator: Allocator) !void {
 }
 
 fn _Example_One_Entity_No_Views() void {
-    var texture_asset: *Asset = TextureAsset.new(.{
+    var sprite = SpriteTemplate.new(.{
+        .texture_asset_name = "TestTexture",
+        .sprite_data = .{ .texture_bounds = utils.RectF{ 0, 0, 32, 32 } },
+    });
+
+    _ = TextureAsset.new(.{
         .name = "TestTexture",
         .resource_path = "resources/logo.png",
         .is_mipmap = false,
     });
-
-    var sprite_asset: *Asset = SpriteAsset.new(.{
-        .name = "TestSprite",
-        .texture_asset_id = texture_asset.id,
-        .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+    _ = Asset.loadByName("TestTexture");
 
     _ = Entity.new(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .transform = .{
-        .position = .{ 64, 164 },
-        .scale = .{ 4, 4 },
-        .pivot = .{ 16, 16 },
-        .rotation = 180,
-    } })
-        .withComponent(ESprite.fromAsset(sprite_asset))
+        .withComponent(ETransform{ .transform = .{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 } })
+        .withComponent(ESprite{ .template_id = sprite.id })
         .withComponentAnd(EAnimation{})
-        .withAnimation(.{
-        .duration = 1000,
-        .looping = true,
-        .inverse_on_loop = true,
-        .active_on_init = true,
-    }, EasedValueIntegration{
-        .start_value = 164.0,
-        .end_value = 264.0,
-        .easing = utils.Easing_Linear,
-        .property_ref = ETransform.Property.XPos,
-    })
-        .withAnimationAnd(.{
-        .duration = 2000,
-        .looping = true,
-        .inverse_on_loop = true,
-        .active_on_init = true,
-    }, EasedValueIntegration{
-        .start_value = 0.0,
-        .end_value = 180.0,
-        .easing = utils.Easing_Linear,
-        .property_ref = ETransform.Property.Rotation,
-    })
+        .withAnimation(
+        .{ .duration = 1000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
+        EasedValueIntegration{ .start_value = 164.0, .end_value = 264.0, .easing = Easing.Linear, .property_ref = ETransform.Property.XPos },
+    )
+        .withAnimationAnd(
+        .{ .duration = 2000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
+        EasedValueIntegration{ .start_value = 0.0, .end_value = 180.0, .easing = Easing.Linear, .property_ref = ETransform.Property.Rotation },
+    )
         .activate();
 
     //AnimationSystem.activateById(0, false);

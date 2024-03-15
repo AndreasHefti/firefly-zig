@@ -30,10 +30,11 @@ const CInt = utils.CInt;
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
+pub const SpriteTemplate = sprite.SpriteTemplate;
 pub const ESprite = sprite.ESprite;
-pub const SpriteAsset = sprite.SpriteAsset;
-pub const SpriteSet = sprite.SpriteSet;
-pub const SpriteSetAsset = sprite.SpriteSetAsset;
+//pub const SpriteDataKey = sprite.SpriteDataKey;
+//pub const SpriteSet = sprite.SpriteSet;
+//pub const SpriteSetAsset = sprite.SpriteSetAsset;
 
 pub const View = view.View;
 pub const Layer = view.Layer;
@@ -250,8 +251,31 @@ pub const TextureAsset = struct {
         return textures.get(asset.resource_id);
     }
 
+    pub fn getResourceByName(asset_name: String, auto_load: bool) ?*const TextureData {
+        if (Asset.byName(asset_name)) |asset| {
+            // check if the asset is loaded, if not, try to auto-load it
+            if (!asset.isLoaded() and auto_load) {
+                if (!asset.load()) {
+                    std.log.err("Failed to load/activate dependent TextureAsset: {any}", .{Asset.byId(asset.parent_asset_id)});
+                    return null;
+                }
+            }
+
+            return textures.get(asset.resource_id);
+        } else {
+            return null;
+        }
+    }
+
     pub fn getBindingByAssetId(asset_id: Index) BindingId {
         if (getResourceById(asset_id, true)) |res| {
+            return res.binding;
+        }
+        return NO_BINDING;
+    }
+
+    pub fn getBindingByAssetName(asset_name: String) BindingId {
+        if (getResourceByName(asset_name, true)) |res| {
             return res.binding;
         }
         return NO_BINDING;
