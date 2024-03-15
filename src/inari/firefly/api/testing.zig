@@ -308,7 +308,7 @@ test "RenderAPI debug init" {
 
     //try std.testing.expect(t1.binding == NO_BINDING);
     var tex_1_binding = api.rendering.loadTexture("t1", false, TextureFilter.TEXTURE_FILTER_POINT, TextureWrap.TEXTURE_WRAP_CLAMP);
-    try std.testing.expect(tex_1_binding != NO_BINDING);
+    try std.testing.expect(tex_1_binding.id != NO_BINDING);
     try std.testing.expect(t2.binding == NO_BINDING);
     api.rendering.createRenderTexture(&t2);
     try std.testing.expect(t2.binding != NO_BINDING);

@@ -26,11 +26,13 @@ test "EasedValueIntegration" {
         true,
         true,
         true,
+        null,
+        null,
         EasedValueIntegration{
             .start_value = 0.0,
             .end_value = 100.0,
-            .easing = utils.Easing_Linear,
-            .property_ref = &value[1],
+            .easing = utils.Easing.Linear,
+            ._property = &value[1],
         },
     );
     // If one need the concrete animation struct, one can explicit cast is by using the getAnimation

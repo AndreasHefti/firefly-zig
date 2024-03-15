@@ -22,8 +22,8 @@ const ETransform = firefly.graphics.ETransform;
 const TransformData = firefly.api.TransformData;
 const ESprite = firefly.graphics.ESprite;
 const Asset = firefly.api.Asset;
-const TextureAsset = firefly.graphics.TextureAsset;
-const SpriteAsset = firefly.graphics.SpriteAsset;
+const Texture = firefly.graphics.Texture;
+const SpriteTemplate = firefly.graphics.SpriteTemplate;
 
 test {
     std.testing.refAllDecls(@import("api/testing.zig"));
@@ -121,7 +121,7 @@ test "initialization" {
     defer firefly.deinit();
     Component.API.registerComponent(ExampleComponent);
 
-    var newC = ExampleComponent.new(ExampleComponent{
+    var newC = ExampleComponent.newAnd(ExampleComponent{
         .color = Color{ 1, 2, 3, 255 },
         .position = PosF{ 10, 20 },
     });
@@ -136,7 +136,7 @@ test "valid component" {
     defer firefly.deinit();
     Component.API.registerComponent(ExampleComponent);
 
-    var newC = ExampleComponent.new(ExampleComponent{
+    var newC = ExampleComponent.newAnd(ExampleComponent{
         .color = Color{ 1, 2, 3, 255 },
         .position = PosF{ 10, 20 },
     });
@@ -158,7 +158,7 @@ test "create/dispose component" {
     defer firefly.deinit();
     Component.API.registerComponent(ExampleComponent);
 
-    var cPtr = ExampleComponent.new(.{
+    var cPtr = ExampleComponent.newAnd(.{
         .color = Color{ 0, 0, 0, 255 },
         .position = PosF{ 10, 10 },
     });
@@ -221,13 +221,13 @@ test "name mapping" {
     defer firefly.deinit();
     Component.API.registerComponent(ExampleComponent);
 
-    var c1 = ExampleComponent.new(.{
+    var c1 = ExampleComponent.newAnd(.{
         .color = Color{ 0, 0, 0, 255 },
         .position = PosF{ 10, 10 },
     });
     _ = c1;
 
-    var c2 = ExampleComponent.new(.{
+    var c2 = ExampleComponent.newAnd(.{
         .name = "c2",
         .color = Color{ 2, 0, 0, 255 },
         .position = PosF{ 20, 20 },
@@ -251,7 +251,7 @@ test "event propagation" {
     // also triggers auto init
     ExampleComponent.subscribe(testListener);
 
-    var c1 = ExampleComponent.new(.{
+    var c1 = ExampleComponent.newAnd(.{
         .color = Color{ 0, 0, 0, 255 },
         .position = PosF{ 10, 10 },
     });
@@ -268,19 +268,19 @@ test "get poll and process" {
     defer firefly.deinit();
     Component.API.registerComponent(ExampleComponent);
 
-    var c1 = ExampleComponent.new(.{
+    var c1 = ExampleComponent.newAnd(.{
         .color = Color{ 0, 0, 0, 255 },
         .position = PosF{ 10, 10 },
     });
     c1.activate(true);
 
-    var c2 = ExampleComponent.new(.{
+    var c2 = ExampleComponent.newAnd(.{
         .color = Color{ 2, 0, 0, 255 },
         .position = PosF{ 20, 20 },
     });
     _ = c2;
 
-    var c3 = ExampleComponent.new(.{
+    var c3 = ExampleComponent.newAnd(.{
         .color = Color{ 0, 5, 0, 255 },
         .position = PosF{ 40, 70 },
     });
@@ -295,13 +295,6 @@ test "function pointer equality op" {
 
     try std.testing.expect(p1 == p2);
 }
-
-// fn processViaIdCast(id: component.ComponentId) void {
-//     if (ComponentPool(ExampleComponent).typeCheck(id.aspect)) {
-//         var arr = [1]usize{id.cIndex};
-//         id.cTypePtr.cast(ComponentPool(ExampleComponent)).processIndexed(&arr, processOne);
-//     }
-// }
 
 fn process() void {
     ExampleComponent.processActive(processOne);
@@ -338,22 +331,22 @@ test "Init Rendering one sprite entity with no view and layer" {
     var sb = utils.StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    var texture_asset: *Asset = TextureAsset.new(.{
+    _ = Texture.new(.{
         .name = "TestTexture",
-        .resource_path = "path/TestTexture",
+        .resource = "path/TestTexture",
         .is_mipmap = false,
     });
 
-    var sprite_asset: *Asset = SpriteAsset.new(.{
-        .name = "TestSprite",
-        .texture_asset_id = texture_asset.id,
-        .texture_bounds = utils.RectF{ 0, 0, 20, 20 },
-        .flip_x = true,
+    var sprite_data: api.SpriteData = .{ .texture_bounds = utils.RectF{ 0, 0, 20, 20 } };
+    sprite_data.flip_x();
+    var sprite_id = SpriteTemplate.new(.{
+        .texture_asset_name = "TestTexture",
+        .sprite_data = sprite_data,
     });
 
-    _ = Entity.new(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .transform = .{ .position = .{ 50, 50 } } })
-        .withComponent(ESprite.fromAsset(sprite_asset))
+    _ = Entity.newAnd(.{ .name = "TestEntity" })
+        .with(ETransform{ .transform = .{ .position = .{ 50, 50 } } })
+        .with(ESprite{ .template_id = sprite_id })
         .activate();
 
     var output: utils.String =

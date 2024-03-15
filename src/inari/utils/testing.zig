@@ -352,39 +352,39 @@ test "easing interface" {
     const t = 0.5;
     const fac = 5;
 
-    sb.print("Linear:       5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Linear.f(t)});
-    sb.print("Quad In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quad_In.f(t)});
-    sb.print("Quad Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quad_Out.f(t)});
-    sb.print("Quad InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quad_In_Out.f(t)});
-    sb.print("Cubic In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Cubic_In.f(t)});
-    sb.print("Cubic Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Cubic_Out.f(t)});
-    sb.print("Cubic InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Cubic_In_Out.f(t)});
+    sb.print("Linear:       5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Linear.f(t)});
+    sb.print("Quad In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quad_In.f(t)});
+    sb.print("Quad Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quad_Out.f(t)});
+    sb.print("Quad InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quad_In_Out.f(t)});
+    sb.print("Cubic In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Cubic_In.f(t)});
+    sb.print("Cubic Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Cubic_Out.f(t)});
+    sb.print("Cubic InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Cubic_In_Out.f(t)});
 
-    sb.print("Quart In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quart_In.f(t)});
-    sb.print("Quart Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quart_Out.f(t)});
-    sb.print("Quart InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quart_In_Out.f(t)});
+    sb.print("Quart In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quart_In.f(t)});
+    sb.print("Quart Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quart_Out.f(t)});
+    sb.print("Quart InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quart_In_Out.f(t)});
 
-    sb.print("Quint In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quint_In.f(t)});
-    sb.print("Quint Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quint_Out.f(t)});
-    sb.print("Quint InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Quint_In_Out.f(t)});
+    sb.print("Quint In:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quint_In.f(t)});
+    sb.print("Quint Out:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quint_Out.f(t)});
+    sb.print("Quint InOut:  5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Quint_In_Out.f(t)});
 
-    sb.print("Expo In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Exponential_In.f(t)});
-    sb.print("Expo Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Exponential_Out.f(t)});
-    sb.print("Expo InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Exponential_In_Out.f(t)});
+    sb.print("Expo In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Exponential_In.f(t)});
+    sb.print("Expo Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Exponential_Out.f(t)});
+    sb.print("Expo InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Exponential_In_Out.f(t)});
 
-    sb.print("Sin In:       5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Sin_In.f(t)});
-    sb.print("Sin Out:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Sin_Out.f(t)});
-    sb.print("Sin InOut:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Sin_In_Out.f(t)});
+    sb.print("Sin In:       5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Sin_In.f(t)});
+    sb.print("Sin Out:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Sin_Out.f(t)});
+    sb.print("Sin InOut:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Sin_In_Out.f(t)});
 
-    sb.print("Circ In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Circ_In.f(t)});
-    sb.print("Circ Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Circ_Out.f(t)});
-    sb.print("Circ InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Circ_In_Out.f(t)});
+    sb.print("Circ In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Circ_In.f(t)});
+    sb.print("Circ Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Circ_Out.f(t)});
+    sb.print("Circ InOut:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Circ_In_Out.f(t)});
 
-    sb.print("Back In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Back_In.f(t)});
-    sb.print("Back Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Back_Out.f(t)});
+    sb.print("Back In:      5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Back_In.f(t)});
+    sb.print("Back Out:     5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Back_Out.f(t)});
 
-    sb.print("Bounce In:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Bounce_In.f(t)});
-    sb.print("Bounce Out:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing_Bounce_Out.f(t)});
+    sb.print("Bounce In:    5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Bounce_In.f(t)});
+    sb.print("Bounce Out:   5 * f(0.5) --> {d}\n", .{fac * utils.Easing.Bounce_Out.f(t)});
 
     const expected =
         \\Linear:       5 * f(0.5) --> 2.5

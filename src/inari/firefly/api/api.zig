@@ -83,9 +83,9 @@ pub fn init(
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
-        //rendering = try testing.createTestRenderAPI();
-        rendering = try @import("raylib/rendering.zig").createRenderAPI();
-        window = try @import("raylib/window.zig").createWindowAPI();
+        rendering = try testing.createTestRenderAPI();
+        //rendering = try @import("raylib/rendering.zig").createRenderAPI();
+        //window = try @import("raylib/window.zig").createWindowAPI();
     }
 
     try Component.init();
