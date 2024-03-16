@@ -39,8 +39,12 @@ pub fn init() void {
         return;
 
     IndexFrame.init();
-    AnimationSystem.init();
-    AnimationSystem.registerAnimationType(EasedValueIntegration);
+    System(AnimationIntegration).init(
+        "SimpleSpriteRenderer",
+        "Render Entities with ETransform and ESprite components",
+    );
+    System(AnimationIntegration).activate();
+    AnimationIntegration.registerAnimationType(EasedValueIntegration);
     EntityComponent.registerEntityComponent(EAnimation);
 }
 
@@ -50,7 +54,7 @@ pub fn deinit() void {
         return;
 
     IndexFrame.deinit();
-    AnimationSystem.deinit();
+    System(AnimationIntegration).deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -292,7 +296,7 @@ pub const EAnimation = struct {
     ) *EAnimation {
         var i = integration;
         i.init(self.id);
-        self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
+        self.animations.set(AnimationIntegration.animation_refs.add(Animation(@TypeOf(integration)).new(
             animation.duration,
             animation.looping,
             animation.inverse_on_loop,
@@ -311,7 +315,7 @@ pub const EAnimation = struct {
     ) *Entity {
         var i = integration;
         i.init(self.id);
-        self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
+        self.animations.set(AnimationIntegration.animation_refs.add(Animation(@TypeOf(integration)).new(
             animation.duration,
             animation.looping,
             animation.inverse_on_loop,
@@ -327,9 +331,9 @@ pub const EAnimation = struct {
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
             if (active) {
-                AnimationSystem.resetById(i);
+                AnimationIntegration.resetById(i);
             } else {
-                AnimationSystem.activateById(i, false);
+                AnimationIntegration.activateById(i, false);
             }
             next = self.animations.nextSetBit(i + 1);
         }
@@ -338,7 +342,7 @@ pub const EAnimation = struct {
     pub fn destruct(self: *EAnimation) void {
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
-            AnimationSystem.disposeAnimation(i);
+            AnimationIntegration.disposeAnimation(i);
             next = self.animations.nextSetBit(i + 1);
         }
 
@@ -348,34 +352,25 @@ pub const EAnimation = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Animation System
+//// Animation Integration System
 //////////////////////////////////////////////////////////////
 
-pub const AnimationSystem = struct {
+pub const AnimationIntegration = struct {
     const sys_name = "AnimationSystem ";
 
     var animation_type_refs: DynArray(AnimationTypeReference) = undefined;
     var animation_refs: DynArray(IAnimation) = undefined;
 
-    fn init() void {
+    pub fn onConstruct() void {
         animation_type_refs = DynArray(AnimationTypeReference).newWithRegisterSize(
             api.ALLOC,
             10,
         ) catch unreachable;
 
         animation_refs = DynArray(IAnimation).new(api.COMPONENT_ALLOC) catch unreachable;
-
-        _ = System.new(System{
-            .name = sys_name,
-            .info = "Updates all active animations",
-            .onActivation = onActivation,
-        });
-        System.activateByName(sys_name, true);
     }
 
-    fn deinit() void {
-        System.disposeByName(sys_name);
-
+    pub fn onDestruct() void {
         var next = animation_refs.slots.nextSetBit(0);
         while (next) |i| {
             if (animation_refs.get(i)) |ar| ar.fn_dispose(i);
@@ -393,6 +388,13 @@ pub const AnimationSystem = struct {
         animation_type_refs.clear();
         animation_type_refs.deinit();
         animation_type_refs = undefined;
+    }
+
+    pub fn onActivation(active: bool) void {
+        if (active)
+            Engine.subscribeUpdate(update)
+        else
+            Engine.unsubscribeUpdate(update);
     }
 
     pub fn activateById(id: Index, active: bool) void {
@@ -422,13 +424,6 @@ pub const AnimationSystem = struct {
 
     pub fn registerAnimationType(comptime Integration: type) void {
         _ = animation_type_refs.add(Animation(Integration).init());
-    }
-
-    fn onActivation(active: bool) void {
-        if (active)
-            Engine.subscribeUpdate(update)
-        else
-            Engine.unsubscribeUpdate(update);
     }
 
     fn disposeAnimation(id: Index) void {

@@ -213,11 +213,6 @@ pub fn DynArray(comptime T: type) type {
 
         pub fn clear(self: *Self) void {
             self.slots.clear();
-            // var next = self.slots.nextSetBit(0);
-            // while (next) |i| {
-            //     self.delete(i);
-            //     next = self.slots.nextSetBit(i + 1);
-            // }
         }
 
         pub fn iterator(self: *Self) Iterator {

@@ -12,7 +12,7 @@ pub const EasedValueIntegration = animation.EasedValueIntegration;
 pub const IAnimation = animation.IAnimation;
 pub const Animation = animation.Animation;
 pub const EAnimation = animation.EAnimation;
-pub const AnimationSystem = animation.AnimationSystem;
+pub const AnimationIntegration = animation.AnimationIntegration;
 
 //////////////////////////////////////////////////////////////
 //// module init

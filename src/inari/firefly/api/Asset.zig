@@ -55,7 +55,7 @@ pub fn Asset(comptime T: type) type {
         const Self = @This();
         var type_init = false;
 
-        pub usingnamespace Component.API.ComponentTrait(@This(), .{ .name = "Asset:" ++ T.ASSET_TYPE_NAME });
+        pub usingnamespace Component.API.ComponentTrait(Self, .{ .name = "Asset:" ++ T.ASSET_TYPE_NAME });
 
         // struct fields
         id: Index = UNDEF_INDEX,

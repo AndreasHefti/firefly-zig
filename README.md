@@ -2,7 +2,7 @@
 
 TODO:
 
-  - Refactor System like Asset but for singletons
+  - Refactor System like Asset but for singletons DONE!
   - Refactor Shader handling like Texture handling
   - Reimplement Asset(Shader) and Asset(SpriteSet)
   - Adapt old tests

@@ -11,7 +11,7 @@ const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const EAnimation = firefly.physics.EAnimation;
 const Animation = firefly.physics.Animation;
-const AnimationSystem = firefly.physics.AnimationSystem;
+const AnimationIntegration = firefly.physics.AnimationIntegration;
 const IAnimation = firefly.physics.IAnimation;
 const EasedValueIntegration = firefly.physics.EasedValueIntegration;
 const Allocator = std.mem.Allocator;
@@ -77,7 +77,7 @@ fn _Example_One_Entity_No_Views() void {
         .activate();
 
     //AnimationSystem.activateById(0, false);
-    AnimationSystem.setLoopCallbackById(1, loopCallback1);
+    AnimationIntegration.setLoopCallbackById(1, loopCallback1);
 }
 
 fn loopCallback1(count: usize) void {

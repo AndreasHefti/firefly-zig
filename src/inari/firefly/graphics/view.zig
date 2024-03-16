@@ -46,7 +46,11 @@ pub fn init() !void {
     Component.API.registerComponent(View);
     EntityComponent.registerEntityComponent(ETransform);
     EntityComponent.registerEntityComponent(EMultiplier);
-    ViewRenderer.init();
+    System(ViewRenderer).init(
+        "SimpleSpriteRenderer",
+        "Render Entities with ETransform and ESprite components",
+    );
+    System(ViewRenderer).activate();
 }
 
 pub fn deinit() void {
@@ -55,7 +59,7 @@ pub fn deinit() void {
         return;
 
     View.deinit();
-    ViewRenderer.deinit();
+    System(ViewRenderer).deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -375,6 +379,34 @@ pub const ViewRenderEvent = struct {
 pub const ViewRenderListener = *const fn (ViewRenderEvent) void;
 
 pub const ViewRenderer = struct {
+    var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(ViewRenderEvent) = undefined;
+    var VIEW_RENDER_EVENT = ViewRenderEvent{
+        .view_id = UNDEF_INDEX,
+        .layer_id = UNDEF_INDEX,
+    };
+
+    var re_subscription: RenderEventSubscription(ViewRenderer) = undefined;
+
+    pub fn onConstruct() void {
+        VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(api.ALLOC);
+    }
+
+    pub fn onDestruct() void {
+        VIEW_RENDER_EVENT_DISPATCHER.deinit();
+        VIEW_RENDER_EVENT_DISPATCHER = undefined;
+    }
+
+    pub fn onActivation(active: bool) void {
+        if (active) {
+            re_subscription = RenderEventSubscription(ViewRenderer)
+                .of(render)
+                .subscribe();
+        } else {
+            _ = re_subscription.unsubscribe();
+            re_subscription = undefined;
+        }
+    }
+
     pub fn subscribe(listener: ViewRenderListener) void {
         ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.register(listener);
     }
@@ -385,41 +417,6 @@ pub const ViewRenderer = struct {
 
     pub fn unsubscribe(listener: ViewRenderListener) void {
         ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.unregister(listener);
-    }
-
-    var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(ViewRenderEvent) = undefined;
-    var VIEW_RENDER_EVENT = ViewRenderEvent{
-        .view_id = UNDEF_INDEX,
-        .layer_id = UNDEF_INDEX,
-    };
-
-    var re_subscription: RenderEventSubscription(ViewRenderer) = undefined;
-
-    fn init() void {
-        VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(api.ALLOC);
-        _ = System.new(System{
-            .name = "ViewRenderer",
-            .info = "Emits ViewRenderEvent in order of active Views and its Layers",
-            .onActivation = onActivation,
-        });
-        System.activateByName("ViewRenderer", true);
-    }
-
-    fn deinit() void {
-        System.activateByName("ViewRenderer", false);
-        System.disposeByName("ViewRenderer");
-        VIEW_RENDER_EVENT_DISPATCHER.deinit();
-    }
-
-    fn onActivation(active: bool) void {
-        if (active) {
-            re_subscription = RenderEventSubscription(ViewRenderer)
-                .of(render)
-                .subscribe();
-        } else {
-            _ = re_subscription.unsubscribe();
-            re_subscription = undefined;
-        }
     }
 
     fn render(event: RenderEvent) void {

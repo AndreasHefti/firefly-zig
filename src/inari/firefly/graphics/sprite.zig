@@ -55,7 +55,11 @@ pub fn init() !void {
     Component.API.registerComponent(SpriteTemplate);
     EntityComponent.registerEntityComponent(ESprite);
     // init renderer
-    SimpleSpriteRenderer.init();
+    System(SimpleSpriteRenderer).init(
+        "SimpleSpriteRenderer",
+        "Render Entities with ETransform and ESprite components",
+    );
+    System(SimpleSpriteRenderer).activate();
 }
 
 pub fn deinit() void {
@@ -64,7 +68,7 @@ pub fn deinit() void {
         return;
 
     // deinit renderer
-    SimpleSpriteRenderer.deinit();
+    System(SimpleSpriteRenderer).deinit();
     // deinit Assets
     //SpriteSetAsset.deinit();
 }
@@ -315,7 +319,7 @@ const SimpleSpriteRenderer = struct {
     var ee_subscription: EntityEventSubscription(SimpleSpriteRenderer) = undefined;
     var sprite_refs: ViewLayerMapping = undefined;
 
-    fn init() void {
+    pub fn onConstruct() void {
         ee_subscription = EntityEventSubscription(SimpleSpriteRenderer)
             .of(registerEntity)
             .withAcceptKind(Kind.of(ETransform.type_aspect).with(ESprite.type_aspect))
@@ -323,23 +327,16 @@ const SimpleSpriteRenderer = struct {
             .subscribe();
 
         sprite_refs = ViewLayerMapping.new();
-        _ = System.new(.{
-            .name = sys_name,
-            .info = "Render Entities with ETransform and ESprite components",
-            .onActivation = onActivation,
-        });
-        System.activateByName(sys_name, true);
     }
 
-    fn deinit() void {
-        System.disposeByName(sys_name);
+    pub fn onDestruct() void {
         _ = ee_subscription.unsubscribe();
         ee_subscription = undefined;
         sprite_refs.deinit();
         sprite_refs = undefined;
     }
 
-    fn onActivation(active: bool) void {
+    pub fn onActivation(active: bool) void {
         if (active) {
             graphics.ViewRenderer.subscribeAt(0, render);
         } else {

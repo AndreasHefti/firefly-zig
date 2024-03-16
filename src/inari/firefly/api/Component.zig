@@ -218,6 +218,10 @@ pub const API = struct {
         ComponentPool(T).init();
     }
 
+    pub fn deinitComponent(comptime T: type) void {
+        ComponentPool(T).deinit();
+    }
+
     pub inline fn checkValidity(any_component: anytype) void {
         if (!checkComponentValidity(any_component))
             @panic("Invalid component type");
@@ -412,11 +416,11 @@ pub fn ComponentPool(comptime T: type) type {
             if (!initialized)
                 return;
 
+            clearAll();
             if (has_deinit)
                 T.deinit();
 
             c_aspect = undefined;
-            items.clear();
             items.deinit();
             active_mapping.deinit();
 

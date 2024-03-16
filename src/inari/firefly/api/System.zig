@@ -4,65 +4,125 @@ const utils = inari.utils;
 const api = inari.firefly.api;
 const trait = std.meta.trait;
 
-const Allocator = std.mem.Allocator;
-const EventDispatch = utils.EventDispatch;
 const Component = api.Component;
-const ComponentEvent = Component.ComponentEvent;
-const ComponentListener = Component.ComponentListener;
-const EntityKindPredicate = api.EntityKindPredicate;
-const UpdateEvent = api.UpdateEvent;
-const UpdateListener = api.UpdateListener;
-const RenderEvent = api.RenderEvent;
-const RenderListener = api.RenderListener;
-const UpdateScheduler = api.Timer.UpdateScheduler;
-const Engine = api.Engine;
-const Entity = api.Entity;
-const Kind = utils.Kind;
-const Aspect = utils.Aspect;
-const AspectGroup = utils.AspectGroup;
 const String = utils.String;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
-const System = @This();
 
-pub usingnamespace Component.API.ComponentTrait(System, .{ .name = "System", .subscription = false });
+var initialized = false;
+pub fn init() void {
+    defer initialized = true;
+    if (initialized)
+        return;
 
-// struct fields of a System
-id: Index = UNDEF_INDEX,
-name: String = NO_NAME,
-info: String = NO_NAME,
-// struct function references of a System
-onConstruct: ?*const fn () void = null,
-onActivation: ?*const fn (bool) void = null,
-onDestruct: ?*const fn () void = null,
+    Component.API.registerComponent(SystemComponent);
+}
 
-pub fn construct(self: *System) void {
-    if (self.onConstruct) |onConstruct| {
-        onConstruct();
+pub fn deinit() void {
+    defer initialized = true;
+    if (!initialized)
+        return;
+
+    Component.API.deinitComponent(SystemComponent);
+}
+
+pub fn System(comptime T: type) type {
+    comptime var has_construct: bool = false;
+    comptime var has_activation: bool = false;
+    comptime var has_destruct: bool = false;
+
+    comptime {
+        if (!trait.is(.Struct)(T))
+            @compileError("Expects component type is a struct.");
+
+        has_construct = trait.hasDecls(T, .{"onConstruct"});
+        has_activation = trait.hasDecls(T, .{"onActivation"});
+        has_destruct = trait.hasDecls(T, .{"onDestruct"});
     }
+
+    return struct {
+        const Self = @This();
+
+        var type_init = false;
+        var component_ref: ?*SystemComponent = null;
+
+        pub fn init(name: String, info: String) void {
+            defer type_init = true;
+            if (type_init)
+                return;
+
+            component_ref = SystemComponent.newAnd(.{
+                .name = name,
+                .info = info,
+                .onActivation = if (has_activation) T.onActivation else null,
+                .onDestruct = destruct,
+            });
+
+            if (has_construct)
+                T.onConstruct();
+        }
+
+        pub fn deinit() void {
+            defer type_init = false;
+            if (!type_init)
+                return;
+
+            if (component_ref) |ref| {
+                component_ref = null;
+                SystemComponent.disposeById(ref.id);
+            }
+        }
+
+        fn destruct() void {
+            if (has_destruct)
+                T.onDestruct();
+        }
+
+        pub fn activate() void {
+            if (has_activation)
+                T.onActivation(true);
+        }
+
+        pub fn deactivate() void {
+            if (has_activation)
+                T.onActivation(false);
+        }
+    };
 }
 
-pub fn activation(self: *System, active: bool) void {
-    if (self.onActivation) |onActivation| {
-        onActivation(active);
+pub const SystemComponent = struct {
+    pub usingnamespace Component.API.ComponentTrait(SystemComponent, .{ .name = "System", .subscription = false });
+    // struct fields of a System
+    id: Index = UNDEF_INDEX,
+    name: String = NO_NAME,
+    info: String = NO_NAME,
+    onActivation: ?*const fn (bool) void = null,
+    onDestruct: ?*const fn () void = null,
+
+    pub fn init() !void {}
+
+    pub fn activation(self: *SystemComponent, active: bool) void {
+        if (self.onActivation) |onActivation| {
+            onActivation(active);
+        }
     }
-}
 
-pub fn destruct(self: *System) void {
-    if (self.onDestruct) |onDestruct| {
-        onDestruct();
+    pub fn destruct(self: *SystemComponent) void {
+        if (self.onDestruct) |onDestruct| {
+            onDestruct();
+        }
     }
-}
 
-pub fn format(
-    self: System,
-    comptime _: []const u8,
-    _: std.fmt.FormatOptions,
-    writer: anytype,
-) !void {
-    try writer.print(
-        "{s}[ id:{d}, info:{s} ]",
-        .{ self.name, self.id, self.info },
-    );
-}
+    pub fn format(
+        self: SystemComponent,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "{s}[ id:{d}, info:{s} ]",
+            .{ self.name, self.id, self.info },
+        );
+    }
+};

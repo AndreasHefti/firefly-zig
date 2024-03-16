@@ -140,6 +140,9 @@ pub const EntityComponent = struct {
     }
 
     fn activateEntityComponents(entity: *Entity, active: bool) void {
+        if (!initialized)
+            return;
+
         for (0..ENTITY_KIND_ASP_GROUP._size) |i| {
             var aspect = &ENTITY_KIND_ASP_GROUP.aspects[i];
             if (entity.kind.hasAspect(aspect)) {

@@ -48,7 +48,7 @@ pub const Component = component;
 pub const ComponentEvent = component.ComponentEvent;
 pub const ComponentActionType = component.ActionType;
 pub const ComponentListener = component.ComponentListener;
-pub const System = system;
+pub const System = system.System;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
@@ -91,11 +91,11 @@ pub fn init(
     try Component.init();
     Timer.init();
     try asset.init();
+    system.init();
 
     // register api based components and entity components
-
     Component.API.registerComponent(Entity);
-    Component.API.registerComponent(System);
+    Component.API.registerComponent(system.SystemComponent);
 }
 
 pub fn deinit() void {
@@ -103,6 +103,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    system.deinit();
     asset.deinit();
     Component.deinit();
     rendering.deinit();
