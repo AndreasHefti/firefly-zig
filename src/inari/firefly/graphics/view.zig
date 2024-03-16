@@ -14,7 +14,7 @@ const Aspect = utils.Aspect;
 const String = utils.String;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
-const RenderTextureData = api.RenderTextureData;
+const RenderTextureBinding = api.RenderTextureBinding;
 const Vector2f = utils.Vector2f;
 const DynArray = utils.DynArray;
 const ActionType = Component.ActionType;
@@ -47,8 +47,8 @@ pub fn init() !void {
     EntityComponent.registerEntityComponent(ETransform);
     EntityComponent.registerEntityComponent(EMultiplier);
     System(ViewRenderer).init(
-        "SimpleSpriteRenderer",
-        "Render Entities with ETransform and ESprite components",
+        "ViewRenderer",
+        "Emits ViewRenderEvent in order of active Views and its Layers",
     );
     System(ViewRenderer).activate();
 }
@@ -144,13 +144,16 @@ pub const View = struct {
     // struct fields
     id: Index = UNDEF_INDEX,
     name: String = NO_NAME,
+    width: c_int,
+    height: c_int,
     /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
     camera_position: Vector2f = Vector2f{ 0, 0 },
     order: u8 = undefined,
     render_data: RenderData = RenderData{},
     transform: TransformData = TransformData{},
     projection: Projection = Projection{},
-    render_texture: RenderTextureData = RenderTextureData{},
+
+    render_texture_binding: ?RenderTextureBinding = null,
     shader_binding: BindingId = NO_BINDING,
     ordered_active_layer: ?DynArray(Index) = null,
 
@@ -197,7 +200,7 @@ pub const View = struct {
 
         addViewMapping(view);
 
-        api.rendering.createRenderTexture(&view.render_texture);
+        view.render_texture_binding = api.rendering.createRenderTexture(view.width, view.height);
     }
 
     fn deactivate(view: *View) void {
@@ -206,7 +209,10 @@ pub const View = struct {
             return; // screen, no render texture dispose needed
 
         removeViewMapping(view);
-        api.rendering.disposeRenderTexture(&view.render_texture);
+        if (view.render_texture_binding) |b| {
+            api.rendering.disposeRenderTexture(b.id);
+            view.render_texture_binding = null;
+        }
     }
 
     fn onLayerAction(event: Component.ComponentEvent) void {
@@ -450,12 +456,9 @@ pub const ViewRenderer = struct {
             // render all FBO as textures to the screen
             while (view_it.next()) |view_id| {
                 var view: *const View = View.byId(view_id.*);
-                api.rendering.renderTexture(
-                    view.render_texture.binding,
-                    &view.transform,
-                    &view.render_data,
-                    null,
-                );
+                if (view.render_texture_binding) |b| {
+                    api.rendering.renderTexture(b.id, &view.transform, &view.render_data, null);
+                }
             }
             // end rendering to screen
             api.rendering.endRendering();
@@ -463,37 +466,39 @@ pub const ViewRenderer = struct {
     }
 
     fn renderView(view: *const View) void {
-        // start rendering to view (FBO)
-        // set shader...
-        if (view.shader_binding != NO_BINDING)
-            api.rendering.setActiveShader(view.shader_binding);
-        // activate FBO
-        api.rendering.startRendering(view.render_texture.binding, &view.projection);
-        // emit render events for all layers of the view in order to render to FBO
-        if (view.ordered_active_layer != null) {
-            var it = view.ordered_active_layer.?.slots.nextSetBit(0);
-            while (it) |layer_id| {
-                var layer: *const Layer = Layer.byId(layer_id);
-                // apply layer shader to render engine if set
-                if (layer.shader_binding != NO_BINDING)
-                    api.rendering.setActiveShader(layer.shader_binding);
-                // add layer offset to render engine
-                api.rendering.addOffset(layer.offset);
-                // send layer render event
+        if (view.render_texture_binding) |b| {
+            // start rendering to view (FBO)
+            // set shader...
+            if (view.shader_binding != NO_BINDING)
+                api.rendering.setActiveShader(view.shader_binding);
+            // activate FBO
+            api.rendering.startRendering(b.id, &view.projection);
+            // emit render events for all layers of the view in order to render to FBO
+            if (view.ordered_active_layer != null) {
+                var it = view.ordered_active_layer.?.slots.nextSetBit(0);
+                while (it) |layer_id| {
+                    var layer: *const Layer = Layer.byId(layer_id);
+                    // apply layer shader to render engine if set
+                    if (layer.shader_binding != NO_BINDING)
+                        api.rendering.setActiveShader(layer.shader_binding);
+                    // add layer offset to render engine
+                    api.rendering.addOffset(layer.offset);
+                    // send layer render event
+                    VIEW_RENDER_EVENT.view_id = view.id;
+                    VIEW_RENDER_EVENT.layer_id = layer_id;
+                    VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
+                    // remove layer offset form render engine
+                    api.rendering.addOffset(layer.offset * @as(Vector2f, @splat(-1)));
+                    it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
+                }
+            } else {
+                // we have no layer so only one render call for this view
                 VIEW_RENDER_EVENT.view_id = view.id;
-                VIEW_RENDER_EVENT.layer_id = layer_id;
+                VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
                 VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
-                // remove layer offset form render engine
-                api.rendering.addOffset(layer.offset * @as(Vector2f, @splat(-1)));
-                it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
             }
-        } else {
-            // we have no layer so only one render call for this view
-            VIEW_RENDER_EVENT.view_id = view.id;
-            VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
-            VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
+            // end rendering to FBO
+            api.rendering.endRendering();
         }
-        // end rendering to FBO
-        api.rendering.endRendering();
     }
 };

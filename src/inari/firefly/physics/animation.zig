@@ -40,8 +40,8 @@ pub fn init() void {
 
     IndexFrame.init();
     System(AnimationIntegration).init(
-        "SimpleSpriteRenderer",
-        "Render Entities with ETransform and ESprite components",
+        "AnimationIntegration",
+        "Updates all active animations",
     );
     System(AnimationIntegration).activate();
     AnimationIntegration.registerAnimationType(EasedValueIntegration);

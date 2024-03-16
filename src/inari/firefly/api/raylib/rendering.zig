@@ -15,14 +15,14 @@ const TextureBinding = api.TextureBinding;
 const TransformData = api.TransformData;
 const TextureFilter = api.TextureFilter;
 const TextureWrap = api.TextureWrap;
-const ShaderData = api.ShaderData;
 const SpriteData = api.SpriteData;
-const RenderTextureData = api.RenderTextureData;
+const RenderTextureBinding = api.RenderTextureBinding;
 const Projection = api.Projection;
 const BindingId = api.BindingId;
 const DynArray = utils.DynArray;
 const StringBuffer = utils.StringBuffer;
 const CUInt = utils.CUInt;
+const CInt = utils.CInt;
 const Float = utils.Float;
 const NO_BINDING = api.NO_BINDING;
 
@@ -160,47 +160,54 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn createRenderTexture(td: *RenderTextureData) void {
-        var tex = rl.LoadRenderTexture(td.width, td.height);
-        td.binding = render_textures.add(tex);
+    fn createRenderTexture(width: CInt, height: CInt) RenderTextureBinding {
+        var tex = rl.LoadRenderTexture(width, height);
+        var id = render_textures.add(tex);
+        return RenderTextureBinding{
+            .id = id,
+            .width = width,
+            .height = height,
+        };
     }
 
-    fn disposeRenderTexture(td: *RenderTextureData) void {
-        if (td.binding == NO_BINDING)
+    fn disposeRenderTexture(id: BindingId) void {
+        if (id == NO_BINDING)
             return;
 
-        if (render_textures.get(td.binding)) |tex| {
+        if (render_textures.get(id)) |tex| {
             rl.UnloadRenderTexture(tex.*);
-            render_textures.delete(td.binding);
-            td.binding = NO_BINDING;
+            render_textures.delete(id);
         }
     }
 
-    fn createShader(sd: *ShaderData) void {
+    fn createShader(
+        vertex_shader: String,
+        fragment_shade: String,
+        file: bool,
+    ) BindingId {
         var shader: Shader = undefined;
-        if (sd.file_resource) {
+        if (file) {
             shader = rl.LoadShader(
-                @ptrCast(sd.vertex_shader_resource),
-                @ptrCast(sd.fragment_shader_resource),
+                @ptrCast(vertex_shader),
+                @ptrCast(fragment_shade),
             );
         } else {
             shader = rl.LoadShaderFromMemory(
-                @ptrCast(sd.vertex_shader_resource),
-                @ptrCast(sd.fragment_shader_resource),
+                @ptrCast(vertex_shader),
+                @ptrCast(fragment_shade),
             );
         }
 
-        sd.binding = shaders.add(shader);
+        return shaders.add(shader);
     }
 
-    fn disposeShader(sd: *ShaderData) void {
-        if (sd.binding == NO_BINDING)
+    fn disposeShader(id: BindingId) void {
+        if (id == NO_BINDING)
             return;
 
-        if (shaders.get(sd.binding)) |shader| {
+        if (shaders.get(id)) |shader| {
             rl.UnloadShader(shader.*);
-            shaders.delete(sd.binding);
-            sd.binding = NO_BINDING;
+            shaders.delete(id);
         }
     }
 

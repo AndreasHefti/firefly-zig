@@ -12,8 +12,7 @@ const NO_BINDING = api.NO_BINDING;
 const TextureBinding = api.TextureBinding;
 const TextureFilter = api.TextureFilter;
 const TextureWrap = api.TextureWrap;
-const RenderTextureData = api.RenderTextureData;
-const ShaderData = api.ShaderData;
+const RenderTextureBinding = api.RenderTextureBinding;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const SpriteData = api.SpriteData;
@@ -73,9 +72,27 @@ pub const DebugRenderAPI = struct {
             }
         }
     };
+    const ShaderData = struct {
+        binding: BindingId,
+        vertex_shader: String,
+        fragment_shader: String,
+        file: bool = true,
+
+        pub fn format(
+            self: ShaderData,
+            comptime _: []const u8,
+            _: std.fmt.FormatOptions,
+            writer: anytype,
+        ) !void {
+            try writer.print(
+                "ShaderData[ binding:{d}, vert:{s}, frag:{s}, file_resource:{} ]",
+                self,
+            );
+        }
+    };
 
     var textures: DynArray(TextureBinding) = undefined;
-    var renderTextures: DynArray(RenderTextureData) = undefined;
+    var renderTextures: DynArray(RenderTextureBinding) = undefined;
     var shaders: DynArray(ShaderData) = undefined;
 
     var renderActionQueue: DynArray(RenderAction) = undefined;
@@ -92,7 +109,7 @@ pub const DebugRenderAPI = struct {
             return;
 
         textures = DynArray(TextureBinding).new(api.ALLOC) catch unreachable;
-        renderTextures = DynArray(RenderTextureData).new(api.ALLOC) catch unreachable;
+        renderTextures = DynArray(RenderTextureBinding).new(api.ALLOC) catch unreachable;
         shaders = DynArray(ShaderData).new(api.ALLOC) catch unreachable;
         renderActionQueue = DynArray(RenderAction).new(api.ALLOC) catch unreachable;
 
@@ -165,27 +182,38 @@ pub const DebugRenderAPI = struct {
         textures.delete(binding);
     }
 
-    pub fn createRenderTexture(textureData: *RenderTextureData) void {
-        textureData.binding = renderTextures.add(textureData.*);
-        if (renderTextures.get(textureData.binding)) |tex| tex.binding = textureData.binding;
+    pub fn createRenderTexture(width: CInt, height: CInt) RenderTextureBinding {
+        var binding = RenderTextureBinding{
+            .id = renderTextures.nextFreeSlot(),
+            .width = width,
+            .height = height,
+        };
+        _ = renderTextures.add(binding);
+        return binding;
     }
 
-    pub fn disposeRenderTexture(textureData: *RenderTextureData) void {
-        if (textureData.binding != NO_BINDING) {
-            renderTextures.delete(textureData.binding);
-            textureData.binding = NO_BINDING;
+    pub fn disposeRenderTexture(id: BindingId) void {
+        if (id != NO_BINDING) {
+            renderTextures.delete(id);
         }
     }
 
-    pub fn createShader(shaderData: *ShaderData) void {
-        shaderData.binding = shaders.add(shaderData.*);
-        if (shaders.get(shaderData.binding)) |s| s.binding = shaderData.binding;
+    fn createShader(
+        vertex_shader: String,
+        fragment_shader: String,
+        file: bool,
+    ) BindingId {
+        return shaders.add(ShaderData{
+            .binding = shaders.nextFreeSlot(),
+            .vertex_shader = vertex_shader,
+            .fragment_shader = fragment_shader,
+            .file = file,
+        });
     }
 
-    pub fn disposeShader(shaderData: *ShaderData) void {
-        if (shaderData.binding != NO_BINDING) {
-            shaders.delete(shaderData.binding);
-            shaderData.binding = NO_BINDING;
+    pub fn disposeShader(id: BindingId) void {
+        if (id != NO_BINDING) {
+            shaders.delete(id);
         }
     }
 
@@ -299,20 +327,17 @@ test "RenderAPI debug init" {
     try inari.firefly.initTesting();
     defer inari.firefly.deinit();
 
-    //var t1 = TextureData{ .resource = "t1" };
-    var t2 = RenderTextureData{};
     var sprite = SpriteData{};
     var transform = TransformData{};
     var renderData = RenderData{};
     transform.position[0] = 10;
     transform.position[1] = 100;
 
-    //try std.testing.expect(t1.binding == NO_BINDING);
     var tex_1_binding = api.rendering.loadTexture("t1", false, TextureFilter.TEXTURE_FILTER_POINT, TextureWrap.TEXTURE_WRAP_CLAMP);
     try std.testing.expect(tex_1_binding.id != NO_BINDING);
-    try std.testing.expect(t2.binding == NO_BINDING);
-    api.rendering.createRenderTexture(&t2);
-    try std.testing.expect(t2.binding != NO_BINDING);
+
+    var t2: RenderTextureBinding = api.rendering.createRenderTexture(10, 10);
+    try std.testing.expect(t2.id != NO_BINDING);
 
     sprite.texture_binding = tex_1_binding.id;
     api.rendering.renderSprite(&sprite, &transform, &renderData, null);
@@ -334,7 +359,7 @@ test "RenderAPI debug init" {
         \\ loaded textures:
         \\   TextureBinding[ id:0, width:1, height:1 ]
         \\ loaded render textures:
-        \\   RenderTextureData[ bind:0, w:0, h:0 ]
+        \\   RenderTextureBinding[ bind:0, w:10, h:10 ]
         \\ loaded shaders:
         \\ current state:
         \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]

@@ -3,9 +3,10 @@
 TODO:
 
   - Refactor System like Asset but for singletons DONE!
-  - Refactor Shader handling like Texture handling
+  - Refactor Shader handling like Texture handling DONE!
+  - Test Viewport rendering (render to texture)
   - Reimplement Asset(Shader) and Asset(SpriteSet)
-  - Adapt old tests
+  - Adapt old tests DONE!
   - Go on with porting from FlyKo
 
 Example Code:

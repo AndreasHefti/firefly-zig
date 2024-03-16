@@ -262,24 +262,6 @@ pub const TextureWrap = enum(CInt) {
     TEXTURE_WRAP_MIRROR_CLAMP = 3, // Mirrors and clamps to border the texture in tiled mode
 };
 
-pub const TextureBinding = struct {
-    id: BindingId = NO_BINDING,
-    width: CInt = 0,
-    height: CInt = 0,
-
-    pub fn format(
-        self: TextureBinding,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "TextureBinding[ id:{any}, width:{any}, height:{any} ]",
-            self,
-        );
-    }
-};
-
 pub const Projection = struct {
     clear_color: ?Color = .{ 0, 0, 0, 255 },
     offset: PosF = .{ 0, 0 },
@@ -300,51 +282,71 @@ pub const Projection = struct {
     }
 };
 
-pub const RenderTextureData = struct {
-    binding: BindingId = NO_BINDING,
+pub const TextureBinding = struct {
+    id: BindingId = NO_BINDING,
     width: CInt = 0,
     height: CInt = 0,
 
     pub fn format(
-        self: RenderTextureData,
+        self: TextureBinding,
         comptime _: []const u8,
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
         try writer.print(
-            "RenderTextureData[ bind:{d}, w:{d}, h:{d} ]",
+            "TextureBinding[ id:{any}, width:{any}, height:{any} ]",
             self,
         );
     }
 };
 
-pub const ShaderUpdate = struct {
-    setUniformFloat: *const fn (String, Float) void = undefined,
-    setUniformVec2: *const fn (String, *Vector2f) void = undefined,
-    setUniformVec3: *const fn (String, *Vector3f) void = undefined,
-    setUniformColorVec4: *const fn (String, *Vector4f) void = undefined,
-    bindTexture: *const fn (String, BindingId) void = undefined,
-};
-
-pub const ShaderData = struct {
-    binding: BindingId = NO_BINDING,
-    vertex_shader_resource: String = NO_NAME,
-    fragment_shader_resource: String = NO_NAME,
-    file_resource: bool = true,
-    shader_update: ShaderUpdate = undefined,
+pub const RenderTextureBinding = struct {
+    id: BindingId = NO_BINDING,
+    width: CInt = 0,
+    height: CInt = 0,
 
     pub fn format(
-        self: ShaderData,
+        self: RenderTextureBinding,
         comptime _: []const u8,
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
         try writer.print(
-            "ShaderData[ binding:{d}, vert:{s}, frag:{s}, file_resource:{} ]",
-            .{ self.binding, self.vertex_shader_resource, self.fragment_shader_resource, self.file_resource },
+            "RenderTextureBinding[ bind:{d}, w:{d}, h:{d} ]",
+            self,
         );
     }
 };
+
+//
+// pub const ShaderBinding = struct {
+//     id: BindingId = NO_BINDING,
+//     setUniformFloat: *const fn (String, Float) void = undefined,
+//     setUniformVec2: *const fn (String, *Vector2f) void = undefined,
+//     setUniformVec3: *const fn (String, *Vector3f) void = undefined,
+//     setUniformColorVec4: *const fn (String, *Vector4f) void = undefined,
+//     bindTexture: *const fn (String, BindingId) void = undefined,
+// };
+
+// pub const ShaderData = struct {
+
+//     vertex_shader_resource: String = NO_NAME,
+//     fragment_shader_resource: String = NO_NAME,
+//     file_resource: bool = true,
+//     shader_update: ShaderUpdate = undefined,
+
+//     pub fn format(
+//         self: ShaderData,
+//         comptime _: []const u8,
+//         _: std.fmt.FormatOptions,
+//         writer: anytype,
+//     ) !void {
+//         try writer.print(
+//             "ShaderData[ binding:{d}, vert:{s}, frag:{s}, file_resource:{} ]",
+//             .{ self.binding, self.vertex_shader_resource, self.fragment_shader_resource, self.file_resource },
+//         );
+//     }
+// };
 
 pub const TransformData = struct {
     position: PosF = .{ 0, 0 },
@@ -512,26 +514,48 @@ pub fn IRenderAPI() type {
         ) TextureBinding = undefined,
         /// Disposes the texture with given texture binding id from GPU memory
         /// @param textureId binding identifier of the texture to dispose.
-        disposeTexture: *const fn (binding: BindingId) void = undefined,
+        disposeTexture: *const fn (BindingId) void = undefined,
 
-        createRenderTexture: *const fn (*RenderTextureData) void = undefined,
-        disposeRenderTexture: *const fn (*RenderTextureData) void = undefined,
+        createRenderTexture: *const fn (width: CInt, height: CInt) RenderTextureBinding = undefined,
+        disposeRenderTexture: *const fn (BindingId) void = undefined,
         /// create new shader from given shader data and load it to GPU
-        createShader: *const fn (*ShaderData) void = undefined,
+        createShader: *const fn (
+            vertex_shader: String,
+            fragment_shade: String,
+            file: bool,
+        ) BindingId = undefined,
         /// Dispose the shader with the given binding identifier (shaderId) from GPU
         /// @param shaderId identifier of the shader to dispose.
-        disposeShader: *const fn (*ShaderData) void = undefined,
-        /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
-        /// Uses Projection to update camera projection and clear target before start rendering
-        startRendering: *const fn (?BindingId, ?*const Projection) void = undefined,
+        disposeShader: *const fn (BindingId) void = undefined,
         /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
         /// @param shaderId The instance identifier of the shader.
         setActiveShader: *const fn (BindingId) void = undefined,
+
+        // TODO example: https://www.raylib.com/examples/shaders/loader.html?name=shaders_julia_set
+        // setUniformFloat: *const fn (String, Float) void = undefined,
+        // setUniformVec2: *const fn (String, *Vector2f) void = undefined,
+        // setUniformVec3: *const fn (String, *Vector3f) void = undefined,
+        // setUniformColorVec4: *const fn (String, *Vector4f) void = undefined,
+
+        bindTexture: *const fn (String, BindingId) void = undefined,
+        /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
+        /// Uses Projection to update camera projection and clear target before start rendering
+        startRendering: *const fn (texture: ?BindingId, projection: ?*const Projection) void = undefined,
         /// This renders a given RenderTextureData (BindingId) to the actual render target that can be
         /// rendering texture or the screen
-        renderTexture: *const fn (BindingId, *const TransformData, ?*const RenderData, ?Vector2f) void = undefined,
+        renderTexture: *const fn (
+            texture: BindingId,
+            transform: *const TransformData,
+            render_data: ?*const RenderData,
+            offset: ?Vector2f,
+        ) void = undefined,
         // TODO
-        renderSprite: *const fn (*const SpriteData, *const TransformData, ?*const RenderData, ?Vector2f) void = undefined,
+        renderSprite: *const fn (
+            sprite: *const SpriteData,
+            transform: *const TransformData,
+            render_data: ?*const RenderData,
+            offset: ?Vector2f,
+        ) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
         /// switches back to screen rendering
         endRendering: *const fn () void = undefined,

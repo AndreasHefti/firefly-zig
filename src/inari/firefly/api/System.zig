@@ -80,13 +80,11 @@ pub fn System(comptime T: type) type {
         }
 
         pub fn activate() void {
-            if (has_activation)
-                T.onActivation(true);
+            if (component_ref) |c| SystemComponent.activateById(c.id, true);
         }
 
         pub fn deactivate() void {
-            if (has_activation)
-                T.onActivation(false);
+            if (component_ref) |c| SystemComponent.activateById(c.id, false);
         }
     };
 }

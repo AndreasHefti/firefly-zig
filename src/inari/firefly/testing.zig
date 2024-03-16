@@ -47,8 +47,8 @@ test "Firefly init" {
     var output: utils.String =
         \\Aspects:
         \\  Group[COMPONENT_ASPECT_GROUP|0]:
-        \\    Aspect[Entity|0]
-        \\    Aspect[System|1]
+        \\    Aspect[System|0]
+        \\    Aspect[Entity|1]
         \\    Aspect[Asset:Texture|2]
         \\    Aspect[Layer|3]
         \\    Aspect[View|4]
@@ -62,11 +62,11 @@ test "Firefly init" {
         \\    Aspect[EAnimation|3]
         \\
         \\Components:
-        \\  Entity size: 0
         \\  System size: 3
         \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
-        \\    (a) AnimationSystem [ id:2, info:Updates all active animations ]
+        \\    (a) AnimationIntegration[ id:2, info:Updates all active animations ]
+        \\  Entity size: 0
         \\  Asset:Texture size: 0
         \\  Layer size: 0
         \\  View size: 0
@@ -356,7 +356,7 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\  System size: 3
         \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
-        \\    (a) AnimationSystem [ id:2, info:Updates all active animations ]
+        \\    (a) AnimationIntegration[ id:2, info:Updates all active animations ]
         \\  Asset:Texture size: 1
         \\    (a) Asset(Texture)[0|TestTexture| resource_id=0, parent_asset_id=18446744073709551615 ]
         \\  Layer size: 0
