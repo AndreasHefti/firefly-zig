@@ -516,14 +516,13 @@ pub fn IRenderAPI() type {
         renderTexture: *const fn (
             texture: BindingId,
             transform: *const TransformData,
-            render_data: ?*const RenderData,
-            offset: ?Vector2f,
+            render_data: ?RenderData,
         ) void = undefined,
         // TODO
         renderSprite: *const fn (
             sprite: *const SpriteData,
             transform: *const TransformData,
-            render_data: ?*const RenderData,
+            render_data: ?RenderData,
             offset: ?Vector2f,
         ) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).

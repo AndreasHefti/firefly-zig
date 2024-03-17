@@ -101,7 +101,7 @@ pub const DebugRenderAPI = struct {
     var currentRenderTexture: ?BindingId = null;
     var currentShader: ?BindingId = null;
     var currentOffset: Vector2f = defaultOffset;
-    var currentRenderData: *const RenderData = &defaultRenderData;
+    var currentRenderData: RenderData = defaultRenderData;
 
     fn initImpl(interface: *IRenderAPI()) void {
         defer initialized = true;
@@ -136,7 +136,7 @@ pub const DebugRenderAPI = struct {
         DebugRenderAPI.currentRenderTexture = null;
         DebugRenderAPI.currentShader = null;
         DebugRenderAPI.currentOffset = defaultOffset;
-        DebugRenderAPI.currentRenderData = &defaultRenderData;
+        DebugRenderAPI.currentRenderData = defaultRenderData;
     }
 
     fn deinit() void {
@@ -246,8 +246,7 @@ pub const DebugRenderAPI = struct {
     pub fn renderTexture(
         textureId: BindingId,
         transform: *const TransformData,
-        renderData: ?*const RenderData,
-        offset: ?Vector2f,
+        renderData: ?RenderData,
     ) void {
         if (renderData) |rd| {
             currentRenderData = rd;
@@ -255,15 +254,15 @@ pub const DebugRenderAPI = struct {
         _ = renderActionQueue.add(RenderAction{
             .render_texture = textureId,
             .transform = transform.*,
-            .render = if (renderData) |sd| sd.* else null,
-            .offset = offset,
+            .render = if (renderData) |sd| sd else null,
+            .offset = null,
         });
     }
 
     pub fn renderSprite(
         spriteData: *const SpriteData,
         transform: *const TransformData,
-        renderData: ?*const RenderData,
+        renderData: ?RenderData,
         offset: ?Vector2f,
     ) void {
         if (renderData) |rd| {
@@ -272,7 +271,7 @@ pub const DebugRenderAPI = struct {
         _ = renderActionQueue.add(RenderAction{
             .render_sprite = spriteData.*,
             .transform = transform.*,
-            .render = if (renderData) |sd| sd.* else null,
+            .render = if (renderData) |sd| sd else null,
             .offset = offset,
         });
     }

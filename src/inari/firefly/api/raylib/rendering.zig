@@ -48,6 +48,8 @@ const RaylibRenderAPI = struct {
 
         active_offset = default_offset;
         active_blend_mode = default_blend_mode;
+        active_tint_color = default_tint_color;
+        active_clear_color = default_clear_color;
 
         textures = DynArray(Texture2D).new(api.ALLOC) catch unreachable;
         render_textures = DynArray(RenderTexture2D).new(api.ALLOC) catch unreachable;
@@ -88,23 +90,25 @@ const RaylibRenderAPI = struct {
         singleton = null;
     }
 
+    const default_offset = Vector2f{ 0, 0 };
+    const default_tint_color = rl.Color{ .r = 255, .g = 255, .b = 255, .a = 255 };
+    const default_clear_color = rl.Color{ .r = 0, .g = 0, .b = 0, .a = 255 };
+    const default_render_data = RenderData{};
+
+    const default_blend_mode = BlendMode.ALPHA;
+
     var window_handle: ?api.WindowHandle = null;
-
-    var default_offset = Vector2f{ 0, 0 };
-    var default_render_data = RenderData{};
-    var default_projection = Projection{};
-    var default_blend_mode = BlendMode.ALPHA;
-
     var textures: DynArray(Texture2D) = undefined;
     var render_textures: DynArray(RenderTexture2D) = undefined;
     var shaders: DynArray(Shader) = undefined;
 
+    var base_projection = Projection{};
+
     var active_shader: ?BindingId = null;
     var active_render_texture: ?BindingId = null;
-    //var active_projection: Projection = undefined;
     var active_offset: Vector2f = undefined;
-    var active_tint_color: rl.Color = rl.Color{ .r = 0, .g = 0, .b = 0, .a = 255 };
-    var active_clear_color: ?rl.Color = rl.Color{ .r = 0, .g = 0, .b = 0, .a = 255 };
+    var active_tint_color: rl.Color = undefined;
+    var active_clear_color: ?rl.Color = undefined;
     var active_blend_mode: BlendMode = undefined;
     var active_camera = rl.Camera2D{
         .offset = rl.Vector2{ .x = 0, .y = 0 },
@@ -126,7 +130,7 @@ const RaylibRenderAPI = struct {
     }
 
     fn setBaseProjection(projection: Projection) void {
-        default_projection = projection;
+        base_projection = projection;
     }
 
     fn loadTexture(
@@ -233,11 +237,11 @@ const RaylibRenderAPI = struct {
             active_camera.zoom = p.zoom;
             active_clear_color = if (p.clear_color != null) @bitCast(p.clear_color.?) else null;
         } else {
-            active_camera.offset = @bitCast(default_projection.offset);
-            active_camera.target = @bitCast(default_projection.pivot);
-            active_camera.rotation = default_projection.rotation;
-            active_camera.zoom = default_projection.zoom;
-            active_clear_color = if (default_projection.clear_color != null) @bitCast(default_projection.clear_color.?) else null;
+            active_camera.offset = @bitCast(base_projection.offset);
+            active_camera.target = @bitCast(base_projection.pivot);
+            active_camera.rotation = base_projection.rotation;
+            active_camera.zoom = base_projection.zoom;
+            active_clear_color = if (base_projection.clear_color != null) @bitCast(base_projection.clear_color.?) else null;
         }
 
         if (active_render_texture) |tex_id| {
@@ -261,23 +265,15 @@ const RaylibRenderAPI = struct {
     fn renderTexture(
         binding_id: BindingId,
         transform: *const TransformData,
-        render_data: ?*const RenderData,
-        offset: ?Vector2f,
+        render_data: ?RenderData,
     ) void {
         if (render_textures.get(binding_id)) |tex| {
 
-            // set offset
-            if (offset) |o|
-                active_offset += o;
-            active_offset += transform.position;
-
-            // set render data
+            // set blend mode
             if (render_data) |rd| {
-                active_tint_color = @bitCast(rd.tint_color);
-                if (active_blend_mode != rd.blend_mode) {
-                    rl.BeginBlendMode(@intFromEnum(active_blend_mode));
-                    active_blend_mode = rd.blend_mode;
-                }
+                rl.BeginBlendMode(@intFromEnum(rd.blend_mode));
+            } else {
+                rl.BeginBlendMode(@intFromEnum(active_blend_mode));
             }
 
             // set source rect
@@ -288,48 +284,43 @@ const RaylibRenderAPI = struct {
             temp_source_rect.height = @floatFromInt(-tex.texture.height);
             // set destination rect
             if (transform.scale[0] != 1 or transform.scale[1] != 1) {
-                temp_dest_rect.x = active_offset[0];
-                temp_dest_rect.y = active_offset[1];
+                temp_dest_rect.x = active_offset[0] + transform.position[0];
+                temp_dest_rect.y = active_offset[1] + transform.position[1];
                 temp_dest_rect.width = transform.scale[0] * @as(Float, @floatFromInt(tex.texture.width));
                 temp_dest_rect.height = transform.scale[1] * @as(Float, @floatFromInt(tex.texture.height));
                 temp_pivot = @bitCast(transform.pivot * transform.scale);
             } else {
-                temp_dest_rect.x = active_offset[0];
-                temp_dest_rect.y = active_offset[1];
+                temp_dest_rect.x = active_offset[0] + transform.position[0];
+                temp_dest_rect.y = active_offset[1] + transform.position[1];
                 temp_dest_rect.width = @floatFromInt(tex.texture.width);
                 temp_dest_rect.height = @floatFromInt(tex.texture.height);
                 temp_pivot = @bitCast(transform.pivot);
             }
 
-            //void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
-            rl.DrawTexturePro(tex.texture, temp_source_rect, temp_dest_rect, temp_pivot, transform.rotation, active_tint_color);
-
-            // reset offset
-            if (offset) |o|
-                active_offset -= o;
-            active_offset -= transform.position;
+            rl.DrawTexturePro(
+                tex.texture,
+                temp_source_rect,
+                temp_dest_rect,
+                temp_pivot,
+                transform.rotation,
+                if (render_data) |rd| @bitCast(rd.tint_color) else active_tint_color,
+            );
         }
     }
 
     fn renderSprite(
         sprite_data: *const SpriteData,
         transform: *const TransformData,
-        render_data: ?*const RenderData,
+        render_data: ?RenderData,
         offset: ?Vector2f,
     ) void {
         if (textures.get(sprite_data.texture_binding)) |tex| {
-            // set offset
-            if (offset) |o|
-                active_offset += o;
-            active_offset += transform.position;
 
-            // set render data
+            // set blend mode
             if (render_data) |rd| {
-                active_tint_color = @bitCast(rd.tint_color);
-                if (active_blend_mode != rd.blend_mode) {
-                    rl.BeginBlendMode(@intFromEnum(active_blend_mode));
-                    active_blend_mode = rd.blend_mode;
-                }
+                rl.BeginBlendMode(@intFromEnum(rd.blend_mode));
+            } else {
+                rl.BeginBlendMode(@intFromEnum(active_blend_mode));
             }
 
             // set source rect
@@ -340,27 +331,27 @@ const RaylibRenderAPI = struct {
             temp_source_rect.height = sprite_data.texture_bounds[3];
             // set destination rect
             if (transform.scale[0] != 1 or transform.scale[1] != 1) {
-                temp_dest_rect.x = active_offset[0]; // + (transform.pivot[0] * transform.scale[0]);
-                temp_dest_rect.y = active_offset[1]; // + (transform.pivot[1] * transform.scale[1]);
+                temp_dest_rect.x = active_offset[0] + transform.position[0] + if (offset) |o| o[0] else 0;
+                temp_dest_rect.y = active_offset[1] + transform.position[1] + if (offset) |o| o[1] else 0;
                 temp_dest_rect.width = sprite_data.texture_bounds[2] * transform.scale[0];
                 temp_dest_rect.height = sprite_data.texture_bounds[3] * transform.scale[1];
                 temp_pivot = @bitCast(transform.pivot * transform.scale);
             } else {
-                temp_dest_rect.x = active_offset[0];
-                temp_dest_rect.y = active_offset[1];
+                temp_dest_rect.x = active_offset[0] + transform.position[0] + if (offset) |o| o[0] else 0;
+                temp_dest_rect.y = active_offset[1] + transform.position[1] + if (offset) |o| o[1] else 0;
                 temp_dest_rect.width = sprite_data.texture_bounds[2];
                 temp_dest_rect.height = sprite_data.texture_bounds[3];
                 temp_pivot = @bitCast(transform.pivot);
             }
 
-            //void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
-            //std.log.info("***************** renderSprite: temp_source_rect {any} temp_dest_rect {any}", .{ temp_source_rect, temp_dest_rect });
-            rl.DrawTexturePro(tex.*, temp_source_rect, temp_dest_rect, temp_pivot, transform.rotation, active_tint_color);
-
-            // reset offset
-            if (offset) |o|
-                active_offset -= o;
-            active_offset -= transform.position;
+            rl.DrawTexturePro(
+                tex.*,
+                temp_source_rect,
+                temp_dest_rect,
+                temp_pivot,
+                transform.rotation,
+                if (render_data) |rd| @bitCast(rd.tint_color) else active_tint_color,
+            );
         }
     }
 
@@ -380,11 +371,11 @@ const RaylibRenderAPI = struct {
         buffer.append("Raylib Renderer:\n");
         buffer.print("  default_offset: {any}\n", .{default_offset});
         buffer.print("  default_render_data: {any}\n", .{default_render_data});
-        buffer.print("  default_projection: {any}\n", .{default_projection});
+        buffer.print("  default_projection: {any}\n", .{base_projection});
         buffer.print("  default_blend_mode: {any}\n\n", .{default_blend_mode});
 
         buffer.print("  textures: {any}\n", .{textures});
-        buffer.print("  render_textures: {any}\n", .{default_projection});
+        buffer.print("  render_textures: {any}\n", .{render_textures});
         buffer.print("  shaders: {any}\n\n", .{shaders});
 
         buffer.print("  active_camera: {any}\n", .{active_camera});

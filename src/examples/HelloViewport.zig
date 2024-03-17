@@ -9,6 +9,7 @@ const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const Allocator = std.mem.Allocator;
 const View = firefly.graphics.View;
+const BlendMode = firefly.api.BlendMode;
 
 pub fn run(allocator: Allocator) !void {
     try firefly.init(
@@ -27,7 +28,6 @@ fn loadWithView() void {
         .name = "TestView",
         .width = 200,
         .height = 200,
-        .camera_position = .{ 0, 0 },
         .order = 1,
         // transform is used when rendering the texture to the screen (or another texture)
         .transform = .{
@@ -36,13 +36,18 @@ fn loadWithView() void {
             .scale = .{ 1, 1 },
             .rotation = 0,
         },
+        // render_data that is used when rendering the texture to the screen (or another texture)
+        .render_data = .{
+            .tint_color = .{ 255, 255, 255, 150 },
+            .blend_mode = BlendMode.ALPHA,
+        },
         // projection is used when rendering to the texture.
         // Can be seen as the camera of the texture
         .projection = .{
             .clear_color = .{ 30, 30, 30, 255 },
             .offset = .{ -10, -10 },
             .pivot = .{ 0, 0 },
-            .zoom = 1,
+            .zoom = 2,
             .rotation = 0,
         },
     });

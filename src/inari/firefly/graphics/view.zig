@@ -145,9 +145,8 @@ pub const View = struct {
     width: c_int,
     height: c_int,
     /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
-    camera_position: Vector2f = Vector2f{ 0, 0 },
     order: u8 = undefined,
-    render_data: RenderData = RenderData{},
+    render_data: ?RenderData = null,
     transform: TransformData = TransformData{},
     projection: Projection = Projection{},
 
@@ -444,7 +443,7 @@ pub const ViewRenderer = struct {
             while (next) |id| {
                 var view: *View = View.byId(id);
                 if (view.render_texture_binding) |b| {
-                    api.rendering.renderTexture(b.id, &view.transform, &view.render_data, null);
+                    api.rendering.renderTexture(b.id, &view.transform, view.render_data);
                 }
                 next = View.ordered_active_views.slots.nextSetBit(id + 1);
             }

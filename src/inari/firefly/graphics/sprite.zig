@@ -171,13 +171,13 @@ pub const ESprite = struct {
 
     id: Index = UNDEF_INDEX,
     template_id: Index,
-    render_data: RenderData = .{},
-    offset: Vec2f = .{ 0, 0 },
+    render_data: ?RenderData = null,
+    offset: ?Vec2f = null,
 
     pub fn destruct(self: *ESprite) void {
         self.template_id = UNDEF_INDEX;
-        self.render_data = .{};
-        self.offset = .{ 0, 0 };
+        self.render_data = null;
+        self.offset = null;
     }
 };
 
@@ -363,7 +363,7 @@ const SimpleSpriteRenderer = struct {
                     api.rendering.renderSprite(
                         &SpriteTemplate.byId(es.template_id).sprite_data,
                         &ETransform.byId(id).transform,
-                        &es.render_data,
+                        es.render_data,
                         es.offset,
                     );
                 }
