@@ -254,8 +254,8 @@ pub const DebugRenderAPI = struct {
         _ = renderActionQueue.add(RenderAction{
             .render_texture = textureId,
             .transform = transform.*,
-            .render = if (renderData) |sd| sd else null,
-            .offset = null,
+            .render = if (renderData) |sd| sd else defaultRenderData,
+            .offset = defaultOffset,
         });
     }
 
@@ -271,8 +271,8 @@ pub const DebugRenderAPI = struct {
         _ = renderActionQueue.add(RenderAction{
             .render_sprite = spriteData.*,
             .transform = transform.*,
-            .render = if (renderData) |sd| sd else null,
-            .offset = offset,
+            .render = if (renderData) |sd| sd else defaultRenderData,
+            .offset = if (offset) |o| o else defaultOffset,
         });
     }
 
@@ -339,14 +339,14 @@ test "RenderAPI debug init" {
     try std.testing.expect(t2.id != NO_BINDING);
 
     sprite.texture_binding = tex_1_binding.id;
-    api.rendering.renderSprite(&sprite, &transform, &renderData, null);
+    api.rendering.renderSprite(&sprite, &transform, renderData, null);
 
     // test creating another DebugGraphics will get the same instance back
     var debugGraphics2 = try createTestRenderAPI();
     try std.testing.expectEqual(api.rendering, debugGraphics2);
     var offset = Vector2f{ 10, 10 };
     debugGraphics2.setOffset(offset);
-    debugGraphics2.renderSprite(&sprite, &transform, &renderData, offset);
+    debugGraphics2.renderSprite(&sprite, &transform, renderData, offset);
 
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
@@ -370,7 +370,7 @@ test "RenderAPI debug init" {
         \\   render SpriteData[ bind:0, bounds:{ 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00 } ] -->
         \\     TransformData[ pos:{ 1.0e+01, 1.0e+02 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
         \\     RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
-        \\     offset:null
+        \\     offset:{ 0.0e+00, 0.0e+00 }
         \\   render SpriteData[ bind:0, bounds:{ 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00 } ] -->
         \\     TransformData[ pos:{ 1.0e+01, 1.0e+02 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
         \\     RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ],

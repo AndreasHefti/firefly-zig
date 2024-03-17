@@ -35,7 +35,7 @@ test "TextureAsset init/deinit" {
 
     try std.testing.expectEqual(
         @as(String, "Texture"),
-        Texture.asset_type.name,
+        Texture.type_aspect.name,
     );
     //try std.testing.expect(TextureAsset.resourceSize() == 0);
 }
@@ -51,9 +51,9 @@ test "TextureAsset load/unload" {
     });
 
     try std.testing.expect(texture_asset.id != UNDEF_INDEX);
-    try std.testing.expect(texture_asset.getAssetType().index == Texture.asset_type.index);
+    try std.testing.expect(texture_asset.getAssetType().index == Texture.type_aspect.index);
     try std.testing.expect(texture_asset.resource_id != UNDEF_INDEX);
-    try std.testing.expectEqualStrings("TestTexture", texture_asset.name);
+    try std.testing.expectEqualStrings("TestTexture", texture_asset.name.?);
 
     var res: ?*Texture = texture_asset.getResource();
     try std.testing.expect(res != null);
@@ -152,7 +152,7 @@ test "TextureAsset dispose" {
     try std.testing.expect(res.?._binding == null); // not loaded yet
     // asset ref has been reset
     try std.testing.expect(texture_asset.id == UNDEF_INDEX);
-    try std.testing.expectEqualStrings(NO_NAME, texture_asset.name);
+    try std.testing.expect(texture_asset.name == null);
 }
 
 //////////////////////////////////////////////////////////////

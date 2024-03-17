@@ -85,7 +85,7 @@ const ExampleComponent = struct {
 
     // struct fields
     id: Index = UNDEF_INDEX,
-    name: String = NO_NAME,
+    name: ?String = null,
     color: Color = Color{ 0, 0, 0, 255 },
     position: PosF = PosF{ 0, 0 },
 
@@ -362,7 +362,7 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\  Layer size: 0
         \\  View size: 0
         \\  SpriteTemplate size: 1
-        \\    (x) SpriteTemplate[ id:0, name:, texture_name:TestTexture, SpriteData[ bind:0, bounds:{ 2.0e+01, 0.0e+00, -2.0e+01, 2.0e+01 } ] ]
+        \\    (x) SpriteTemplate[ id:0, name:null, texture_name:TestTexture, SpriteData[ bind:0, bounds:{ 2.0e+01, 0.0e+00, -2.0e+01, 2.0e+01 } ] ]
     ;
 
     api.Component.print(&sb);

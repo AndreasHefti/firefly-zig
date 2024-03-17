@@ -25,7 +25,7 @@ pub const Entity = struct {
     pub usingnamespace Component.API.ComponentTrait(Entity, .{ .name = "Entity" });
 
     id: Index = UNDEF_INDEX,
-    name: String = NO_NAME,
+    name: ?String = null,
     kind: Kind = undefined,
 
     pub fn init() !void {
@@ -90,7 +90,7 @@ pub const Entity = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "Entity[{d}|{s}|{any}]",
+            "Entity[{d}|{?s}|{any}]",
             .{ self.id, self.name, self.kind },
         );
     }

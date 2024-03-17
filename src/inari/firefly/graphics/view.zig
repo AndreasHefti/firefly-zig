@@ -141,7 +141,7 @@ pub const View = struct {
 
     // struct fields
     id: Index = UNDEF_INDEX,
-    name: String = NO_NAME,
+    name: ?String = null,
     width: c_int,
     height: c_int,
     /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
@@ -264,7 +264,7 @@ pub const Layer = struct {
 
     // struct fields
     id: Index = UNDEF_INDEX,
-    name: String = NO_NAME,
+    name: ?String = null,
     offset: Vector2f = Vector2f{ 0, 0 },
     order: u8 = 0,
     view_id: Index = UNDEF_INDEX,

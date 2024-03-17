@@ -335,9 +335,11 @@ pub fn ComponentPool(comptime T: type) type {
         if (!trait.is(.Struct)(T))
             @compileError("Expects component type is a struct.");
         if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
-            @compileError("Expects component type to have member named 'COMPONENT_TYPE_NAME' that defines a unique name of the component type.");
+            @compileError("Expects component type to have field: COMPONENT_TYPE_NAME: String, that defines a unique name of the component type.");
         if (!trait.hasField("id")(T))
-            @compileError("Expects component type to have field named id");
+            @compileError("Expects component type to have field: id: Index, that holds the index-id of the component");
+        if (has_name_mapping and !trait.hasField("name")(T))
+            @compileError("Expects component type to have field: name: String, that holds the name of the component");
 
         has_name_mapping = trait.hasField("name")(T);
         has_aspect = trait.hasDecls(T, .{"type_aspect"});
@@ -440,8 +442,11 @@ pub fn ComponentPool(comptime T: type) type {
                 result.id = id;
 
                 if (name_mapping) |*nm| {
-                    if (!utils.stringEquals(c.name, NO_NAME))
-                        nm.put(result.name, id) catch unreachable;
+                    if (result.name) |n| {
+                        if (nm.contains(n))
+                            @panic("Component name already exists");
+                        nm.put(n, id) catch unreachable;
+                    }
                 }
 
                 if (has_construct)
@@ -477,9 +482,9 @@ pub fn ComponentPool(comptime T: type) type {
                     val.destruct();
 
                 if (name_mapping) |*nm| {
-                    if (!std.mem.eql(u8, val.name, NO_NAME)) {
-                        _ = nm.remove(val.name);
-                        val.name = NO_NAME;
+                    if (val.name) |n| {
+                        _ = nm.remove(n);
+                        val.name = null;
                     }
                 }
 

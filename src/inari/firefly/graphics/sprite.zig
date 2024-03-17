@@ -89,8 +89,8 @@ pub const SpriteTemplate = struct {
     );
 
     id: Index = UNDEF_INDEX,
-    name: String = NO_NAME,
-    texture_name: String = NO_NAME,
+    name: ?String = null,
+    texture_name: String,
     sprite_data: SpriteData,
 
     pub fn init() !void {
@@ -103,7 +103,7 @@ pub const SpriteTemplate = struct {
 
     fn notifyAssetEvent(e: ComponentEvent) void {
         var asset: *Asset(Texture) = Asset(Texture).byId(e.c_id);
-        if (utils.stringEquals(asset.name, NO_NAME))
+        if (asset.name == null)
             return;
 
         switch (e.event_type) {
@@ -115,14 +115,18 @@ pub const SpriteTemplate = struct {
     }
 
     fn onTextureLoad(asset: *Asset(Texture)) void {
-        if (asset.getResource()._binding) |b| {
-            var next = SpriteTemplate.nextId(0);
-            while (next) |id| {
-                var template = SpriteTemplate.byId(id);
-                if (utils.stringEquals(template.texture_name, asset.name)) {
-                    template.sprite_data.texture_binding = b.id;
+        if (asset.getResource()) |r| {
+            if (r._binding) |b| {
+                var next = SpriteTemplate.nextId(0);
+                while (next) |id| {
+                    var template = SpriteTemplate.byId(id);
+                    if (asset.name) |an| {
+                        if (utils.stringEquals(template.texture_name, an)) {
+                            template.sprite_data.texture_binding = b.id;
+                        }
+                    }
+                    next = SpriteTemplate.nextId(id + 1);
                 }
-                next = SpriteTemplate.nextId(id + 1);
             }
         }
     }
@@ -131,8 +135,10 @@ pub const SpriteTemplate = struct {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
-            if (utils.stringEquals(template.texture_name, asset.name)) {
-                template.sprite_data.texture_binding = NO_BINDING;
+            if (asset.name) |an| {
+                if (utils.stringEquals(template.texture_name, an)) {
+                    template.sprite_data.texture_binding = NO_BINDING;
+                }
             }
             next = SpriteTemplate.nextId(id + 1);
         }
@@ -142,8 +148,10 @@ pub const SpriteTemplate = struct {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
-            if (utils.stringEquals(template.texture_name, asset.name)) {
-                SpriteTemplate.disposeById(id);
+            if (asset.name) |an| {
+                if (utils.stringEquals(template.texture_name, an)) {
+                    SpriteTemplate.disposeById(id);
+                }
             }
             next = SpriteTemplate.nextId(id + 1);
         }
@@ -156,7 +164,7 @@ pub const SpriteTemplate = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "SpriteTemplate[ id:{d}, name:{s}, texture_name:{s}, {any} ]",
+            "SpriteTemplate[ id:{d}, name:{any}, texture_name:{s}, {any} ]",
             self,
         );
     }
@@ -189,7 +197,7 @@ pub const ESprite = struct {
 //     pub var asset_type: *Aspect = undefined;
 
 //     pub const SpriteStamp = struct {
-//         name: String = NO_NAME,
+//         name: ?String = null,
 //         flip_x: bool = false,
 //         flip_y: bool = false,
 //         offset: Vec2f = Vec2f{ 0, 0 },

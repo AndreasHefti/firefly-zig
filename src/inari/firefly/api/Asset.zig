@@ -2,6 +2,7 @@ const std = @import("std");
 const inari = @import("../../inari.zig");
 const utils = inari.utils;
 const api = inari.firefly.api;
+const trait = std.meta.trait;
 
 const Component = api.Component;
 const AspectGroup = utils.AspectGroup;
@@ -31,7 +32,7 @@ pub fn deinit() void {
 pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
     return struct {
         pub const ASSET_TYPE_NAME = type_name;
-        pub var asset_type: *Aspect = undefined;
+        pub var type_aspect: *Aspect = undefined;
         pub fn loadByName(name: String) void {
             Asset(T).loadByName(name);
         }
@@ -51,6 +52,27 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
 }
 
 pub fn Asset(comptime T: type) type {
+    comptime var has_init = false;
+    comptime var has_deinit = false;
+
+    comptime {
+        if (!trait.is(.Struct)(T))
+            @compileError("Expects asset type is a struct.");
+        if (!trait.hasDecls(T, .{"ASSET_TYPE_NAME"}))
+            @compileError("Expects asset type to have field ASSET_TYPE_NAME: String that defines a unique name of the asset type.");
+        if (!trait.hasDecls(T, .{"type_aspect"}))
+            @compileError("Expects asset type to have field type_aspect: *Aspect, that defines the asset type aspect");
+        if (!trait.hasDecls(T, .{"doLoad"}))
+            @compileError("Expects asset type to have fn doLoad(asset: *Asset(T)) void, that loads the asset");
+        if (!trait.hasDecls(T, .{"doUnload"}))
+            @compileError("Expects asset type to have fn doUnload(asset: *Asset(T)) void, that unloads the asset");
+        if (!trait.hasFn("getResource")(T))
+            @compileError("Expects asset type to have fn getResource(asset_id: Index) ?*T, that gets the loaded asset resource");
+
+        has_init = trait.hasDecls(T, .{"init"});
+        has_deinit = trait.hasDecls(T, .{"deinit"});
+    }
+
     return struct {
         const Self = @This();
         var type_init = false;
@@ -59,7 +81,7 @@ pub fn Asset(comptime T: type) type {
 
         // struct fields
         id: Index = UNDEF_INDEX,
-        name: String = utils.NO_NAME,
+        name: ?String = null,
 
         resource_id: Index = UNDEF_INDEX,
         parent_asset_id: Index = UNDEF_INDEX,
@@ -69,8 +91,9 @@ pub fn Asset(comptime T: type) type {
             if (type_init)
                 return;
 
-            T.asset_type = ASSET_TYPE_ASPECT_GROUP.getAspect(T.ASSET_TYPE_NAME);
-            T.init();
+            T.type_aspect = ASSET_TYPE_ASPECT_GROUP.getAspect(T.ASSET_TYPE_NAME);
+            if (has_init)
+                T.init();
         }
 
         pub fn deinit() void {
@@ -78,19 +101,20 @@ pub fn Asset(comptime T: type) type {
             if (!type_init)
                 return;
 
-            T.deinit();
-            T.asset_type = undefined;
+            if (has_deinit)
+                T.deinit();
+            T.type_aspect = undefined;
         }
 
         pub fn getAssetType(_: *Self) *Aspect {
-            return T.asset_type;
+            return T.type_aspect;
         }
 
         pub fn activation(self: *Self, active: bool) void {
             if (active) {
-                T._load(self);
+                T.doLoad(self);
             } else {
-                T._unload(self);
+                T.doUnload(self);
             }
         }
 
@@ -124,8 +148,8 @@ pub fn Asset(comptime T: type) type {
             Self.activateById(self.id, false);
         }
 
-        pub fn getResource(self: *Self) *T {
-            return T._getResource(self.resource_id);
+        pub fn getResource(self: *Self) ?*T {
+            return T.getResource(self.resource_id);
         }
 
         pub fn format(
@@ -134,7 +158,7 @@ pub fn Asset(comptime T: type) type {
             _: std.fmt.FormatOptions,
             writer: anytype,
         ) !void {
-            try writer.print("Asset({s})[{d}|{s}| resource_id={d}, parent_asset_id={d} ]", .{
+            try writer.print("Asset({s})[{d}|{?s}| resource_id={d}, parent_asset_id={d} ]", .{
                 T.ASSET_TYPE_NAME,
                 self.id,
                 self.name,

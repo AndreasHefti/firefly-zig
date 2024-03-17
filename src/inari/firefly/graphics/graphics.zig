@@ -197,7 +197,7 @@ pub const Texture = struct {
     var textures: DynArray(Texture) = undefined;
     var type_init = false;
 
-    name: String = NO_NAME,
+    name: ?String = null,
     resource: String,
     is_mipmap: bool = false,
     filter: TextureFilter = TextureFilter.TEXTURE_FILTER_POINT,
@@ -236,7 +236,7 @@ pub const Texture = struct {
         });
     }
 
-    pub fn _load(asset: *Asset(Texture)) void {
+    pub fn doLoad(asset: *Asset(Texture)) void {
         if (!type_init) @panic("not initialized");
 
         if (textures.get(asset.resource_id)) |tex| {
@@ -252,7 +252,7 @@ pub const Texture = struct {
         }
     }
 
-    pub fn _unload(asset: *Asset(Texture)) void {
+    pub fn doUnload(asset: *Asset(Texture)) void {
         if (!type_init) @panic("not initialized");
 
         if (asset.resource_id == UNDEF_INDEX)
@@ -265,9 +265,10 @@ pub const Texture = struct {
         }
     }
 
-    pub fn _getResource(asset_id: Index) *Texture {
-        if (!type_init) @panic("not initialized");
+    pub fn getResource(asset_id: Index) ?*Texture {
+        if (!type_init)
+            return null;
 
-        return textures.get(Asset(Texture).byId(asset_id).resource_id).?;
+        return textures.get(Asset(Texture).byId(asset_id).resource_id);
     }
 };

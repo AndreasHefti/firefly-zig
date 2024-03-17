@@ -63,7 +63,7 @@ pub fn deinit() void {
 
 pub const IAnimation = struct {
     id: Index = UNDEF_INDEX,
-    name: String = NO_NAME,
+    name: ?String = null,
 
     animation: *anyopaque = undefined,
 

@@ -93,7 +93,7 @@ pub const SystemComponent = struct {
     pub usingnamespace Component.API.ComponentTrait(SystemComponent, .{ .name = "System", .subscription = false });
     // struct fields of a System
     id: Index = UNDEF_INDEX,
-    name: String = NO_NAME,
+    name: ?String = null,
     info: String = NO_NAME,
     onActivation: ?*const fn (bool) void = null,
     onDestruct: ?*const fn () void = null,
@@ -119,7 +119,7 @@ pub const SystemComponent = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "{s}[ id:{d}, info:{s} ]",
+            "{?s}[ id:{d}, info:{s} ]",
             .{ self.name, self.id, self.info },
         );
     }
