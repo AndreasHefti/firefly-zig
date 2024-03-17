@@ -459,7 +459,7 @@ pub fn ComponentPool(comptime T: type) type {
             notify(if (a) ActionType.ACTIVATED else ActionType.DEACTIVATING, id);
         }
 
-        fn clearAll() void {
+        pub fn clearAll() void {
             var i: Index = 0;
             while (items.slots.nextSetBit(i)) |next| {
                 clear(next);

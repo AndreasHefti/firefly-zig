@@ -318,36 +318,6 @@ pub const RenderTextureBinding = struct {
     }
 };
 
-//
-// pub const ShaderBinding = struct {
-//     id: BindingId = NO_BINDING,
-//     setUniformFloat: *const fn (String, Float) void = undefined,
-//     setUniformVec2: *const fn (String, *Vector2f) void = undefined,
-//     setUniformVec3: *const fn (String, *Vector3f) void = undefined,
-//     setUniformColorVec4: *const fn (String, *Vector4f) void = undefined,
-//     bindTexture: *const fn (String, BindingId) void = undefined,
-// };
-
-// pub const ShaderData = struct {
-
-//     vertex_shader_resource: String = NO_NAME,
-//     fragment_shader_resource: String = NO_NAME,
-//     file_resource: bool = true,
-//     shader_update: ShaderUpdate = undefined,
-
-//     pub fn format(
-//         self: ShaderData,
-//         comptime _: []const u8,
-//         _: std.fmt.FormatOptions,
-//         writer: anytype,
-//     ) !void {
-//         try writer.print(
-//             "ShaderData[ binding:{d}, vert:{s}, frag:{s}, file_resource:{} ]",
-//             .{ self.binding, self.vertex_shader_resource, self.fragment_shader_resource, self.file_resource },
-//         );
-//     }
-// };
-
 pub const TransformData = struct {
     position: PosF = .{ 0, 0 },
     pivot: PosF = .{ 0, 0 },

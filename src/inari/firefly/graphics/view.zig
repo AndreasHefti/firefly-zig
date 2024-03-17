@@ -58,7 +58,6 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    View.deinit();
     System(ViewRenderer).deinit();
 }
 
@@ -98,10 +97,9 @@ pub const ViewLayerMapping = struct {
         if (view_id == UNDEF_INDEX) {
             return &self.undef_mapping;
         }
-        if (self.mapping.get(view_id)) |lmap| {
-            if (layer_id != UNDEF_INDEX) {
-                if (lmap.get(layer_id)) |m| return m;
-            }
+        var l_id = if (layer_id == UNDEF_INDEX) 0 else layer_id;
+        if (self.mapping.get(view_id)) |l_map| {
+            if (l_map.get(l_id)) |m| return m;
         }
         return null;
     }
@@ -184,34 +182,23 @@ pub const View = struct {
         return self;
     }
 
-    pub fn onActivation(id: Index, active: bool) void {
-        var view: *View = View.get(id);
-        Component.checkValid(view);
+    pub fn activation(view: *View, active: bool) void {
         if (active) {
-            activate(view);
+            if (view.order == 0)
+                return; // screen, no render texture load needed
+
+            addViewMapping(view);
+            view.render_texture_binding = api.rendering.createRenderTexture(view.width, view.height);
         } else {
-            deactivate(view);
-        }
-    }
+            // dispose render texture for this view and cancel binding
+            if (view.order == 0)
+                return; // screen, no render texture dispose needed
 
-    fn activate(view: *View) void {
-        if (view.order == 0)
-            return; // screen, no render texture load needed
-
-        addViewMapping(view);
-
-        view.render_texture_binding = api.rendering.createRenderTexture(view.width, view.height);
-    }
-
-    fn deactivate(view: *View) void {
-        // dispose render texture for this view and cancel binding
-        if (view.order == 0)
-            return; // screen, no render texture dispose needed
-
-        removeViewMapping(view);
-        if (view.render_texture_binding) |b| {
-            api.rendering.disposeRenderTexture(b.id);
-            view.render_texture_binding = null;
+            removeViewMapping(view);
+            if (view.render_texture_binding) |b| {
+                api.rendering.disposeRenderTexture(b.id);
+                view.render_texture_binding = null;
+            }
         }
     }
 
@@ -229,7 +216,7 @@ pub const View = struct {
             @panic("View order mismatch");
         }
 
-        ordered_active_views.set(view.order, view.id);
+        _ = ordered_active_views.set(view.order, view.id);
     }
 
     fn removeViewMapping(view: *View) void {
@@ -441,31 +428,32 @@ pub const ViewRenderer = struct {
             api.rendering.endRendering();
         } else {
             // render to all FBO
-            var view_it = View.ordered_active_views.iterator();
-            while (view_it.next()) |view_id| {
-                renderView(View.byId(view_id.*));
+            var next = View.ordered_active_views.slots.nextSetBit(0);
+            while (next) |id| {
+                renderView(View.byId(id));
+                next = View.ordered_active_views.slots.nextSetBit(id + 1);
             }
-
             // rendering all FBO to screen
-            view_it = View.ordered_active_views.iterator();
+            next = View.ordered_active_views.slots.nextSetBit(0);
             // set shader if needed
             if (View.screen_shader_binding != NO_BINDING)
                 api.rendering.setActiveShader(View.screen_shader_binding);
             // activate render to screen
             api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
-            while (view_it.next()) |view_id| {
-                var view: *const View = View.byId(view_id.*);
+            while (next) |id| {
+                var view: *View = View.byId(id);
                 if (view.render_texture_binding) |b| {
                     api.rendering.renderTexture(b.id, &view.transform, &view.render_data, null);
                 }
+                next = View.ordered_active_views.slots.nextSetBit(id + 1);
             }
             // end rendering to screen
             api.rendering.endRendering();
         }
     }
 
-    fn renderView(view: *const View) void {
+    fn renderView(view: *View) void {
         if (view.render_texture_binding) |b| {
             // start rendering to view (FBO)
             // set shader...

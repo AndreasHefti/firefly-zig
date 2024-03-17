@@ -284,7 +284,8 @@ const RaylibRenderAPI = struct {
             temp_source_rect.x = 0;
             temp_source_rect.y = 0;
             temp_source_rect.width = @floatFromInt(tex.texture.width);
-            temp_source_rect.height = @floatFromInt(tex.texture.height);
+            // NOTE: render to texture has inverted y axis.
+            temp_source_rect.height = @floatFromInt(-tex.texture.height);
             // set destination rect
             if (transform.scale[0] != 1 or transform.scale[1] != 1) {
                 temp_dest_rect.x = active_offset[0];
@@ -367,9 +368,10 @@ const RaylibRenderAPI = struct {
         if (active_render_texture) |_| {
             rl.EndTextureMode();
             active_render_texture = null;
+        } else {
+            rl.EndMode2D();
+            rl.EndDrawing();
         }
-        rl.EndMode2D();
-        rl.EndDrawing();
 
         // TODO something else?
     }
