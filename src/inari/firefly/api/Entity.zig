@@ -197,7 +197,7 @@ pub const EntityComponent = struct {
                 return false;
             }
 
-            if (!EntityComponentPool(c_type).c_aspect.isOfGroup(ENTITY_KIND_ASP_GROUP)) {
+            if (!c_type.type_aspect.isOfGroup(ENTITY_KIND_ASP_GROUP)) {
                 std.log.err("No valid entity component. AspectGroup mismatch: {any}", .{any_component});
                 return false;
             }
@@ -210,7 +210,6 @@ pub const EntityComponent = struct {
 pub fn EntityComponentPool(comptime T: type) type {
 
     // check component type constraints
-    comptime var has_aspect: bool = false;
     comptime var has_byId: bool = false;
     // component function interceptors
     comptime var has_init: bool = false;
@@ -225,10 +224,11 @@ pub fn EntityComponentPool(comptime T: type) type {
             @compileError("Expects component type is a struct.");
         if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
             @compileError("Expects component type to have member named 'COMPONENT_TYPE_NAME' that defines a unique name of the component type.");
+        if (!trait.hasDecls(T, .{"type_aspect"}))
+            @compileError("Expects component type to have member type_aspect, that defines the entity component runtime type identifier.");
         if (!trait.hasField("id")(T))
             @compileError("Expects component type to have field named id");
 
-        has_aspect = trait.hasDecls(T, .{"type_aspect"});
         has_byId = trait.hasDecls(T, .{"byId"});
 
         has_init = trait.hasDecls(T, .{"init"});
@@ -245,31 +245,25 @@ pub fn EntityComponentPool(comptime T: type) type {
         var initialized = false;
         // internal state
         var items: DynArray(T) = undefined;
-        // external state
-        pub var c_aspect: *Aspect = undefined;
 
         pub fn init() void {
+            defer Self.initialized = true;
             if (Self.initialized)
                 return;
 
             errdefer Self.deinit();
-            defer {
-                _ = EntityComponent.INTERFACE_TABLE.set(
-                    ComponentTypeInterface{
-                        .activate = Self.activate,
-                        .clear = Self.clear,
-                        .deinit = Self.deinit,
-                        .to_string = toString,
-                    },
-                    c_aspect.index,
-                );
-                Self.initialized = true;
-            }
 
+            T.type_aspect = EntityComponent.ENTITY_KIND_ASP_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
             items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
-            c_aspect = EntityComponent.ENTITY_KIND_ASP_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
-
-            if (has_aspect) T.type_aspect = c_aspect;
+            _ = EntityComponent.INTERFACE_TABLE.set(
+                ComponentTypeInterface{
+                    .activate = Self.activate,
+                    .clear = Self.clear,
+                    .deinit = Self.deinit,
+                    .to_string = toString,
+                },
+                T.type_aspect.index,
+            );
             if (has_init) T.init();
         }
 
@@ -286,12 +280,13 @@ pub fn EntityComponentPool(comptime T: type) type {
                 }
             }
 
-            if (has_deinit) T.deinit();
-            c_aspect = undefined;
+            if (has_deinit)
+                T.deinit();
+
             items.clear();
             items.deinit();
 
-            if (has_aspect) T.type_aspect = undefined;
+            T.type_aspect = undefined;
         }
 
         fn register(c: T, id: Index) *T {
@@ -333,7 +328,7 @@ pub fn EntityComponentPool(comptime T: type) type {
         }
 
         fn toString(string_buffer: *StringBuffer) void {
-            string_buffer.print("\n  {s} size: {d}", .{ c_aspect.name, items.size() });
+            string_buffer.print("\n  {s} size: {d}", .{ T.type_aspect.name, items.size() });
             var next = items.slots.nextSetBit(0);
             while (next) |i| {
                 string_buffer.print("\n   {any}", .{items.get(i)});
@@ -349,6 +344,14 @@ pub fn EntityComponentPool(comptime T: type) type {
         }
     };
 }
+
+// pub const EntityEventSubscription = struct {
+//     listener: ComponentListener,
+//     order: ?usize = null,
+//     accept_kind: ?Kind = null,
+//     dismiss_kind: ?Kind = null,
+//     condition: ?Condition(ComponentEvent) = null,
+// };
 
 pub fn EntityEventSubscription(comptime _: type) type {
     return struct {

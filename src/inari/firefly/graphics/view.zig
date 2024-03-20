@@ -290,7 +290,7 @@ pub const Layer = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETransform = struct {
-    pub usingnamespace EntityComponent.API.Adapter(@This(), "ETransform");
+    pub usingnamespace EntityComponent.API.Adapter(ETransform, "ETransform");
 
     id: Index = UNDEF_INDEX,
     transform: TransformData = TransformData{},

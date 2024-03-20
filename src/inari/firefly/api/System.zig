@@ -32,6 +32,10 @@ pub fn System(comptime T: type) type {
     comptime var has_activation: bool = false;
     comptime var has_destruct: bool = false;
 
+    comptime var has_update_event_subscription: bool = false;
+    comptime var has_render_event_subscription: bool = false;
+    comptime var has_entity_event_subscription: bool = false;
+
     comptime {
         if (!trait.is(.Struct)(T))
             @compileError("Expects component type is a struct.");
@@ -39,6 +43,10 @@ pub fn System(comptime T: type) type {
         has_construct = trait.hasDecls(T, .{"onConstruct"});
         has_activation = trait.hasDecls(T, .{"onActivation"});
         has_destruct = trait.hasDecls(T, .{"onDestruct"});
+
+        has_update_event_subscription = trait.hasDecls(T, .{"update_event_subscription"});
+        has_render_event_subscription = trait.hasDecls(T, .{"render_event_subscription"});
+        has_entity_event_subscription = trait.hasDecls(T, .{"entity_event_subscription"});
     }
 
     return struct {
@@ -61,12 +69,17 @@ pub fn System(comptime T: type) type {
 
             if (has_construct)
                 T.onConstruct();
+            if (has_entity_event_subscription)
+                T.entity_event_subscription.subscribe();
         }
 
         pub fn deinit() void {
             defer type_init = false;
             if (!type_init)
                 return;
+
+            if (has_entity_event_subscription)
+                T.entity_event_subscription.unsubscribe();
 
             if (component_ref) |ref| {
                 component_ref = null;
