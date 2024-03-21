@@ -20,7 +20,7 @@ const DynArray = utils.DynArray;
 const ActionType = Component.ActionType;
 const Projection = api.Projection;
 const Entity = api.Entity;
-const EntityComponent = api.EntityComponent;
+const EComponent = api.EComponent;
 const RenderEvent = api.RenderEvent;
 const RenderEventSubscription = api.RenderEventSubscription;
 const System = api.System;
@@ -44,8 +44,8 @@ pub fn init() !void {
 
     Component.API.registerComponent(Layer);
     Component.API.registerComponent(View);
-    EntityComponent.registerEntityComponent(ETransform);
-    EntityComponent.registerEntityComponent(EMultiplier);
+    EComponent.registerEntityComponent(ETransform);
+    EComponent.registerEntityComponent(EMultiplier);
     System(ViewRenderer).init(
         "ViewRenderer",
         "Emits ViewRenderEvent in order of active Views and its Layers",
@@ -290,7 +290,7 @@ pub const Layer = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETransform = struct {
-    pub usingnamespace EntityComponent.API.Adapter(ETransform, "ETransform");
+    pub usingnamespace EComponent.Trait(ETransform, "ETransform");
 
     id: Index = UNDEF_INDEX,
     transform: TransformData = TransformData{},
@@ -341,7 +341,7 @@ pub const ETransform = struct {
 //////////////////////////////////////////////////////////////////////////
 
 pub const EMultiplier = struct {
-    pub usingnamespace EntityComponent.API.Adapter(@This(), "EMultiplier");
+    pub usingnamespace EComponent.Trait(@This(), "EMultiplier");
     pub const NULL_POS_ENTRY = Vector2f{};
 
     id: Index = UNDEF_INDEX,

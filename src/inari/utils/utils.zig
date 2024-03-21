@@ -4,30 +4,30 @@ const Writer = std.io.Writer;
 const ArrayList = std.ArrayList;
 const aspect = @import("aspect.zig");
 
-//////////////////////////////////////////////////////////////
-//// module init
-//////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////
+// //// module init
+// //////////////////////////////////////////////////////////////
 
-var initialized = false;
-pub fn isInitialized() bool {
-    return initialized;
-}
+// var initialized = false;
+// pub fn isInitialized() bool {
+//     return initialized;
+// }
 
-pub fn init(allocator: Allocator) !void {
-    defer initialized = true;
-    if (initialized)
-        return;
+// pub fn init(allocator: Allocator) !void {
+//     defer initialized = true;
+//     if (initialized)
+//         return;
 
-    try aspect.init(allocator);
-}
+//     try aspect.init(allocator);
+// }
 
-pub fn deinit() void {
-    defer initialized = false;
-    if (!initialized)
-        return;
+// pub fn deinit() void {
+//     defer initialized = false;
+//     if (!initialized)
+//         return;
 
-    aspect.deinit();
-}
+//     aspect.deinit();
+// }
 
 //////////////////////////////////////////////////////////////
 //// inari utils public API
@@ -90,9 +90,7 @@ pub fn usize_cint(v: usize) c_int {
     return @as(c_int, @intCast(v));
 }
 
-pub const Aspect = aspect.Aspect;
 pub const AspectGroup = aspect.AspectGroup;
-pub const Kind = aspect.Kind;
 
 pub fn Condition(comptime T: type) type {
     return struct {
@@ -143,12 +141,4 @@ pub const StringBuffer = struct {
     pub fn toString(self: StringBuffer) String {
         return self.buffer.items[0..];
     }
-};
-
-//////////////////////////////////////////////////////////////
-//// module debug/testing api
-//////////////////////////////////////////////////////////////
-
-pub const debug = struct {
-    pub const printAspects = aspect.print;
 };

@@ -4,6 +4,7 @@ const String = utils.String;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Writer = std.io.Writer;
+const StringBuffer = utils.StringBuffer;
 
 /// The integer type used to represent a Kind
 const MaskInt = u128;
@@ -11,262 +12,205 @@ const MaskInt = u128;
 const MaxIndex = 128;
 /// The integer type used to shift a bit mask
 const ShiftInt = std.math.Log2Int(MaskInt);
-// aspect namespace variables and state
 
-var ASPECT_GROUPS: ArrayList(AspectGroup) = undefined;
-var ALLOCATOR: Allocator = undefined;
-var initialized = false;
+pub fn AspectGroup(comptime T: type) type {
+    return struct {
+        const Group = @This();
+        const _name: String = if (std.meta.trait.hasDecls(T, .{"name"})) T.name else @typeName(T);
 
-pub fn isInitialized() bool {
-    return initialized;
-}
+        var _aspects: [MaxIndex]Aspect = [_]Aspect{undefined} ** MaxIndex;
+        var _aspect_count: u8 = 0;
 
-fn checkInitialized() void {
-    if (!initialized)
-        @panic("aspect module not initialized");
-}
-
-pub fn init(_allocator: Allocator) !void {
-    defer initialized = true;
-    if (!initialized) {
-        ALLOCATOR = _allocator;
-        ASPECT_GROUPS = try ArrayList(AspectGroup).initCapacity(ALLOCATOR, 10);
-        errdefer deinit();
-    }
-}
-
-pub fn deinit() void {
-    defer initialized = false;
-    if (initialized) {
-        ASPECT_GROUPS.deinit();
-        ASPECT_GROUPS = undefined;
-        ALLOCATOR = undefined;
-    }
-}
-
-pub fn print(string_buffer: *utils.StringBuffer) void {
-    if (!initialized) {
-        string_buffer.append("Aspects: [ NOT initialized ]\n");
-        return;
-    }
-
-    string_buffer.append("Aspects:");
-    if (ASPECT_GROUPS.items.len == 0) {
-        string_buffer.append("EMPTY");
-    } else {
-        var gi: usize = 0;
-        for (ASPECT_GROUPS.items) |item| {
-            string_buffer.print("\n  Group[{s}|{}]:", .{ item.name, gi });
-            for (0..item._size) |i| {
-                string_buffer.print("\n    Aspect[{s}|{d}]", .{ item.aspects[i].name, item.aspects[i].index });
-            }
-            gi += 1;
+        pub fn name() String {
+            return _name;
         }
-    }
-    _ = string_buffer.append("\n");
-}
 
-pub const Aspect = struct {
-    group: *AspectGroup,
-    name: String,
-    index: u8,
+        pub fn size() u8 {
+            return _aspect_count;
+        }
 
-    pub fn getAspect(groupName: []const u8, aspectName: []const u8) !*Aspect {
-        const group = try findOrCreateAspectGroup(groupName);
-        return group.getAspect(aspectName);
-    }
+        pub fn getAspectById(id: usize) *const Aspect {
+            if (id < _aspect_count) {
+                return &_aspects[id];
+            }
+            @panic("Aspect id overflow");
+        }
 
-    pub fn sameGroup(self: *Aspect, other: *const Aspect) bool {
-        return std.mem.eql(u8, self.group.name, other.group.name);
-    }
+        pub fn getAspect(aspect_name: String) *const Aspect {
+            var i: u8 = 0;
+            while (i < Group._aspect_count) {
+                if (utils.stringEquals(Group._aspects[i].name, aspect_name)) {
+                    return &Group._aspects[i];
+                }
+                i = i + 1;
+            }
+            // create new one
+            if (Group._aspect_count >= 128)
+                @panic("No more space for new aspects in AspectGroup");
 
-    pub fn isOfGroup(self: *Aspect, group: *const AspectGroup) bool {
-        return std.mem.eql(u8, self.group.name, group.name);
-    }
+            _aspects[Group._aspect_count] = .{ .id = Group._aspect_count, .name = aspect_name };
+            Group._aspect_count = Group._aspect_count + 1;
+            return &_aspects[Group._aspect_count - 1];
+        }
 
-    pub fn format(
-        self: Aspect,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "Aspect[{s}|{s}|{d}]",
-            .{ self.group.name, self.name, self.index },
-        );
-    }
-};
+        pub fn applyAspect(t: anytype, aspect_name: String) void {
+            t.aspect = getAspect(aspect_name);
+        }
 
-pub const AspectGroup = struct {
-    /// The name of the aspect group
-    name: String,
-    /// The aspects of the aspect group. NOTE: max MaxIndex aspects per group possible
-    aspects: [MaxIndex]Aspect,
-    /// the actual size of the group (and pointer for next aspect insertion).
-    /// NOTE: This value is shall only be modified internally. Do not modify this value from outside.
-    _size: u8 = 0,
-
-    pub fn new(name: String) !*AspectGroup {
-        checkInitialized();
-        var new_group = AspectGroup{
-            .name = name,
-            .aspects = [_]Aspect{undefined} ** MaxIndex,
+        pub const Aspect = struct {
+            id: u8,
+            name: String,
         };
-        try ASPECT_GROUPS.append(new_group);
-        return &ASPECT_GROUPS.items[ASPECT_GROUPS.items.len - 1];
-    }
 
-    pub fn get(name: String) !*AspectGroup {
-        checkInitialized();
+        pub fn newKind() Kind {
+            return Kind{};
+        }
 
-        for (ASPECT_GROUPS.items) |*group| {
-            if (std.mem.eql(u8, name, group.name)) {
-                return group;
+        pub fn newKindOf(aspects: anytype) Kind {
+            const args_type_info = @typeInfo(@TypeOf(aspects));
+            if (args_type_info != .Struct) {
+                @compileError("expected struct argument, found " ++ @typeName(@TypeOf(aspects)));
+            }
+            const fields_info = args_type_info.Struct.fields;
+
+            var kind = Kind{};
+            comptime var i = 0;
+            inline while (i < fields_info.len) {
+                if (getAspectFromAnytype(@field(aspects, fields_info[i].name))) |a| {
+                    kind.with(a.id);
+                }
+                i = i + 1;
+            }
+
+            return kind;
+        }
+
+        pub fn newKindOfNames(aspects: [2]String) Kind {
+            var kind = Kind{};
+            for (0..aspects.len) |i| {
+                var j: u8 = 0;
+                while (j < Group._aspect_count) {
+                    if (std.mem.eql(u8, aspects[i], Group._aspects[j].name)) {
+                        kind.with(Group._aspects[j].id);
+                    }
+                    j = j + 1;
+                }
+            }
+            return kind;
+        }
+
+        pub fn print(sb: *StringBuffer) void {
+            sb.print("AspectGroup({?s})\n", .{_name});
+            var i: u8 = 0;
+            while (i < Group._aspect_count) {
+                sb.print("  {d}:{s}\n", .{ Group._aspects[i].id, Group._aspects[i].name });
+                i = i + 1;
             }
         }
 
-        @panic("No Aspect Group Found");
-    }
-
-    pub fn dispose(name: String) void {
-        if (!initialized)
-            return;
-
-        var index: ?usize = null;
-        for (ASPECT_GROUPS.items, 0..) |*group, i| {
-            if (std.mem.eql(u8, name, group.name)) {
-                index = i;
-                break;
-            }
-        }
-        if (index) |i| {
-            _ = ASPECT_GROUPS.swapRemove(i);
-        }
-    }
-
-    pub fn getAspect(self: *AspectGroup, name: String) *Aspect {
-        //std.debug.print("\n************* group {s} aspect size {d}\n", .{ self.name, self._size });
-        // check if aspect with name already exists
-        for (0..self._size) |i| {
-            if (std.mem.eql(u8, self.aspects[i].name, name)) {
-                return &self.aspects[i];
+        fn getAspectFromAnytype(aspect: anytype) ?Aspect {
+            const at = @TypeOf(aspect);
+            if (at == Aspect) {
+                return aspect;
+            } else if (at == *Aspect or at == *const Aspect) {
+                return aspect.*;
+            } else if (std.meta.trait.hasDecls(aspect, .{"aspect"})) {
+                return getAspectFromAnytype(aspect.aspect);
+            } else {
+                return null;
             }
         }
 
-        // if not exists already, create new one
-        self.aspects[self._size].group = self;
-        self.aspects[self._size].name = name;
-        self.aspects[self._size].index = self._size;
+        pub const Kind = struct {
+            /// Reference to the aspect group this kind belongs to
+            const group = Group;
+            /// The bitmask to store indices of owned aspects of this kind
+            _mask: MaskInt = 0,
 
-        defer self._size += 1;
-        return &self.aspects[self._size];
-    }
-};
-
-pub const Kind = struct {
-    /// Reference to the aspect group this kind belongs to
-    group: *AspectGroup,
-    /// The bitmask to store indices of owned aspects of this kind
-    _mask: MaskInt = 0,
-
-    pub fn ofGroup(g: *AspectGroup) Kind {
-        return Kind{
-            .group = g,
-        };
-    }
-
-    pub fn of(aspect: anytype) Kind {
-        return Kind{
-            .group = aspect.group,
-            ._mask = 0 | maskBit(aspect.index),
-        };
-    }
-
-    pub fn with(self: Kind, aspect: *Aspect) Kind {
-        if (self.group != aspect.group)
-            return self;
-
-        var kind = self;
-        kind._mask |= maskBit(aspect.index);
-        return kind;
-    }
-
-    pub fn hasAspect(self: *Kind, aspect: *Aspect) bool {
-        if (self.group != aspect.group)
-            return false;
-
-        return self._mask & maskBit(aspect.index) > 0;
-    }
-
-    pub fn unionKind(self: *Kind, other: *const Kind) Kind {
-        if (self.group != other.group)
-            return copy(self);
-
-        return Kind{
-            .group = self.group,
-            ._mask = self._mask | other._mask,
-        };
-    }
-
-    pub fn intersectionKind(self: *Kind, other: *const Kind) Kind {
-        if (self.group != other.group)
-            return copy(self);
-
-        return Kind{
-            .group = self.group,
-            ._mask = self._mask & other._mask,
-        };
-    }
-
-    pub fn copy(self: Kind) Kind {
-        return Kind{
-            .group = self.group,
-            ._mask = self._mask,
-        };
-    }
-
-    pub fn isKindOf(self: *Kind, other: *const Kind) bool {
-        return other._mask & self._mask == self._mask;
-    }
-
-    pub fn isOfKind(self: *Kind, other: *const Kind) bool {
-        return self._mask & other._mask == other._mask;
-    }
-
-    pub fn isExactKindOf(self: *Kind, other: *const Kind) bool {
-        return other._mask == self._mask;
-    }
-
-    pub fn isNotKindOf(self: *Kind, other: *const Kind) bool {
-        return other._mask & self._mask == 0;
-    }
-
-    pub fn format(
-        self: Kind,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print("Kind[ group: {s}, aspects: ", .{self.group.name});
-        for (0..self.group._size) |i| {
-            if (self._mask & maskBit(self.group.aspects[i].index) > 0) {
-                try writer.print("{s} ", .{self.group.aspects[i].name});
+            pub fn isPartOf(self: Kind, other: Kind) bool {
+                return other._mask & self._mask == self._mask;
             }
-        }
-        try writer.writeAll("]");
-    }
 
-    fn maskBit(index: u8) MaskInt {
-        return @as(MaskInt, 1) << @as(ShiftInt, @truncate(index));
-    }
-};
+            pub fn isNotPartOf(self: Kind, other: Kind) bool {
+                return other._mask & self._mask == 0;
+            }
 
-fn findOrCreateAspectGroup(name: []const u8) !*AspectGroup {
-    for (0..ASPECT_GROUPS.items.len) |i| {
-        var pg = &ASPECT_GROUPS.items[i];
-        if (std.mem.eql(u8, pg.name, name)) {
-            return pg;
-        }
-    }
-    return AspectGroup.newAspectGroup(name);
+            pub fn isEquals(self: Kind, other: Kind) bool {
+                return other._mask == self._mask;
+            }
+
+            pub fn unionKind(self: Kind, other: Kind) Kind {
+                if (self.group != other.group)
+                    return copy(self);
+
+                return Kind{
+                    .group = self.group,
+                    ._mask = self._mask | other._mask,
+                };
+            }
+
+            pub fn intersectionKind(self: Kind, other: Kind) Kind {
+                if (self.group != other.group)
+                    return copy(self);
+
+                return Kind{
+                    .group = self.group,
+                    ._mask = self._mask & other._mask,
+                };
+            }
+
+            pub fn copy(self: Kind) Kind {
+                return Kind{
+                    .group = self.group,
+                    ._mask = self._mask,
+                };
+            }
+
+            pub fn withAspect(self: Kind, aspect: anytype) Kind {
+                var k = self;
+                if (getAspectFromAnytype(aspect)) |a| {
+                    with(&k, a.id);
+                }
+                return k;
+            }
+
+            pub fn hasAspect(self: Kind, aspect: anytype) bool {
+                if (getAspectFromAnytype(aspect)) |a| {
+                    return has(self, a.id);
+                } else {
+                    return false;
+                }
+            }
+
+            pub fn has(self: Kind, index: u8) bool {
+                return self._mask & maskBit(index) != 0;
+            }
+
+            fn with(self: *Kind, index: u8) void {
+                self._mask |= maskBit(index);
+            }
+
+            fn maskBit(index: u8) MaskInt {
+                return @as(MaskInt, 1) << @as(ShiftInt, @truncate(index));
+            }
+
+            pub fn format(
+                self: Kind,
+                comptime _: String,
+                _: std.fmt.FormatOptions,
+                writer: anytype,
+            ) !void {
+                var k = self;
+                try writer.print("Kind({?s})[", .{_name});
+                var i: u8 = 0;
+                while (i < Group._aspect_count) {
+                    if (k.has(i)) {
+                        try writer.print("{d}:{s} ", .{ Group._aspects[i].id, Group._aspects[i].name });
+                    }
+                    i = i + 1;
+                }
+                try writer.print("]", .{});
+            }
+        };
+    };
 }

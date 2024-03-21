@@ -6,33 +6,22 @@ const trait = std.meta.trait;
 
 const Component = api.Component;
 const AspectGroup = utils.AspectGroup;
-const Aspect = utils.Aspect;
 const String = utils.String;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 var initialized = false;
-pub var ASSET_TYPE_ASPECT_GROUP: *AspectGroup = undefined;
 
-pub fn init() !void {
-    defer initialized = true;
-    if (initialized) return;
-
-    ASSET_TYPE_ASPECT_GROUP = try AspectGroup.new("ASSET_TYPE_ASPECT_GROUP");
-}
-
-pub fn deinit() void {
-    defer initialized = false;
-    if (!initialized) return;
-
-    AspectGroup.dispose("ASSET_TYPE_ASPECT_GROUP");
-    ASSET_TYPE_ASPECT_GROUP = undefined;
-}
+pub const AssetAspectGroup = AspectGroup(struct {
+    pub const name = "Asset";
+});
+pub const AssetKind = AssetAspectGroup.Kind;
+pub const AssetAspect = AssetAspectGroup.Aspect;
 
 pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
     return struct {
         pub const ASSET_TYPE_NAME = type_name;
-        pub var type_aspect: *Aspect = undefined;
+        pub var aspect: *const AssetAspect = undefined;
         pub fn loadByName(name: String) void {
             Asset(T).loadByName(name);
         }
@@ -60,8 +49,8 @@ pub fn Asset(comptime T: type) type {
             @compileError("Expects asset type is a struct.");
         if (!trait.hasDecls(T, .{"ASSET_TYPE_NAME"}))
             @compileError("Expects asset type to have field ASSET_TYPE_NAME: String that defines a unique name of the asset type.");
-        if (!trait.hasDecls(T, .{"type_aspect"}))
-            @compileError("Expects asset type to have field type_aspect: *Aspect, that defines the asset type aspect");
+        if (!trait.hasDecls(T, .{"aspect"}))
+            @compileError("Expects asset type to have field aspect: *const ASPECT_GROUP_TYPE.Aspect, that defines the asset type aspect");
         if (!trait.hasDecls(T, .{"doLoad"}))
             @compileError("Expects asset type to have fn doLoad(asset: *Asset(T)) void, that loads the asset");
         if (!trait.hasDecls(T, .{"doUnload"}))
@@ -91,7 +80,7 @@ pub fn Asset(comptime T: type) type {
             if (type_init)
                 return;
 
-            T.type_aspect = ASSET_TYPE_ASPECT_GROUP.getAspect(T.ASSET_TYPE_NAME);
+            AssetAspectGroup.applyAspect(T, T.ASSET_TYPE_NAME);
             if (has_init)
                 T.init();
         }
@@ -103,11 +92,11 @@ pub fn Asset(comptime T: type) type {
 
             if (has_deinit)
                 T.deinit();
-            T.type_aspect = undefined;
+            T.aspect = undefined;
         }
 
-        pub fn getAssetType(_: *Self) *Aspect {
-            return T.type_aspect;
+        pub fn getAssetType(_: *Self) *const AssetAspect {
+            return T.aspect;
         }
 
         pub fn activation(self: *Self, active: bool) void {

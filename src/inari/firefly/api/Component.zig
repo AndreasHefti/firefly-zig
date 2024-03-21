@@ -7,7 +7,6 @@ const trait = std.meta.trait;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const StringBuffer = utils.StringBuffer;
-const Aspect = utils.Aspect;
 const AspectGroup = utils.AspectGroup;
 const EventDispatch = utils.EventDispatch;
 const DynArray = utils.DynArray;
@@ -27,7 +26,6 @@ pub fn init() !void {
         return;
 
     API.COMPONENT_INTERFACE_TABLE = try DynArray(API.ComponentTypeInterface).new(api.COMPONENT_ALLOC);
-    API.COMPONENT_ASPECT_GROUP = try AspectGroup.new("COMPONENT_ASPECT_GROUP");
 }
 
 pub fn deinit() void {
@@ -35,25 +33,30 @@ pub fn deinit() void {
     if (!INIT)
         return;
 
-    // deinit all registered component pools via aspect interface mapping
-    for (0..API.COMPONENT_ASPECT_GROUP._size) |i| {
-        var aspect = API.COMPONENT_ASPECT_GROUP.aspects[i];
-        API.COMPONENT_INTERFACE_TABLE.get(aspect.index).?.deinit();
-        API.COMPONENT_INTERFACE_TABLE.delete(aspect.index);
+    // deinit all registered component pools
+    var next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    while (next) |i| {
+        if (API.COMPONENT_INTERFACE_TABLE.get(i)) |interface| {
+            interface.deinit();
+            API.COMPONENT_INTERFACE_TABLE.delete(i);
+        }
+        next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
     }
     API.COMPONENT_INTERFACE_TABLE.deinit();
     API.COMPONENT_INTERFACE_TABLE = undefined;
-
-    AspectGroup.dispose("COMPONENT_ASPECT_GROUP");
-    API.COMPONENT_ASPECT_GROUP = undefined;
 }
 
 //////////////////////////////////////////////////////////////
 //// Component API
 //////////////////////////////////////////////////////////////
+pub const ComponentAspectGroup = AspectGroup(struct {
+    pub const name = "Component";
+});
+pub const ComponentKind = ComponentAspectGroup.Kind;
+pub const ComponentAspect = ComponentAspectGroup.Aspect;
+
 pub const API = struct {
     var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
-    pub var COMPONENT_ASPECT_GROUP: *AspectGroup = undefined;
 
     pub const ComponentTypeInterface = struct {
         activate: *const fn (Index, bool) void,
@@ -159,14 +162,7 @@ pub const API = struct {
             // component type fields
             pub const COMPONENT_TYPE_NAME = context.name;
             pub const pool = ComponentPool(T);
-            pub var type_aspect: *Aspect = undefined;
-
-            pub fn typeCheck(a: *Aspect) bool {
-                if (!pool.initialized)
-                    return false;
-
-                return type_aspect.index == a.index;
-            }
+            pub var aspect: *const ComponentAspect = undefined;
 
             pub fn count() usize {
                 return pool.items.slots.count();
@@ -240,14 +236,6 @@ pub const API = struct {
 
         if (!@hasField(c_type, "id")) {
             std.log.warn("Invalid component. No id field: {any}", .{any_component});
-            return false;
-        }
-
-        if (@intFromPtr(c_type.type_aspect) == 0) {
-            std.log.warn("Invalid component. aspect not initialized: {any}", .{any_component});
-            return false;
-        } else if (!c_type.type_aspect.isOfGroup(COMPONENT_ASPECT_GROUP)) {
-            std.log.warn("Invalid component. AspectGroup mismatch: {any}", .{any_component});
             return false;
         }
 
@@ -372,8 +360,6 @@ pub fn ComponentPool(comptime T: type) type {
         // events
         var event: ?ComponentEvent = null;
         var eventDispatch: ?EventDispatch(ComponentEvent) = null;
-        // external state
-        pub var c_aspect: *Aspect = undefined;
 
         pub fn init() void {
             if (initialized)
@@ -381,29 +367,26 @@ pub fn ComponentPool(comptime T: type) type {
 
             errdefer Self.deinit();
             defer {
-                _ = API.COMPONENT_INTERFACE_TABLE.set(
-                    API.ComponentTypeInterface{
-                        .activate = Self.activate,
-                        .clear = Self.clear,
-                        .deinit = Self.deinit,
-                        .to_string = toString,
-                    },
-                    c_aspect.index,
-                );
+                _ = API.COMPONENT_INTERFACE_TABLE.add(API.ComponentTypeInterface{
+                    .activate = Self.activate,
+                    .clear = Self.clear,
+                    .deinit = Self.deinit,
+                    .to_string = toString,
+                });
                 initialized = true;
             }
 
             items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
             active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
-            c_aspect = API.COMPONENT_ASPECT_GROUP.getAspect(T.COMPONENT_TYPE_NAME);
+            ComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
 
             if (has_subscribe) {
                 event = ComponentEvent{};
                 eventDispatch = EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
             }
 
-            if (has_name_mapping) name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
-            if (has_aspect) T.type_aspect = c_aspect;
+            if (has_name_mapping)
+                name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
 
             if (has_init) {
                 T.init() catch {
@@ -422,7 +405,6 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_deinit)
                 T.deinit();
 
-            c_aspect = undefined;
             items.deinit();
             active_mapping.deinit();
 
@@ -495,7 +477,7 @@ pub fn ComponentPool(comptime T: type) type {
         }
 
         fn toString(string_buffer: *StringBuffer) void {
-            string_buffer.print("\n  {s} size: {d}", .{ c_aspect.name, items.slots.count() });
+            string_buffer.print("\n  {s} size: {d}", .{ T.COMPONENT_TYPE_NAME, items.slots.count() });
             var next = items.slots.nextSetBit(0);
             while (next) |i| {
                 string_buffer.print("\n    {s} {any}", .{

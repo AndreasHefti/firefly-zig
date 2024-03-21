@@ -35,7 +35,7 @@ test "TextureAsset init/deinit" {
 
     try std.testing.expectEqual(
         @as(String, "Texture"),
-        Texture.type_aspect.name,
+        Texture.aspect.name,
     );
     //try std.testing.expect(TextureAsset.resourceSize() == 0);
 }
@@ -51,7 +51,7 @@ test "TextureAsset load/unload" {
     });
 
     try std.testing.expect(texture_asset.id != UNDEF_INDEX);
-    try std.testing.expect(texture_asset.getAssetType().index == Texture.type_aspect.index);
+    try std.testing.expect(texture_asset.getAssetType().id == Texture.aspect.id);
     try std.testing.expect(texture_asset.resource_id != UNDEF_INDEX);
     try std.testing.expectEqualStrings("TestTexture", texture_asset.name.?);
 

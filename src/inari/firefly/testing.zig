@@ -41,25 +41,28 @@ test "Firefly init" {
     var sb = utils.StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    utils.debug.printAspects(&sb);
+    //utils.debug.printAspects(&sb);
+
+    api.ComponentAspectGroup.print(&sb);
+    api.AssetAspectGroup.print(&sb);
+    api.EComponentAspectGroup.print(&sb);
     api.Component.print(&sb);
 
     var output: utils.String =
-        \\Aspects:
-        \\  Group[COMPONENT_ASPECT_GROUP|0]:
-        \\    Aspect[System|0]
-        \\    Aspect[Entity|1]
-        \\    Aspect[Asset:Texture|2]
-        \\    Aspect[Layer|3]
-        \\    Aspect[View|4]
-        \\    Aspect[SpriteTemplate|5]
-        \\  Group[ASSET_TYPE_ASPECT_GROUP|1]:
-        \\    Aspect[Texture|0]
-        \\  Group[ENTITY_KIND_ASP_GROUP|2]:
-        \\    Aspect[ETransform|0]
-        \\    Aspect[EMultiplier|1]
-        \\    Aspect[ESprite|2]
-        \\    Aspect[EAnimation|3]
+        \\AspectGroup(Component)
+        \\  0:System
+        \\  1:Entity
+        \\  2:Asset:Texture
+        \\  3:Layer
+        \\  4:View
+        \\  5:SpriteTemplate
+        \\AspectGroup(Asset)
+        \\  0:Texture
+        \\AspectGroup(EComponent)
+        \\  0:ETransform
+        \\  1:EMultiplier
+        \\  2:ESprite
+        \\  3:EAnimation
         \\
         \\Components:
         \\  System size: 3
@@ -127,7 +130,7 @@ test "initialization" {
     var newCPtr = ExampleComponent.byId(newC.id);
 
     try std.testing.expectEqual(newC.*, newCPtr.*);
-    try std.testing.expectEqual(@as(String, "ExampleComponent"), ExampleComponent.pool.c_aspect.name);
+    try std.testing.expectEqual(@as(String, "ExampleComponent"), ExampleComponent.aspect.name);
 }
 
 test "valid component" {
@@ -352,7 +355,7 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\
         \\Components:
         \\  Entity size: 1
-        \\    (a) Entity[0|TestEntity|Kind[ group: ENTITY_KIND_ASP_GROUP, aspects: ETransform ESprite ]]
+        \\    (a) Entity[0|TestEntity|] ETransform  ESprite 
         \\  System size: 3
         \\    (a) ViewRenderer[ id:0, info:Emits ViewRenderEvent in order of active Views and its Layers ]
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]

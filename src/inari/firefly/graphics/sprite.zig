@@ -16,7 +16,6 @@ const graphics = inari.firefly.graphics;
 //const ViewRenderListener = graphics.ViewRenderListener;
 //const DynIndexArray = utils.DynIndexArray;
 
-const Kind = utils.Kind;
 const Asset = api.Asset;
 const SpriteData = api.SpriteData;
 const RenderData = api.RenderData;
@@ -25,7 +24,8 @@ const Component = api.Component;
 const ComponentEvent = api.Component.ComponentEvent;
 const ActionType = api.Component.ActionType;
 const Texture = graphics.Texture;
-const EntityComponent = api.EntityComponent;
+const EComponent = api.EComponent;
+const EComponentAspectGroup = api.EComponentAspectGroup;
 const EntityEventSubscription = api.EntityEventSubscription;
 const ETransform = graphics.ETransform;
 const EMultiplier = graphics.EMultiplier;
@@ -53,7 +53,7 @@ pub fn init() !void {
     //SpriteSetAsset.init();
     // init components and entities
     Component.API.registerComponent(SpriteTemplate);
-    EntityComponent.registerEntityComponent(ESprite);
+    EComponent.registerEntityComponent(ESprite);
     // init renderer
     System(SimpleSpriteRenderer).init(
         "SimpleSpriteRenderer",
@@ -175,7 +175,7 @@ pub const SpriteTemplate = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ESprite = struct {
-    pub usingnamespace EntityComponent.API.Adapter(@This(), "ESprite");
+    pub usingnamespace EComponent.Trait(@This(), "ESprite");
 
     id: Index = UNDEF_INDEX,
     template_id: Index,
@@ -330,8 +330,8 @@ const SimpleSpriteRenderer = struct {
     pub fn onConstruct() void {
         ee_subscription = EntityEventSubscription(SimpleSpriteRenderer)
             .of(registerEntity)
-            .withAcceptKind(Kind.of(ETransform.type_aspect).with(ESprite.type_aspect))
-            .withDismissKind(Kind.of(EMultiplier.type_aspect))
+            .withAcceptKind(EComponentAspectGroup.newKindOf(.{ ETransform, ESprite }))
+            .withDismissKind(EComponentAspectGroup.newKindOf(.{EMultiplier}))
             .subscribe();
 
         sprite_refs = ViewLayerMapping.new();

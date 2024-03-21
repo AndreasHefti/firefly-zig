@@ -13,7 +13,7 @@ const NO_NAME = utils.NO_NAME;
 const Timer = api.Timer;
 const Kind = utils.Kind;
 const Entity = api.Entity;
-const EntityComponent = api.EntityComponent;
+const EComponent = api.EComponent;
 const EntityEventSubscription = api.EntityEventSubscription;
 const System = api.System;
 const ComponentEvent = api.ComponentEvent;
@@ -45,7 +45,7 @@ pub fn init() void {
     );
     System(AnimationIntegration).activate();
     AnimationIntegration.registerAnimationType(EasedValueIntegration);
-    EntityComponent.registerEntityComponent(EAnimation);
+    EComponent.registerEntityComponent(EAnimation);
 }
 
 pub fn deinit() void {
@@ -270,7 +270,7 @@ fn AnimationResolver(comptime Integration: type) type {
 //////////////////////////////////////////////////////////////
 
 pub const EAnimation = struct {
-    pub usingnamespace EntityComponent.API.Adapter(@This(), "EAnimation");
+    pub usingnamespace EComponent.Trait(@This(), "EAnimation");
 
     id: Index = UNDEF_INDEX,
     animations: BitSet = undefined,

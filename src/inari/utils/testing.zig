@@ -10,7 +10,6 @@ const EventDispatch = utils.EventDispatch;
 const DynArray = utils.DynArray;
 const DynIndexArray = utils.DynIndexArray;
 const BitSet = utils.BitSet;
-const Kind = utils.Kind;
 const Vector2i = utils.Vector2i;
 
 test "StringBuffer" {
@@ -301,47 +300,46 @@ test "test ensure capacity" {
     try std.testing.expect(!bitset2.isSet(9));
 }
 
+const TEST_ASPECT_GROUP = utils.AspectGroup(struct {
+    pub const name = "TestGroup";
+});
+
 test "initialize" {
-    try utils.init(std.testing.allocator);
-    defer utils.deinit();
+    try std.testing.expectEqualStrings("TestGroup", TEST_ASPECT_GROUP.name());
+    try std.testing.expect(TEST_ASPECT_GROUP.size() == 0);
 
-    var groupPtr = try utils.AspectGroup.new("TestGroup");
-    try std.testing.expectEqualStrings("TestGroup", groupPtr.name);
-    try std.testing.expect(groupPtr._size == 0);
+    var aspect1 = TEST_ASPECT_GROUP.getAspect("aspect1");
+    try std.testing.expect(TEST_ASPECT_GROUP.size() == 1);
+    try std.testing.expect(aspect1.id == 0);
+    try std.testing.expectEqualStrings("aspect1", aspect1.name);
 
-    var aspect1Ptr = groupPtr.getAspect("aspect1");
-    try std.testing.expect(groupPtr._size == 1);
-    try std.testing.expect(aspect1Ptr.group == groupPtr);
-    try std.testing.expect(aspect1Ptr.index == 0);
-    try std.testing.expectEqualStrings("aspect1", aspect1Ptr.name);
-
-    var aspect2Ptr = groupPtr.getAspect("aspect2");
-    try std.testing.expect(groupPtr._size == 2);
-    try std.testing.expect(aspect2Ptr.group == groupPtr);
-    try std.testing.expect(aspect2Ptr.index == 1);
-    try std.testing.expectEqualStrings("aspect2", aspect2Ptr.name);
+    var aspect2 = TEST_ASPECT_GROUP.getAspect("aspect2");
+    try std.testing.expect(TEST_ASPECT_GROUP.size() == 2);
+    try std.testing.expect(aspect2.id == 1);
+    try std.testing.expectEqualStrings("aspect2", aspect2.name);
 }
 
 test "kind" {
-    try utils.init(std.testing.allocator);
-    defer utils.deinit();
+    var aspect1 = TEST_ASPECT_GROUP.getAspect("aspect1");
+    var aspect2 = TEST_ASPECT_GROUP.getAspect("aspect2");
+    var aspect3 = TEST_ASPECT_GROUP.getAspect("aspect3");
+    var aspect4 = TEST_ASPECT_GROUP.getAspect("aspect4");
 
-    var groupPtr = try utils.AspectGroup.new("TestGroup");
-    var aspect1Ptr = groupPtr.getAspect("aspect1");
-    var aspect2Ptr = groupPtr.getAspect("aspect2");
-    var aspect3Ptr = groupPtr.getAspect("aspect3");
-    var aspect4Ptr = groupPtr.getAspect("aspect4");
+    var kind1 = TEST_ASPECT_GROUP.newKindOf(.{ aspect1, aspect2, aspect3 });
+    var kind2 = TEST_ASPECT_GROUP.newKindOf(.{ aspect2, aspect3 });
+    var kind3 = TEST_ASPECT_GROUP.newKindOf(.{aspect4});
 
-    var kind1 = Kind.of(aspect1Ptr).with(aspect2Ptr).with(aspect3Ptr);
-    var kind2 = Kind.of(aspect2Ptr).with(aspect3Ptr);
-    var kind3 = Kind.of(aspect4Ptr);
+    try std.testing.expect(kind2.isPartOf(kind1));
+    try std.testing.expect(!kind1.isPartOf(kind2));
 
-    try std.testing.expect(kind2.isKindOf(&kind1));
-    try std.testing.expect(!kind1.isKindOf(&kind2));
-    try std.testing.expect(kind1.isOfKind(&kind2));
-    try std.testing.expect(!kind1.isExactKindOf(&kind2));
-    try std.testing.expect(!kind3.isExactKindOf(&kind2));
-    try std.testing.expect(!kind3.isExactKindOf(&kind1));
+    try std.testing.expect(!kind1.isEquals(kind2));
+    try std.testing.expect(!kind3.isEquals(kind2));
+    try std.testing.expect(!kind3.isEquals(kind1));
+    try std.testing.expect(kind1.isEquals(kind1));
+
+    try std.testing.expect(kind1.isNotPartOf(kind3));
+    try std.testing.expect(kind3.isNotPartOf(kind1));
+    try std.testing.expect(!kind1.isNotPartOf(kind2));
 }
 
 // test easing

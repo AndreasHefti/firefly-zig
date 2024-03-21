@@ -43,8 +43,14 @@ pub var rendering: IRenderAPI() = undefined;
 pub var window: IWindowAPI() = undefined;
 
 pub const Asset = asset.Asset;
+pub const AssetAspectGroup = asset.AssetAspectGroup;
+pub const AssetKind = AssetAspectGroup.Kind;
+pub const AssetAspect = AssetAspectGroup.Aspect;
 pub const AssetTrait = asset.AssetTrait;
 pub const Component = component;
+pub const ComponentAspectGroup = component.ComponentAspectGroup;
+pub const ComponentKind = ComponentAspectGroup.Kind;
+pub const ComponentAspect = ComponentAspectGroup.Aspect;
 pub const ComponentEvent = component.ComponentEvent;
 pub const ComponentActionType = component.ActionType;
 pub const ComponentListener = component.ComponentListener;
@@ -52,9 +58,11 @@ pub const System = system.System;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
-pub const EntityComponent = entity.EntityComponent;
 pub const EntityEventSubscription = entity.EntityEventSubscription;
-
+pub const EComponent = entity.EComponent;
+pub const EComponentAspectGroup = entity.EComponentAspectGroup;
+pub const EComponentKind = EComponentAspectGroup.Kind;
+pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
 
@@ -78,8 +86,6 @@ pub fn init(
     ENTITY_ALLOC = entity_allocator;
     ALLOC = allocator;
 
-    try utils.init(allocator);
-
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
@@ -90,7 +96,6 @@ pub fn init(
 
     try Component.init();
     Timer.init();
-    try asset.init();
     system.init();
 
     // register api based components and entity components
@@ -104,13 +109,11 @@ pub fn deinit() void {
         return;
 
     system.deinit();
-    asset.deinit();
     Component.deinit();
     rendering.deinit();
     rendering = undefined;
     window = undefined;
     Timer.deinit();
-    utils.deinit();
 }
 
 //////////////////////////////////////////////////////////////
