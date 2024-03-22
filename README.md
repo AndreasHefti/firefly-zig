@@ -9,12 +9,12 @@ TODO:
   - Adapt old tests DONE!
   - Go on with porting from FlyKo
 
-Example Code:
+ 
+ ##Code Example:
 
 ![](inari.gif)
 
 ``` zig
-
 var sprite_id = SpriteTemplate.new(.{
     .texture_asset_name = "TestTexture",
     .sprite_data = .{ .texture_bounds = utils.RectF{ 0, 0, 32, 32 } },
@@ -39,7 +39,5 @@ _ = Entity.newAnd(.{ .name = "TestEntity" })
     EasedValueIntegration{ .start_value = 0.0, .end_value = 180.0, .easing = Easing.Linear, .property_ref = ETransform.Property.Rotation },
 )
     .activate();
-
-
 ```
 
