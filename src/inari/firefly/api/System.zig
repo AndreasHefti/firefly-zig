@@ -5,7 +5,6 @@ const api = inari.firefly.api;
 const trait = std.meta.trait;
 
 const Component = api.Component;
-const ViewRenderer = inari.firefly.graphics.ViewRenderer;
 const Entity = api.Entity;
 const String = utils.String;
 const Index = utils.Index;
@@ -123,9 +122,9 @@ pub fn System(comptime T: type) type {
                 }
                 if (has_view_render_event_subscription) {
                     if (has_view_render_order) {
-                        ViewRenderer.subscribeAt(T.view_render_order, T.renderView);
+                        api.subscribeViewRenderAt(T.view_render_order, T.renderView);
                     } else {
-                        ViewRenderer.subscribe(T.renderView);
+                        api.subscribeViewRender(T.renderView);
                     }
                 }
             }
@@ -143,7 +142,7 @@ pub fn System(comptime T: type) type {
                     api.unsubscribeRender(T.render);
                 }
                 if (has_view_render_event_subscription) {
-                    ViewRenderer.unsubscribe(T.renderView);
+                    api.unsubscribeViewRender(T.renderView);
                 }
 
                 SystemComponent.activateById(c.id, false);

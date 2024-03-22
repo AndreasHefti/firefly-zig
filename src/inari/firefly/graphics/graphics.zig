@@ -44,8 +44,8 @@ pub const Layer = view.Layer;
 pub const ViewLayerMapping = view.ViewLayerMapping;
 pub const EMultiplier = view.EMultiplier;
 pub const ETransform = view.ETransform;
-pub const ViewRenderEvent = view.ViewRenderEvent;
-pub const ViewRenderListener = view.ViewRenderListener;
+pub const ViewRenderEvent = firefly.api.ViewRenderEvent;
+pub const ViewRenderListener = firefly.api.ViewRenderListener;
 pub const ViewRenderer = view.ViewRenderer;
 
 //////////////////////////////////////////////////////////////

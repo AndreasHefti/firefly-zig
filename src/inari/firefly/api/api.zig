@@ -88,13 +88,14 @@ pub fn init(
 
     UPDATE_EVENT_DISPATCHER = EventDispatch(UpdateEvent).new(ALLOC);
     RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).new(ALLOC);
+    VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(ALLOC);
 
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
-        rendering = try testing.createTestRenderAPI();
-        //rendering = try @import("raylib/rendering.zig").createRenderAPI();
-        //window = try @import("raylib/window.zig").createWindowAPI();
+        //rendering = try testing.createTestRenderAPI();
+        rendering = try @import("raylib/rendering.zig").createRenderAPI();
+        window = try @import("raylib/window.zig").createWindowAPI();
     }
 
     try Component.init();
@@ -120,6 +121,7 @@ pub fn deinit() void {
 
     UPDATE_EVENT_DISPATCHER.deinit();
     RENDER_EVENT_DISPATCHER.deinit();
+    VIEW_RENDER_EVENT_DISPATCHER.deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -128,6 +130,7 @@ pub fn deinit() void {
 
 var UPDATE_EVENT_DISPATCHER: EventDispatch(UpdateEvent) = undefined;
 var RENDER_EVENT_DISPATCHER: EventDispatch(RenderEvent) = undefined;
+var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(ViewRenderEvent) = undefined;
 
 pub const UpdateEvent = struct {};
 pub const UpdateListener = *const fn (UpdateEvent) void;
@@ -138,37 +141,58 @@ pub const RenderEventType = enum {
 };
 pub const RenderEvent = struct { type: RenderEventType };
 pub const RenderListener = *const fn (RenderEvent) void;
+pub const ViewRenderEvent = struct {
+    view_id: Index,
+    layer_id: Index,
+};
+pub const ViewRenderListener = *const fn (ViewRenderEvent) void;
 
-pub fn subscribeUpdate(listener: UpdateListener) void {
+pub inline fn subscribeUpdate(listener: UpdateListener) void {
     UPDATE_EVENT_DISPATCHER.register(listener);
 }
 
-pub fn subscribeUpdateAt(index: usize, listener: UpdateListener) void {
+pub inline fn subscribeUpdateAt(index: usize, listener: UpdateListener) void {
     UPDATE_EVENT_DISPATCHER.register(index, listener);
 }
 
-pub fn unsubscribeUpdate(listener: UpdateListener) void {
+pub inline fn unsubscribeUpdate(listener: UpdateListener) void {
     UPDATE_EVENT_DISPATCHER.unregister(listener);
 }
 
-pub fn subscribeRender(listener: RenderListener) void {
+pub inline fn subscribeRender(listener: RenderListener) void {
     RENDER_EVENT_DISPATCHER.register(listener);
 }
 
-pub fn subscribeRenderAt(index: usize, listener: RenderListener) void {
+pub inline fn subscribeRenderAt(index: usize, listener: RenderListener) void {
     RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
 }
 
-pub fn unsubscribeRender(listener: RenderListener) void {
+pub inline fn unsubscribeRender(listener: RenderListener) void {
     RENDER_EVENT_DISPATCHER.unregister(listener);
 }
 
-pub fn update(event: UpdateEvent) void {
+pub inline fn subscribeViewRender(listener: ViewRenderListener) void {
+    VIEW_RENDER_EVENT_DISPATCHER.register(listener);
+}
+
+pub inline fn subscribeViewRenderAt(index: usize, listener: ViewRenderListener) void {
+    VIEW_RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
+}
+
+pub inline fn unsubscribeViewRender(listener: ViewRenderListener) void {
+    VIEW_RENDER_EVENT_DISPATCHER.unregister(listener);
+}
+
+pub inline fn update(event: UpdateEvent) void {
     UPDATE_EVENT_DISPATCHER.notify(event);
 }
 
-pub fn render(event: RenderEvent) void {
+pub inline fn render(event: RenderEvent) void {
     RENDER_EVENT_DISPATCHER.notify(event);
+}
+
+pub inline fn renderView(event: ViewRenderEvent) void {
+    VIEW_RENDER_EVENT_DISPATCHER.notify(event);
 }
 
 //////////////////////////////////////////////////////////////

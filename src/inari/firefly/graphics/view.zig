@@ -23,6 +23,8 @@ const Entity = api.Entity;
 const EComponent = api.EComponent;
 const RenderEvent = api.RenderEvent;
 const System = api.System;
+const ViewRenderEvent = api.ViewRenderEvent;
+const ViewRenderListener = api.ViewRenderListener;
 
 const Index = utils.Index;
 const Float = utils.Float;
@@ -363,41 +365,12 @@ pub const EMultiplier = struct {
 //// ViewRenderer System
 //////////////////////////////////////////////////////////////
 
-pub const ViewRenderEvent = struct {
-    view_id: Index,
-    layer_id: Index,
-};
-pub const ViewRenderListener = *const fn (ViewRenderEvent) void;
-
 pub const ViewRenderer = struct {
-    var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(ViewRenderEvent) = undefined;
     var VIEW_RENDER_EVENT = ViewRenderEvent{
         .view_id = UNDEF_INDEX,
         .layer_id = UNDEF_INDEX,
     };
-
     pub const render_order = 0;
-
-    pub fn onConstruct() void {
-        VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(api.ALLOC);
-    }
-
-    pub fn onDestruct() void {
-        VIEW_RENDER_EVENT_DISPATCHER.deinit();
-        VIEW_RENDER_EVENT_DISPATCHER = undefined;
-    }
-
-    pub fn subscribe(listener: ViewRenderListener) void {
-        ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.register(listener);
-    }
-
-    pub fn subscribeAt(index: usize, listener: ViewRenderListener) void {
-        ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
-    }
-
-    pub fn unsubscribe(listener: ViewRenderListener) void {
-        ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.unregister(listener);
-    }
 
     pub fn render(event: RenderEvent) void {
         if (event.type != api.RenderEventType.RENDER)
@@ -411,7 +384,7 @@ pub const ViewRenderer = struct {
             api.rendering.startRendering(null, &View.screen_projection);
             VIEW_RENDER_EVENT.view_id = UNDEF_INDEX;
             VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
-            VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
+            api.renderView(VIEW_RENDER_EVENT);
             api.rendering.endRendering();
         } else {
             // render to all FBO
@@ -461,7 +434,7 @@ pub const ViewRenderer = struct {
                     // send layer render event
                     VIEW_RENDER_EVENT.view_id = view.id;
                     VIEW_RENDER_EVENT.layer_id = layer_id;
-                    VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
+                    api.renderView(VIEW_RENDER_EVENT);
                     // remove layer offset form render engine
                     api.rendering.addOffset(layer.offset * @as(Vector2f, @splat(-1)));
                     it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
@@ -470,7 +443,7 @@ pub const ViewRenderer = struct {
                 // we have no layer so only one render call for this view
                 VIEW_RENDER_EVENT.view_id = view.id;
                 VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
-                VIEW_RENDER_EVENT_DISPATCHER.notify(VIEW_RENDER_EVENT);
+                api.renderView(VIEW_RENDER_EVENT);
             }
             // end rendering to FBO
             api.rendering.endRendering();
