@@ -45,7 +45,6 @@ pub fn init(
         return;
 
     try api.init(component_allocator, entity_allocator, allocator, initMode);
-    Engine.init();
     try graphics.init(initMode);
     try physics.init(initMode);
 }
@@ -58,5 +57,4 @@ pub fn deinit() void {
     physics.deinit();
     graphics.deinit();
     api.deinit();
-    Engine.deinit();
 }

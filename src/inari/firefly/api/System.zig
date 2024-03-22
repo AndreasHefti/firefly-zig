@@ -5,7 +5,6 @@ const api = inari.firefly.api;
 const trait = std.meta.trait;
 
 const Component = api.Component;
-const Engine = inari.firefly.Engine;
 const ViewRenderer = inari.firefly.graphics.ViewRenderer;
 const Entity = api.Entity;
 const String = utils.String;
@@ -110,16 +109,16 @@ pub fn System(comptime T: type) type {
                 }
                 if (has_update_event_subscription) {
                     if (has_update_order) {
-                        Engine.subscribeUpdateAt(T.update_order, T.update);
+                        api.subscribeUpdateAt(T.update_order, T.update);
                     } else {
-                        Engine.subscribeUpdate(T.update);
+                        api.subscribeUpdate(T.update);
                     }
                 }
                 if (has_render_event_subscription) {
                     if (has_render_order) {
-                        Engine.subscribeRenderAt(T.render_order, T.render);
+                        api.subscribeRenderAt(T.render_order, T.render);
                     } else {
-                        Engine.subscribeRender(T.render);
+                        api.subscribeRender(T.render);
                     }
                 }
                 if (has_view_render_event_subscription) {
@@ -138,10 +137,10 @@ pub fn System(comptime T: type) type {
                     Entity.unsubscribe(T.notifyEntityChange);
                 }
                 if (has_update_event_subscription) {
-                    Engine.unsubscribeUpdate(T.update);
+                    api.unsubscribeUpdate(T.update);
                 }
                 if (has_render_event_subscription) {
-                    Engine.unsubscribeRender(T.render);
+                    api.unsubscribeRender(T.render);
                 }
                 if (has_view_render_event_subscription) {
                     ViewRenderer.unsubscribe(T.renderView);

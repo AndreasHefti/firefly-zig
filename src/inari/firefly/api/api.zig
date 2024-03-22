@@ -86,6 +86,9 @@ pub fn init(
     ENTITY_ALLOC = entity_allocator;
     ALLOC = allocator;
 
+    UPDATE_EVENT_DISPATCHER = EventDispatch(UpdateEvent).new(ALLOC);
+    RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).new(ALLOC);
+
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
@@ -114,11 +117,17 @@ pub fn deinit() void {
     rendering = undefined;
     window = undefined;
     Timer.deinit();
+
+    UPDATE_EVENT_DISPATCHER.deinit();
+    RENDER_EVENT_DISPATCHER.deinit();
 }
 
 //////////////////////////////////////////////////////////////
 //// Update Event and Render Event declarations
 //////////////////////////////////////////////////////////////
+
+var UPDATE_EVENT_DISPATCHER: EventDispatch(UpdateEvent) = undefined;
+var RENDER_EVENT_DISPATCHER: EventDispatch(RenderEvent) = undefined;
 
 pub const UpdateEvent = struct {};
 pub const UpdateListener = *const fn (UpdateEvent) void;
@@ -130,80 +139,37 @@ pub const RenderEventType = enum {
 pub const RenderEvent = struct { type: RenderEventType };
 pub const RenderListener = *const fn (RenderEvent) void;
 
-// pub fn RenderEventSubscription(comptime _: type) type {
-//     return struct {
-//         const Self = @This();
+pub fn subscribeUpdate(listener: UpdateListener) void {
+    UPDATE_EVENT_DISPATCHER.register(listener);
+}
 
-//         var _listener: RenderListener = undefined;
-//         var _condition: ?Condition(RenderEvent) = null;
+pub fn subscribeUpdateAt(index: usize, listener: UpdateListener) void {
+    UPDATE_EVENT_DISPATCHER.register(index, listener);
+}
 
-//         pub fn of(listener: RenderListener) Self {
-//             _listener = listener;
-//             return Self{};
-//         }
+pub fn unsubscribeUpdate(listener: UpdateListener) void {
+    UPDATE_EVENT_DISPATCHER.unregister(listener);
+}
 
-//         pub fn withCondition(self: Self, condition: Condition(RenderEvent)) Self {
-//             _condition = condition;
-//             return self;
-//         }
+pub fn subscribeRender(listener: RenderListener) void {
+    RENDER_EVENT_DISPATCHER.register(listener);
+}
 
-//         pub fn subscribe(self: Self) Self {
-//             firefly.Engine.subscribeRender(adapt);
-//             return self;
-//         }
+pub fn subscribeRenderAt(index: usize, listener: RenderListener) void {
+    RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
+}
 
-//         pub fn unsubscribe(self: Self) Self {
-//             firefly.Engine.unsubscribeRender(adapt);
-//             return self;
-//         }
+pub fn unsubscribeRender(listener: RenderListener) void {
+    RENDER_EVENT_DISPATCHER.unregister(listener);
+}
 
-//         fn adapt(e: RenderEvent) void {
-//             if (_condition) |*c| if (!c.check(e))
-//                 return;
+pub fn update(event: UpdateEvent) void {
+    UPDATE_EVENT_DISPATCHER.notify(event);
+}
 
-//             _listener(e);
-//         }
-//     };
-// }
-
-// pub fn UpdateEventSubscription(comptime _: type) type {
-//     return struct {
-//         const Self = @This();
-
-//         var _listener: UpdateListener = undefined;
-//         var _condition: ?Condition(UpdateEvent) = null;
-//         var _scheduler: ?UpdateScheduler = null;
-
-//         pub fn of(listener: UpdateListener) Self {
-//             _listener = listener;
-//             return Self{};
-//         }
-
-//         pub fn withCondition(self: Self, condition: Condition(UpdateEvent)) Self {
-//             _condition = condition;
-//             return self;
-//         }
-
-//         pub fn subscribe(self: Self) Self {
-//             firefly.Engine.subscribeUpdate(adapt);
-//             return self;
-//         }
-
-//         pub fn unsubscribe(self: Self) Self {
-//             firefly.Engine.unsubscribeUpdate(adapt);
-//             return self;
-//         }
-
-//         fn adapt(e: UpdateEvent) void {
-//             if (_scheduler) |*s| if (!s.needs_update)
-//                 return;
-//             if (_condition) |*c| if (!c.check(e))
-//                 return;
-
-//             _listener(e);
-//         }
-//     };
-// }
+pub fn render(event: RenderEvent) void {
+    RENDER_EVENT_DISPATCHER.notify(event);
+}
 
 //////////////////////////////////////////////////////////////
 //// Graphics API declarations

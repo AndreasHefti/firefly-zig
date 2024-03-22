@@ -13,23 +13,8 @@ const UpdateListener = api.UpdateListener;
 const RenderListener = api.RenderListener;
 const Timer = api.Timer;
 
-// TODO move subscription to api package
-// private state
-var UPDATE_EVENT_DISPATCHER: EventDispatch(UpdateEvent) = undefined;
-var RENDER_EVENT_DISPATCHER: EventDispatch(RenderEvent) = undefined;
 var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
-
-var initialized = false;
-pub fn init() void {
-    UPDATE_EVENT_DISPATCHER = EventDispatch(UpdateEvent).new(api.ALLOC);
-    RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).new(api.ALLOC);
-}
-
-pub fn deinit() void {
-    UPDATE_EVENT_DISPATCHER.deinit();
-    RENDER_EVENT_DISPATCHER.deinit();
-}
 
 pub fn start(
     w: c_int,
@@ -49,43 +34,43 @@ pub fn start(
     }
 }
 
-pub fn subscribeUpdate(listener: UpdateListener) void {
-    UPDATE_EVENT_DISPATCHER.register(listener);
+pub inline fn subscribeUpdate(listener: UpdateListener) void {
+    api.subscribeUpdate(listener);
 }
 
-pub fn subscribeUpdateAt(index: usize, listener: UpdateListener) void {
-    UPDATE_EVENT_DISPATCHER.register(index, listener);
+pub inline fn subscribeUpdateAt(index: usize, listener: UpdateListener) void {
+    api.subscribeUpdateAt(index, listener);
 }
 
-pub fn unsubscribeUpdate(listener: UpdateListener) void {
-    UPDATE_EVENT_DISPATCHER.unregister(listener);
+pub inline fn unsubscribeUpdate(listener: UpdateListener) void {
+    api.unsubscribeUpdate(listener);
 }
 
-pub fn subscribeRender(listener: RenderListener) void {
-    RENDER_EVENT_DISPATCHER.register(listener);
+pub inline fn subscribeRender(listener: RenderListener) void {
+    api.subscribeRender(listener);
 }
 
-pub fn subscribeRenderAt(index: usize, listener: RenderListener) void {
-    RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
+pub inline fn subscribeRenderAt(index: usize, listener: RenderListener) void {
+    api.subscribeRenderAt(index, listener);
 }
 
-pub fn unsubscribeRender(listener: RenderListener) void {
-    RENDER_EVENT_DISPATCHER.unregister(listener);
+pub inline fn unsubscribeRender(listener: RenderListener) void {
+    api.unsubscribeRender.unregister(listener);
 }
 
 /// Performs a tick.Update the Timer, notify UpdateEvent, notify Pre-Render, Render, Post-Render events
 pub fn tick() void {
     // update
     Timer.tick();
-    UPDATE_EVENT_DISPATCHER.notify(UPDATE_EVENT);
+    api.update(UPDATE_EVENT);
 
     // rendering
     RENDER_EVENT.type = RenderEventType.PRE_RENDER;
-    RENDER_EVENT_DISPATCHER.notify(RENDER_EVENT);
+    api.render(RENDER_EVENT);
 
     RENDER_EVENT.type = RenderEventType.RENDER;
-    RENDER_EVENT_DISPATCHER.notify(RENDER_EVENT);
+    api.render(RENDER_EVENT);
 
     RENDER_EVENT.type = RenderEventType.POST_RENDER;
-    RENDER_EVENT_DISPATCHER.notify(RENDER_EVENT);
+    api.render(RENDER_EVENT);
 }
