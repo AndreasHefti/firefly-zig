@@ -1,5 +1,9 @@
 # firefly-zig
 
+Firefly is a 2D Game API and engine strongly based on ECS design. Uses Raylib under the hood 
+
+Note: Firefly is unter heavy development and way far from release or completed feature set. 
+
 TODO:
   - Reimplement Asset(Shader) and Asset(SpriteSet)
   - Go on with porting from FlyKo
