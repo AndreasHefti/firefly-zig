@@ -12,8 +12,8 @@ const EventDispatch = utils.EventDispatch;
 const UpdateListener = api.UpdateListener;
 const RenderListener = api.RenderListener;
 const Timer = api.Timer;
-//const rl = @cImport(@cInclude("raylib.h"));
 
+// TODO move subscription to api package
 // private state
 var UPDATE_EVENT_DISPATCHER: EventDispatch(UpdateEvent) = undefined;
 var RENDER_EVENT_DISPATCHER: EventDispatch(RenderEvent) = undefined;
@@ -66,7 +66,7 @@ pub fn subscribeRender(listener: RenderListener) void {
 }
 
 pub fn subscribeRenderAt(index: usize, listener: RenderListener) void {
-    RENDER_EVENT_DISPATCHER.register(index, listener);
+    RENDER_EVENT_DISPATCHER.registerInsert(index, listener);
 }
 
 pub fn unsubscribeRender(listener: RenderListener) void {

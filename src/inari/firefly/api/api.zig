@@ -58,7 +58,7 @@ pub const System = system.System;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
-pub const EntityEventSubscription = entity.EntityEventSubscription;
+pub const EntityCondition = entity.EntityCondition;
 pub const EComponent = entity.EComponent;
 pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
@@ -99,8 +99,8 @@ pub fn init(
     system.init();
 
     // register api based components and entity components
-    Component.API.registerComponent(Entity);
-    Component.API.registerComponent(system.SystemComponent);
+    Component.registerComponent(Entity);
+    Component.registerComponent(system.SystemComponent);
 }
 
 pub fn deinit() void {
@@ -130,80 +130,80 @@ pub const RenderEventType = enum {
 pub const RenderEvent = struct { type: RenderEventType };
 pub const RenderListener = *const fn (RenderEvent) void;
 
-pub fn RenderEventSubscription(comptime _: type) type {
-    return struct {
-        const Self = @This();
+// pub fn RenderEventSubscription(comptime _: type) type {
+//     return struct {
+//         const Self = @This();
 
-        var _listener: RenderListener = undefined;
-        var _condition: ?Condition(RenderEvent) = null;
+//         var _listener: RenderListener = undefined;
+//         var _condition: ?Condition(RenderEvent) = null;
 
-        pub fn of(listener: RenderListener) Self {
-            _listener = listener;
-            return Self{};
-        }
+//         pub fn of(listener: RenderListener) Self {
+//             _listener = listener;
+//             return Self{};
+//         }
 
-        pub fn withCondition(self: Self, condition: Condition(RenderEvent)) Self {
-            _condition = condition;
-            return self;
-        }
+//         pub fn withCondition(self: Self, condition: Condition(RenderEvent)) Self {
+//             _condition = condition;
+//             return self;
+//         }
 
-        pub fn subscribe(self: Self) Self {
-            firefly.Engine.subscribeRender(adapt);
-            return self;
-        }
+//         pub fn subscribe(self: Self) Self {
+//             firefly.Engine.subscribeRender(adapt);
+//             return self;
+//         }
 
-        pub fn unsubscribe(self: Self) Self {
-            firefly.Engine.unsubscribeRender(adapt);
-            return self;
-        }
+//         pub fn unsubscribe(self: Self) Self {
+//             firefly.Engine.unsubscribeRender(adapt);
+//             return self;
+//         }
 
-        fn adapt(e: RenderEvent) void {
-            if (_condition) |*c| if (!c.check(e))
-                return;
+//         fn adapt(e: RenderEvent) void {
+//             if (_condition) |*c| if (!c.check(e))
+//                 return;
 
-            _listener(e);
-        }
-    };
-}
+//             _listener(e);
+//         }
+//     };
+// }
 
-pub fn UpdateEventSubscription(comptime _: type) type {
-    return struct {
-        const Self = @This();
+// pub fn UpdateEventSubscription(comptime _: type) type {
+//     return struct {
+//         const Self = @This();
 
-        var _listener: UpdateListener = undefined;
-        var _condition: ?Condition(UpdateEvent) = null;
-        var _scheduler: ?UpdateScheduler = null;
+//         var _listener: UpdateListener = undefined;
+//         var _condition: ?Condition(UpdateEvent) = null;
+//         var _scheduler: ?UpdateScheduler = null;
 
-        pub fn of(listener: UpdateListener) Self {
-            _listener = listener;
-            return Self{};
-        }
+//         pub fn of(listener: UpdateListener) Self {
+//             _listener = listener;
+//             return Self{};
+//         }
 
-        pub fn withCondition(self: Self, condition: Condition(UpdateEvent)) Self {
-            _condition = condition;
-            return self;
-        }
+//         pub fn withCondition(self: Self, condition: Condition(UpdateEvent)) Self {
+//             _condition = condition;
+//             return self;
+//         }
 
-        pub fn subscribe(self: Self) Self {
-            firefly.Engine.subscribeUpdate(adapt);
-            return self;
-        }
+//         pub fn subscribe(self: Self) Self {
+//             firefly.Engine.subscribeUpdate(adapt);
+//             return self;
+//         }
 
-        pub fn unsubscribe(self: Self) Self {
-            firefly.Engine.unsubscribeUpdate(adapt);
-            return self;
-        }
+//         pub fn unsubscribe(self: Self) Self {
+//             firefly.Engine.unsubscribeUpdate(adapt);
+//             return self;
+//         }
 
-        fn adapt(e: UpdateEvent) void {
-            if (_scheduler) |*s| if (!s.needs_update)
-                return;
-            if (_condition) |*c| if (!c.check(e))
-                return;
+//         fn adapt(e: UpdateEvent) void {
+//             if (_scheduler) |*s| if (!s.needs_update)
+//                 return;
+//             if (_condition) |*c| if (!c.check(e))
+//                 return;
 
-            _listener(e);
-        }
-    };
-}
+//             _listener(e);
+//         }
+//     };
+// }
 
 //////////////////////////////////////////////////////////////
 //// Graphics API declarations

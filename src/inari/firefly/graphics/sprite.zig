@@ -26,7 +26,7 @@ const ActionType = api.Component.ActionType;
 const Texture = graphics.Texture;
 const EComponent = api.EComponent;
 const EComponentAspectGroup = api.EComponentAspectGroup;
-const EntityEventSubscription = api.EntityEventSubscription;
+const EntityCondition = api.EntityCondition;
 const ETransform = graphics.ETransform;
 const EMultiplier = graphics.EMultiplier;
 const ViewLayerMapping = graphics.ViewLayerMapping;
@@ -52,14 +52,14 @@ pub fn init() !void {
     // init Asset
     //SpriteSetAsset.init();
     // init components and entities
-    Component.API.registerComponent(SpriteTemplate);
+    Component.registerComponent(SpriteTemplate);
     EComponent.registerEntityComponent(ESprite);
     // init renderer
     System(SimpleSpriteRenderer).init(
         "SimpleSpriteRenderer",
         "Render Entities with ETransform and ESprite components",
+        true,
     );
-    System(SimpleSpriteRenderer).activate();
 }
 
 pub fn deinit() void {
@@ -78,7 +78,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const SpriteTemplate = struct {
-    pub usingnamespace Component.API.ComponentTrait(
+    pub usingnamespace Component.Trait(
         @This(),
         .{
             .name = "SpriteTemplate",
@@ -322,37 +322,36 @@ pub const ESprite = struct {
 //////////////////////////////////////////////////////////////
 
 const SimpleSpriteRenderer = struct {
-    const sys_name = "SimpleSpriteRenderer";
-
-    var ee_subscription: EntityEventSubscription(SimpleSpriteRenderer) = undefined;
+    pub const view_render_order: usize = 0;
+    var entity_condition: EntityCondition = undefined;
     var sprite_refs: ViewLayerMapping = undefined;
 
     pub fn onConstruct() void {
-        ee_subscription = EntityEventSubscription(SimpleSpriteRenderer)
-            .of(registerEntity)
-            .withAcceptKind(EComponentAspectGroup.newKindOf(.{ ETransform, ESprite }))
-            .withDismissKind(EComponentAspectGroup.newKindOf(.{EMultiplier}))
-            .subscribe();
-
         sprite_refs = ViewLayerMapping.new();
+        entity_condition = EntityCondition{
+            .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, ESprite }),
+            .dismiss_kind = EComponentAspectGroup.newKindOf(.{EMultiplier}),
+        };
     }
 
     pub fn onDestruct() void {
-        _ = ee_subscription.unsubscribe();
-        ee_subscription = undefined;
+        entity_condition = undefined;
         sprite_refs.deinit();
         sprite_refs = undefined;
     }
 
-    pub fn onActivation(active: bool) void {
-        if (active) {
-            graphics.ViewRenderer.subscribeAt(0, render);
-        } else {
-            graphics.ViewRenderer.unsubscribe(render);
-        }
-    }
+    // pub fn onActivation(active: bool) void {
+    //     if (active) {
+    //         graphics.ViewRenderer.subscribeAt(0, render);
+    //     } else {
+    //         graphics.ViewRenderer.unsubscribe(render);
+    //     }
+    // }
 
-    fn registerEntity(e: ComponentEvent) void {
+    pub fn notifyEntityChange(e: ComponentEvent) void {
+        if (!entity_condition.check(e.c_id))
+            return;
+
         var transform = ETransform.byId(e.c_id);
         switch (e.event_type) {
             ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id),
@@ -361,7 +360,7 @@ const SimpleSpriteRenderer = struct {
         }
     }
 
-    fn render(e: ViewRenderEvent) void {
+    pub fn renderView(e: ViewRenderEvent) void {
         if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |id| {

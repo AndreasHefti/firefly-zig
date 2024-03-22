@@ -11,7 +11,6 @@ const ArrayList = std.ArrayList;
 const Component = api.Component;
 const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
-const ComponentTypeInterface = Component.API.ComponentTypeInterface;
 const Condition = utils.Condition;
 const AspectGroup = utils.AspectGroup;
 const String = utils.String;
@@ -20,7 +19,7 @@ const UNDEF_INDEX = utils.UNDEF_INDEX;
 const NO_NAME = utils.NO_NAME;
 
 pub const Entity = struct {
-    pub usingnamespace Component.API.ComponentTrait(Entity, .{ .name = "Entity" });
+    pub usingnamespace Component.Trait(Entity, .{ .name = "Entity" });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -100,11 +99,33 @@ pub const Entity = struct {
     }
 };
 
+pub const EntityCondition = struct {
+    accept_kind: ?EComponentKind = null,
+    dismiss_kind: ?EComponentKind = null,
+    condition: ?Condition(Index) = null,
+
+    pub fn check(self: *EntityCondition, id: Index) bool {
+        const e_kind = Entity.byId(id).kind;
+        if (self.accept_kind) |*ak| if (!ak.isPartOf(e_kind))
+            return false;
+        if (self.dismiss_kind) |*dk| if (!dk.isNotPartOf(e_kind))
+            return false;
+        if (self.condition) |*c| if (!c.check(id))
+            return false;
+        return true;
+    }
+};
+
 //////////////////////////////////////////////////////////////////////////
 //// Entity Component
 //////////////////////////////////////////////////////////////////////////
-
-var INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
+const EComponentTypeInterface = struct {
+    activate: *const fn (Index, bool) void,
+    clear: *const fn (Index) void,
+    deinit: *const fn () void,
+    to_string: *const fn (*StringBuffer) void,
+};
+var INTERFACE_TABLE: DynArray(EComponentTypeInterface) = undefined;
 
 pub const EComponentAspectGroup = AspectGroup(struct {
     pub const name = "EComponent";
@@ -162,7 +183,7 @@ pub const EComponent = struct {
         if (initialized)
             return;
 
-        INTERFACE_TABLE = try DynArray(ComponentTypeInterface).new(api.ENTITY_ALLOC);
+        INTERFACE_TABLE = try DynArray(EComponentTypeInterface).new(api.ENTITY_ALLOC);
     }
 
     // module deinit
@@ -248,7 +269,7 @@ pub fn EComponentPool(comptime T: type) type {
 
             EComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
             items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
-            _ = INTERFACE_TABLE.add(ComponentTypeInterface{
+            _ = INTERFACE_TABLE.add(EComponentTypeInterface{
                 .activate = Self.activate,
                 .clear = Self.clear,
                 .deinit = Self.deinit,
@@ -331,68 +352,6 @@ pub fn EComponentPool(comptime T: type) type {
                 if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
                 if (!trait.hasField("id")(@TypeOf(c))) @compileError("Expects component to have field 'id'.");
             }
-        }
-    };
-}
-
-// pub const EntityEventSubscription = struct {
-//     listener: ComponentListener,
-//     order: ?usize = null,
-//     accept_kind: ?Kind = null,
-//     dismiss_kind: ?Kind = null,
-//     condition: ?Condition(ComponentEvent) = null,
-// };
-
-pub fn EntityEventSubscription(comptime _: type) type {
-    return struct {
-        const Self = @This();
-
-        var _listener: ComponentListener = undefined;
-        var _order: ?usize = null;
-        var _accept_kind: ?EComponentKind = null;
-        var _dismiss_kind: ?EComponentKind = null;
-        var _condition: ?Condition(ComponentEvent) = null;
-
-        pub fn of(listener: ComponentListener) Self {
-            _listener = listener;
-            return Self{};
-        }
-
-        pub fn withCondition(self: Self, condition: Condition(ComponentEvent)) Self {
-            _condition = condition;
-            return self;
-        }
-
-        pub fn withAcceptKind(self: Self, accept_kind: EComponentKind) Self {
-            _accept_kind = accept_kind;
-            return self;
-        }
-
-        pub fn withDismissKind(self: Self, dismiss_kind: EComponentKind) Self {
-            _dismiss_kind = dismiss_kind;
-            return self;
-        }
-
-        pub fn subscribe(self: Self) Self {
-            Entity.subscribe(adapt);
-            return self;
-        }
-
-        pub fn unsubscribe(self: Self) Self {
-            Entity.unsubscribe(adapt);
-            return self;
-        }
-
-        fn adapt(e: ComponentEvent) void {
-            const e_kind = Entity.byId(e.c_id).kind;
-            if (_accept_kind) |*ak| if (!ak.isPartOf(e_kind))
-                return;
-            if (_dismiss_kind) |*dk| if (!dk.isNotPartOf(e_kind))
-                return;
-            if (_condition) |*c| if (!c.check(e))
-                return;
-
-            _listener(e);
         }
     };
 }

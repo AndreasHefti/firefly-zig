@@ -42,8 +42,8 @@ pub fn init() void {
     System(AnimationIntegration).init(
         "AnimationIntegration",
         "Updates all active animations",
+        true,
     );
-    System(AnimationIntegration).activate();
     AnimationIntegration.registerAnimationType(EasedValueIntegration);
     EComponent.registerEntityComponent(EAnimation);
 }

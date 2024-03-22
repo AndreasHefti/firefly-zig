@@ -25,7 +25,7 @@ pub fn init() !void {
     if (INIT)
         return;
 
-    API.COMPONENT_INTERFACE_TABLE = try DynArray(API.ComponentTypeInterface).new(api.COMPONENT_ALLOC);
+    COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).new(api.COMPONENT_ALLOC);
 }
 
 pub fn deinit() void {
@@ -34,16 +34,16 @@ pub fn deinit() void {
         return;
 
     // deinit all registered component pools
-    var next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
     while (next) |i| {
-        if (API.COMPONENT_INTERFACE_TABLE.get(i)) |interface| {
+        if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| {
             interface.deinit();
-            API.COMPONENT_INTERFACE_TABLE.delete(i);
+            COMPONENT_INTERFACE_TABLE.delete(i);
         }
-        next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
     }
-    API.COMPONENT_INTERFACE_TABLE.deinit();
-    API.COMPONENT_INTERFACE_TABLE = undefined;
+    COMPONENT_INTERFACE_TABLE.deinit();
+    COMPONENT_INTERFACE_TABLE = undefined;
 }
 
 //////////////////////////////////////////////////////////////
@@ -55,198 +55,195 @@ pub const ComponentAspectGroup = AspectGroup(struct {
 pub const ComponentKind = ComponentAspectGroup.Kind;
 pub const ComponentAspect = ComponentAspectGroup.Aspect;
 
-pub const API = struct {
-    var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
-
-    pub const ComponentTypeInterface = struct {
-        activate: *const fn (Index, bool) void,
-        clear: *const fn (Index) void,
-        deinit: *const fn () void,
-        to_string: *const fn (*StringBuffer) void,
-    };
-
-    pub const Context = struct {
-        name: String,
-        activation: bool = true,
-        name_mapping: bool = true,
-        subscription: bool = true,
-        processing: bool = true,
-    };
-
-    fn SubscriptionTrait(comptime _: type, comptime adapter: anytype) type {
-        return struct {
-            pub fn subscribe(listener: ComponentListener) void {
-                if (adapter.pool.eventDispatch) |*ed| ed.register(listener);
-            }
-
-            pub fn unsubscribe(listener: ComponentListener) void {
-                if (adapter.pool.eventDispatch) |*ed| ed.unregister(listener);
-            }
-        };
-    }
-
-    fn NameMappingTrait(comptime T: type, comptime adapter: anytype) type {
-        return struct {
-            pub fn existsName(name: String) bool {
-                if (adapter.pool.name_mapping) |*nm| {
-                    return nm.contains(name);
-                }
-                return false;
-            }
-
-            pub fn byName(name: String) ?*T {
-                if (adapter.pool.name_mapping) |*nm| {
-                    if (nm.get(name)) |id|
-                        return adapter.pool.items.get(id);
-                }
-                return null;
-            }
-            pub fn disposeByName(name: String) void {
-                if (adapter.pool.name_mapping) |*nm| {
-                    if (nm.get(name)) |id| adapter.pool.clear(id);
-                }
-            }
-        };
-    }
-
-    fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
-        return struct {
-            pub fn activateById(id: Index, active: bool) void {
-                adapter.pool.activate(id, active);
-            }
-            pub fn activateByName(name: String, active: bool) void {
-                if (adapter.pool.name_mapping) |*nm| {
-                    if (nm.get(name)) |id| {
-                        adapter.pool.activate(id, active);
-                    }
-                }
-            }
-            pub fn isActiveById(index: Index) bool {
-                return adapter.pool.active_mapping.isSet(index);
-            }
-            pub fn isActive(self: T) bool {
-                return adapter.pool.active_mapping.isSet(self.id);
-            }
-        };
-    }
-
-    fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
-        return struct {
-            pub fn processActive(f: *const fn (*const T) void) void {
-                var i: Index = 0;
-                while (adapter.pool.active_mapping.nextSetBit(i)) |next| {
-                    f(adapter.pool.items.get(next).?);
-                    i = next + 1;
-                }
-            }
-
-            pub fn processBitSet(indices: *BitSet, f: *const fn (*const T) void) void {
-                var i: Index = 0;
-                while (indices.nextSetBit(i)) |next| {
-                    f(adapter.pool.items.get(next));
-                    i = next + 1;
-                }
-            }
-
-            fn processIndexed(indices: []Index, f: *const fn (*const T) void) void {
-                for (indices) |i| {
-                    f(adapter.pool.items.get(i));
-                }
-            }
-        };
-    }
-
-    pub fn ComponentTrait(comptime T: type, comptime context: Context) type {
-        return struct {
-
-            // component type fields
-            pub const COMPONENT_TYPE_NAME = context.name;
-            pub const pool = ComponentPool(T);
-            pub var aspect: *const ComponentAspect = undefined;
-
-            pub fn count() usize {
-                return pool.items.slots.count();
-            }
-
-            pub fn activeCount() usize {
-                return pool.active_mapping.count();
-            }
-
-            // component type pool function references
-            pub fn new(t: T) Index {
-                return pool.register(t).id;
-            }
-
-            pub fn newAnd(t: T) *T {
-                return pool.register(t);
-            }
-
-            pub fn exists(id: Index) bool {
-                return pool.items.exists(id);
-            }
-
-            // TODO make it optional?
-            pub fn byId(id: Index) *T {
-                return pool.items.get(id).?;
-            }
-
-            pub fn nextId(id: Index) ?Index {
-                return pool.items.slots.nextSetBit(id);
-            }
-
-            pub fn nextActiveId(id: Index) ?Index {
-                return pool.active_mapping.nextSetBit(id);
-            }
-
-            pub fn disposeById(id: Index) void {
-                pool.clear(id);
-            }
-
-            // optional component type features
-            pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This()) else struct {};
-            pub usingnamespace if (context.activation) ActivationTrait(T, @This()) else struct {};
-            pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This()) else struct {};
-            pub usingnamespace if (context.processing) ProcessingTrait(T, @This()) else struct {};
-        };
-    }
-
-    pub fn registerComponent(comptime T: type) void {
-        ComponentPool(T).init();
-    }
-
-    pub fn deinitComponent(comptime T: type) void {
-        ComponentPool(T).deinit();
-    }
-
-    pub inline fn checkValidity(any_component: anytype) void {
-        if (!checkComponentValidity(any_component))
-            @panic("Invalid component type");
-    }
-
-    pub fn checkComponentValidity(any_component: anytype) bool {
-        const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
-        const c_type = switch (info) {
-            .Pointer => @TypeOf(any_component.*),
-            .Struct => @TypeOf(any_component),
-            else => {
-                std.log.err("Invalid type component: {any}", .{any_component});
-                return false;
-            },
-        };
-
-        if (!@hasField(c_type, "id")) {
-            std.log.warn("Invalid component. No id field: {any}", .{any_component});
-            return false;
-        }
-
-        if (any_component.id == utils.UNDEF_INDEX) {
-            std.log.warn("Invalid component. Undefined id: {any}", .{any_component});
-            return false;
-        }
-
-        return true;
-    }
+const ComponentTypeInterface = struct {
+    activate: *const fn (Index, bool) void,
+    clear: *const fn (Index) void,
+    deinit: *const fn () void,
+    to_string: *const fn (*StringBuffer) void,
 };
+var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
+
+pub const Context = struct {
+    name: String,
+    activation: bool = true,
+    name_mapping: bool = true,
+    subscription: bool = true,
+    processing: bool = true,
+};
+
+pub fn Trait(comptime T: type, comptime context: Context) type {
+    return struct {
+
+        // component type fields
+        pub const COMPONENT_TYPE_NAME = context.name;
+        pub const pool = ComponentPool(T);
+        pub var aspect: *const ComponentAspect = undefined;
+
+        pub fn count() usize {
+            return pool.items.slots.count();
+        }
+
+        pub fn activeCount() usize {
+            return pool.active_mapping.count();
+        }
+
+        // component type pool function references
+        pub fn new(t: T) Index {
+            return pool.register(t).id;
+        }
+
+        pub fn newAnd(t: T) *T {
+            return pool.register(t);
+        }
+
+        pub fn exists(id: Index) bool {
+            return pool.items.exists(id);
+        }
+
+        // TODO make it optional?
+        pub fn byId(id: Index) *T {
+            return pool.items.get(id).?;
+        }
+
+        pub fn nextId(id: Index) ?Index {
+            return pool.items.slots.nextSetBit(id);
+        }
+
+        pub fn nextActiveId(id: Index) ?Index {
+            return pool.active_mapping.nextSetBit(id);
+        }
+
+        pub fn disposeById(id: Index) void {
+            pool.clear(id);
+        }
+
+        // optional component type features
+        pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This()) else struct {};
+        pub usingnamespace if (context.activation) ActivationTrait(T, @This()) else struct {};
+        pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This()) else struct {};
+        pub usingnamespace if (context.processing) ProcessingTrait(T, @This()) else struct {};
+    };
+}
+
+fn SubscriptionTrait(comptime _: type, comptime adapter: anytype) type {
+    return struct {
+        pub fn subscribe(listener: ComponentListener) void {
+            if (adapter.pool.eventDispatch) |*ed| ed.register(listener);
+        }
+
+        pub fn unsubscribe(listener: ComponentListener) void {
+            if (adapter.pool.eventDispatch) |*ed| ed.unregister(listener);
+        }
+    };
+}
+
+fn NameMappingTrait(comptime T: type, comptime adapter: anytype) type {
+    return struct {
+        pub fn existsName(name: String) bool {
+            if (adapter.pool.name_mapping) |*nm| {
+                return nm.contains(name);
+            }
+            return false;
+        }
+
+        pub fn byName(name: String) ?*T {
+            if (adapter.pool.name_mapping) |*nm| {
+                if (nm.get(name)) |id|
+                    return adapter.pool.items.get(id);
+            }
+            return null;
+        }
+        pub fn disposeByName(name: String) void {
+            if (adapter.pool.name_mapping) |*nm| {
+                if (nm.get(name)) |id| adapter.pool.clear(id);
+            }
+        }
+    };
+}
+
+fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
+    return struct {
+        pub fn activateById(id: Index, active: bool) void {
+            adapter.pool.activate(id, active);
+        }
+        pub fn activateByName(name: String, active: bool) void {
+            if (adapter.pool.name_mapping) |*nm| {
+                if (nm.get(name)) |id| {
+                    adapter.pool.activate(id, active);
+                }
+            }
+        }
+        pub fn isActiveById(index: Index) bool {
+            return adapter.pool.active_mapping.isSet(index);
+        }
+        pub fn isActive(self: T) bool {
+            return adapter.pool.active_mapping.isSet(self.id);
+        }
+    };
+}
+
+fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
+    return struct {
+        pub fn processActive(f: *const fn (*const T) void) void {
+            var i: Index = 0;
+            while (adapter.pool.active_mapping.nextSetBit(i)) |next| {
+                f(adapter.pool.items.get(next).?);
+                i = next + 1;
+            }
+        }
+
+        pub fn processBitSet(indices: *BitSet, f: *const fn (*const T) void) void {
+            var i: Index = 0;
+            while (indices.nextSetBit(i)) |next| {
+                f(adapter.pool.items.get(next));
+                i = next + 1;
+            }
+        }
+
+        fn processIndexed(indices: []Index, f: *const fn (*const T) void) void {
+            for (indices) |i| {
+                f(adapter.pool.items.get(i));
+            }
+        }
+    };
+}
+
+pub fn registerComponent(comptime T: type) void {
+    ComponentPool(T).init();
+}
+
+pub fn deinitComponent(comptime T: type) void {
+    ComponentPool(T).deinit();
+}
+
+pub inline fn checkValidity(any_component: anytype) void {
+    if (!checkComponentValidity(any_component))
+        @panic("Invalid component type");
+}
+
+pub fn checkComponentValidity(any_component: anytype) bool {
+    const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
+    const c_type = switch (info) {
+        .Pointer => @TypeOf(any_component.*),
+        .Struct => @TypeOf(any_component),
+        else => {
+            std.log.err("Invalid type component: {any}", .{any_component});
+            return false;
+        },
+    };
+
+    if (!@hasField(c_type, "id")) {
+        std.log.warn("Invalid component. No id field: {any}", .{any_component});
+        return false;
+    }
+
+    if (any_component.id == utils.UNDEF_INDEX) {
+        std.log.warn("Invalid component. Undefined id: {any}", .{any_component});
+        return false;
+    }
+
+    return true;
+}
 
 //////////////////////////////////////////////////////////////
 //// Component Event Handling
@@ -367,7 +364,7 @@ pub fn ComponentPool(comptime T: type) type {
 
             errdefer Self.deinit();
             defer {
-                _ = API.COMPONENT_INTERFACE_TABLE.add(API.ComponentTypeInterface{
+                _ = COMPONENT_INTERFACE_TABLE.add(ComponentTypeInterface{
                     .activate = Self.activate,
                     .clear = Self.clear,
                     .deinit = Self.deinit,
@@ -500,9 +497,9 @@ pub fn ComponentPool(comptime T: type) type {
 
 pub fn print(string_buffer: *StringBuffer) void {
     string_buffer.print("\nComponents:", .{});
-    var next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
     while (next) |i| {
-        if (API.COMPONENT_INTERFACE_TABLE.get(i)) |interface| interface.to_string(string_buffer);
-        next = API.COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+        if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| interface.to_string(string_buffer);
+        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
     }
 }

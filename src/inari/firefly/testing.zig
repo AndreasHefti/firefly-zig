@@ -84,7 +84,7 @@ test "Firefly init" {
 // //////////////////////////////////////////////////////////////
 
 const ExampleComponent = struct {
-    pub usingnamespace Component.API.ComponentTrait(@This(), .{ .name = "ExampleComponent" });
+    pub usingnamespace Component.Trait(@This(), .{ .name = "ExampleComponent" });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -121,7 +121,7 @@ const ExampleComponent = struct {
 test "initialization" {
     try firefly.initTesting();
     defer firefly.deinit();
-    Component.API.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var newC = ExampleComponent.newAnd(ExampleComponent{
         .color = Color{ 1, 2, 3, 255 },
@@ -136,7 +136,7 @@ test "initialization" {
 test "valid component" {
     try firefly.initTesting();
     defer firefly.deinit();
-    Component.API.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var newC = ExampleComponent.newAnd(ExampleComponent{
         .color = Color{ 1, 2, 3, 255 },
@@ -150,15 +150,15 @@ test "valid component" {
         .position = PosF{ 10, 20 },
     };
 
-    try std.testing.expect(Component.API.checkComponentValidity(newC));
-    try std.testing.expect(Component.API.checkComponentValidity(newCPtr));
-    try std.testing.expect(!Component.API.checkComponentValidity(invalid1));
+    try std.testing.expect(Component.checkComponentValidity(newC));
+    try std.testing.expect(Component.checkComponentValidity(newCPtr));
+    try std.testing.expect(!Component.checkComponentValidity(invalid1));
 }
 
 test "create/dispose component" {
     try firefly.initTesting();
     defer firefly.deinit();
-    Component.API.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var cPtr = ExampleComponent.newAnd(.{
         .color = Color{ 0, 0, 0, 255 },
@@ -221,7 +221,7 @@ test "create/dispose component" {
 test "name mapping" {
     try firefly.initTesting();
     defer firefly.deinit();
-    Component.API.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var c1 = ExampleComponent.newAnd(.{
         .color = Color{ 0, 0, 0, 255 },
@@ -248,7 +248,7 @@ test "name mapping" {
 test "event propagation" {
     try firefly.initTesting();
     defer firefly.deinit();
-    Component.API.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     // also triggers auto init
     ExampleComponent.subscribe(testListener);
@@ -268,7 +268,7 @@ fn testListener(event: Component.ComponentEvent) void {
 test "get poll and process" {
     try firefly.initTesting();
     defer firefly.deinit();
-    Component.API.registerComponent(ExampleComponent);
+    Component.registerComponent(ExampleComponent);
 
     var c1 = ExampleComponent.newAnd(.{
         .color = Color{ 0, 0, 0, 255 },

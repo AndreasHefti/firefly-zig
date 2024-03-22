@@ -61,7 +61,7 @@ pub fn init(_: firefly.api.InitMode) !void {
         return;
 
     // register Assets
-    Component.API.registerComponent(Asset(Texture));
+    Component.registerComponent(Asset(Texture));
 
     // init sub packages
     try view.init();

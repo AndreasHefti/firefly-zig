@@ -108,12 +108,12 @@ pub fn AspectGroup(comptime T: type) type {
             }
         }
 
-        fn getAspectFromAnytype(aspect: anytype) ?Aspect {
+        fn getAspectFromAnytype(aspect: anytype) ?*const Aspect {
             const at = @TypeOf(aspect);
             if (at == Aspect) {
-                return aspect;
+                return &aspect;
             } else if (at == *Aspect or at == *const Aspect) {
-                return aspect.*;
+                return aspect;
             } else if (std.meta.trait.hasDecls(aspect, .{"aspect"})) {
                 return getAspectFromAnytype(aspect.aspect);
             } else {

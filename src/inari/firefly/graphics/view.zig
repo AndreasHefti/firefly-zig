@@ -22,7 +22,6 @@ const Projection = api.Projection;
 const Entity = api.Entity;
 const EComponent = api.EComponent;
 const RenderEvent = api.RenderEvent;
-const RenderEventSubscription = api.RenderEventSubscription;
 const System = api.System;
 
 const Index = utils.Index;
@@ -42,15 +41,15 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    Component.API.registerComponent(Layer);
-    Component.API.registerComponent(View);
+    Component.registerComponent(Layer);
+    Component.registerComponent(View);
     EComponent.registerEntityComponent(ETransform);
     EComponent.registerEntityComponent(EMultiplier);
     System(ViewRenderer).init(
         "ViewRenderer",
         "Emits ViewRenderEvent in order of active Views and its Layers",
+        true,
     );
-    System(ViewRenderer).activate();
 }
 
 pub fn deinit() void {
@@ -137,7 +136,7 @@ pub const ViewLayerMapping = struct {
 //////////////////////////////////////////////////////////////
 
 pub const View = struct {
-    pub usingnamespace Component.API.ComponentTrait(View, .{ .name = "View" });
+    pub usingnamespace Component.Trait(View, .{ .name = "View" });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -260,7 +259,7 @@ pub const View = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Layer = struct {
-    pub usingnamespace Component.API.ComponentTrait(Layer, .{ .name = "Layer" });
+    pub usingnamespace Component.Trait(Layer, .{ .name = "Layer" });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -377,7 +376,7 @@ pub const ViewRenderer = struct {
         .layer_id = UNDEF_INDEX,
     };
 
-    var re_subscription: RenderEventSubscription(ViewRenderer) = undefined;
+    pub const render_order = 0;
 
     pub fn onConstruct() void {
         VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(api.ALLOC);
@@ -386,17 +385,6 @@ pub const ViewRenderer = struct {
     pub fn onDestruct() void {
         VIEW_RENDER_EVENT_DISPATCHER.deinit();
         VIEW_RENDER_EVENT_DISPATCHER = undefined;
-    }
-
-    pub fn onActivation(active: bool) void {
-        if (active) {
-            re_subscription = RenderEventSubscription(ViewRenderer)
-                .of(render)
-                .subscribe();
-        } else {
-            _ = re_subscription.unsubscribe();
-            re_subscription = undefined;
-        }
     }
 
     pub fn subscribe(listener: ViewRenderListener) void {
@@ -411,7 +399,7 @@ pub const ViewRenderer = struct {
         ViewRenderer.VIEW_RENDER_EVENT_DISPATCHER.unregister(listener);
     }
 
-    fn render(event: RenderEvent) void {
+    pub fn render(event: RenderEvent) void {
         if (event.type != api.RenderEventType.RENDER)
             return;
 
