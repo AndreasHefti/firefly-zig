@@ -1,13 +1,16 @@
 # firefly-zig
 
 TODO:
-
-  - Refactor System like Asset but for singletons DONE!
-  - Refactor Shader handling like Texture handling DONE!
-  - Test Viewport rendering (render to texture) DONE!
   - Reimplement Asset(Shader) and Asset(SpriteSet)
-  - Adapt old tests DONE!
   - Go on with porting from FlyKo
+      - Tiles
+      - Text
+      - Shapes
+      - Move Collision-Detection amd Collision-Resolving
+      - Audio
+      - Behaviour and State Engine
+      - TileMap and WorldMap
+      - ...
 
  
  ## Code Example:
