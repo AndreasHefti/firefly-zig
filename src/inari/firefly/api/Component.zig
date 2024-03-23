@@ -79,6 +79,10 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
         pub const pool = ComponentPool(T);
         pub var aspect: *const ComponentAspect = undefined;
 
+        pub fn isInitialized() bool {
+            return pool._type_init;
+        }
+
         pub fn count() usize {
             return pool.items.slots.count();
         }
@@ -308,8 +312,8 @@ pub fn ComponentPool(comptime T: type) type {
     comptime var has_name_mapping: bool = false;
 
     // component type init/deinit functions
-    comptime var has_init: bool = false;
-    comptime var has_deinit: bool = false;
+    comptime var has_component_type_init: bool = false;
+    comptime var has_component_type_deinit: bool = false;
 
     // component member function interceptors
     comptime var has_construct: bool = false;
@@ -338,8 +342,8 @@ pub fn ComponentPool(comptime T: type) type {
         has_activateById = trait.hasDecls(T, .{"activateById"});
         has_activateByName = has_name_mapping and trait.hasDecls(T, .{"activateByName"});
         has_subscribe = trait.hasDecls(T, .{"subscribe"});
-        has_init = trait.hasDecls(T, .{"init"});
-        has_deinit = trait.hasDecls(T, .{"deinit"});
+        has_component_type_init = trait.hasDecls(T, .{"componentTypeInit"});
+        has_component_type_deinit = trait.hasDecls(T, .{"componentTypeDeinit"});
         has_construct = trait.hasDecls(T, .{"construct"});
         has_activation = trait.hasDecls(T, .{"activation"});
         has_destruct = trait.hasDecls(T, .{"destruct"});
@@ -347,8 +351,10 @@ pub fn ComponentPool(comptime T: type) type {
 
     return struct {
         const Self = @This();
+
         // ensure type based singleton
-        var initialized = false;
+        var _type_init = false;
+
         // internal state
         var items: DynArray(T) = undefined;
         // mappings
@@ -359,7 +365,7 @@ pub fn ComponentPool(comptime T: type) type {
         var eventDispatch: ?EventDispatch(ComponentEvent) = null;
 
         pub fn init() void {
-            if (initialized)
+            if (_type_init)
                 return;
 
             errdefer Self.deinit();
@@ -370,7 +376,7 @@ pub fn ComponentPool(comptime T: type) type {
                     .deinit = Self.deinit,
                     .to_string = toString,
                 });
-                initialized = true;
+                _type_init = true;
             }
 
             items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
@@ -385,8 +391,8 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_name_mapping)
                 name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
 
-            if (has_init) {
-                T.init() catch {
+            if (has_component_type_init) {
+                T.componentTypeInit() catch {
                     std.log.err("Failed to initialize component of type: {any}", .{T});
                 };
             }
@@ -394,13 +400,13 @@ pub fn ComponentPool(comptime T: type) type {
 
         /// Release all allocated memory.
         pub fn deinit() void {
-            defer initialized = false;
-            if (!initialized)
+            defer _type_init = false;
+            if (!_type_init)
                 return;
 
             clearAll();
-            if (has_deinit)
-                T.deinit();
+            if (has_component_type_deinit)
+                T.componentTypeDeinit();
 
             items.deinit();
             active_mapping.deinit();

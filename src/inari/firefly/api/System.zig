@@ -29,9 +29,10 @@ pub fn deinit() void {
 }
 
 pub fn System(comptime T: type) type {
-    comptime var has_construct: bool = false;
+    comptime var has_init: bool = false;
     comptime var has_activation: bool = false;
-    comptime var has_destruct: bool = false;
+    comptime var has_deinit: bool = false;
+
     comptime var has_render_order: bool = false;
     comptime var has_view_render_order: bool = false;
     comptime var has_update_order: bool = false;
@@ -45,9 +46,9 @@ pub fn System(comptime T: type) type {
         if (!trait.is(.Struct)(T))
             @compileError("Expects component type is a struct.");
 
-        has_construct = trait.hasDecls(T, .{"onConstruct"});
-        has_activation = trait.hasDecls(T, .{"onActivation"});
-        has_destruct = trait.hasDecls(T, .{"onDestruct"});
+        has_init = trait.hasDecls(T, .{"systemInit"});
+        has_activation = trait.hasDecls(T, .{"systemActivation"});
+        has_deinit = trait.hasDecls(T, .{"systemDeinit"});
         has_render_order = trait.hasDecls(T, .{"render_order"});
         has_view_render_order = trait.hasDecls(T, .{"view_render_order"});
         has_update_order = trait.hasDecls(T, .{"update_order"});
@@ -64,7 +65,7 @@ pub fn System(comptime T: type) type {
         var type_init = false;
         var component_ref: ?*SystemComponent = null;
 
-        pub fn init(name: String, info: String, active: bool) void {
+        pub fn createSystem(name: String, info: String, active: bool) void {
             defer type_init = true;
             if (type_init)
                 return;
@@ -72,18 +73,18 @@ pub fn System(comptime T: type) type {
             component_ref = SystemComponent.newAnd(.{
                 .name = name,
                 .info = info,
-                .onActivation = if (has_activation) T.onActivation else null,
+                .onActivation = if (has_activation) T.systemActivation else null,
                 .onDestruct = destruct,
             });
 
-            if (has_construct)
-                T.onConstruct();
+            if (has_init)
+                T.systemInit();
 
             if (active)
                 activate();
         }
 
-        pub fn deinit() void {
+        pub fn disposeSystem() void {
             defer type_init = false;
             if (!type_init)
                 return;
@@ -95,8 +96,8 @@ pub fn System(comptime T: type) type {
         }
 
         fn destruct() void {
-            if (has_destruct)
-                T.onDestruct();
+            if (has_deinit)
+                T.systemDeinit();
         }
 
         pub fn activate() void {
@@ -158,9 +159,7 @@ pub const SystemComponent = struct {
     name: ?String = null,
     info: String = NO_NAME,
     onActivation: ?*const fn (bool) void = null,
-    onDestruct: ?*const fn () void = null,
-
-    pub fn init() !void {}
+    onDestruct: *const fn () void,
 
     pub fn activation(self: *SystemComponent, active: bool) void {
         if (self.onActivation) |onActivation| {
@@ -169,9 +168,7 @@ pub const SystemComponent = struct {
     }
 
     pub fn destruct(self: *SystemComponent) void {
-        if (self.onDestruct) |onDestruct| {
-            onDestruct();
-        }
+        self.onDestruct();
     }
 
     pub fn format(

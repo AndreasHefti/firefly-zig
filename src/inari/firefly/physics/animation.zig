@@ -39,7 +39,7 @@ pub fn init() void {
         return;
 
     IndexFrame.init();
-    System(AnimationIntegration).init(
+    System(AnimationIntegration).createSystem(
         "AnimationIntegration",
         "Updates all active animations",
         true,
@@ -54,7 +54,7 @@ pub fn deinit() void {
         return;
 
     IndexFrame.deinit();
-    System(AnimationIntegration).deinit();
+    System(AnimationIntegration).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -361,7 +361,7 @@ pub const AnimationIntegration = struct {
     var animation_type_refs: DynArray(AnimationTypeReference) = undefined;
     var animation_refs: DynArray(IAnimation) = undefined;
 
-    pub fn onConstruct() void {
+    pub fn systemInit() void {
         animation_type_refs = DynArray(AnimationTypeReference).newWithRegisterSize(
             api.ALLOC,
             10,
@@ -370,7 +370,7 @@ pub const AnimationIntegration = struct {
         animation_refs = DynArray(IAnimation).new(api.COMPONENT_ALLOC) catch unreachable;
     }
 
-    pub fn onDestruct() void {
+    pub fn systemDeinit() void {
         var next = animation_refs.slots.nextSetBit(0);
         while (next) |i| {
             if (animation_refs.get(i)) |ar| ar.fn_dispose(i);
@@ -390,7 +390,7 @@ pub const AnimationIntegration = struct {
         animation_type_refs = undefined;
     }
 
-    pub fn onActivation(active: bool) void {
+    pub fn systemActivation(active: bool) void {
         if (active)
             Engine.subscribeUpdate(update)
         else

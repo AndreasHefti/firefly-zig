@@ -98,11 +98,11 @@ const ExampleComponent = struct {
     }
 
     // following methods will automatically be called by Component interface when defined
-    pub fn init() !void {
+    pub fn componentTypeInit() !void {
         // testing
     }
 
-    pub fn deinit() void {}
+    pub fn componentTypeDeinit() void {}
 
     pub fn construct(self: *ExampleComponent) void {
         std.testing.expect(self.id != UNDEF_INDEX) catch unreachable;

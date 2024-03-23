@@ -85,7 +85,7 @@ pub fn AspectGroup(comptime T: type) type {
             return kind;
         }
 
-        pub fn newKindOfNames(aspects: [2]String) Kind {
+        pub fn newKindOfNames(aspects: []String) Kind {
             var kind = Kind{};
             for (0..aspects.len) |i| {
                 var j: u8 = 0;

@@ -25,11 +25,17 @@ pub const Entity = struct {
     name: ?String = null,
     kind: EComponentKind = undefined,
 
-    pub fn init() !void {
+    pub fn componentTypeInit() !void {
+        if (@This().isInitialized())
+            return;
+
         try EComponent.init();
     }
 
-    pub fn deinit() void {
+    pub fn componentTypeDeinit() void {
+        if (!@This().isInitialized())
+            return;
+
         EComponent.deinit();
     }
 
@@ -245,8 +251,8 @@ pub fn EComponentPool(comptime T: type) type {
 
         has_byId = trait.hasDecls(T, .{"byId"});
 
-        has_init = trait.hasDecls(T, .{"init"});
-        has_deinit = trait.hasDecls(T, .{"deinit"});
+        has_init = trait.hasDecls(T, .{"ecTypeInit"});
+        has_deinit = trait.hasDecls(T, .{"ecTypeDeinit"});
 
         has_construct = trait.hasDecls(T, .{"construct"});
         has_destruct = trait.hasDecls(T, .{"destruct"});
@@ -275,7 +281,8 @@ pub fn EComponentPool(comptime T: type) type {
                 .deinit = Self.deinit,
                 .to_string = toString,
             });
-            if (has_init) T.init();
+            if (has_init)
+                T.ecTypeInit();
         }
 
         pub fn deinit() void {
@@ -292,7 +299,7 @@ pub fn EComponentPool(comptime T: type) type {
             }
 
             if (has_deinit)
-                T.deinit();
+                T.ecTypeDeinit();
 
             items.clear();
             items.deinit();

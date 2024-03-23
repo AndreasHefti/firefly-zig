@@ -22,6 +22,9 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
     return struct {
         pub const ASSET_TYPE_NAME = type_name;
         pub var aspect: *const AssetAspect = undefined;
+        pub fn isInitialized() bool {
+            return Asset(T).isInitialized();
+        }
         pub fn loadByName(name: String) void {
             Asset(T).loadByName(name);
         }
@@ -58,13 +61,13 @@ pub fn Asset(comptime T: type) type {
         if (!trait.hasFn("getResource")(T))
             @compileError("Expects asset type to have fn getResource(asset_id: Index) ?*T, that gets the loaded asset resource");
 
-        has_init = trait.hasDecls(T, .{"init"});
-        has_deinit = trait.hasDecls(T, .{"deinit"});
+        has_init = trait.hasDecls(T, .{"assetTypeInit"});
+        has_deinit = trait.hasDecls(T, .{"assetTypeDeinit"});
     }
 
     return struct {
         const Self = @This();
-        var type_init = false;
+        //var type_init = false;
 
         pub usingnamespace Component.Trait(Self, .{ .name = "Asset:" ++ T.ASSET_TYPE_NAME });
 
@@ -75,23 +78,21 @@ pub fn Asset(comptime T: type) type {
         resource_id: Index = UNDEF_INDEX,
         parent_asset_id: Index = UNDEF_INDEX,
 
-        pub fn init() !void {
-            defer type_init = true;
-            if (type_init)
+        pub fn componentTypeInit() !void {
+            if (Self.isInitialized())
                 return;
 
             AssetAspectGroup.applyAspect(T, T.ASSET_TYPE_NAME);
             if (has_init)
-                T.init();
+                T.assetTypeInit();
         }
 
-        pub fn deinit() void {
-            defer type_init = false;
-            if (!type_init)
+        pub fn componentTypeDeinit() void {
+            if (!Self.isInitialized())
                 return;
 
             if (has_deinit)
-                T.deinit();
+                T.assetTypeDeinit();
             T.aspect = undefined;
         }
 

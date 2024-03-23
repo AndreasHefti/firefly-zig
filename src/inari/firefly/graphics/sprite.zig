@@ -4,18 +4,7 @@ const utils = inari.utils;
 const api = inari.firefly.api;
 const graphics = inari.firefly.graphics;
 
-//const ArrayList = std.ArrayList;
-//const StringHashMap = std.StringHashMap;
-//const Aspect = utils.Aspect;
-//const Condition = utils.Condition;
-//const DynArray = utils.DynArray;
-//const BindingId = api.BindingId;
-//const TextureData = api.TextureData;
-//const Entity = api.Entity;
-//const View = graphics.View;
-//const ViewRenderListener = graphics.ViewRenderListener;
-//const DynIndexArray = utils.DynIndexArray;
-
+const DynArray = utils.DynArray;
 const Asset = api.Asset;
 const SpriteData = api.SpriteData;
 const RenderData = api.RenderData;
@@ -55,7 +44,7 @@ pub fn init() !void {
     Component.registerComponent(SpriteTemplate);
     EComponent.registerEntityComponent(ESprite);
     // init renderer
-    System(SimpleSpriteRenderer).init(
+    System(SimpleSpriteRenderer).createSystem(
         "SimpleSpriteRenderer",
         "Render Entities with ETransform and ESprite components",
         true,
@@ -68,7 +57,7 @@ pub fn deinit() void {
         return;
 
     // deinit renderer
-    System(SimpleSpriteRenderer).deinit();
+    System(SimpleSpriteRenderer).disposeSystem();
     // deinit Assets
     //SpriteSetAsset.deinit();
 }
@@ -93,11 +82,11 @@ pub const SpriteTemplate = struct {
     texture_name: String,
     sprite_data: SpriteData,
 
-    pub fn init() !void {
+    pub fn componentTypeInit() !void {
         Asset(Texture).subscribe(notifyAssetEvent);
     }
 
-    pub fn deinit() void {
+    pub fn componentTypeDeinit() void {
         Asset(Texture).unsubscribe(notifyAssetEvent);
     }
 
@@ -192,6 +181,39 @@ pub const ESprite = struct {
 //////////////////////////////////////////////////////////////
 //// Sprite Set Asset
 //////////////////////////////////////////////////////////////
+
+pub const SpriteStamp = struct {
+    name: ?String = null,
+    sprite_dim: ?RectF = null,
+    flip_x: bool = false,
+    flip_y: bool = false,
+};
+
+pub const SpriteSet = struct {
+    pub usingnamespace api.AssetTrait(Texture, "SpriteSet");
+
+    var stamps: DynArray(SpriteStamp) = undefined;
+
+    name: ?String = null,
+    texture_asset_id: Index,
+    default_stamp: ?SpriteStamp = null,
+    set_dimensions: ?Vec2f = null,
+
+    pub fn assetTypeInit() void {
+        if (@This().isInitialized())
+            return;
+
+        stamps = DynArray(SpriteStamp).new(api.COMPONENT_ALLOC);
+    }
+
+    pub fn assetTypeDeInit() void {
+        if (!@This().isInitialized())
+            return;
+
+        stamps.deinit();
+        stamps = undefined;
+    }
+};
 
 // pub const SpriteSetAsset = struct {
 //     pub var asset_type: *Aspect = undefined;
@@ -326,7 +348,7 @@ const SimpleSpriteRenderer = struct {
     var entity_condition: EntityCondition = undefined;
     var sprite_refs: ViewLayerMapping = undefined;
 
-    pub fn onConstruct() void {
+    pub fn systemInit() void {
         sprite_refs = ViewLayerMapping.new();
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, ESprite }),
@@ -334,19 +356,11 @@ const SimpleSpriteRenderer = struct {
         };
     }
 
-    pub fn onDestruct() void {
+    pub fn systemDeinit() void {
         entity_condition = undefined;
         sprite_refs.deinit();
         sprite_refs = undefined;
     }
-
-    // pub fn onActivation(active: bool) void {
-    //     if (active) {
-    //         graphics.ViewRenderer.subscribeAt(0, render);
-    //     } else {
-    //         graphics.ViewRenderer.unsubscribe(render);
-    //     }
-    // }
 
     pub fn notifyEntityChange(e: ComponentEvent) void {
         if (!entity_condition.check(e.c_id))

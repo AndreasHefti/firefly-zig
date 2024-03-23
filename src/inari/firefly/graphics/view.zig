@@ -47,7 +47,7 @@ pub fn init() !void {
     Component.registerComponent(View);
     EComponent.registerEntityComponent(ETransform);
     EComponent.registerEntityComponent(EMultiplier);
-    System(ViewRenderer).init(
+    System(ViewRenderer).createSystem(
         "ViewRenderer",
         "Emits ViewRenderEvent in order of active Views and its Layers",
         true,
@@ -59,7 +59,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    System(ViewRenderer).deinit();
+    System(ViewRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -159,7 +159,7 @@ pub const View = struct {
     pub var screen_shader_binding: BindingId = NO_BINDING;
     pub var ordered_active_views: DynArray(Index) = undefined;
 
-    pub fn init() !void {
+    pub fn componentTypeInit() !void {
         ordered_active_views = try DynArray(Index).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             10,
@@ -167,7 +167,7 @@ pub const View = struct {
         Layer.subscribe(onLayerAction);
     }
 
-    pub fn deinit() void {
+    pub fn componentTypeDeinit() void {
         Layer.unsubscribe(onLayerAction);
         ordered_active_views.deinit();
     }

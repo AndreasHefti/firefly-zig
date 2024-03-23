@@ -195,7 +195,6 @@ pub const Texture = struct {
     pub usingnamespace firefly.api.AssetTrait(Texture, "Texture");
 
     var textures: DynArray(Texture) = undefined;
-    var type_init = false;
 
     name: ?String = null,
     resource: String,
@@ -205,31 +204,25 @@ pub const Texture = struct {
 
     _binding: ?TextureBinding = null,
 
-    pub fn init() void {
-        defer type_init = true;
-        if (type_init)
+    pub fn assetTypeInit() void {
+        if (@This().isInitialized())
             return;
 
         textures = DynArray(Texture).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
     }
 
-    pub fn deinit() void {
-        defer type_init = false;
-        if (!type_init)
+    pub fn assetTypeDeinit() void {
+        if (!@This().isInitialized())
             return;
 
         textures.deinit();
     }
 
     pub fn new(data: Texture) Index {
-        if (!type_init) @panic("not initialized");
-
         return newAnd(data).id;
     }
 
     pub fn newAnd(data: Texture) *Asset(Texture) {
-        if (!type_init) @panic("not initialized");
-
         return Asset(Texture).newAnd(.{
             .name = data.name,
             .resource_id = textures.add(data),
@@ -237,8 +230,6 @@ pub const Texture = struct {
     }
 
     pub fn doLoad(asset: *Asset(Texture)) void {
-        if (!type_init) @panic("not initialized");
-
         if (textures.get(asset.resource_id)) |tex| {
             if (tex._binding != null)
                 return; // already loaded
@@ -253,8 +244,6 @@ pub const Texture = struct {
     }
 
     pub fn doUnload(asset: *Asset(Texture)) void {
-        if (!type_init) @panic("not initialized");
-
         if (asset.resource_id == UNDEF_INDEX)
             return;
         if (textures.get(asset.resource_id)) |tex| {
@@ -266,9 +255,6 @@ pub const Texture = struct {
     }
 
     pub fn getResource(asset_id: Index) ?*Texture {
-        if (!type_init)
-            return null;
-
         return textures.get(Asset(Texture).byId(asset_id).resource_id);
     }
 };
