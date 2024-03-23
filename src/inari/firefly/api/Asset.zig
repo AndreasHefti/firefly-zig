@@ -4,6 +4,7 @@ const utils = inari.utils;
 const api = inari.firefly.api;
 const trait = std.meta.trait;
 
+const DynArray = utils.DynArray;
 const Component = api.Component;
 const AspectGroup = utils.AspectGroup;
 const String = utils.String;
@@ -22,9 +23,22 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
     return struct {
         pub const ASSET_TYPE_NAME = type_name;
         pub var aspect: *const AssetAspect = undefined;
+
         pub fn isInitialized() bool {
             return Asset(T).isInitialized();
         }
+
+        pub fn new(data: T) Index {
+            return newAnd(data).id;
+        }
+
+        pub fn newAnd(data: T) *Asset(T) {
+            return Asset(T).newAnd(.{
+                .name = data.name,
+                .resource_id = Asset(T).resources.add(data),
+            });
+        }
+
         pub fn loadByName(name: String) void {
             Asset(T).loadByName(name);
         }
@@ -39,6 +53,19 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
         }
         pub fn disposeByName(name: String) void {
             Asset(T).disposeByName(name);
+        }
+        pub fn getResourceByAssetId(asset_id: Index) ?*T {
+            var asset = Asset(T).byId(asset_id);
+            if (!asset.isActive()) {
+                loadById(asset_id);
+            }
+            return getResourceById(asset.resource_id);
+        }
+        pub fn getResourceById(resource_id: usize) ?*T {
+            return Asset(T).resources.get(resource_id);
+        }
+        pub fn getResourceByName(asset_name: String) ?*T {
+            return Asset(T).resources.get(Asset(T).byName(asset_name).resource_id);
         }
     };
 }
@@ -58,8 +85,6 @@ pub fn Asset(comptime T: type) type {
             @compileError("Expects asset type to have fn doLoad(asset: *Asset(T)) void, that loads the asset");
         if (!trait.hasDecls(T, .{"doUnload"}))
             @compileError("Expects asset type to have fn doUnload(asset: *Asset(T)) void, that unloads the asset");
-        if (!trait.hasFn("getResource")(T))
-            @compileError("Expects asset type to have fn getResource(asset_id: Index) ?*T, that gets the loaded asset resource");
 
         has_init = trait.hasDecls(T, .{"assetTypeInit"});
         has_deinit = trait.hasDecls(T, .{"assetTypeDeinit"});
@@ -67,9 +92,10 @@ pub fn Asset(comptime T: type) type {
 
     return struct {
         const Self = @This();
-        //var type_init = false;
 
         pub usingnamespace Component.Trait(Self, .{ .name = "Asset:" ++ T.ASSET_TYPE_NAME });
+
+        var resources: DynArray(T) = undefined;
 
         // struct fields
         id: Index = UNDEF_INDEX,
@@ -83,6 +109,7 @@ pub fn Asset(comptime T: type) type {
                 return;
 
             AssetAspectGroup.applyAspect(T, T.ASSET_TYPE_NAME);
+            Self.resources = DynArray(T).new(api.COMPONENT_ALLOC) catch unreachable;
             if (has_init)
                 T.assetTypeInit();
         }
@@ -93,6 +120,8 @@ pub fn Asset(comptime T: type) type {
 
             if (has_deinit)
                 T.assetTypeDeinit();
+
+            Self.resources.deinit();
             T.aspect = undefined;
         }
 
@@ -139,7 +168,7 @@ pub fn Asset(comptime T: type) type {
         }
 
         pub fn getResource(self: *Self) ?*T {
-            return T.getResource(self.resource_id);
+            return T.getResourceById(self.resource_id);
         }
 
         pub fn format(

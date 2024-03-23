@@ -194,8 +194,6 @@ pub fn deinit() void {
 pub const Texture = struct {
     pub usingnamespace firefly.api.AssetTrait(Texture, "Texture");
 
-    var textures: DynArray(Texture) = undefined;
-
     name: ?String = null,
     resource: String,
     is_mipmap: bool = false,
@@ -204,33 +202,8 @@ pub const Texture = struct {
 
     _binding: ?TextureBinding = null,
 
-    pub fn assetTypeInit() void {
-        if (@This().isInitialized())
-            return;
-
-        textures = DynArray(Texture).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
-    }
-
-    pub fn assetTypeDeinit() void {
-        if (!@This().isInitialized())
-            return;
-
-        textures.deinit();
-    }
-
-    pub fn new(data: Texture) Index {
-        return newAnd(data).id;
-    }
-
-    pub fn newAnd(data: Texture) *Asset(Texture) {
-        return Asset(Texture).newAnd(.{
-            .name = data.name,
-            .resource_id = textures.add(data),
-        });
-    }
-
     pub fn doLoad(asset: *Asset(Texture)) void {
-        if (textures.get(asset.resource_id)) |tex| {
+        if (@This().getResourceById(asset.resource_id)) |tex| {
             if (tex._binding != null)
                 return; // already loaded
 
@@ -246,15 +219,12 @@ pub const Texture = struct {
     pub fn doUnload(asset: *Asset(Texture)) void {
         if (asset.resource_id == UNDEF_INDEX)
             return;
-        if (textures.get(asset.resource_id)) |tex| {
+
+        if (@This().getResourceById(asset.resource_id)) |tex| {
             if (tex._binding) |b| {
                 firefly.api.rendering.disposeTexture(b.id);
                 tex._binding = null;
             }
         }
-    }
-
-    pub fn getResource(asset_id: Index) ?*Texture {
-        return textures.get(Asset(Texture).byId(asset_id).resource_id);
     }
 };
