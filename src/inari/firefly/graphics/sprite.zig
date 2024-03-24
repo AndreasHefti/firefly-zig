@@ -26,6 +26,7 @@ const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Float = utils.Float;
 const RectF = utils.RectF;
 const Vec2f = utils.Vector2f;
 
@@ -39,8 +40,8 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    // init Asset
-    //SpriteSetAsset.init();
+    // register Assets
+    Component.registerComponent(Asset(SpriteSet));
     // init components and entities
     Component.registerComponent(SpriteTemplate);
     EComponent.registerEntityComponent(ESprite);
@@ -59,8 +60,6 @@ pub fn deinit() void {
 
     // deinit renderer
     System(SimpleSpriteRenderer).disposeSystem();
-    // deinit Assets
-    //SpriteSetAsset.deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -92,6 +91,13 @@ pub const SpriteTemplate = struct {
     }
 
     // TODO add construct to automatically bind the texture if it is already loaded
+    pub fn construct(self: *SpriteTemplate) void {
+        if (Texture.getResourceByName(self.texture_name)) |tex| {
+            if (tex.binding) |b| {
+                self.sprite_data.texture_binding = b.id;
+            }
+        }
+    }
 
     fn notifyAssetEvent(e: ComponentEvent) void {
         var asset: *Asset(Texture) = Asset(Texture).byId(e.c_id);
@@ -108,7 +114,7 @@ pub const SpriteTemplate = struct {
 
     fn onTextureLoad(asset: *Asset(Texture)) void {
         if (asset.getResource()) |r| {
-            if (r._binding) |b| {
+            if (r.binding) |b| {
                 var next = SpriteTemplate.nextId(0);
                 while (next) |id| {
                     var template = SpriteTemplate.byId(id);
@@ -193,12 +199,12 @@ pub const SpriteStamp = struct {
 };
 
 pub const SpriteSet = struct {
-    pub usingnamespace api.AssetTrait(Texture, "SpriteSet");
+    pub usingnamespace api.AssetTrait(SpriteSet, "SpriteSet");
 
     _stamps: DynArray(SpriteStamp) = undefined,
     _loaded_sprite_template_refs: DynIndexArray = undefined,
 
-    name: ?String = null,
+    name: String,
     texture_name: String,
     default_stamp: ?SpriteStamp = null,
     set_dimensions: ?Vec2f = null,
@@ -227,56 +233,69 @@ pub const SpriteSet = struct {
         }
     }
 
-    pub fn doLoad(asset: *Asset(SpriteSet)) void {
-        if (@This().getResourceById(asset.resource_id)) |set| {
-            if (set.set_dimensions) |dim| {
-                // in this case we interpret the texture as a grid-map of sprites and use default stamp
-                for (0..dim[1]) |y| { // 0..height
-                    for (0..dim[0]) |x| { // 0..width
-                        if (set._stamps.get(y * dim[0] + x)) |stamp| {
-                            // use the stamp merged with default stamp
-                            set._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
-                                .name = getMapName(stamp.name, set.default_stamp.name, x, y),
-                                .texture_name = set.texture_name,
-                                .sprite_data = SpriteData{ .texture_bounds = .{
-                                    x,
-                                    y,
-                                    set.default_stamp.sprite_dim[2],
-                                    set.default_stamp.sprite_dim[3],
-                                } },
-                            }));
-                        } else {
-                            // use the default stamp
-                            set._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
-                                .name = getMapName(null, set.default_stamp.name, x, y),
-                                .texture_name = set.texture_name,
-                                .sprite_data = SpriteData{ .texture_bounds = .{
-                                    x,
-                                    y,
-                                    set.default_stamp.sprite_dim[2],
-                                    set.default_stamp.sprite_dim[3],
-                                } },
-                            }));
-                        }
+    pub fn doLoad(_: *Asset(SpriteSet), resource: *SpriteSet) void {
+        if (resource.set_dimensions) |dim| {
+            // in this case we interpret the texture as a grid-map of sprites and use default stamp
+            if (resource.default_stamp == null)
+                @panic("SpriteSet needs default_stamp when loading with set_dimensions");
+
+            var default_stamp = resource.default_stamp.?;
+            if (default_stamp.sprite_dim == null)
+                @panic("SpriteSet needs default_stamp with sprite_dim");
+
+            var width: usize = @intFromFloat(dim[0]);
+            var height: usize = @intFromFloat(dim[1]);
+            var default_dim = default_stamp.sprite_dim.?;
+            var default_prefix = if (default_stamp.name) |p| p else resource.name;
+
+            for (0..height) |y| { // 0..height
+                for (0..width) |x| { // 0..width
+                    if (resource._stamps.get(y * width + x)) |stamp| {
+                        // use the stamp merged with default stamp
+                        resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                            .name = getMapName(stamp.name, default_prefix, x, y),
+                            .texture_name = resource.texture_name,
+                            .sprite_data = SpriteData{ .texture_bounds = stamp.sprite_dim.? },
+                        }));
+                    } else {
+                        // use the default stamp
+                        resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                            .name = getMapName(null, default_prefix, x, y),
+                            .texture_name = resource.texture_name,
+                            .sprite_data = SpriteData{ .texture_bounds = RectF{
+                                @as(Float, @floatFromInt(x)) * default_dim[2],
+                                @as(Float, @floatFromInt(y)) * default_dim[3],
+                                default_dim[2],
+                                default_dim[3],
+                            } },
+                        }));
                     }
-                }
-            } else {
-                // in this case just load the existing stamps that has defined sprite_dim (others are ignored)
-                var next = set._stamps.slots.nextSetBit(0);
-                while (next) |i| {
-                    if (set._stamps.get(i)) |stamp| {
-                        if (stamp.sprite_dim) |s_dim| {
-                            set._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
-                                .name = getMapName(stamp.name, set.default_stamp.name, i, null),
-                                .texture_name = set.texture_name,
-                                .sprite_data = SpriteData{ .texture_bounds = s_dim },
-                            }));
-                        }
-                    }
-                    next = set._stamps.slots.nextSetBit(i + 1);
                 }
             }
+        } else {
+            // in this case just load the existing stamps that has defined sprite_dim (others are ignored)
+            var default_prefix = if (resource.default_stamp.?.name) |p| p else resource.name;
+            var next = resource._stamps.slots.nextSetBit(0);
+            while (next) |i| {
+                if (resource._stamps.get(i)) |stamp| {
+                    if (stamp.sprite_dim) |s_dim| {
+                        resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                            .name = getMapName(stamp.name, default_prefix, i, null),
+                            .texture_name = resource.texture_name,
+                            .sprite_data = SpriteData{ .texture_bounds = s_dim },
+                        }));
+                    }
+                }
+                next = resource._stamps.slots.nextSetBit(i + 1);
+            }
         }
+    }
+
+    pub fn doUnload(_: *Asset(SpriteSet), resource: *SpriteSet) void {
+        for (resource._loaded_sprite_template_refs.items) |index| {
+            SpriteTemplate.disposeById(index);
+        }
+        resource._loaded_sprite_template_refs.clear();
     }
 
     fn getMapName(name: ?String, prefix: String, x: usize, y: ?usize) String {
@@ -294,15 +313,6 @@ pub const SpriteSet = struct {
             spriteTemplate.sprite_data.flip_x();
         if (flip_y)
             spriteTemplate.sprite_data.flip_y();
-    }
-
-    pub fn doUnload(asset: *Asset(SpriteSet)) void {
-        if (@This().getResourceById(asset.resource_id)) |set| {
-            for (set._loaded_sprite_template_refs.items) |index| {
-                SpriteTemplate.disposeById(index);
-            }
-            set._loaded_sprite_template_refs.clear();
-        }
     }
 };
 

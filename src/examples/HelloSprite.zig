@@ -26,16 +26,16 @@ pub fn run(allocator: Allocator) !void {
 }
 
 fn _Example_One_Entity_No_Views() void {
-    var sprite_id = SpriteTemplate.new(.{
-        .texture_name = "TestTexture",
-        .sprite_data = .{ .texture_bounds = utils.RectF{ 0, 0, 32, 32 } },
-    });
-
     Texture.newAnd(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
     }).load();
+
+    var sprite_id = SpriteTemplate.new(.{
+        .texture_name = "TestTexture",
+        .sprite_data = .{ .texture_bounds = utils.RectF{ 0, 0, 32, 32 } },
+    });
 
     _ = Entity.newAnd(.{ .name = "TestEntity" })
         .with(ETransform{ .transform = .{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 } })

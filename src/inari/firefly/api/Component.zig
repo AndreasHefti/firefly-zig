@@ -87,11 +87,6 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
             return pool.items.slots.count();
         }
 
-        pub fn activeCount() usize {
-            return pool.active_mapping.count();
-        }
-
-        // component type pool function references
         pub fn new(t: T) Index {
             return pool.register(t).id;
         }
@@ -111,10 +106,6 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
 
         pub fn nextId(id: Index) ?Index {
             return pool.items.slots.nextSetBit(id);
-        }
-
-        pub fn nextActiveId(id: Index) ?Index {
-            return pool.active_mapping.nextSetBit(id);
         }
 
         pub fn disposeById(id: Index) void {
@@ -182,6 +173,13 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
         }
         pub fn isActive(self: T) bool {
             return adapter.pool.active_mapping.isSet(self.id);
+        }
+        pub fn activeCount() usize {
+            return adapter.pool.active_mapping.count();
+        }
+
+        pub fn nextActiveId(id: Index) ?Index {
+            return adapter.pool.active_mapping.nextSetBit(id);
         }
     };
 }

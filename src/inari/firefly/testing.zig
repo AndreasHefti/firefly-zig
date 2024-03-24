@@ -53,11 +53,15 @@ test "Firefly init" {
         \\  0:System
         \\  1:Entity
         \\  2:Asset:Texture
-        \\  3:Layer
-        \\  4:View
-        \\  5:SpriteTemplate
+        \\  3:Asset:Shader
+        \\  4:Layer
+        \\  5:View
+        \\  6:Asset:SpriteSet
+        \\  7:SpriteTemplate
         \\AspectGroup(Asset)
         \\  0:Texture
+        \\  1:Shader
+        \\  2:SpriteSet
         \\AspectGroup(EComponent)
         \\  0:ETransform
         \\  1:EMultiplier
@@ -71,8 +75,10 @@ test "Firefly init" {
         \\    (a) AnimationIntegration[ id:2, info:Updates all active animations ]
         \\  Entity size: 0
         \\  Asset:Texture size: 0
+        \\  Asset:Shader size: 0
         \\  Layer size: 0
         \\  View size: 0
+        \\  Asset:SpriteSet size: 0
         \\  SpriteTemplate size: 0
     ;
 
@@ -361,9 +367,11 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\    (a) SimpleSpriteRenderer[ id:1, info:Render Entities with ETransform and ESprite components ]
         \\    (a) AnimationIntegration[ id:2, info:Updates all active animations ]
         \\  Asset:Texture size: 1
-        \\    (a) Asset(Texture)[0|TestTexture| resource_id=0, parent_asset_id=18446744073709551615 ]
+        \\    (a) Asset(Texture)[0|TestTexture| resource_id=0, parent_asset_id=null ]
+        \\  Asset:Shader size: 0
         \\  Layer size: 0
         \\  View size: 0
+        \\  Asset:SpriteSet size: 0
         \\  SpriteTemplate size: 1
         \\    (x) SpriteTemplate[ id:0, name:null, texture_name:TestTexture, SpriteData[ bind:0, bounds:{ 2.0e+01, 0.0e+00, -2.0e+01, 2.0e+01 } ] ]
     ;

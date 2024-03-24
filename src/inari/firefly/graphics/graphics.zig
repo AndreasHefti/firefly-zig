@@ -19,6 +19,7 @@ const ActionType = firefly.api.ComponentActionType;
 const TextureBinding = firefly.api.TextureBinding;
 const TextureFilter = firefly.api.TextureFilter;
 const TextureWrap = firefly.api.TextureWrap;
+const ShaderBinding = firefly.api.ShaderBinding;
 
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = firefly.api.NO_BINDING;
@@ -27,6 +28,10 @@ const UNDEF_INDEX = utils.UNDEF_INDEX;
 const RectF = utils.geom.RectF;
 const Vec2f = utils.geom.Vector2f;
 const CInt = utils.CInt;
+const Float = utils.Float;
+const Vector2f = utils.Vector2f;
+const Vector3f = utils.Vector3f;
+const Vector4f = utils.Vector4f;
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
@@ -34,9 +39,7 @@ const CInt = utils.CInt;
 
 pub const SpriteTemplate = sprite.SpriteTemplate;
 pub const ESprite = sprite.ESprite;
-//pub const SpriteDataKey = sprite.SpriteDataKey;
-//pub const SpriteSet = sprite.SpriteSet;
-//pub const SpriteSetAsset = sprite.SpriteSetAsset;
+pub const SpriteSet = sprite.SpriteSet;
 
 pub const Component = firefly.api.Component;
 pub const View = view.View;
@@ -62,6 +65,7 @@ pub fn init(_: firefly.api.InitMode) !void {
 
     // register Assets
     Component.registerComponent(Asset(Texture));
+    Component.registerComponent(Asset(Shader));
 
     // init sub packages
     try view.init();
@@ -89,103 +93,81 @@ pub fn deinit() void {
 //// ShaderAsset
 //////////////////////////////////////////////////////////////
 
-// pub const ShaderAsset = struct {
-//     pub var asset_type: *Aspect = undefined;
+pub const Shader = struct {
+    pub usingnamespace firefly.api.AssetTrait(Shader, "Shader");
 
-//     pub const Shader = struct {
-//         asset_name: String = NO_NAME,
-//         vertex_shader_resource: String = NO_NAME,
-//         fragment_shader_resource: String = NO_NAME,
-//         file_resource: bool = true,
-//     };
+    name: String,
+    vertex_shader_resource: String = NO_NAME,
+    fragment_shader_resource: String = NO_NAME,
+    file_resource: bool = true,
 
-//     fn init() !void {
-//         asset_type = Asset.ASSET_TYPE_ASPECT_GROUP.getAspect("Shader");
-//         shader = try DynArray(ShaderData).new(firefly.api.COMPONENT_ALLOC);
-//         Asset.subscribe(listener);
-//     }
+    binding: ?ShaderBinding = null,
 
-//     fn deinit() void {
-//         Asset.unsubscribe(listener);
-//         asset_type = undefined;
-//         shader.deinit();
-//         shader = undefined;
-//     }
+    pub fn doLoad(_: *Asset(Shader), resource: *Shader) void {
+        if (resource.binding != null)
+            return; // already loaded
 
-//     pub fn new(data: Shader) *Asset {
-//         if (!initialized)
-//             @panic("Firefly module not initialized");
+        resource.binding = firefly.api.rendering.createShader(
+            resource.vertex_shader_resource,
+            resource.fragment_shader_resource,
+            resource.file_resource,
+        );
+    }
 
-//         return Asset.new(Asset{
-//             .asset_type = asset_type,
-//             .name = data.asset_name,
-//             .resource_id = shader.add(ShaderData{
-//                 .vertex_shader_resource = data.vertex_shader_resource,
-//                 .fragment_shader_resource = data.fragment_shader_resource,
-//                 .file_resource = data.file_resource,
-//             }),
-//         });
-//     }
+    pub fn setByNameUniformFloat(asset_name: String, name: String, v_ptr: *Float) bool {
+        if (Shader.getResourceByName(asset_name)) |s| {
+            return s._set_uniform_float(s.binding_id, name, v_ptr);
+        }
+        return false;
+    }
+    pub fn setByNameUniformVec2(asset_name: String, name: String, v_ptr: *Vector2f) bool {
+        if (Shader.getResourceByName(asset_name)) |s| {
+            return s._set_uniform_vec2(s.binding_id, name, v_ptr);
+        }
+        return false;
+    }
+    pub fn setByNameUniformVec3(asset_name: String, name: String, v_ptr: *Vector3f) bool {
+        if (Shader.getResourceByName(asset_name)) |s| {
+            return s._set_uniform_vec3(s.binding_id, name, v_ptr);
+        }
+        return false;
+    }
+    pub fn setByNameUniformVec4(asset_name: String, name: String, v_ptr: *Vector4f) bool {
+        if (Shader.getResourceByName(asset_name)) |s| {
+            return s._set_uniform_vec4(s.binding_id, name, v_ptr);
+        }
+        return false;
+    }
+    pub fn setByNameUniformTexture(asset_name: String, name: String, tex_binding: BindingId) bool {
+        if (Shader.getResourceByName(asset_name)) |s| {
+            return s._set_uniform_texture(s.binding_id, name, tex_binding);
+        }
+        return false;
+    }
 
-//     fn listener(e: ComponentEvent) void {
-//         var asset: *Asset = Asset.byId(e.c_id);
-//         if (asset_type.index != asset.asset_type.index)
-//             return;
+    pub fn setUniformFloat(self: *Shader, name: String, v_ptr: *Float) bool {
+        return self._set_uniform_float(self.binding_id, name, v_ptr);
+    }
+    pub fn setUniformVec2(self: *Shader, name: String, v_ptr: *Vector2f) bool {
+        return self._set_uniform_vec2(self.binding_id, name, v_ptr);
+    }
+    pub fn setUniformVec3(self: *Shader, name: String, v_ptr: *Vector3f) bool {
+        return self._set_uniform_vec3(self.binding_id, name, v_ptr);
+    }
+    pub fn setUniformVec4(self: *Shader, name: String, v_ptr: *Vector4f) bool {
+        return self._set_uniform_vec4(self.binding_id, name, v_ptr);
+    }
+    pub fn setUniformTexture(self: *Shader, name: String, tex_binding: BindingId) bool {
+        return self._set_uniform_texture(self.binding_id, name, tex_binding);
+    }
 
-//         switch (e.event_type) {
-//             ActionType.ACTIVATED => load(asset),
-//             ActionType.DEACTIVATING => unload(asset),
-//             ActionType.DISPOSING => delete(asset),
-//             else => {},
-//         }
-//     }
-
-//     pub fn getResourceById(asset_id: Index, auto_load: bool) ?*const ShaderData {
-//         var asset: *Asset = Asset.byId(asset_id);
-//         // check if the asset is loaded, if not, try to auto-load it
-//         if (!asset.isLoaded() and auto_load) {
-//             if (!asset.load()) {
-//                 std.log.err("Failed to load/activate dependent ShaderAsset: {any}", .{Asset.byId(asset.parent_asset_id)});
-//                 return null;
-//             }
-//         }
-
-//         return shader.get(asset.resource_id);
-//     }
-
-//     pub fn getBindingByAssetId(asset_id: Index) BindingId {
-//         if (getResourceById(asset_id, true)) |res| {
-//             return res.binding;
-//         }
-//         return NO_BINDING;
-//     }
-
-//     fn load(asset: *Asset) void {
-//         if (!initialized)
-//             return;
-
-//         if (shader.get(asset.resource_id)) |sd| {
-//             if (sd.binding != NO_BINDING)
-//                 return; // already loaded
-
-//             firefly.api.rendering.createShader(sd);
-//         }
-//     }
-
-//     fn unload(asset: *Asset) void {
-//         if (!initialized)
-//             return;
-
-//         if (shader.get(asset.resource_id)) |s| {
-//             firefly.api.rendering.disposeShader(s);
-//         }
-//     }
-
-//     fn delete(asset: *Asset) void {
-//         Asset.activateById(asset.id, false);
-//         shader.delete(asset.resource_id);
-//     }
-// };
+    pub fn doUnload(_: *Asset(Shader), resource: *Shader) void {
+        if (resource.binding) |b| {
+            firefly.api.rendering.disposeShader(b.id);
+            resource.binding = null;
+        }
+    }
+};
 
 //////////////////////////////////////////////////////////////
 //// Texture Asset
@@ -194,37 +176,30 @@ pub fn deinit() void {
 pub const Texture = struct {
     pub usingnamespace firefly.api.AssetTrait(Texture, "Texture");
 
-    name: ?String = null,
+    name: String,
     resource: String,
     is_mipmap: bool = false,
     filter: TextureFilter = TextureFilter.TEXTURE_FILTER_POINT,
     wrap: TextureWrap = TextureWrap.TEXTURE_WRAP_CLAMP,
 
-    _binding: ?TextureBinding = null,
+    binding: ?TextureBinding = null,
 
-    pub fn doLoad(asset: *Asset(Texture)) void {
-        if (@This().getResourceById(asset.resource_id)) |tex| {
-            if (tex._binding != null)
-                return; // already loaded
+    pub fn doLoad(_: *Asset(Texture), resource: *Texture) void {
+        if (resource.binding != null)
+            return; // already loaded
 
-            tex._binding = firefly.api.rendering.loadTexture(
-                tex.resource,
-                tex.is_mipmap,
-                tex.filter,
-                tex.wrap,
-            );
-        }
+        resource.binding = firefly.api.rendering.loadTexture(
+            resource.resource,
+            resource.is_mipmap,
+            resource.filter,
+            resource.wrap,
+        );
     }
 
-    pub fn doUnload(asset: *Asset(Texture)) void {
-        if (asset.resource_id == UNDEF_INDEX)
-            return;
-
-        if (@This().getResourceById(asset.resource_id)) |tex| {
-            if (tex._binding) |b| {
-                firefly.api.rendering.disposeTexture(b.id);
-                tex._binding = null;
-            }
+    pub fn doUnload(_: *Asset(Texture), resource: *Texture) void {
+        if (resource.binding) |b| {
+            firefly.api.rendering.disposeTexture(b.id);
+            resource.binding = null;
         }
     }
 };

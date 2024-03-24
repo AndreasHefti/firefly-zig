@@ -8,10 +8,13 @@ const api = inari.firefly.api;
 const String = utils.String;
 const IRenderAPI = api.IRenderAPI;
 const Vector2f = utils.Vector2f;
+const Vector3f = utils.Vector3f;
+const Vector4f = utils.Vector4f;
 const Color = utils.Color;
 const BlendMode = api.BlendMode;
 const RenderData = api.RenderData;
 const TextureBinding = api.TextureBinding;
+const ShaderBinding = api.ShaderBinding;
 const TransformData = api.TransformData;
 const TextureFilter = api.TextureFilter;
 const TextureWrap = api.TextureWrap;
@@ -188,7 +191,7 @@ const RaylibRenderAPI = struct {
         vertex_shader: String,
         fragment_shade: String,
         file: bool,
-    ) BindingId {
+    ) ShaderBinding {
         var shader: Shader = undefined;
         if (file) {
             shader = rl.LoadShader(
@@ -202,7 +205,14 @@ const RaylibRenderAPI = struct {
             );
         }
 
-        return shaders.add(shader);
+        return .{
+            .id = shaders.add(shader),
+            ._set_uniform_float = setShaderValueFloat,
+            ._set_uniform_vec2 = setShaderValueVec2,
+            ._set_uniform_vec3 = setShaderValueVec3,
+            ._set_uniform_vec4 = setShaderValueVec4,
+            ._set_uniform_texture = setShaderValueTex,
+        };
     }
 
     fn disposeShader(id: BindingId) void {
@@ -365,6 +375,37 @@ const RaylibRenderAPI = struct {
         }
 
         // TODO something else?
+    }
+
+    fn setShaderValueFloat(shader_id: BindingId, name: String, val: *Float) bool {
+        return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_FLOAT);
+    }
+    fn setShaderValueVec2(shader_id: BindingId, name: String, val: *Vector2f) bool {
+        return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC2);
+    }
+    fn setShaderValueVec3(shader_id: BindingId, name: String, val: *Vector3f) bool {
+        return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC3);
+    }
+    fn setShaderValueVec4(shader_id: BindingId, name: String, val: *Vector4f) bool {
+        return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC4);
+    }
+    fn setShaderValueTex(shader_id: BindingId, name: String, val: BindingId) bool {
+        if (render_textures.get(val)) |rt| {
+            return setShaderValue(shader_id, name, rt, rl.SHADER_UNIFORM_SAMPLER2D);
+        }
+        return false;
+    }
+
+    fn setShaderValue(shader_id: BindingId, name: String, val: anytype, v_type: CInt) bool {
+        if (shaders.get(shader_id)) |shader| {
+            var location = rl.GetShaderLocation(shader.*, @ptrCast(name));
+            if (location < 0)
+                return false;
+
+            rl.SetShaderValue(shader.*, location, val, v_type);
+            return true;
+        }
+        return false;
     }
 
     fn printDebug(buffer: *StringBuffer) void {

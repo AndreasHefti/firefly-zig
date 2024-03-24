@@ -16,11 +16,15 @@ const RenderTextureBinding = api.RenderTextureBinding;
 const TransformData = api.TransformData;
 const RenderData = api.RenderData;
 const SpriteData = api.SpriteData;
+const ShaderBinding = api.ShaderBinding;
 const PosI = utils.PosI;
 const CInt = utils.CInt;
 const Vector2f = utils.Vector2f;
+const Vector3f = utils.Vector3f;
+const Vector4f = utils.Vector4f;
 const Projection = api.Projection;
 const IRenderAPI = api.IRenderAPI;
+const Float = utils.Float;
 
 // Singleton Debug RenderAPI
 var singletonDebugRenderAPI: IRenderAPI() = undefined;
@@ -202,13 +206,52 @@ pub const DebugRenderAPI = struct {
         vertex_shader: String,
         fragment_shader: String,
         file: bool,
-    ) BindingId {
-        return shaders.add(ShaderData{
-            .binding = shaders.nextFreeSlot(),
-            .vertex_shader = vertex_shader,
-            .fragment_shader = fragment_shader,
-            .file = file,
-        });
+    ) ShaderBinding {
+        return .{
+            .id = shaders.add(ShaderData{
+                .binding = shaders.nextFreeSlot(),
+                .vertex_shader = vertex_shader,
+                .fragment_shader = fragment_shader,
+                .file = file,
+            }),
+
+            ._set_uniform_float = setShaderValueFloat,
+            ._set_uniform_vec2 = setShaderValueVec2,
+            ._set_uniform_vec3 = setShaderValueVec3,
+            ._set_uniform_vec4 = setShaderValueVec4,
+            ._set_uniform_texture = setShaderValueTex,
+        };
+    }
+
+    fn setShaderValueFloat(shader_id: BindingId, name: String, val: *Float) bool {
+        _ = shader_id;
+        _ = name;
+        _ = val;
+        return true;
+    }
+    fn setShaderValueVec2(shader_id: BindingId, name: String, val: *Vector2f) bool {
+        _ = shader_id;
+        _ = name;
+        _ = val;
+        return true;
+    }
+    fn setShaderValueVec3(shader_id: BindingId, name: String, val: *Vector3f) bool {
+        _ = shader_id;
+        _ = name;
+        _ = val;
+        return true;
+    }
+    fn setShaderValueVec4(shader_id: BindingId, name: String, val: *Vector4f) bool {
+        _ = shader_id;
+        _ = name;
+        _ = val;
+        return true;
+    }
+    fn setShaderValueTex(shader_id: BindingId, name: String, val: BindingId) bool {
+        _ = shader_id;
+        _ = name;
+        _ = val;
+        return true;
     }
 
     pub fn disposeShader(id: BindingId) void {

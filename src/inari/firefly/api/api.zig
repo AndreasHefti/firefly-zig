@@ -427,6 +427,16 @@ pub const SpriteData = struct {
     }
 };
 
+pub const ShaderBinding = struct {
+    id: BindingId = NO_BINDING,
+
+    _set_uniform_float: *const fn (BindingId, String, *Float) bool = undefined,
+    _set_uniform_vec2: *const fn (BindingId, String, *Vector2f) bool = undefined,
+    _set_uniform_vec3: *const fn (BindingId, String, *Vector3f) bool = undefined,
+    _set_uniform_vec4: *const fn (BindingId, String, *Vector4f) bool = undefined,
+    _set_uniform_texture: *const fn (BindingId, String, BindingId) bool = undefined,
+};
+
 pub const WindowData = struct {
     width: CInt,
     height: CInt,
@@ -469,12 +479,7 @@ pub fn IRenderAPI() type {
 
         /// Loads image data from file system and create new texture data loaded into GPU
         /// @param textureData The texture DAO. Sets binding, width and height to the DAO
-        loadTexture: *const fn (
-            resource: String,
-            is_mipmap: bool,
-            filter: TextureFilter,
-            wrap: TextureWrap,
-        ) TextureBinding = undefined,
+        loadTexture: *const fn (resource: String, is_mipmap: bool, filter: TextureFilter, wrap: TextureWrap) TextureBinding = undefined,
         /// Disposes the texture with given texture binding id from GPU memory
         /// @param textureId binding identifier of the texture to dispose.
         disposeTexture: *const fn (BindingId) void = undefined,
@@ -482,23 +487,13 @@ pub fn IRenderAPI() type {
         createRenderTexture: *const fn (width: CInt, height: CInt) RenderTextureBinding = undefined,
         disposeRenderTexture: *const fn (BindingId) void = undefined,
         /// create new shader from given shader data and load it to GPU
-        createShader: *const fn (
-            vertex_shader: String,
-            fragment_shade: String,
-            file: bool,
-        ) BindingId = undefined,
+        createShader: *const fn (vertex_shader: String, fragment_shade: String, file: bool) ShaderBinding = undefined,
         /// Dispose the shader with the given binding identifier (shaderId) from GPU
         /// @param shaderId identifier of the shader to dispose.
         disposeShader: *const fn (BindingId) void = undefined,
         /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
         /// @param shaderId The instance identifier of the shader.
         setActiveShader: *const fn (BindingId) void = undefined,
-
-        // TODO example: https://www.raylib.com/examples/shaders/loader.html?name=shaders_julia_set
-        // setUniformFloat: *const fn (String, Float) void = undefined,
-        // setUniformVec2: *const fn (String, *Vector2f) void = undefined,
-        // setUniformVec3: *const fn (String, *Vector3f) void = undefined,
-        // setUniformColorVec4: *const fn (String, *Vector4f) void = undefined,
 
         bindTexture: *const fn (String, BindingId) void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given

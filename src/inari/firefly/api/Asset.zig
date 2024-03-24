@@ -23,6 +23,7 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
     return struct {
         pub const ASSET_TYPE_NAME = type_name;
         pub var aspect: *const AssetAspect = undefined;
+        pub var asset_id: ?Index = null;
 
         pub fn isInitialized() bool {
             return Asset(T).isInitialized();
@@ -37,6 +38,13 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
                 .name = data.name,
                 .resource_id = Asset(T).resources.add(data),
             });
+        }
+
+        pub fn isLoadByName(name: String) bool {
+            if (Asset(T).byName(name)) |a| {
+                return a.isActive();
+            }
+            return false;
         }
 
         pub fn loadByName(name: String) void {
@@ -54,10 +62,10 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
         pub fn disposeByName(name: String) void {
             Asset(T).disposeByName(name);
         }
-        pub fn getResourceByAssetId(asset_id: Index) ?*T {
-            var asset = Asset(T).byId(asset_id);
+        pub fn getResourceByAssetId(id: Index) ?*T {
+            var asset = Asset(T).byId(id);
             if (!asset.isActive()) {
-                loadById(asset_id);
+                loadById(id);
             }
             return getResourceById(asset.resource_id);
         }
@@ -65,7 +73,10 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
             return Asset(T).resources.get(resource_id);
         }
         pub fn getResourceByName(asset_name: String) ?*T {
-            return Asset(T).resources.get(Asset(T).byName(asset_name).resource_id);
+            if (Asset(T).byName(asset_name)) |asset| {
+                return if (asset.resource_id) |r_id| Asset(T).resources.get(r_id) else null;
+            }
+            return null;
         }
     };
 }
@@ -101,8 +112,8 @@ pub fn Asset(comptime T: type) type {
         id: Index = UNDEF_INDEX,
         name: ?String = null,
 
-        resource_id: Index = UNDEF_INDEX,
-        parent_asset_id: Index = UNDEF_INDEX,
+        resource_id: ?Index = null,
+        parent_asset_id: ?Index = null,
 
         pub fn componentTypeInit() !void {
             if (Self.isInitialized())
@@ -130,10 +141,12 @@ pub fn Asset(comptime T: type) type {
         }
 
         pub fn activation(self: *Self, active: bool) void {
-            if (active) {
-                T.doLoad(self);
-            } else {
-                T.doUnload(self);
+            if (self.getResource()) |r| {
+                if (active) {
+                    T.doLoad(self, r);
+                } else {
+                    T.doUnload(self, r);
+                }
             }
         }
 
@@ -168,7 +181,7 @@ pub fn Asset(comptime T: type) type {
         }
 
         pub fn getResource(self: *Self) ?*T {
-            return T.getResourceById(self.resource_id);
+            return if (self.resource_id) |r_id| T.getResourceById(r_id) else null;
         }
 
         pub fn format(
@@ -177,7 +190,7 @@ pub fn Asset(comptime T: type) type {
             _: std.fmt.FormatOptions,
             writer: anytype,
         ) !void {
-            try writer.print("Asset({s})[{d}|{?s}| resource_id={d}, parent_asset_id={d} ]", .{
+            try writer.print("Asset({s})[{d}|{?s}| resource_id={?d}, parent_asset_id={?d} ]", .{
                 T.ASSET_TYPE_NAME,
                 self.id,
                 self.name,
