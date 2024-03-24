@@ -38,13 +38,13 @@ _ = Entity.newAnd(.{ .name = "TestEntity" })
     .with(ESprite{ .template_id = sprite_id })
     .withAnd(EAnimation{})
     .withAnimation(
-    .{ .duration = 1000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
-    EasedValueIntegration{ .start_value = 164.0, .end_value = 264.0, .easing = Easing.Linear, .property_ref = ETransform.Property.XPos },
-)
+        .{ .duration = 1000, .looping = true, .inverse_on_loop = true },
+        EasedValueIntegration{ .start_value = 164.0, .end_value = 264.0, .easing = Easing.Linear, .property_ref = ETransform.Property.XPos },
+    )
     .withAnimationAnd(
-    .{ .duration = 2000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
-    EasedValueIntegration{ .start_value = 0.0, .end_value = 180.0, .easing = Easing.Linear, .property_ref = ETransform.Property.Rotation },
-)
+        .{ .duration = 2000, .looping = true, .inverse_on_loop = true },
+        EasedValueIntegration{ .start_value = 0.0, .end_value = 180.0, .easing = Easing.Linear, .property_ref = ETransform.Property.Rotation },
+    )
     .activate();
 ```
 
