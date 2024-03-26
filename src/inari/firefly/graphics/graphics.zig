@@ -21,7 +21,6 @@ const TextureFilter = firefly.api.TextureFilter;
 const TextureWrap = firefly.api.TextureWrap;
 const ShaderBinding = firefly.api.ShaderBinding;
 
-const NO_NAME = utils.NO_NAME;
 const NO_BINDING = firefly.api.NO_BINDING;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
@@ -97,8 +96,8 @@ pub const Shader = struct {
     pub usingnamespace firefly.api.AssetTrait(Shader, "Shader");
 
     name: String,
-    vertex_shader_resource: String = NO_NAME,
-    fragment_shader_resource: String = NO_NAME,
+    vertex_shader_resource: ?String = null,
+    fragment_shader_resource: ?String = null,
     file_resource: bool = true,
 
     binding: ?ShaderBinding = null,

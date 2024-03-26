@@ -25,13 +25,10 @@ const RenderEvent = api.RenderEvent;
 const System = api.System;
 const ViewRenderEvent = api.ViewRenderEvent;
 const ViewRenderListener = api.ViewRenderListener;
-
 const Index = utils.Index;
 const Float = utils.Float;
 const BindingId = api.BindingId;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
-const NO_BINDING = api.NO_BINDING;
-const NO_NAME = utils.NO_NAME;
 
 //////////////////////////////////////////////////////////////
 //// global
@@ -90,29 +87,28 @@ pub const ViewLayerMapping = struct {
         self.undef_mapping.deinit();
     }
 
-    pub fn add(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
+    pub fn add(self: *ViewLayerMapping, view_id: ?Index, layer_id: ?Index, id: Index) void {
         getIdMapping(self, view_id, layer_id).set(id);
     }
 
-    pub fn get(self: *ViewLayerMapping, view_id: Index, layer_id: Index) ?*BitSet {
-        if (view_id == UNDEF_INDEX) {
-            return &self.undef_mapping;
+    pub fn get(self: *ViewLayerMapping, view_id: ?Index, layer_id: ?Index) ?*BitSet {
+        if (view_id) |vid| {
+            if (self.mapping.get(vid)) |l_map| {
+                if (l_map.get(layer_id orelse 0)) |m| return m;
+            }
+            return null;
         }
-        var l_id = if (layer_id == UNDEF_INDEX) 0 else layer_id;
-        if (self.mapping.get(view_id)) |l_map| {
-            if (l_map.get(l_id)) |m| return m;
-        }
-        return null;
+        return &self.undef_mapping;
     }
 
-    pub fn remove(self: *ViewLayerMapping, view_id: Index, layer_id: Index, id: Index) void {
+    pub fn remove(self: *ViewLayerMapping, view_id: ?Index, layer_id: ?Index, id: Index) void {
         getIdMapping(self, view_id, layer_id).setValue(id, false);
     }
 
-    fn getIdMapping(self: *ViewLayerMapping, view_id: Index, layer_id: Index) *BitSet {
-        if (view_id != UNDEF_INDEX) {
-            var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, view_id);
-            var l_id = if (layer_id == UNDEF_INDEX) 0 else layer_id;
+    fn getIdMapping(self: *ViewLayerMapping, view_id: ?Index, layer_id: ?Index) *BitSet {
+        if (view_id) |vid| {
+            var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, vid);
+            var l_id = layer_id orelse 0;
             if (!layer_mapping.exists(l_id)) {
                 return layer_mapping.set(BitSet.new(api.ALLOC) catch unreachable, l_id);
             }
@@ -149,14 +145,14 @@ pub const View = struct {
     order: u8 = undefined,
     render_data: ?RenderData = null,
     transform: TransformData = TransformData{},
-    projection: Projection = Projection{},
+    projection: ?Projection = Projection{},
 
     render_texture_binding: ?RenderTextureBinding = null,
-    shader_binding: BindingId = NO_BINDING,
+    shader_binding: ?BindingId = null,
     ordered_active_layer: ?DynArray(Index) = null,
 
-    pub var screen_projection: Projection = Projection{};
-    pub var screen_shader_binding: BindingId = NO_BINDING;
+    pub var screen_projection: ?Projection = null;
+    pub var screen_shader_binding: ?BindingId = null;
     pub var ordered_active_views: DynArray(Index) = undefined;
 
     pub fn componentTypeInit() !void {
@@ -204,8 +200,8 @@ pub const View = struct {
 
     fn onLayerAction(event: Component.ComponentEvent) void {
         switch (event.event_type) {
-            ActionType.ACTIVATED => addLayerMapping(Layer.byId(event.c_id)),
-            ActionType.DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id)),
+            ActionType.ACTIVATED => addLayerMapping(Layer.byId(event.c_id.?)),
+            ActionType.DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id.?)),
             else => {},
         }
     }
@@ -266,10 +262,10 @@ pub const Layer = struct {
     // struct fields
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    offset: Vector2f = Vector2f{ 0, 0 },
+    offset: ?Vector2f = null,
     order: u8 = 0,
-    view_id: Index = UNDEF_INDEX,
-    shader_binding: api.BindingId = api.NO_BINDING,
+    view_id: Index,
+    shader_binding: ?BindingId = null,
 
     pub fn setViewByName(self: *Layer, view_name: String) void {
         self.view_id = View.byName(view_name).id;
@@ -295,8 +291,8 @@ pub const ETransform = struct {
 
     id: Index = UNDEF_INDEX,
     transform: TransformData = TransformData{},
-    view_id: Index = UNDEF_INDEX,
-    layer_id: Index = UNDEF_INDEX,
+    view_id: ?Index = null,
+    layer_id: ?Index = null,
 
     pub fn setViewByName(self: *ETransform, view_name: String) void {
         self.view_id = View.byName(view_name).id;
@@ -307,8 +303,8 @@ pub const ETransform = struct {
     }
 
     pub fn destruct(self: *ETransform) void {
-        self.layer_id = UNDEF_INDEX;
-        self.view_id = UNDEF_INDEX;
+        self.layer_id = null;
+        self.view_id = null;
         self.transform.clear();
     }
 
@@ -366,10 +362,7 @@ pub const EMultiplier = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ViewRenderer = struct {
-    var VIEW_RENDER_EVENT = ViewRenderEvent{
-        .view_id = UNDEF_INDEX,
-        .layer_id = UNDEF_INDEX,
-    };
+    var VIEW_RENDER_EVENT = ViewRenderEvent{};
     pub const render_order = 0;
 
     pub fn render(event: RenderEvent) void {
@@ -378,12 +371,12 @@ pub const ViewRenderer = struct {
 
         if (View.ordered_active_views.slots.nextSetBit(0) == null) {
             // in this case we have only the screen, no FBO
-            if (View.screen_shader_binding != NO_BINDING)
-                api.rendering.setActiveShader(View.screen_shader_binding);
+            if (View.screen_shader_binding) |sb|
+                api.rendering.setActiveShader(sb);
 
-            api.rendering.startRendering(null, &View.screen_projection);
-            VIEW_RENDER_EVENT.view_id = UNDEF_INDEX;
-            VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
+            api.rendering.startRendering(null, View.screen_projection);
+            VIEW_RENDER_EVENT.view_id = null;
+            VIEW_RENDER_EVENT.layer_id = null;
             api.renderView(VIEW_RENDER_EVENT);
             api.rendering.endRendering();
         } else {
@@ -396,10 +389,10 @@ pub const ViewRenderer = struct {
             // rendering all FBO to screen
             next = View.ordered_active_views.slots.nextSetBit(0);
             // set shader if needed
-            if (View.screen_shader_binding != NO_BINDING)
-                api.rendering.setActiveShader(View.screen_shader_binding);
+            if (View.screen_shader_binding) |sb|
+                api.rendering.setActiveShader(sb);
             // activate render to screen
-            api.rendering.startRendering(null, &View.screen_projection);
+            api.rendering.startRendering(null, View.screen_projection);
             // render all FBO as textures to the screen
             while (next) |id| {
                 var view: *View = View.byId(id);
@@ -417,32 +410,34 @@ pub const ViewRenderer = struct {
         if (view.render_texture_binding) |b| {
             // start rendering to view (FBO)
             // set shader...
-            if (view.shader_binding != NO_BINDING)
-                api.rendering.setActiveShader(view.shader_binding);
+            if (view.shader_binding) |sb|
+                api.rendering.setActiveShader(sb);
             // activate FBO
-            api.rendering.startRendering(b.id, &view.projection);
+            api.rendering.startRendering(b.id, view.projection);
             // emit render events for all layers of the view in order to render to FBO
             if (view.ordered_active_layer != null) {
                 var it = view.ordered_active_layer.?.slots.nextSetBit(0);
                 while (it) |layer_id| {
                     var layer: *const Layer = Layer.byId(layer_id);
                     // apply layer shader to render engine if set
-                    if (layer.shader_binding != NO_BINDING)
-                        api.rendering.setActiveShader(layer.shader_binding);
+                    if (layer.shader_binding) |sb|
+                        api.rendering.setActiveShader(sb);
                     // add layer offset to render engine
-                    api.rendering.addOffset(layer.offset);
+                    if (layer.offset) |o|
+                        api.rendering.addOffset(o);
                     // send layer render event
                     VIEW_RENDER_EVENT.view_id = view.id;
                     VIEW_RENDER_EVENT.layer_id = layer_id;
                     api.renderView(VIEW_RENDER_EVENT);
                     // remove layer offset form render engine
-                    api.rendering.addOffset(layer.offset * @as(Vector2f, @splat(-1)));
+                    if (layer.offset) |o|
+                        api.rendering.addOffset(o * @as(Vector2f, @splat(-1)));
                     it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
                 }
             } else {
                 // we have no layer so only one render call for this view
                 VIEW_RENDER_EVENT.view_id = view.id;
-                VIEW_RENDER_EVENT.layer_id = UNDEF_INDEX;
+                VIEW_RENDER_EVENT.layer_id = null;
                 api.renderView(VIEW_RENDER_EVENT);
             }
             // end rendering to FBO

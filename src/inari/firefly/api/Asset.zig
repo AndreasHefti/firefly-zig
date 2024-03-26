@@ -23,7 +23,7 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
     return struct {
         pub const ASSET_TYPE_NAME = type_name;
         pub var aspect: *const AssetAspect = undefined;
-        pub var asset_id: ?Index = null;
+        pub var asset_id: Index = UNDEF_INDEX;
 
         pub fn isInitialized() bool {
             return Asset(T).isInitialized();
@@ -34,10 +34,12 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
         }
 
         pub fn newAnd(data: T) *Asset(T) {
-            return Asset(T).newAnd(.{
+            var asset = Asset(T).newAnd(.{
                 .name = data.name,
                 .resource_id = Asset(T).resources.add(data),
             });
+            asset_id = asset.id;
+            return asset;
         }
 
         pub fn isLoadByName(name: String) bool {
@@ -74,7 +76,7 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
         }
         pub fn getResourceByName(asset_name: String) ?*T {
             if (Asset(T).byName(asset_name)) |asset| {
-                return if (asset.resource_id) |r_id| Asset(T).resources.get(r_id) else null;
+                return Asset(T).resources.get(asset.resource_id);
             }
             return null;
         }
@@ -112,7 +114,7 @@ pub fn Asset(comptime T: type) type {
         id: Index = UNDEF_INDEX,
         name: ?String = null,
 
-        resource_id: ?Index = null,
+        resource_id: Index = undefined,
         parent_asset_id: ?Index = null,
 
         pub fn componentTypeInit() !void {
@@ -181,7 +183,7 @@ pub fn Asset(comptime T: type) type {
         }
 
         pub fn getResource(self: *Self) ?*T {
-            return if (self.resource_id) |r_id| T.getResourceById(r_id) else null;
+            return T.getResourceById(self.resource_id);
         }
 
         pub fn format(

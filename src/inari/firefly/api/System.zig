@@ -9,7 +9,6 @@ const Entity = api.Entity;
 const String = utils.String;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
-const NO_NAME = utils.NO_NAME;
 
 var initialized = false;
 pub fn init() void {
@@ -157,7 +156,7 @@ pub const SystemComponent = struct {
     // struct fields of a System
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    info: String = NO_NAME,
+    info: ?String = null,
     onActivation: ?*const fn (bool) void = null,
     onDestruct: *const fn () void,
 
@@ -178,7 +177,7 @@ pub const SystemComponent = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "{?s}[ id:{d}, info:{s} ]",
+            "{?s}[ id:{d}, info:{?s} ]",
             .{ self.name, self.id, self.info },
         );
     }

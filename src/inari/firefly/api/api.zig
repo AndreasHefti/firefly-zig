@@ -14,9 +14,7 @@ const EventDispatch = utils.EventDispatch;
 const Condition = utils.Condition;
 const String = utils.String;
 const CString = utils.CString;
-const NO_NAME = utils.NO_NAME;
 const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
 const CInt = utils.CInt;
 const CUInt = utils.CUInt;
 const Float = utils.Float;
@@ -142,8 +140,8 @@ pub const RenderEventType = enum {
 pub const RenderEvent = struct { type: RenderEventType };
 pub const RenderListener = *const fn (RenderEvent) void;
 pub const ViewRenderEvent = struct {
-    view_id: Index,
-    layer_id: Index,
+    view_id: ?Index = null,
+    layer_id: ?Index = null,
 };
 pub const ViewRenderListener = *const fn (ViewRenderEvent) void;
 
@@ -487,7 +485,7 @@ pub fn IRenderAPI() type {
         createRenderTexture: *const fn (width: CInt, height: CInt) RenderTextureBinding = undefined,
         disposeRenderTexture: *const fn (BindingId) void = undefined,
         /// create new shader from given shader data and load it to GPU
-        createShader: *const fn (vertex_shader: String, fragment_shade: String, file: bool) ShaderBinding = undefined,
+        createShader: *const fn (vertex_shader: ?String, fragment_shade: ?String, file: bool) ShaderBinding = undefined,
         /// Dispose the shader with the given binding identifier (shaderId) from GPU
         /// @param shaderId identifier of the shader to dispose.
         disposeShader: *const fn (BindingId) void = undefined,
@@ -498,7 +496,7 @@ pub fn IRenderAPI() type {
         bindTexture: *const fn (String, BindingId) void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
         /// Uses Projection to update camera projection and clear target before start rendering
-        startRendering: *const fn (texture: ?BindingId, projection: ?*const Projection) void = undefined,
+        startRendering: *const fn (texture: ?BindingId, projection: ?Projection) void = undefined,
         /// This renders a given RenderTextureData (BindingId) to the actual render target that can be
         /// rendering texture or the screen
         renderTexture: *const fn (

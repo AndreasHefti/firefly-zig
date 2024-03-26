@@ -28,6 +28,7 @@ const CUInt = utils.CUInt;
 const CInt = utils.CInt;
 const Float = utils.Float;
 const NO_BINDING = api.NO_BINDING;
+const EMPTY_STRING = utils.EMPTY_STRING;
 
 const Texture2D = rl.Texture2D;
 const RenderTexture2D = rl.RenderTexture2D;
@@ -40,6 +41,27 @@ pub fn createRenderAPI() !IRenderAPI() {
 
     return singleton.?;
 }
+
+const DEFAULT_VERTEX_SHADER: String =
+    \\#version 330
+    \\
+    \\layout (location = 0) in vec3 vertexPosition;
+    \\in vec2 vertexTexCoord;            
+    \\in vec4 vertexColor;
+    \\out vec2 fragTexCoord;             
+    \\out vec4 fragColor;                
+    \\uniform mat4 mvp;            
+    \\      
+    \\void main()                        
+    \\{             
+    \\    fragTexCoord = vertexTexCoord; 
+    \\    fragColor = vertexColor;       
+    \\    gl_Position = mvp*vec4(vertexPosition, 1.0); 
+    \\}
+;
+
+// TODO
+const DEFAULT_FRAGMENT_SHADER: String = "";
 
 const RaylibRenderAPI = struct {
     var initialized = false;
@@ -187,21 +209,17 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn createShader(
-        vertex_shader: String,
-        fragment_shade: String,
-        file: bool,
-    ) ShaderBinding {
+    fn createShader(vertex_shader: ?String, fragment_shade: ?String, file: bool) ShaderBinding {
         var shader: Shader = undefined;
         if (file) {
             shader = rl.LoadShader(
-                @ptrCast(vertex_shader),
-                @ptrCast(fragment_shade),
+                @ptrCast(vertex_shader orelse EMPTY_STRING),
+                @ptrCast(fragment_shade orelse EMPTY_STRING),
             );
         } else {
             shader = rl.LoadShaderFromMemory(
-                @ptrCast(vertex_shader),
-                @ptrCast(fragment_shade),
+                @ptrCast(vertex_shader orelse DEFAULT_VERTEX_SHADER),
+                @ptrCast(fragment_shade orelse DEFAULT_FRAGMENT_SHADER),
             );
         }
 
@@ -238,7 +256,7 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn startRendering(binding_id: ?BindingId, projection: ?*const Projection) void {
+    fn startRendering(binding_id: ?BindingId, projection: ?Projection) void {
         active_render_texture = binding_id;
         if (projection) |p| {
             active_camera.offset = @bitCast(p.offset);

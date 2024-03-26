@@ -4,31 +4,6 @@ const Writer = std.io.Writer;
 const ArrayList = std.ArrayList;
 const aspect = @import("aspect.zig");
 
-// //////////////////////////////////////////////////////////////
-// //// module init
-// //////////////////////////////////////////////////////////////
-
-// var initialized = false;
-// pub fn isInitialized() bool {
-//     return initialized;
-// }
-
-// pub fn init(allocator: Allocator) !void {
-//     defer initialized = true;
-//     if (initialized)
-//         return;
-
-//     try aspect.init(allocator);
-// }
-
-// pub fn deinit() void {
-//     defer initialized = false;
-//     if (!initialized)
-//         return;
-
-//     aspect.deinit();
-// }
-
 //////////////////////////////////////////////////////////////
 //// inari utils public API
 //////////////////////////////////////////////////////////////
@@ -47,7 +22,7 @@ pub const Float = f32;
 pub const Byte = u8;
 
 pub const EMPTY_STRING: String = "";
-pub const NO_NAME: String = EMPTY_STRING;
+//pub const NO_NAME: String = EMPTY_STRING;
 pub const UNDEF_INDEX = std.math.maxInt(Index);
 
 pub const Test = struct { array: []Index = &[_]Index{ 1, 2, 3 } };

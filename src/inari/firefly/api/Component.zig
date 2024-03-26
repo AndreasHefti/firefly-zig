@@ -13,7 +13,6 @@ const DynArray = utils.DynArray;
 const BitSet = utils.BitSet;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
-const NO_NAME = utils.NO_NAME;
 const String = utils.String;
 
 //////////////////////////////////////////////////////////////
@@ -277,7 +276,7 @@ pub const ActionType = enum {
 
 pub const ComponentEvent = struct {
     event_type: ActionType = .NONE,
-    c_id: Index = UNDEF_INDEX,
+    c_id: ?Index = null,
 
     pub fn format(
         self: ComponentEvent,

@@ -310,7 +310,9 @@ pub fn EComponentPool(comptime T: type) type {
         fn register(c: T, id: Index) *T {
             checkComponentTrait(c);
 
-            if (c.id != UNDEF_INDEX) @panic("Entity Component id mismatch");
+            if (c.id != UNDEF_INDEX)
+                @panic("Entity Component id mismatch");
+
             var comp = items.set(c, id);
             comp.id = id;
             if (has_construct)

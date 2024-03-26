@@ -100,7 +100,7 @@ pub const SpriteTemplate = struct {
     }
 
     fn notifyAssetEvent(e: ComponentEvent) void {
-        var asset: *Asset(Texture) = Asset(Texture).byId(e.c_id);
+        var asset: *Asset(Texture) = Asset(Texture).byId(e.c_id.?);
         if (asset.name == null)
             return;
 
@@ -340,13 +340,13 @@ const SimpleSpriteRenderer = struct {
     }
 
     pub fn notifyEntityChange(e: ComponentEvent) void {
-        if (!entity_condition.check(e.c_id))
+        if (e.c_id == null or !entity_condition.check(e.c_id.?))
             return;
 
-        var transform = ETransform.byId(e.c_id);
+        var transform = ETransform.byId(e.c_id.?);
         switch (e.event_type) {
-            ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id),
-            ActionType.DEACTIVATING => sprite_refs.remove(transform.view_id, transform.layer_id, e.c_id),
+            ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id.?),
+            ActionType.DEACTIVATING => sprite_refs.remove(transform.view_id, transform.layer_id, e.c_id.?),
             else => {},
         }
     }

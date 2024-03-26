@@ -78,8 +78,8 @@ pub const DebugRenderAPI = struct {
     };
     const ShaderData = struct {
         binding: BindingId,
-        vertex_shader: String,
-        fragment_shader: String,
+        vertex_shader: ?String,
+        fragment_shader: ?String,
         file: bool = true,
 
         pub fn format(
@@ -89,7 +89,7 @@ pub const DebugRenderAPI = struct {
             writer: anytype,
         ) !void {
             try writer.print(
-                "ShaderData[ binding:{d}, vert:{s}, frag:{s}, file_resource:{} ]",
+                "ShaderData[ binding:{d}, vert:{?s}, frag:{?s}, file_resource:{} ]",
                 self,
             );
         }
@@ -202,11 +202,7 @@ pub const DebugRenderAPI = struct {
         }
     }
 
-    fn createShader(
-        vertex_shader: String,
-        fragment_shader: String,
-        file: bool,
-    ) ShaderBinding {
+    fn createShader(vertex_shader: ?String, fragment_shader: ?String, file: bool) ShaderBinding {
         return .{
             .id = shaders.add(ShaderData{
                 .binding = shaders.nextFreeSlot(),
@@ -260,12 +256,12 @@ pub const DebugRenderAPI = struct {
         }
     }
 
-    pub fn startRendering(textureId: ?BindingId, projection: ?*const Projection) void {
+    pub fn startRendering(textureId: ?BindingId, projection: ?Projection) void {
         if (textureId) |id| {
             currentRenderTexture = id;
         }
         if (projection) |p| {
-            currentProjection = p.*;
+            currentProjection = p;
         } else {
             currentProjection = Projection{};
         }
