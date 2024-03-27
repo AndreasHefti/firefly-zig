@@ -114,7 +114,7 @@ pub fn Asset(comptime T: type) type {
         id: Index = UNDEF_INDEX,
         name: ?String = null,
 
-        resource_id: Index = undefined,
+        resource_id: Index = UNDEF_INDEX,
         parent_asset_id: ?Index = null,
 
         pub fn componentTypeInit() !void {
@@ -192,7 +192,7 @@ pub fn Asset(comptime T: type) type {
             _: std.fmt.FormatOptions,
             writer: anytype,
         ) !void {
-            try writer.print("Asset({s})[{d}|{?s}| resource_id={?d}, parent_asset_id={?d} ]", .{
+            try writer.print("Asset({s})[{d}|{?s}| resource_id={d}, parent_asset_id={?d} ]", .{
                 T.ASSET_TYPE_NAME,
                 self.id,
                 self.name,

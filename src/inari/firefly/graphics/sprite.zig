@@ -7,8 +7,6 @@ const graphics = inari.firefly.graphics;
 const DynArray = utils.DynArray;
 const DynIndexArray = utils.DynIndexArray;
 const Asset = api.Asset;
-const SpriteData = api.SpriteData;
-const RenderData = api.RenderData;
 const String = utils.String;
 const Component = api.Component;
 const ComponentEvent = api.Component.ComponentEvent;
@@ -22,6 +20,7 @@ const EMultiplier = graphics.EMultiplier;
 const ViewLayerMapping = graphics.ViewLayerMapping;
 const ViewRenderEvent = graphics.ViewRenderEvent;
 const System = api.System;
+const BindingId = api.BindingId;
 const NO_NAME = utils.NO_NAME;
 const NO_BINDING = api.NO_BINDING;
 const Index = utils.Index;
@@ -29,6 +28,8 @@ const UNDEF_INDEX = utils.UNDEF_INDEX;
 const Float = utils.Float;
 const RectF = utils.RectF;
 const Vec2f = utils.Vector2f;
+const Color = utils.Color;
+const BlendMode = api.BlendMode;
 
 //////////////////////////////////////////////////////////////
 //// sprite init
@@ -80,7 +81,10 @@ pub const SpriteTemplate = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     texture_name: String,
-    sprite_data: SpriteData,
+    texture_bounds: RectF,
+    texture_binding: BindingId = NO_BINDING,
+    flip_x: bool = false,
+    flip_y: bool = false,
 
     pub fn componentTypeInit() !void {
         Asset(Texture).subscribe(notifyAssetEvent);
@@ -94,7 +98,7 @@ pub const SpriteTemplate = struct {
     pub fn construct(self: *SpriteTemplate) void {
         if (Texture.getResourceByName(self.texture_name)) |tex| {
             if (tex.binding) |b| {
-                self.sprite_data.texture_binding = b.id;
+                self.texture_binding = b.id;
             }
         }
     }
@@ -120,7 +124,7 @@ pub const SpriteTemplate = struct {
                     var template = SpriteTemplate.byId(id);
                     if (asset.name) |an| {
                         if (utils.stringEquals(template.texture_name, an)) {
-                            template.sprite_data.texture_binding = b.id;
+                            template.texture_binding = b.id;
                         }
                     }
                     next = SpriteTemplate.nextId(id + 1);
@@ -135,7 +139,7 @@ pub const SpriteTemplate = struct {
             var template = SpriteTemplate.byId(id);
             if (asset.name) |an| {
                 if (utils.stringEquals(template.texture_name, an)) {
-                    template.sprite_data.texture_binding = NO_BINDING;
+                    template.texture_binding = NO_BINDING;
                 }
             }
             next = SpriteTemplate.nextId(id + 1);
@@ -162,7 +166,7 @@ pub const SpriteTemplate = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "SpriteTemplate[ id:{d}, name:{any}, texture_name:{s}, {any} ]",
+            "SpriteTemplate[ id:{d}, name:{?s}, texture_name:{?s}, bounds:{any}, binding:{any}, flip_x:{any}, flip_y:{any} ]",
             self,
         );
     }
@@ -176,14 +180,40 @@ pub const ESprite = struct {
     pub usingnamespace EComponent.Trait(@This(), "ESprite");
 
     id: Index = UNDEF_INDEX,
-    template_id: Index,
-    render_data: ?RenderData = null,
-    offset: ?Vec2f = null,
+    template_id: Index = UNDEF_INDEX,
+    tint_color: ?Color = null,
+    blend_mode: ?BlendMode = null,
+
+    _texture_bounds: RectF = undefined,
+    _texture_binding: BindingId = NO_BINDING,
+
+    pub fn activation(self: *ESprite, active: bool) void {
+        if (active) {
+            if (self.template_id == UNDEF_INDEX)
+                @panic("Missing template_id");
+
+            var template = SpriteTemplate.byId(self.template_id);
+            self._texture_bounds = template.texture_bounds;
+            self._texture_binding = template.texture_binding;
+
+            if (template.flip_x) {
+                self._texture_bounds[2] = -self._texture_bounds[2];
+            }
+            if (template.flip_y) {
+                self._texture_bounds[3] = -self._texture_bounds[3];
+            }
+        } else {
+            self._texture_bounds = undefined;
+            self._texture_binding = UNDEF_INDEX;
+        }
+    }
 
     pub fn destruct(self: *ESprite) void {
         self.template_id = UNDEF_INDEX;
-        self.render_data = null;
-        self.offset = null;
+        self._texture_bounds = undefined;
+        self._texture_binding = NO_BINDING;
+        self.tint_color = null;
+        self.blend_mode = null;
     }
 };
 
@@ -255,19 +285,23 @@ pub const SpriteSet = struct {
                         resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
                             .name = getMapName(stamp.name, default_prefix, x, y),
                             .texture_name = resource.texture_name,
-                            .sprite_data = SpriteData{ .texture_bounds = stamp.sprite_dim.? },
+                            .texture_bounds = stamp.sprite_dim.?,
+                            .flip_x = stamp.flip_x,
+                            .flip_y = stamp.flip_y,
                         }));
                     } else {
                         // use the default stamp
                         resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
                             .name = getMapName(null, default_prefix, x, y),
                             .texture_name = resource.texture_name,
-                            .sprite_data = SpriteData{ .texture_bounds = RectF{
+                            .texture_bounds = RectF{
                                 @as(Float, @floatFromInt(x)) * default_dim[2],
                                 @as(Float, @floatFromInt(y)) * default_dim[3],
                                 default_dim[2],
                                 default_dim[3],
-                            } },
+                            },
+                            .flip_x = default_stamp.flip_x,
+                            .flip_y = default_stamp.flip_y,
                         }));
                     }
                 }
@@ -282,7 +316,9 @@ pub const SpriteSet = struct {
                         resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
                             .name = getMapName(stamp.name, default_prefix, i, null),
                             .texture_name = resource.texture_name,
-                            .sprite_data = SpriteData{ .texture_bounds = s_dim },
+                            .texture_bounds = s_dim,
+                            .flip_x = stamp.flip_x,
+                            .flip_y = stamp.flip_y,
                         }));
                     }
                 }
@@ -306,13 +342,6 @@ pub const SpriteSet = struct {
         } else {
             return std.fmt.allocPrint(api.ALLOC, "{s}_{d}", .{ prefix, x }) catch unreachable;
         }
-    }
-
-    fn applyFlip(spriteTemplate: *SpriteTemplate, flip_x: bool, flip_y: bool) void {
-        if (flip_x)
-            spriteTemplate.sprite_data.flip_x();
-        if (flip_y)
-            spriteTemplate.sprite_data.flip_y();
     }
 };
 
@@ -357,12 +386,17 @@ const SimpleSpriteRenderer = struct {
             while (i) |id| {
                 // render the sprite
                 var es = ESprite.byId(id);
-                if (es.template_id != UNDEF_INDEX) {
+                var trans = ETransform.byId(id);
+                if (es.template_id != NO_BINDING) {
                     api.rendering.renderSprite(
-                        &SpriteTemplate.byId(es.template_id).sprite_data,
-                        &ETransform.byId(id).transform,
-                        es.render_data,
-                        es.offset,
+                        es._texture_binding,
+                        &es._texture_bounds,
+                        &trans.position,
+                        &trans.pivot,
+                        &trans.scale,
+                        &trans.rotation,
+                        &es.tint_color,
+                        es.blend_mode,
                     );
                 }
                 i = all.nextSetBit(id + 1);

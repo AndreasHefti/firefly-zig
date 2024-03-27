@@ -24,7 +24,7 @@ TODO:
 ``` zig
 var sprite_id = SpriteTemplate.new(.{
     .texture_asset_name = "TestTexture",
-    .sprite_data = .{ .texture_bounds = utils.RectF{ 0, 0, 32, 32 } },
+    .sprite_data = .{ .texture_bounds = .{ 0, 0, 32, 32 } },
 });
 
 Texture.newAnd(.{
@@ -34,7 +34,7 @@ Texture.newAnd(.{
 }).load();
 
 _ = Entity.newAnd(.{ .name = "TestEntity" })
-    .with(ETransform{ .transform = .{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 } })
+    .with(ETransform{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 } )
     .with(ESprite{ .template_id = sprite_id })
     .withAnd(EAnimation{})
     .withAnimation(

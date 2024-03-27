@@ -91,9 +91,9 @@ pub fn init(
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
-        //rendering = try testing.createTestRenderAPI();
-        rendering = try @import("raylib/rendering.zig").createRenderAPI();
-        window = try @import("raylib/window.zig").createWindowAPI();
+        rendering = try testing.createTestRenderAPI();
+        //rendering = try @import("raylib/rendering.zig").createRenderAPI();
+        //window = try @import("raylib/window.zig").createWindowAPI();
     }
 
     try Component.init();
@@ -309,121 +309,75 @@ pub const RenderTextureBinding = struct {
     }
 };
 
-pub const TransformData = struct {
-    position: PosF = .{ 0, 0 },
-    pivot: PosF = .{ 0, 0 },
-    scale: PosF = .{ 1, 1 },
-    rotation: Float = 0,
+// pub const TransformDataCollector = struct {
+//     position: PosF = .{ 0, 0 },
+//     pivot: PosF = .{ 0, 0 },
+//     scale: PosF = .{ 1, 1 },
+//     rotation: Float = 0,
 
-    pub fn clear(self: *TransformData) void {
-        self.position = .{ 0, 0 };
-        self.pivot = .{ 0, 0 };
-        self.scale = .{ 1, 1 };
-        self.rotation = 0;
-    }
+//     pub fn clear(self: *TransformData) void {
+//         self.position = .{ 0, 0 };
+//         self.pivot = .{ 0, 0 };
+//         self.scale = .{ 1, 1 };
+//         self.rotation = 0;
+//     }
 
-    pub fn set(self: *TransformData, other: TransformData) void {
-        self.position = other.position;
-        self.pivot = other.pivot;
-        self.scale = other.scale;
-        self.rotation = other.rotation;
-    }
+//     pub fn set(self: *TransformData, other: TransformData) void {
+//         self.position = other.position;
+//         self.pivot = other.pivot;
+//         self.scale = other.scale;
+//         self.rotation = other.rotation;
+//     }
 
-    pub fn setDiscrete(self: *TransformData, other: TransformData) void {
-        self.position = @floor(other.position);
-        self.pivot = @floor(other.pivot);
-        self.scale = other.scale;
-        self.rotation = other.rotation;
-    }
+//     pub fn setDiscrete(self: *TransformData, other: TransformData) void {
+//         self.position = @floor(other.position);
+//         self.pivot = @floor(other.pivot);
+//         self.scale = other.scale;
+//         self.rotation = other.rotation;
+//     }
 
-    pub fn add(self: *TransformData, other: TransformData) void {
-        self.position += other.position;
-        self.pivot += other.pivot;
-        self.scale += other.scale;
-        self.rotation += other.rotation;
-    }
+//     pub fn add(self: *TransformData, other: TransformData) void {
+//         self.position += other.position;
+//         self.pivot += other.pivot;
+//         self.scale += other.scale;
+//         self.rotation += other.rotation;
+//     }
 
-    pub fn minus(self: *TransformData, other: TransformData) void {
-        self.position -= other.position;
-        self.pivot -= other.pivot;
-        self.scale -= other.scale;
-        self.rotation -= other.rotation;
-    }
+//     pub fn minus(self: *TransformData, other: TransformData) void {
+//         self.position -= other.position;
+//         self.pivot -= other.pivot;
+//         self.scale -= other.scale;
+//         self.rotation -= other.rotation;
+//     }
 
-    pub fn move(self: *TransformData, offset: Vector2f) void {
-        self.position += offset;
-    }
+//     pub fn move(self: *TransformData, offset: Vector2f) void {
+//         self.position += offset;
+//     }
 
-    pub fn moveDiscrete(self: *TransformData, offset: Vector2f) void {
-        self.position += @floor(offset);
-    }
+//     pub fn moveDiscrete(self: *TransformData, offset: Vector2f) void {
+//         self.position += @floor(offset);
+//     }
 
-    pub fn hasRotation(self: *TransformData) bool {
-        return self.rotation != 0;
-    }
+//     pub fn hasRotation(self: *TransformData) bool {
+//         return self.rotation != 0;
+//     }
 
-    pub fn hasScale(self: *TransformData) bool {
-        return self.scale[0] != 1 or self.scale[1] != 1;
-    }
+//     pub fn hasScale(self: *TransformData) bool {
+//         return self.scale[0] != 1 or self.scale[1] != 1;
+//     }
 
-    pub fn format(
-        self: TransformData,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "TransformData[ pos:{any}, pivot:{any}, scale:{any}, rot:{d} ]",
-            self,
-        );
-    }
-};
-
-pub const RenderData = struct {
-    tint_color: Color = .{ 255, 255, 255, 255 },
-    blend_mode: BlendMode = BlendMode.ALPHA,
-
-    pub fn format(
-        self: RenderData,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "RenderData[ tint:{any}, blend:{} ]",
-            self,
-        );
-    }
-};
-
-pub const SpriteData = struct {
-    texture_binding: BindingId = NO_BINDING,
-    texture_bounds: RectF = .{ 0, 0, 0, 0 },
-
-    // x = x + width / width = -width
-    pub fn flip_x(self: *SpriteData) void {
-        self.texture_bounds[0] = self.texture_bounds[0] + self.texture_bounds[2];
-        self.texture_bounds[2] = -self.texture_bounds[2];
-    }
-
-    // y = y + height / height = -height
-    pub fn flip_y(self: *SpriteData) void {
-        self.texture_bounds[1] = self.texture_bounds[1] + self.texture_bounds[3];
-        self.texture_bounds[3] = -self.texture_bounds[3];
-    }
-
-    pub fn format(
-        self: SpriteData,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "SpriteData[ bind:{d}, bounds:{any} ]",
-            self,
-        );
-    }
-};
+//     pub fn format(
+//         self: TransformData,
+//         comptime _: []const u8,
+//         _: std.fmt.FormatOptions,
+//         writer: anytype,
+//     ) !void {
+//         try writer.print(
+//             "TransformData[ pos:{any}, pivot:{any}, scale:{any}, rot:{d} ]",
+//             self,
+//         );
+//     }
+// };
 
 pub const ShaderBinding = struct {
     id: BindingId = NO_BINDING,
@@ -496,20 +450,28 @@ pub fn IRenderAPI() type {
         bindTexture: *const fn (String, BindingId) void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
         /// Uses Projection to update camera projection and clear target before start rendering
-        startRendering: *const fn (texture: ?BindingId, projection: ?Projection) void = undefined,
+        startRendering: *const fn (texture_id: ?BindingId, projection: ?Projection) void = undefined,
         /// This renders a given RenderTextureData (BindingId) to the actual render target that can be
         /// rendering texture or the screen
         renderTexture: *const fn (
-            texture: BindingId,
-            transform: *const TransformData,
-            render_data: ?RenderData,
+            texture_id: BindingId,
+            position: *const PosF,
+            pivot: *const ?PosF,
+            scale: *const ?PosF,
+            rotation: *const ?Float,
+            tint_color: *const ?Color,
+            blend_mode: ?BlendMode,
         ) void = undefined,
         // TODO
         renderSprite: *const fn (
-            sprite: *const SpriteData,
-            transform: *const TransformData,
-            render_data: ?RenderData,
-            offset: ?Vector2f,
+            texture_id: BindingId,
+            texture_bounds: *const RectF,
+            position: *const PosF,
+            pivot: *const ?PosF,
+            scale: *const ?PosF,
+            rotation: *const ?Float,
+            tint_color: *const ?Color,
+            blend_mode: ?BlendMode,
         ) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
         /// switches back to screen rendering

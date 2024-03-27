@@ -117,3 +117,8 @@ pub const StringBuffer = struct {
         return self.buffer.items[0..];
     }
 };
+
+pub fn getNullPointer(comptime T: type) *const ?T {
+    const t: ?T = null;
+    return &t;
+}

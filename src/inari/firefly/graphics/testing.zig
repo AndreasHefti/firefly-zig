@@ -59,8 +59,6 @@ test "TextureAsset load/unload" {
     try std.testing.expect(res != null);
     try std.testing.expectEqualStrings("path/TestTexture", res.?.resource);
     try std.testing.expect(res.?.binding == null);
-    //try std.testing.expect(res.?._binding.id == NO_BINDING); // not loaded yet
-    //try std.testing.expect(texture_asset.getResourceById(TextureAsset).binding == NO_BINDING);
 
     // load the texture... by name
     _ = Texture.loadByName("TestTexture");
@@ -96,7 +94,6 @@ test "TextureAsset load/unload" {
         \\ current state:
         \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
         \\   null
-        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
         \\   null
         \\   Offset: { 0.0e+00, 0.0e+00 }
         \\ render actions:
@@ -120,7 +117,6 @@ test "TextureAsset load/unload" {
         \\ current state:
         \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
         \\   null
-        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
         \\   null
         \\   Offset: { 0.0e+00, 0.0e+00 }
         \\ render actions:
@@ -170,12 +166,12 @@ test "ShaderAsset load/unload" {
     });
 
     try std.testing.expect(shader_asset.id != UNDEF_INDEX);
-    try std.testing.expect(shader_asset.resource_id != null);
+    try std.testing.expect(shader_asset.resource_id != UNDEF_INDEX);
     try std.testing.expectEqualStrings("Shader123", shader_asset.name.?);
 
-    var res: *Shader = Shader.getResourceById(shader_asset.resource_id.?).?;
-    try std.testing.expectEqualStrings("/vertex_shader.glsl", res.vertex_shader_resource);
-    try std.testing.expectEqualStrings("/fragment_shader.glsl", res.fragment_shader_resource);
+    var res: *Shader = Shader.getResourceById(shader_asset.resource_id).?;
+    try std.testing.expectEqualStrings("/vertex_shader.glsl", res.vertex_shader_resource.?);
+    try std.testing.expectEqualStrings("/fragment_shader.glsl", res.fragment_shader_resource.?);
     try std.testing.expect(res.binding == null); // not loaded yet
 
     // load the texture... by name
@@ -197,7 +193,6 @@ test "ShaderAsset load/unload" {
         \\ current state:
         \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
         \\   null
-        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
         \\   null
         \\   Offset: { 0.0e+00, 0.0e+00 }
         \\ render actions:
@@ -221,7 +216,6 @@ test "ShaderAsset load/unload" {
         \\ current state:
         \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
         \\   null
-        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
         \\   null
         \\   Offset: { 0.0e+00, 0.0e+00 }
         \\ render actions:

@@ -339,11 +339,10 @@ test "Init Rendering one sprite entity with no view and layer" {
     var sb = utils.StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    var sprite_data: api.SpriteData = .{ .texture_bounds = utils.RectF{ 0, 0, 20, 20 } };
-    sprite_data.flip_x();
     var sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
-        .sprite_data = sprite_data,
+        .texture_bounds = utils.RectF{ 0, 0, 20, 20 },
+        .flip_x = true,
     });
 
     _ = Texture.newAnd(.{
@@ -353,7 +352,7 @@ test "Init Rendering one sprite entity with no view and layer" {
     }).load();
 
     _ = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{ .transform = .{ .position = .{ 50, 50 } } })
+        .with(ETransform{ .position = .{ 50, 50 } })
         .with(ESprite{ .template_id = sprite_id })
         .activate();
 
@@ -373,7 +372,7 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\  View size: 0
         \\  Asset:SpriteSet size: 0
         \\  SpriteTemplate size: 1
-        \\    (x) SpriteTemplate[ id:0, name:null, texture_name:TestTexture, SpriteData[ bind:0, bounds:{ 2.0e+01, 0.0e+00, -2.0e+01, 2.0e+01 } ] ]
+        \\    (x) SpriteTemplate[ id:0, name:null, texture_name:TestTexture, bounds:{ 0.0e+00, 0.0e+00, 2.0e+01, 2.0e+01 }, binding:0, flip_x:true, flip_y:false ]
     ;
 
     api.Component.print(&sb);
@@ -392,7 +391,6 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\ current state:
         \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
         \\   null
-        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
         \\   null
         \\   Offset: { 0.0e+00, 0.0e+00 }
         \\ render actions:
@@ -416,14 +414,10 @@ test "Init Rendering one sprite entity with no view and layer" {
         \\ current state:
         \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
         \\   null
-        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
         \\   null
         \\   Offset: { 0.0e+00, 0.0e+00 }
         \\ render actions:
-        \\   render SpriteData[ bind:0, bounds:{ 2.0e+01, 0.0e+00, -2.0e+01, 2.0e+01 } ] -->
-        \\     TransformData[ pos:{ 5.0e+01, 5.0e+01 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
-        \\     RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
-        \\     offset:{ 0.0e+00, 0.0e+00 }
+        \\   render sprite --> texture_binding=0, texture_bounds={ 0.0e+00, 0.0e+00, -2.0e+01, 2.0e+01 }, position={ 5.0e+01, 5.0e+01 }, pivot=null, scale=null, rotation=null, tint_color=null, blend_mode=null
         \\
     ;
     api.rendering.printDebug(&sb);

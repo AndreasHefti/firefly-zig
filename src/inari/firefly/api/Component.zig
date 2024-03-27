@@ -284,7 +284,7 @@ pub const ComponentEvent = struct {
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.print("Event[ type: {any}, id: {d}]", .{ self.event_type, self.c_id });
+        try writer.print("Event[ type: {any}, id: {?d}]", .{ self.event_type, self.c_id });
     }
 };
 

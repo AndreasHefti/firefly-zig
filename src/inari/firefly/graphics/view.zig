@@ -12,10 +12,11 @@ const ComponentListener = Component.ComponentListener;
 const ComponentEvent = Component.ComponentEvent;
 const Aspect = utils.Aspect;
 const String = utils.String;
-const TransformData = api.TransformData;
-const RenderData = api.RenderData;
 const RenderTextureBinding = api.RenderTextureBinding;
 const Vector2f = utils.Vector2f;
+const PosF = utils.PosF;
+const Color = utils.Color;
+const BlendMode = api.BlendMode;
 const DynArray = utils.DynArray;
 const ActionType = Component.ActionType;
 const Projection = api.Projection;
@@ -139,12 +140,17 @@ pub const View = struct {
     // struct fields
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    width: c_int,
-    height: c_int,
     /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
     order: u8 = undefined,
-    render_data: ?RenderData = null,
-    transform: TransformData = TransformData{},
+    width: c_int,
+    height: c_int,
+
+    position: PosF,
+    pivot: ?PosF,
+    scale: ?PosF,
+    rotation: ?Float,
+    tint_color: ?Color,
+    blend_mode: ?BlendMode,
     projection: ?Projection = Projection{},
 
     render_texture_binding: ?RenderTextureBinding = null,
@@ -290,7 +296,10 @@ pub const ETransform = struct {
     pub usingnamespace EComponent.Trait(ETransform, "ETransform");
 
     id: Index = UNDEF_INDEX,
-    transform: TransformData = TransformData{},
+    position: PosF = .{ 0, 0 },
+    pivot: ?PosF = null,
+    scale: ?PosF = null,
+    rotation: ?Float = null,
     view_id: ?Index = null,
     layer_id: ?Index = null,
 
@@ -305,30 +314,41 @@ pub const ETransform = struct {
     pub fn destruct(self: *ETransform) void {
         self.layer_id = null;
         self.view_id = null;
-        self.transform.clear();
+        self.position = .{ 0, 0 };
+        self.pivot = null;
+        self.scale = null;
+        self.rotation = null;
     }
 
-    pub fn withData(self: ETransform, data: TransformData) ETransform {
-        var copy = self;
-        copy.transform = data;
-        return copy;
+    fn getScale(self: *ETransform) *PosF {
+        if (self.scale == null) {
+            self.scale = .{ 1, 1 };
+        }
+        return self.scale.?;
+    }
+
+    fn getRotation(self: *ETransform) *Float {
+        if (self.rotation == null) {
+            self.rotation = 0;
+        }
+        return &self.rotation.?;
     }
 
     pub const Property = struct {
         pub fn XPos(id: Index) *Float {
-            return &ETransform.byId(id).transform.position[0];
+            return &ETransform.byId(id).position[0];
         }
         pub fn YPos(id: Index) *Float {
-            return &ETransform.byId(id).transform.position[1];
+            return &ETransform.byId(id).position[1];
         }
         pub fn XScale(id: Index) *Float {
-            return &ETransform.byId(id).transform.scale[1];
+            return &ETransform.byId(id).getScale()[1];
         }
         pub fn YScale(id: Index) *Float {
-            return &ETransform.byId(id).transform.scale[1];
+            return &ETransform.byId(id).getScale()[1];
         }
         pub fn Rotation(id: Index) *Float {
-            return &ETransform.byId(id).transform.rotation;
+            return ETransform.byId(id).getRotation();
         }
     };
 };
@@ -397,7 +417,15 @@ pub const ViewRenderer = struct {
             while (next) |id| {
                 var view: *View = View.byId(id);
                 if (view.render_texture_binding) |b| {
-                    api.rendering.renderTexture(b.id, &view.transform, view.render_data);
+                    api.rendering.renderTexture(
+                        b.id,
+                        &view.position,
+                        &view.pivot,
+                        &view.scale,
+                        &view.rotation,
+                        &view.tint_color,
+                        view.blend_mode,
+                    );
                 }
                 next = View.ordered_active_views.slots.nextSetBit(id + 1);
             }

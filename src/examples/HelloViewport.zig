@@ -29,18 +29,17 @@ fn loadWithView() void {
         .width = 200,
         .height = 200,
         .order = 1,
+
         // transform is used when rendering the texture to the screen (or another texture)
-        .transform = .{
-            .position = .{ 10, 10 },
-            .pivot = .{ 0, 0 },
-            .scale = .{ 1, 1 },
-            .rotation = 0,
-        },
+        .position = .{ 10, 10 },
+        .pivot = .{ 0, 0 },
+        .scale = .{ 1, 1 },
+        .rotation = 0,
+
         // render_data that is used when rendering the texture to the screen (or another texture)
-        .render_data = .{
-            .tint_color = .{ 255, 255, 255, 150 },
-            .blend_mode = BlendMode.ALPHA,
-        },
+        .tint_color = .{ 255, 255, 255, 150 },
+        .blend_mode = BlendMode.ALPHA,
+
         // projection is used when rendering to the texture.
         // Can be seen as the camera of the texture
         .projection = .{
@@ -55,7 +54,9 @@ fn loadWithView() void {
 
     var sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
-        .sprite_data = .{ .texture_bounds = utils.RectF{ 0, 0, 32, 32 } },
+        .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
+        .flip_x = true,
+        .flip_y = true,
     });
 
     Texture.newAnd(.{

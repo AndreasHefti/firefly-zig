@@ -10,12 +10,12 @@ const IRenderAPI = api.IRenderAPI;
 const Vector2f = utils.Vector2f;
 const Vector3f = utils.Vector3f;
 const Vector4f = utils.Vector4f;
+const PosF = utils.PosF;
+const RectF = utils.RectF;
 const Color = utils.Color;
 const BlendMode = api.BlendMode;
-const RenderData = api.RenderData;
 const TextureBinding = api.TextureBinding;
 const ShaderBinding = api.ShaderBinding;
-const TransformData = api.TransformData;
 const TextureFilter = api.TextureFilter;
 const TextureWrap = api.TextureWrap;
 const SpriteData = api.SpriteData;
@@ -118,7 +118,7 @@ const RaylibRenderAPI = struct {
     const default_offset = Vector2f{ 0, 0 };
     const default_tint_color = rl.Color{ .r = 255, .g = 255, .b = 255, .a = 255 };
     const default_clear_color = rl.Color{ .r = 0, .g = 0, .b = 0, .a = 255 };
-    const default_render_data = RenderData{};
+    const default_pivot = PosF{ 0, 0 };
 
     const default_blend_mode = BlendMode.ALPHA;
 
@@ -291,38 +291,36 @@ const RaylibRenderAPI = struct {
     }
 
     fn renderTexture(
-        binding_id: BindingId,
-        transform: *const TransformData,
-        render_data: ?RenderData,
+        texture_id: BindingId,
+        position: *const PosF,
+        pivot: *const ?PosF,
+        scale: *const ?PosF,
+        rotation: *const ?Float,
+        tint_color: *const ?Color,
+        blend_mode: ?BlendMode,
     ) void {
-        if (render_textures.get(binding_id)) |tex| {
+        if (render_textures.get(texture_id)) |tex| {
 
             // set blend mode
-            if (render_data) |rd| {
-                rl.BeginBlendMode(@intFromEnum(rd.blend_mode));
-            } else {
-                rl.BeginBlendMode(@intFromEnum(active_blend_mode));
-            }
+            rl.BeginBlendMode(@intFromEnum(blend_mode orelse active_blend_mode));
 
             // set source rect
-            temp_source_rect.x = 0;
-            temp_source_rect.y = 0;
             temp_source_rect.width = @floatFromInt(tex.texture.width);
             // NOTE: render to texture has inverted y axis.
             temp_source_rect.height = @floatFromInt(-tex.texture.height);
             // set destination rect
-            if (transform.scale[0] != 1 or transform.scale[1] != 1) {
-                temp_dest_rect.x = active_offset[0] + transform.position[0];
-                temp_dest_rect.y = active_offset[1] + transform.position[1];
-                temp_dest_rect.width = transform.scale[0] * @as(Float, @floatFromInt(tex.texture.width));
-                temp_dest_rect.height = transform.scale[1] * @as(Float, @floatFromInt(tex.texture.height));
-                temp_pivot = @bitCast(transform.pivot * transform.scale);
+            if (scale.*) |s| {
+                temp_dest_rect.x = active_offset[0] + position[0];
+                temp_dest_rect.y = active_offset[1] + position[1];
+                temp_dest_rect.width = s[0] * @as(Float, @floatFromInt(tex.texture.width));
+                temp_dest_rect.height = s[1] * @as(Float, @floatFromInt(tex.texture.height));
+                temp_pivot = @bitCast((pivot.* orelse default_pivot) * s);
             } else {
-                temp_dest_rect.x = active_offset[0] + transform.position[0];
-                temp_dest_rect.y = active_offset[1] + transform.position[1];
+                temp_dest_rect.x = active_offset[0] + position[0];
+                temp_dest_rect.y = active_offset[1] + position[1];
                 temp_dest_rect.width = @floatFromInt(tex.texture.width);
                 temp_dest_rect.height = @floatFromInt(tex.texture.height);
-                temp_pivot = @bitCast(transform.pivot);
+                temp_pivot = @bitCast(pivot.* orelse default_pivot);
             }
 
             rl.DrawTexturePro(
@@ -330,55 +328,47 @@ const RaylibRenderAPI = struct {
                 temp_source_rect,
                 temp_dest_rect,
                 temp_pivot,
-                transform.rotation,
-                if (render_data) |rd| @bitCast(rd.tint_color) else active_tint_color,
+                rotation.* orelse 0,
+                if (tint_color.*) |tc| @bitCast(tc) else active_tint_color,
             );
         }
     }
 
     fn renderSprite(
-        sprite_data: *const SpriteData,
-        transform: *const TransformData,
-        render_data: ?RenderData,
-        offset: ?Vector2f,
+        texture_id: BindingId,
+        texture_bounds: *const RectF,
+        position: *const PosF,
+        pivot: *const ?PosF,
+        scale: *const ?PosF,
+        rotation: *const ?Float,
+        tint_color: *const ?Color,
+        blend_mode: ?BlendMode,
     ) void {
-        if (textures.get(sprite_data.texture_binding)) |tex| {
+        if (textures.get(texture_id)) |tex| {
 
             // set blend mode
-            if (render_data) |rd| {
-                rl.BeginBlendMode(@intFromEnum(rd.blend_mode));
-            } else {
-                rl.BeginBlendMode(@intFromEnum(active_blend_mode));
-            }
+            rl.BeginBlendMode(@intFromEnum(blend_mode orelse active_blend_mode));
 
-            // set source rect
-            // TODO try to directly set value with cast
-            temp_source_rect.x = sprite_data.texture_bounds[0];
-            temp_source_rect.y = sprite_data.texture_bounds[1];
-            temp_source_rect.width = sprite_data.texture_bounds[2];
-            temp_source_rect.height = sprite_data.texture_bounds[3];
             // set destination rect
-            if (transform.scale[0] != 1 or transform.scale[1] != 1) {
-                temp_dest_rect.x = active_offset[0] + transform.position[0] + if (offset) |o| o[0] else 0;
-                temp_dest_rect.y = active_offset[1] + transform.position[1] + if (offset) |o| o[1] else 0;
-                temp_dest_rect.width = sprite_data.texture_bounds[2] * transform.scale[0];
-                temp_dest_rect.height = sprite_data.texture_bounds[3] * transform.scale[1];
-                temp_pivot = @bitCast(transform.pivot * transform.scale);
+            temp_dest_rect.x = active_offset[0] + position[0];
+            temp_dest_rect.y = active_offset[1] + position[1];
+            if (scale.*) |s| {
+                temp_dest_rect.width = @fabs(texture_bounds[2]) * s[0];
+                temp_dest_rect.height = @fabs(texture_bounds[3]) * s[1];
+                temp_pivot = @bitCast((pivot.* orelse default_pivot) * s);
             } else {
-                temp_dest_rect.x = active_offset[0] + transform.position[0] + if (offset) |o| o[0] else 0;
-                temp_dest_rect.y = active_offset[1] + transform.position[1] + if (offset) |o| o[1] else 0;
-                temp_dest_rect.width = sprite_data.texture_bounds[2];
-                temp_dest_rect.height = sprite_data.texture_bounds[3];
-                temp_pivot = @bitCast(transform.pivot);
+                temp_dest_rect.width = @fabs(texture_bounds[2]);
+                temp_dest_rect.height = @fabs(texture_bounds[3]);
+                temp_pivot = @bitCast(pivot.* orelse default_pivot);
             }
 
             rl.DrawTexturePro(
                 tex.*,
-                temp_source_rect,
+                @bitCast(texture_bounds.*),
                 temp_dest_rect,
                 temp_pivot,
-                transform.rotation,
-                if (render_data) |rd| @bitCast(rd.tint_color) else active_tint_color,
+                rotation.* orelse 0,
+                if (tint_color.*) |tc| @bitCast(tc) else active_tint_color,
             );
         }
     }
@@ -429,7 +419,7 @@ const RaylibRenderAPI = struct {
     fn printDebug(buffer: *StringBuffer) void {
         buffer.append("Raylib Renderer:\n");
         buffer.print("  default_offset: {any}\n", .{default_offset});
-        buffer.print("  default_render_data: {any}\n", .{default_render_data});
+        buffer.print("  default_pivot: {any}\n", .{default_pivot});
         buffer.print("  default_projection: {any}\n", .{base_projection});
         buffer.print("  default_blend_mode: {any}\n\n", .{default_blend_mode});
 

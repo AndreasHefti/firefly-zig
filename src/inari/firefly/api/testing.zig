@@ -13,15 +13,16 @@ const TextureBinding = api.TextureBinding;
 const TextureFilter = api.TextureFilter;
 const TextureWrap = api.TextureWrap;
 const RenderTextureBinding = api.RenderTextureBinding;
-const TransformData = api.TransformData;
-const RenderData = api.RenderData;
-const SpriteData = api.SpriteData;
 const ShaderBinding = api.ShaderBinding;
 const PosI = utils.PosI;
 const CInt = utils.CInt;
 const Vector2f = utils.Vector2f;
 const Vector3f = utils.Vector3f;
 const Vector4f = utils.Vector4f;
+const PosF = utils.PosF;
+const RectF = utils.RectF;
+const Color = utils.Color;
+const BlendMode = api.BlendMode;
 const Projection = api.Projection;
 const IRenderAPI = api.IRenderAPI;
 const Float = utils.Float;
@@ -47,14 +48,17 @@ pub const DebugRenderAPI = struct {
     var initialized = false;
 
     const defaultOffset = Vector2f{ 0, 0 };
-    const defaultRenderData = RenderData{};
+    //const defaultRenderData = RenderData{};
 
     const RenderAction = struct {
-        render_texture: ?BindingId = null,
-        render_sprite: ?SpriteData = null,
-        transform: TransformData,
-        render: ?RenderData,
-        offset: ?Vector2f,
+        texture_binding: BindingId,
+        texture_bounds: ?RectF = null,
+        position: PosF,
+        pivot: ?PosF = null,
+        scale: ?PosF = null,
+        rotation: ?Float = null,
+        tint_color: ?Color = null,
+        blend_mode: ?BlendMode = null,
 
         pub fn format(
             self: RenderAction,
@@ -62,17 +66,10 @@ pub const DebugRenderAPI = struct {
             _: std.fmt.FormatOptions,
             writer: anytype,
         ) !void {
-            if (self.render_texture) |rt| {
-                _ = rt;
-                try writer.print(
-                    "render texture {any} -->\n     {any},\n     {any},\n     offset:{any}",
-                    .{ self.render_texture, self.transform, self.render, self.offset },
-                );
+            if (self.texture_bounds) |_| {
+                try writer.print("render sprite --> texture_binding={any}, texture_bounds={any}, position={any}, pivot={any}, scale={any}, rotation={any}, tint_color={any}, blend_mode={any}", self);
             } else {
-                try writer.print(
-                    "render {any} -->\n     {any},\n     {any},\n     offset:{any}",
-                    .{ self.render_sprite, self.transform, self.render, self.offset },
-                );
+                try writer.print("render texture --> texture_binding={any}, texture_bounds={any}, position={any}, pivot={any}, scale={any}, rotation={any}, tint_color={any}, blend_mode={any}", self);
             }
         }
     };
@@ -89,7 +86,7 @@ pub const DebugRenderAPI = struct {
             writer: anytype,
         ) !void {
             try writer.print(
-                "ShaderData[ binding:{d}, vert:{?s}, frag:{?s}, file_resource:{} ]",
+                "ShaderData[ binding:{d}, vert:{?s}, frag:{?s}, file_resource:{any} ]",
                 self,
             );
         }
@@ -105,7 +102,6 @@ pub const DebugRenderAPI = struct {
     var currentRenderTexture: ?BindingId = null;
     var currentShader: ?BindingId = null;
     var currentOffset: Vector2f = defaultOffset;
-    var currentRenderData: RenderData = defaultRenderData;
 
     fn initImpl(interface: *IRenderAPI()) void {
         defer initialized = true;
@@ -140,7 +136,6 @@ pub const DebugRenderAPI = struct {
         DebugRenderAPI.currentRenderTexture = null;
         DebugRenderAPI.currentShader = null;
         DebugRenderAPI.currentOffset = defaultOffset;
-        DebugRenderAPI.currentRenderData = defaultRenderData;
     }
 
     fn deinit() void {
@@ -283,35 +278,44 @@ pub const DebugRenderAPI = struct {
     pub fn setBaseProjection(_: Projection) void {}
 
     pub fn renderTexture(
-        textureId: BindingId,
-        transform: *const TransformData,
-        renderData: ?RenderData,
+        texture_id: BindingId,
+        position: *const PosF,
+        pivot: *const ?PosF,
+        scale: *const ?PosF,
+        rotation: *const ?Float,
+        tint_color: *const ?Color,
+        blend_mode: ?BlendMode,
     ) void {
-        if (renderData) |rd| {
-            currentRenderData = rd;
-        }
         _ = renderActionQueue.add(RenderAction{
-            .render_texture = textureId,
-            .transform = transform.*,
-            .render = if (renderData) |sd| sd else defaultRenderData,
-            .offset = defaultOffset,
+            .texture_binding = texture_id,
+            .position = position.*,
+            .pivot = pivot.*,
+            .scale = scale.*,
+            .rotation = rotation.*,
+            .tint_color = tint_color.*,
+            .blend_mode = blend_mode,
         });
     }
 
     pub fn renderSprite(
-        spriteData: *const SpriteData,
-        transform: *const TransformData,
-        renderData: ?RenderData,
-        offset: ?Vector2f,
+        texture_id: BindingId,
+        texture_bounds: *const RectF,
+        position: *const PosF,
+        pivot: *const ?PosF,
+        scale: *const ?PosF,
+        rotation: *const ?Float,
+        tint_color: *const ?Color,
+        blend_mode: ?BlendMode,
     ) void {
-        if (renderData) |rd| {
-            currentRenderData = rd;
-        }
         _ = renderActionQueue.add(RenderAction{
-            .render_sprite = spriteData.*,
-            .transform = transform.*,
-            .render = if (renderData) |sd| sd else defaultRenderData,
-            .offset = if (offset) |o| o else defaultOffset,
+            .texture_binding = texture_id,
+            .texture_bounds = texture_bounds.*,
+            .position = position.*,
+            .pivot = pivot.*,
+            .scale = scale.*,
+            .rotation = rotation.*,
+            .tint_color = tint_color.*,
+            .blend_mode = blend_mode,
         });
     }
 
@@ -345,7 +349,6 @@ pub const DebugRenderAPI = struct {
 
         buffer.print("   {any}\n", .{DebugRenderAPI.currentProjection});
         buffer.print("   {any}\n", .{DebugRenderAPI.currentRenderTexture});
-        buffer.print("   {any}\n", .{DebugRenderAPI.currentRenderData});
         buffer.print("   {any}\n", .{DebugRenderAPI.currentShader});
         buffer.print("   Offset: {any}\n", .{DebugRenderAPI.currentOffset});
 
@@ -365,27 +368,38 @@ test "RenderAPI debug init" {
     try inari.firefly.initTesting();
     defer inari.firefly.deinit();
 
-    var sprite = SpriteData{};
-    var transform = TransformData{};
-    var renderData = RenderData{};
-    transform.position[0] = 10;
-    transform.position[1] = 100;
-
     var tex_1_binding = api.rendering.loadTexture("t1", false, TextureFilter.TEXTURE_FILTER_POINT, TextureWrap.TEXTURE_WRAP_CLAMP);
     try std.testing.expect(tex_1_binding.id != NO_BINDING);
 
     var t2: RenderTextureBinding = api.rendering.createRenderTexture(10, 10);
     try std.testing.expect(t2.id != NO_BINDING);
 
-    sprite.texture_binding = tex_1_binding.id;
-    api.rendering.renderSprite(&sprite, &transform, renderData, null);
+    api.rendering.renderSprite(
+        tex_1_binding.id,
+        &RectF{ 0, 0, 32, 32 },
+        &PosF{ 10, 100 },
+        utils.getNullPointer(PosF),
+        utils.getNullPointer(PosF),
+        utils.getNullPointer(Float),
+        utils.getNullPointer(Color),
+        null,
+    );
 
     // test creating another DebugGraphics will get the same instance back
     var debugGraphics2 = try createTestRenderAPI();
     try std.testing.expectEqual(api.rendering, debugGraphics2);
     var offset = Vector2f{ 10, 10 };
     debugGraphics2.setOffset(offset);
-    debugGraphics2.renderSprite(&sprite, &transform, renderData, offset);
+    debugGraphics2.renderSprite(
+        tex_1_binding.id,
+        &RectF{ 0, 0, 32, 32 },
+        &PosF{ 10, 100 },
+        utils.getNullPointer(PosF),
+        utils.getNullPointer(PosF),
+        utils.getNullPointer(Float),
+        utils.getNullPointer(Color),
+        null,
+    );
 
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
@@ -402,18 +416,11 @@ test "RenderAPI debug init" {
         \\ current state:
         \\   Projection[ clear_color:{ 0, 0, 0, 255 }, offset:{ 0.0e+00, 0.0e+00 }, pivot:{ 0.0e+00, 0.0e+00 }, zoom:1, rot:0 ]
         \\   null
-        \\   RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ]
         \\   null
         \\   Offset: { 1.0e+01, 1.0e+01 }
         \\ render actions:
-        \\   render SpriteData[ bind:0, bounds:{ 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00 } ] -->
-        \\     TransformData[ pos:{ 1.0e+01, 1.0e+02 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
-        \\     RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
-        \\     offset:{ 0.0e+00, 0.0e+00 }
-        \\   render SpriteData[ bind:0, bounds:{ 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00 } ] -->
-        \\     TransformData[ pos:{ 1.0e+01, 1.0e+02 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:0 ],
-        \\     RenderData[ tint:{ 255, 255, 255, 255 }, blend:ALPHA ],
-        \\     offset:{ 1.0e+01, 1.0e+01 }
+        \\   render sprite --> texture_binding=0, texture_bounds={ 0.0e+00, 0.0e+00, 3.2e+01, 3.2e+01 }, position={ 1.0e+01, 1.0e+02 }, pivot=null, scale=null, rotation=null, tint_color=null, blend_mode=null
+        \\   render sprite --> texture_binding=0, texture_bounds={ 0.0e+00, 0.0e+00, 3.2e+01, 3.2e+01 }, position={ 1.0e+01, 1.0e+02 }, pivot=null, scale=null, rotation=null, tint_color=null, blend_mode=null
         \\
     ;
     api.rendering.printDebug(&sb);
@@ -421,51 +428,35 @@ test "RenderAPI debug init" {
     try std.testing.expectEqualStrings(api_out, sb.toString());
 }
 
-test "TransformData operations" {
-    var td1 = TransformData{
-        .position = Vector2f{ 10, 10 },
-        .pivot = Vector2f{ 0, 0 },
-        .scale = Vector2f{ 1, 1 },
-        .rotation = 2,
-    };
-    var td2 = TransformData{
-        .position = Vector2f{ 10, 10 },
-        .pivot = Vector2f{ 1, 1 },
-        .scale = Vector2f{ 2, 2 },
-        .rotation = 5,
-    };
-    var td3 = TransformData{};
-    td3.set(td1);
+// test "TransformData operations" {
+//     var td1 = TransformData{
+//         .position = Vector2f{ 10, 10 },
+//         .pivot = Vector2f{ 0, 0 },
+//         .scale = Vector2f{ 1, 1 },
+//         .rotation = 2,
+//     };
+//     var td2 = TransformData{
+//         .position = Vector2f{ 10, 10 },
+//         .pivot = Vector2f{ 1, 1 },
+//         .scale = Vector2f{ 2, 2 },
+//         .rotation = 5,
+//     };
+//     var td3 = TransformData{};
+//     td3.set(td1);
 
-    var sb = StringBuffer.init(std.testing.allocator);
-    defer sb.deinit();
-    sb.print("{any}", .{td3});
-    try std.testing.expectEqualStrings(
-        "TransformData[ pos:{ 1.0e+01, 1.0e+01 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:2 ]",
-        sb.toString(),
-    );
+//     var sb = StringBuffer.init(std.testing.allocator);
+//     defer sb.deinit();
+//     sb.print("{any}", .{td3});
+//     try std.testing.expectEqualStrings(
+//         "TransformData[ pos:{ 1.0e+01, 1.0e+01 }, pivot:{ 0.0e+00, 0.0e+00 }, scale:{ 1.0e+00, 1.0e+00 }, rot:2 ]",
+//         sb.toString(),
+//     );
 
-    sb.clear();
-    td3.add(td2);
-    sb.print("{any}", .{td3});
-    try std.testing.expectEqualStrings(
-        "TransformData[ pos:{ 2.0e+01, 2.0e+01 }, pivot:{ 1.0e+00, 1.0e+00 }, scale:{ 3.0e+00, 3.0e+00 }, rot:7 ]",
-        sb.toString(),
-    );
-}
-
-// //////////////////////////////////////////////////////////////
-// //// TESTING System
-// //////////////////////////////////////////////////////////////
-
-// // test "initialization" {
-// //
-// //     try firefly.moduleInitDebug(std.testing.allocator);
-// //     defer firefly.moduleDeinit();
-
-// //     var exampleSystem = try System.initSystem(ExampleSystem);
-// //     try std.testing.expectEqualStrings("ExampleSystem", exampleSystem.getInfo().name);
-// //     var systemPtr = System.getSystem("ExampleSystem").?;
-// //     try std.testing.expectEqualStrings("ExampleSystem", systemPtr.getInfo().name);
-// //     System.activate(ExampleSystem.info.name, false);
-// // }
+//     sb.clear();
+//     td3.add(td2);
+//     sb.print("{any}", .{td3});
+//     try std.testing.expectEqualStrings(
+//         "TransformData[ pos:{ 2.0e+01, 2.0e+01 }, pivot:{ 1.0e+00, 1.0e+00 }, scale:{ 3.0e+00, 3.0e+00 }, rot:7 ]",
+//         sb.toString(),
+//     );
+// }
