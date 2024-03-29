@@ -4,6 +4,7 @@ const utils = inari.utils;
 const firefly = inari.firefly;
 const assert = std.debug.assert;
 const sprite = @import("sprite.zig");
+const shape = @import("shape.zig");
 const view = @import("view.zig");
 
 const Allocator = std.mem.Allocator;
@@ -40,11 +41,12 @@ pub const SpriteTemplate = sprite.SpriteTemplate;
 pub const ESprite = sprite.ESprite;
 pub const SpriteSet = sprite.SpriteSet;
 
+pub const EShape = shape.EShape;
+
 pub const Component = firefly.api.Component;
 pub const View = view.View;
 pub const Layer = view.Layer;
 pub const ViewLayerMapping = view.ViewLayerMapping;
-pub const EMultiplier = view.EMultiplier;
 pub const ETransform = view.ETransform;
 pub const ViewRenderEvent = firefly.api.ViewRenderEvent;
 pub const ViewRenderListener = firefly.api.ViewRenderListener;
@@ -69,6 +71,7 @@ pub fn init(_: firefly.api.InitMode) !void {
     // init sub packages
     try view.init();
     try sprite.init();
+    try shape.init();
 }
 
 pub fn deinit() void {
@@ -77,6 +80,7 @@ pub fn deinit() void {
         return;
 
     // deinit sprite package
+    shape.deinit();
     sprite.deinit();
     view.deinit();
     // deinit Assets

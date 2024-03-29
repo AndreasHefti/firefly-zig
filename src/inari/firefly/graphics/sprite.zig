@@ -15,8 +15,8 @@ const Texture = graphics.Texture;
 const EComponent = api.EComponent;
 const EComponentAspectGroup = api.EComponentAspectGroup;
 const EntityCondition = api.EntityCondition;
+const EMultiplier = api.EMultiplier;
 const ETransform = graphics.ETransform;
-const EMultiplier = graphics.EMultiplier;
 const ViewLayerMapping = graphics.ViewLayerMapping;
 const ViewRenderEvent = graphics.ViewRenderEvent;
 const System = api.System;
@@ -372,7 +372,7 @@ const SimpleSpriteRenderer = struct {
         if (e.c_id == null or !entity_condition.check(e.c_id.?))
             return;
 
-        var transform = ETransform.byId(e.c_id.?);
+        var transform = ETransform.byId(e.c_id.?).?;
         switch (e.event_type) {
             ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id.?),
             ActionType.DEACTIVATING => sprite_refs.remove(transform.view_id, transform.layer_id, e.c_id.?),
@@ -385,17 +385,17 @@ const SimpleSpriteRenderer = struct {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the sprite
-                var es = ESprite.byId(id);
-                var trans = ETransform.byId(id);
+                var es = ESprite.byId(id).?;
+                var trans = ETransform.byId(id).?;
                 if (es.template_id != NO_BINDING) {
                     api.rendering.renderSprite(
                         es._texture_binding,
-                        &es._texture_bounds,
-                        &trans.position,
-                        &trans.pivot,
-                        &trans.scale,
-                        &trans.rotation,
-                        &es.tint_color,
+                        es._texture_bounds,
+                        trans.position,
+                        trans.pivot,
+                        trans.scale,
+                        trans.rotation,
+                        es.tint_color,
                         es.blend_mode,
                     );
                 }

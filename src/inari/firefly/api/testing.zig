@@ -26,6 +26,7 @@ const BlendMode = api.BlendMode;
 const Projection = api.Projection;
 const IRenderAPI = api.IRenderAPI;
 const Float = utils.Float;
+const ShapeType = api.ShapeType;
 
 // Singleton Debug RenderAPI
 var singletonDebugRenderAPI: IRenderAPI() = undefined;
@@ -279,45 +280,61 @@ pub const DebugRenderAPI = struct {
 
     pub fn renderTexture(
         texture_id: BindingId,
-        position: *const PosF,
-        pivot: *const ?PosF,
-        scale: *const ?PosF,
-        rotation: *const ?Float,
-        tint_color: *const ?Color,
+        position: PosF,
+        pivot: ?PosF,
+        scale: ?PosF,
+        rotation: ?Float,
+        tint_color: ?Color,
         blend_mode: ?BlendMode,
     ) void {
         _ = renderActionQueue.add(RenderAction{
             .texture_binding = texture_id,
-            .position = position.*,
-            .pivot = pivot.*,
-            .scale = scale.*,
-            .rotation = rotation.*,
-            .tint_color = tint_color.*,
+            .position = position,
+            .pivot = pivot,
+            .scale = scale,
+            .rotation = rotation,
+            .tint_color = tint_color,
             .blend_mode = blend_mode,
         });
     }
 
     pub fn renderSprite(
         texture_id: BindingId,
-        texture_bounds: *const RectF,
-        position: *const PosF,
-        pivot: *const ?PosF,
-        scale: *const ?PosF,
-        rotation: *const ?Float,
-        tint_color: *const ?Color,
+        texture_bounds: RectF,
+        position: PosF,
+        pivot: ?PosF,
+        scale: ?PosF,
+        rotation: ?Float,
+        tint_color: ?Color,
         blend_mode: ?BlendMode,
     ) void {
         _ = renderActionQueue.add(RenderAction{
             .texture_binding = texture_id,
-            .texture_bounds = texture_bounds.*,
-            .position = position.*,
-            .pivot = pivot.*,
-            .scale = scale.*,
-            .rotation = rotation.*,
-            .tint_color = tint_color.*,
+            .texture_bounds = texture_bounds,
+            .position = position,
+            .pivot = pivot,
+            .scale = scale,
+            .rotation = rotation,
+            .tint_color = tint_color,
             .blend_mode = blend_mode,
         });
     }
+
+    fn renderShape(
+        _: ShapeType,
+        _: []Float,
+        _: bool,
+        _: ?Float,
+        _: PosF,
+        _: Color,
+        _: ?BlendMode,
+        _: ?PosF,
+        _: ?PosF,
+        _: ?Float,
+        _: ?Color,
+        _: ?Color,
+        _: ?Color,
+    ) void {}
 
     pub fn endRendering() void {
         currentRenderTexture = null;

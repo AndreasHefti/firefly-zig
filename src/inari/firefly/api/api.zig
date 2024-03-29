@@ -57,6 +57,7 @@ pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
 pub const EntityCondition = entity.EntityCondition;
+pub const EMultiplier = entity.EMultiplier;
 pub const EComponent = entity.EComponent;
 pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
@@ -91,9 +92,9 @@ pub fn init(
     if (initMode == InitMode.TESTING) {
         rendering = try testing.createTestRenderAPI();
     } else {
-        rendering = try testing.createTestRenderAPI();
-        //rendering = try @import("raylib/rendering.zig").createRenderAPI();
-        //window = try @import("raylib/window.zig").createWindowAPI();
+        //rendering = try testing.createTestRenderAPI();
+        rendering = try @import("raylib/rendering.zig").createRenderAPI();
+        window = try @import("raylib/window.zig").createWindowAPI();
     }
 
     try Component.init();
@@ -102,6 +103,7 @@ pub fn init(
 
     // register api based components and entity components
     Component.registerComponent(Entity);
+    EComponent.registerEntityComponent(EMultiplier);
     Component.registerComponent(system.SystemComponent);
 }
 
@@ -251,6 +253,16 @@ pub const TextureWrap = enum(CInt) {
     TEXTURE_WRAP_CLAMP = 1, // Clamps texture to edge pixel in tiled mode
     TEXTURE_WRAP_MIRROR_REPEAT = 2, // Mirrors and repeats the texture in tiled mode
     TEXTURE_WRAP_MIRROR_CLAMP = 3, // Mirrors and clamps to border the texture in tiled mode
+};
+
+pub const ShapeType = enum {
+    POINT,
+    LINE,
+    RECTANGLE,
+    CIRCLE,
+    ARC,
+    CURVE,
+    TRIANGLE,
 };
 
 pub const Projection = struct {
@@ -455,23 +467,39 @@ pub fn IRenderAPI() type {
         /// rendering texture or the screen
         renderTexture: *const fn (
             texture_id: BindingId,
-            position: *const PosF,
-            pivot: *const ?PosF,
-            scale: *const ?PosF,
-            rotation: *const ?Float,
-            tint_color: *const ?Color,
+            position: PosF,
+            pivot: ?PosF,
+            scale: ?PosF,
+            rotation: ?Float,
+            tint_color: ?Color,
             blend_mode: ?BlendMode,
         ) void = undefined,
         // TODO
         renderSprite: *const fn (
             texture_id: BindingId,
-            texture_bounds: *const RectF,
-            position: *const PosF,
-            pivot: *const ?PosF,
-            scale: *const ?PosF,
-            rotation: *const ?Float,
-            tint_color: *const ?Color,
+            texture_bounds: RectF,
+            position: PosF,
+            pivot: ?PosF,
+            scale: ?PosF,
+            rotation: ?Float,
+            tint_color: ?Color,
             blend_mode: ?BlendMode,
+        ) void = undefined,
+        // TODO
+        renderShape: *const fn (
+            shape_type: ShapeType,
+            vertices: []Float,
+            fill: bool,
+            thickness: ?Float,
+            offset: PosF,
+            color: Color,
+            blend_mode: ?BlendMode,
+            pivot: ?PosF,
+            scale: ?PosF,
+            rotation: ?Float,
+            color1: ?Color,
+            color2: ?Color,
+            color3: ?Color,
         ) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
         /// switches back to screen rendering

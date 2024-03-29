@@ -7,8 +7,9 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     //try @import("examples/HelloWindow.zig").run(allocator);
-    try @import("examples/HelloSprite.zig").run(allocator);
+    //try @import("examples/HelloSprite.zig").run(allocator);
     try @import("examples/HelloViewport.zig").run(allocator);
+    try @import("examples/HelloShape.zig").run(allocator);
 }
 
 test "API Tests" {

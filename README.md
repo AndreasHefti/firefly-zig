@@ -12,7 +12,7 @@ TODO:
       - Shapes
       - Move Collision-Detection amd Collision-Resolving
       - Audio
-      - Behaviour and State Engine
+      - Behavior and State Engine
       - TileMap and WorldMap
       - ...
 

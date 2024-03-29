@@ -1,6 +1,7 @@
 const std = @import("std");
 const inari = @import("../../../inari.zig");
 const rl = @cImport(@cInclude("raylib.h"));
+const rlgl = @cImport(@cInclude("rlgl.h"));
 
 const utils = inari.utils;
 const api = inari.firefly.api;
@@ -13,6 +14,7 @@ const Vector4f = utils.Vector4f;
 const PosF = utils.PosF;
 const RectF = utils.RectF;
 const Color = utils.Color;
+const ShapeType = api.ShapeType;
 const BlendMode = api.BlendMode;
 const TextureBinding = api.TextureBinding;
 const ShaderBinding = api.ShaderBinding;
@@ -95,6 +97,7 @@ const RaylibRenderAPI = struct {
         interface.startRendering = startRendering;
         interface.renderTexture = renderTexture;
         interface.renderSprite = renderSprite;
+        interface.renderShape = renderShape;
         interface.endRendering = endRendering;
 
         interface.printDebug = printDebug;
@@ -145,6 +148,7 @@ const RaylibRenderAPI = struct {
     var temp_source_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
     var temp_dest_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
     var temp_pivot = rl.Vector2{ .x = 0, .y = 0 };
+    var temp_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
 
     fn setOffset(offset: Vector2f) void {
         active_offset = offset;
@@ -292,11 +296,11 @@ const RaylibRenderAPI = struct {
 
     fn renderTexture(
         texture_id: BindingId,
-        position: *const PosF,
-        pivot: *const ?PosF,
-        scale: *const ?PosF,
-        rotation: *const ?Float,
-        tint_color: *const ?Color,
+        position: PosF,
+        pivot: ?PosF,
+        scale: ?PosF,
+        rotation: ?Float,
+        tint_color: ?Color,
         blend_mode: ?BlendMode,
     ) void {
         if (render_textures.get(texture_id)) |tex| {
@@ -309,18 +313,18 @@ const RaylibRenderAPI = struct {
             // NOTE: render to texture has inverted y axis.
             temp_source_rect.height = @floatFromInt(-tex.texture.height);
             // set destination rect
-            if (scale.*) |s| {
+            if (scale) |s| {
                 temp_dest_rect.x = active_offset[0] + position[0];
                 temp_dest_rect.y = active_offset[1] + position[1];
                 temp_dest_rect.width = s[0] * @as(Float, @floatFromInt(tex.texture.width));
                 temp_dest_rect.height = s[1] * @as(Float, @floatFromInt(tex.texture.height));
-                temp_pivot = @bitCast((pivot.* orelse default_pivot) * s);
+                temp_pivot = @bitCast((pivot orelse default_pivot) * s);
             } else {
                 temp_dest_rect.x = active_offset[0] + position[0];
                 temp_dest_rect.y = active_offset[1] + position[1];
                 temp_dest_rect.width = @floatFromInt(tex.texture.width);
                 temp_dest_rect.height = @floatFromInt(tex.texture.height);
-                temp_pivot = @bitCast(pivot.* orelse default_pivot);
+                temp_pivot = @bitCast(pivot orelse default_pivot);
             }
 
             rl.DrawTexturePro(
@@ -328,20 +332,20 @@ const RaylibRenderAPI = struct {
                 temp_source_rect,
                 temp_dest_rect,
                 temp_pivot,
-                rotation.* orelse 0,
-                if (tint_color.*) |tc| @bitCast(tc) else active_tint_color,
+                rotation orelse 0,
+                if (tint_color) |tc| @bitCast(tc) else active_tint_color,
             );
         }
     }
 
     fn renderSprite(
         texture_id: BindingId,
-        texture_bounds: *const RectF,
-        position: *const PosF,
-        pivot: *const ?PosF,
-        scale: *const ?PosF,
-        rotation: *const ?Float,
-        tint_color: *const ?Color,
+        texture_bounds: RectF,
+        position: PosF,
+        pivot: ?PosF,
+        scale: ?PosF,
+        rotation: ?Float,
+        tint_color: ?Color,
         blend_mode: ?BlendMode,
     ) void {
         if (textures.get(texture_id)) |tex| {
@@ -352,25 +356,100 @@ const RaylibRenderAPI = struct {
             // set destination rect
             temp_dest_rect.x = active_offset[0] + position[0];
             temp_dest_rect.y = active_offset[1] + position[1];
-            if (scale.*) |s| {
+            if (scale) |s| {
                 temp_dest_rect.width = @fabs(texture_bounds[2]) * s[0];
                 temp_dest_rect.height = @fabs(texture_bounds[3]) * s[1];
-                temp_pivot = @bitCast((pivot.* orelse default_pivot) * s);
+                temp_pivot = @bitCast((pivot orelse default_pivot) * s);
             } else {
                 temp_dest_rect.width = @fabs(texture_bounds[2]);
                 temp_dest_rect.height = @fabs(texture_bounds[3]);
-                temp_pivot = @bitCast(pivot.* orelse default_pivot);
+                temp_pivot = @bitCast(pivot orelse default_pivot);
             }
 
             rl.DrawTexturePro(
                 tex.*,
-                @bitCast(texture_bounds.*),
+                @bitCast(texture_bounds),
                 temp_dest_rect,
                 temp_pivot,
-                rotation.* orelse 0,
-                if (tint_color.*) |tc| @bitCast(tc) else active_tint_color,
+                rotation orelse 0,
+                if (tint_color) |tc| @bitCast(tc) else active_tint_color,
             );
         }
+    }
+
+    fn renderShape(
+        shape_type: ShapeType,
+        vertices: []Float,
+        fill: bool,
+        thickness: ?Float,
+        offset: PosF,
+        color: Color,
+        blend_mode: ?BlendMode,
+        pivot: ?PosF,
+        scale: ?PosF,
+        rotation: ?Float,
+        color1: ?Color,
+        color2: ?Color,
+        color3: ?Color,
+    ) void {
+
+        // set blend mode
+        rl.BeginBlendMode(@intFromEnum(blend_mode orelse active_blend_mode));
+
+        // apply translation functions if needed
+        if (scale != null or rotation != null) {
+            rlgl.rlPushMatrix();
+            if (pivot) |p| rlgl.rlTranslatef(p[0], p[1], 0);
+            if (scale) |s| rlgl.rlScalef(s[0], s[1], 0);
+            if (rotation) |r| rlgl.rlRotatef(r, 0, 0, 1);
+            if (pivot) |p| rlgl.rlTranslatef(-p[0], -p[1], 0);
+        }
+        active_offset[0] += offset[0];
+        active_offset[1] += offset[1];
+
+        switch (shape_type) {
+            ShapeType.POINT => {
+                rl.DrawPixel(
+                    @intFromFloat(vertices[0] + active_offset[0]),
+                    @intFromFloat(vertices[1] + active_offset[1]),
+                    @bitCast(color),
+                );
+            },
+            ShapeType.LINE => {
+                rl.DrawLine(
+                    @intFromFloat(vertices[0] + active_offset[0]),
+                    @intFromFloat(vertices[1] + active_offset[1]),
+                    @intFromFloat(vertices[2] + active_offset[0]),
+                    @intFromFloat(vertices[3] + active_offset[1]),
+                    @bitCast(color),
+                );
+            },
+            ShapeType.RECTANGLE => {
+                temp_rect.x = vertices[0] + active_offset[0];
+                temp_rect.y = vertices[1] + active_offset[1];
+                temp_rect.width = vertices[2];
+                temp_rect.height = vertices[3];
+                if (fill) {
+                    rl.DrawRectangleGradientEx(
+                        temp_rect,
+                        @bitCast(color),
+                        @bitCast(color1 orelse color),
+                        @bitCast(color2 orelse color),
+                        @bitCast(color3 orelse color),
+                    );
+                } else {
+                    rl.DrawRectangleLinesEx(temp_rect, thickness orelse 1.0, @bitCast(color));
+                }
+            },
+            else => {},
+        }
+
+        // dispose translation functions if needed
+        if (scale != null or rotation != null) {
+            rlgl.rlPopMatrix();
+        }
+        active_offset[0] -= offset[0];
+        active_offset[1] -= offset[1];
     }
 
     fn endRendering() void {

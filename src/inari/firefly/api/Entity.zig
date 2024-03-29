@@ -16,7 +16,7 @@ const AspectGroup = utils.AspectGroup;
 const String = utils.String;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
-const NO_NAME = utils.NO_NAME;
+const Vector2f = utils.Vector2f;
 
 pub const Entity = struct {
     pub usingnamespace Component.Trait(Entity, .{ .name = "Entity" });
@@ -123,6 +123,30 @@ pub const EntityCondition = struct {
 };
 
 //////////////////////////////////////////////////////////////////////////
+//// EMultiplier Entity position multiplier
+//////////////////////////////////////////////////////////////////////////
+
+pub const EMultiplier = struct {
+    pub usingnamespace EComponent.Trait(@This(), "EMultiplier");
+    pub const NULL_POS_ENTRY = Vector2f{};
+
+    id: Index = UNDEF_INDEX,
+    positions: DynArray(Vector2f) = undefined,
+
+    pub fn construct(self: *EMultiplier) void {
+        self.positions = DynArray(Vector2f).init(
+            api.COMPONENT_ALLOC,
+            NULL_POS_ENTRY,
+        ) catch unreachable;
+    }
+
+    pub fn destruct(self: *EMultiplier) void {
+        self.positions.deinit();
+        self.positions = undefined;
+    }
+};
+
+//////////////////////////////////////////////////////////////////////////
 //// Entity Component
 //////////////////////////////////////////////////////////////////////////
 const EComponentTypeInterface = struct {
@@ -149,8 +173,8 @@ pub const EComponent = struct {
             pub const pool = EComponentPool(T);
             // component type pool function references
             pub var aspect: *const EComponentAspect = undefined;
-            pub fn byId(id: Index) *T {
-                return pool.items.get(id).?;
+            pub fn byId(id: Index) ?*T {
+                return pool.items.get(id);
             }
 
             pub fn count() usize {

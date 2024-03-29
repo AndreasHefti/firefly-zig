@@ -195,7 +195,6 @@ pub fn DynArray(comptime T: type) type {
             return inBounds(self, index) and self.slots.isSet(index);
         }
 
-        // TODO use ?*T here as return type and ged rid of getIfExists
         pub fn get(self: *Self, index: usize) ?*T {
             if (exists(self, index)) {
                 return self.register.get(index);

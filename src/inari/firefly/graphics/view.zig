@@ -44,7 +44,6 @@ pub fn init() !void {
     Component.registerComponent(Layer);
     Component.registerComponent(View);
     EComponent.registerEntityComponent(ETransform);
-    EComponent.registerEntityComponent(EMultiplier);
     System(ViewRenderer).createSystem(
         "ViewRenderer",
         "Emits ViewRenderEvent in order of active Views and its Layers",
@@ -336,45 +335,21 @@ pub const ETransform = struct {
 
     pub const Property = struct {
         pub fn XPos(id: Index) *Float {
-            return &ETransform.byId(id).position[0];
+            return &ETransform.byId(id).?.position[0];
         }
         pub fn YPos(id: Index) *Float {
-            return &ETransform.byId(id).position[1];
+            return &ETransform.byId(id).?.position[1];
         }
         pub fn XScale(id: Index) *Float {
-            return &ETransform.byId(id).getScale()[1];
+            return &ETransform.byId(id).?.getScale()[1];
         }
         pub fn YScale(id: Index) *Float {
-            return &ETransform.byId(id).getScale()[1];
+            return &ETransform.byId(id).?.getScale()[1];
         }
         pub fn Rotation(id: Index) *Float {
-            return ETransform.byId(id).getRotation();
+            return ETransform.byId(id).?.getRotation();
         }
     };
-};
-
-//////////////////////////////////////////////////////////////////////////
-//// EMultiplier Entity position multiplier
-//////////////////////////////////////////////////////////////////////////
-
-pub const EMultiplier = struct {
-    pub usingnamespace EComponent.Trait(@This(), "EMultiplier");
-    pub const NULL_POS_ENTRY = Vector2f{};
-
-    id: Index = UNDEF_INDEX,
-    positions: DynArray(Vector2f) = undefined,
-
-    pub fn construct(self: *EMultiplier) void {
-        self.positions = DynArray(Vector2f).init(
-            api.COMPONENT_ALLOC,
-            NULL_POS_ENTRY,
-        ) catch unreachable;
-    }
-
-    pub fn destruct(self: *EMultiplier) void {
-        self.positions.deinit();
-        self.positions = undefined;
-    }
 };
 
 //////////////////////////////////////////////////////////////
@@ -419,11 +394,11 @@ pub const ViewRenderer = struct {
                 if (view.render_texture_binding) |b| {
                     api.rendering.renderTexture(
                         b.id,
-                        &view.position,
-                        &view.pivot,
-                        &view.scale,
-                        &view.rotation,
-                        &view.tint_color,
+                        view.position,
+                        view.pivot,
+                        view.scale,
+                        view.rotation,
+                        view.tint_color,
                         view.blend_mode,
                     );
                 }
