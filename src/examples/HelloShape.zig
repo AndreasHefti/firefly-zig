@@ -28,17 +28,44 @@ pub fn run(allocator: Allocator) !void {
 }
 
 fn example() void {
-    var v: []Float = firefly.api.ALLOC.alloc(Float, 4) catch unreachable;
-    v[0] = 0;
-    v[1] = 0;
-    v[2] = 200;
-    v[3] = 200;
-    _ = Entity.newAnd(.{ .name = "TestEntity" })
+    _ = Entity.newAnd(.{ .name = "TestEntity4" })
+        .with(ETransform{ .position = .{ 100, 100 } })
+        .with(EShape{
+        .shape_type = ShapeType.CIRCLE,
+        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 50 }),
+        .color = .{ 150, 150, 150, 100 },
+    })
+        .activate();
+
+    _ = Entity.newAnd(.{ .name = "TestEntity1" })
         .with(ETransform{ .position = .{ 0, 0 }, .pivot = .{ 100, 100 }, .scale = .{ 0.5, 0.5 }, .rotation = 45 })
         .with(EShape{
         .shape_type = ShapeType.RECTANGLE,
-        .vertices = v,
+        .fill = false,
+        .thickness = 5,
+        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
         .color = .{ 255, 0, 0, 255 },
+    })
+        .activate();
+
+    _ = Entity.newAnd(.{ .name = "TestEntity2" })
+        .with(ETransform{ .position = .{ 0, 0 }, .pivot = .{ 100, 100 }, .scale = .{ 0.25, 0.25 }, .rotation = 45 })
+        .with(EShape{
+        .shape_type = ShapeType.RECTANGLE,
+        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
+        .color = .{ 255, 0, 0, 100 },
+    })
+        .activate();
+
+    _ = Entity.newAnd(.{ .name = "TestEntity3" })
+        .with(ETransform{ .position = .{ 0, 0 }, .pivot = .{ 100, 100 }, .scale = .{ 0.1, 0.1 }, .rotation = 45 })
+        .with(EShape{
+        .shape_type = ShapeType.RECTANGLE,
+        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
+        .color = .{ 255, 0, 0, 255 },
+        .color1 = .{ 0, 255, 0, 255 },
+        .color2 = .{ 0, 0, 255, 255 },
+        .color3 = .{ 255, 255, 255, 0 },
     })
         .activate();
 

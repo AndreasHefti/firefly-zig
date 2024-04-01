@@ -125,6 +125,14 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////
+//// Convenient Functions
+//////////////////////////////////////////////////////////////
+
+pub fn allocFloatArray(array: anytype) []Float {
+    return firefly.api.ALLOC.dupe(Float, &array) catch unreachable;
+}
+
+//////////////////////////////////////////////////////////////
 //// Update Event and Render Event declarations
 //////////////////////////////////////////////////////////////
 
@@ -261,7 +269,7 @@ pub const ShapeType = enum {
     RECTANGLE,
     CIRCLE,
     ARC,
-    CURVE,
+    ELLIPSE,
     TRIANGLE,
 };
 
