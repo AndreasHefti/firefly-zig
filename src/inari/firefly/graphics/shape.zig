@@ -124,36 +124,26 @@ const DefaultShapeRenderer = struct {
                 // render the shape
                 var es = EShape.byId(id).?;
                 var trans = ETransform.byId(id).?;
-                if (EMultiplier.byId(id)) |m| {
-                    var next = m.positions.slots.nextSetBit(0);
-                    while (next) |pi| {
-                        renderOneShape(es, trans, (trans.position + m.positions.get(pi).?.*));
-                        next = m.positions.slots.nextSetBit(pi + 1);
-                    }
-                } else {
-                    renderOneShape(es, trans, trans.position);
-                }
+                var multi = if (EMultiplier.byId(id)) |m| m.positions else null;
+                api.rendering.renderShape(
+                    es.shape_type,
+                    es.vertices,
+                    es.fill,
+                    es.thickness,
+                    trans.position,
+                    es.color,
+                    es.blend_mode,
+                    trans.pivot,
+                    trans.scale,
+                    trans.rotation,
+                    es.color1,
+                    es.color2,
+                    es.color3,
+                    multi,
+                );
 
                 i = all.nextSetBit(id + 1);
             }
         }
-    }
-
-    inline fn renderOneShape(shape: *EShape, trans: *ETransform, offset: PosF) void {
-        api.rendering.renderShape(
-            shape.shape_type,
-            shape.vertices,
-            shape.fill,
-            shape.thickness,
-            offset,
-            shape.color,
-            shape.blend_mode,
-            trans.pivot,
-            trans.scale,
-            trans.rotation,
-            shape.color1,
-            shape.color2,
-            shape.color3,
-        );
     }
 };

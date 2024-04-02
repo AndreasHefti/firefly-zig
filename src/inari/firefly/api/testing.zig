@@ -307,6 +307,7 @@ pub const DebugRenderAPI = struct {
         rotation: ?Float,
         tint_color: ?Color,
         blend_mode: ?BlendMode,
+        _: ?[]const Vector2f,
     ) void {
         _ = renderActionQueue.add(RenderAction{
             .texture_binding = texture_id,
@@ -334,6 +335,7 @@ pub const DebugRenderAPI = struct {
         _: ?Color,
         _: ?Color,
         _: ?Color,
+        _: ?[]const PosF,
     ) void {}
 
     pub fn endRendering() void {

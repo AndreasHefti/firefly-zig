@@ -10,10 +10,12 @@ const ShapeType = firefly.api.ShapeType;
 const Allocator = std.mem.Allocator;
 const Easing = utils.Easing;
 const Float = utils.Float;
+const Vector2f = utils.Vector2f;
 
 const Texture = firefly.graphics.Texture;
 const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const ESprite = firefly.graphics.ESprite;
+const EMultiplier = firefly.api.EMultiplier;
 
 pub fn run(allocator: Allocator) !void {
     try firefly.init(
@@ -66,6 +68,23 @@ fn example() void {
         .color1 = .{ 0, 255, 0, 255 },
         .color2 = .{ 0, 0, 255, 255 },
         .color3 = .{ 255, 255, 255, 0 },
+    })
+        .activate();
+
+    _ = Entity.newAnd(.{ .name = "TestEntity5" })
+        .with(ETransform{ .position = .{ 0, 0 } })
+        .with(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
+        .{ 400, 310 },
+        .{ 410, 310 },
+        .{ 420, 310 },
+        .{ 430, 315 },
+        .{ 400, 315 },
+        .{ 415, 310 },
+    }) })
+        .with(EShape{
+        .shape_type = ShapeType.CIRCLE,
+        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 10 }),
+        .color = .{ 150, 150, 150, 100 },
     })
         .activate();
 

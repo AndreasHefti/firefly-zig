@@ -10,6 +10,7 @@ pub fn main() !void {
     //try @import("examples/HelloSprite.zig").run(allocator);
     try @import("examples/HelloViewport.zig").run(allocator);
     try @import("examples/HelloShape.zig").run(allocator);
+    try @import("examples/RenderSpeed.zig").run(allocator);
 }
 
 test "API Tests" {

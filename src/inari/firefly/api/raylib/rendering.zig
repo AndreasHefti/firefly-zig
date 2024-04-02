@@ -351,15 +351,14 @@ const RaylibRenderAPI = struct {
         rotation: ?Float,
         tint_color: ?Color,
         blend_mode: ?BlendMode,
+        multiplier: ?[]const PosF,
     ) void {
         if (textures.get(texture_id)) |tex| {
 
             // set blend mode
             rl.BeginBlendMode(@intFromEnum(blend_mode orelse active_blend_mode));
 
-            // set destination rect
-            temp_dest_rect.x = active_offset[0] + position[0];
-            temp_dest_rect.y = active_offset[1] + position[1];
+            // scaling
             if (scale) |s| {
                 temp_dest_rect.width = @fabs(texture_bounds[2]) * s[0];
                 temp_dest_rect.height = @fabs(texture_bounds[3]) * s[1];
@@ -370,14 +369,31 @@ const RaylibRenderAPI = struct {
                 temp_pivot = @bitCast(pivot orelse default_pivot);
             }
 
-            rl.DrawTexturePro(
-                tex.*,
-                @bitCast(texture_bounds),
-                temp_dest_rect,
-                temp_pivot,
-                rotation orelse 0,
-                if (tint_color) |tc| @bitCast(tc) else active_tint_color,
-            );
+            if (multiplier) |m| {
+                for (0..m.len) |i| {
+                    temp_dest_rect.x = active_offset[0] + position[0] + m[i][0];
+                    temp_dest_rect.y = active_offset[1] + position[1] + m[i][1];
+                    rl.DrawTexturePro(
+                        tex.*,
+                        @bitCast(texture_bounds),
+                        temp_dest_rect,
+                        temp_pivot,
+                        rotation orelse 0,
+                        if (tint_color) |tc| @bitCast(tc) else active_tint_color,
+                    );
+                }
+            } else {
+                temp_dest_rect.x = active_offset[0] + position[0];
+                temp_dest_rect.y = active_offset[1] + position[1];
+                rl.DrawTexturePro(
+                    tex.*,
+                    @bitCast(texture_bounds),
+                    temp_dest_rect,
+                    temp_pivot,
+                    rotation orelse 0,
+                    if (tint_color) |tc| @bitCast(tc) else active_tint_color,
+                );
+            }
         }
     }
 
@@ -395,6 +411,7 @@ const RaylibRenderAPI = struct {
         color1: ?Color,
         color2: ?Color,
         color3: ?Color,
+        multiplier: ?[]const PosF,
     ) void {
 
         // set blend mode
@@ -408,71 +425,17 @@ const RaylibRenderAPI = struct {
             if (rotation) |r| rlgl.rlRotatef(r, 0, 0, 1);
             if (pivot) |p| rlgl.rlTranslatef(-p[0], -p[1], 0);
         }
+
         active_offset[0] += offset[0];
         active_offset[1] += offset[1];
-
         switch (shape_type) {
-            ShapeType.POINT => {
-                rl.DrawPixel(@intFromFloat(vertices[0] + active_offset[0]), @intFromFloat(vertices[1] + active_offset[1]), @bitCast(color));
-            },
-            ShapeType.LINE => {
-                rl.DrawLine(@intFromFloat(vertices[0] + active_offset[0]), @intFromFloat(vertices[1] + active_offset[1]), @intFromFloat(vertices[2] + active_offset[0]), @intFromFloat(vertices[3] + active_offset[1]), @bitCast(color));
-            },
-            ShapeType.RECTANGLE => {
-                temp_rect.x = vertices[0] + active_offset[0];
-                temp_rect.y = vertices[1] + active_offset[1];
-                temp_rect.width = vertices[2];
-                temp_rect.height = vertices[3];
-                if (fill) {
-                    rl.DrawRectangleGradientEx(temp_rect, @bitCast(color), @bitCast(color1 orelse color), @bitCast(color2 orelse color), @bitCast(color3 orelse color));
-                } else {
-                    rl.DrawRectangleLinesEx(temp_rect, thickness orelse 1.0, @bitCast(color));
-                }
-            },
-            ShapeType.TRIANGLE => {
-                temp_p1.x = vertices[0] + active_offset[0];
-                temp_p1.y = vertices[1] + active_offset[1];
-                temp_p2.x = vertices[2] + active_offset[0];
-                temp_p2.y = vertices[3] + active_offset[1];
-                temp_p3.x = vertices[4] + active_offset[0];
-                temp_p3.y = vertices[5] + active_offset[1];
-                if (fill) {
-                    rl.DrawTriangle(temp_p1, temp_p2, temp_p3, @bitCast(color));
-                } else {
-                    rl.DrawTriangleLines(temp_p1, temp_p2, temp_p3, @bitCast(color));
-                }
-            },
-            ShapeType.CIRCLE => {
-                temp_p1.x = vertices[0] + active_offset[0];
-                temp_p1.y = vertices[1] + active_offset[1];
-                if (fill) {
-                    if (color1) |gc| {
-                        rl.DrawCircleGradient(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], @bitCast(color), @bitCast(gc));
-                    } else {
-                        rl.DrawCircleV(temp_p1, vertices[2], @bitCast(color));
-                    }
-                } else {
-                    rl.DrawCircleLinesV(temp_p1, vertices[2], @bitCast(color));
-                }
-            },
-            ShapeType.ARC => {
-                temp_p1.x = vertices[0] + active_offset[0];
-                temp_p1.y = vertices[1] + active_offset[1];
-                if (fill) {
-                    rl.DrawCircleSector(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
-                } else {
-                    rl.DrawCircleSectorLines(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
-                }
-            },
-            ShapeType.ELLIPSE => {
-                temp_p1.x = vertices[0] + active_offset[0];
-                temp_p1.y = vertices[1] + active_offset[1];
-                if (fill) {
-                    rl.DrawEllipse(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
-                } else {
-                    rl.DrawEllipseLines(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
-                }
-            },
+            ShapeType.POINT => renderPoint(vertices, color, multiplier),
+            ShapeType.LINE => renderLine(vertices, color, multiplier),
+            ShapeType.RECTANGLE => renderRect(vertices, color, multiplier, color1, color2, color3, fill, thickness),
+            ShapeType.TRIANGLE => renderTriangles(vertices, color, multiplier, fill),
+            ShapeType.CIRCLE => renderCircle(vertices, color, color1, multiplier, fill),
+            ShapeType.ARC => renderArc(vertices, color, multiplier, fill),
+            ShapeType.ELLIPSE => renderEllipse(vertices, color, multiplier, fill),
         }
 
         // dispose translation functions if needed
@@ -488,6 +451,7 @@ const RaylibRenderAPI = struct {
             rl.EndTextureMode();
             active_render_texture = null;
         } else {
+            rl.DrawFPS(0, 0);
             rl.EndMode2D();
             rl.EndDrawing();
         }
@@ -524,6 +488,226 @@ const RaylibRenderAPI = struct {
             return true;
         }
         return false;
+    }
+
+    inline fn renderPoint(
+        vertices: []Float,
+        color: Color,
+        multiplier: ?[]const PosF,
+    ) void {
+        if (multiplier) |m| {
+            for (0..m.len) |i| {
+                rl.DrawPixel(
+                    @intFromFloat(vertices[0] + active_offset[0] + m[i][0]),
+                    @intFromFloat(vertices[1] + active_offset[1] + m[i][1]),
+                    @bitCast(color),
+                );
+            }
+        } else {
+            rl.DrawPixel(
+                @intFromFloat(vertices[0] + active_offset[0]),
+                @intFromFloat(vertices[1] + active_offset[1]),
+                @bitCast(color),
+            );
+        }
+    }
+
+    inline fn renderLine(
+        vertices: []Float,
+        color: Color,
+        multiplier: ?[]const PosF,
+    ) void {
+        if (multiplier) |m| {
+            for (0..m.len) |i| {
+                rl.DrawLine(
+                    @intFromFloat(vertices[0] + active_offset[0] + m[i][0]),
+                    @intFromFloat(vertices[1] + active_offset[1] + m[i][1]),
+                    @intFromFloat(vertices[2] + active_offset[0] + m[i][0]),
+                    @intFromFloat(vertices[3] + active_offset[1] + m[i][1]),
+                    @bitCast(color),
+                );
+            }
+        } else {
+            rl.DrawLine(
+                @intFromFloat(vertices[0] + active_offset[0]),
+                @intFromFloat(vertices[1] + active_offset[1]),
+                @intFromFloat(vertices[2] + active_offset[0]),
+                @intFromFloat(vertices[3] + active_offset[1]),
+                @bitCast(color),
+            );
+        }
+    }
+
+    inline fn renderRect(
+        vertices: []Float,
+        color: Color,
+        multiplier: ?[]const PosF,
+        color1: ?Color,
+        color2: ?Color,
+        color3: ?Color,
+        fill: bool,
+        thickness: ?Float,
+    ) void {
+        temp_rect.x = vertices[0] + active_offset[0];
+        temp_rect.y = vertices[1] + active_offset[1];
+        temp_rect.width = vertices[2];
+        temp_rect.height = vertices[3];
+        if (multiplier) |m| {
+            temp_p1.x = temp_rect.x;
+            temp_p1.y = temp_rect.y;
+            for (0..m.len) |i| {
+                temp_rect.x = vertices[0] + temp_p1.x + m[i][0];
+                temp_rect.y = vertices[1] + temp_p1.y + m[i][1];
+                if (fill) {
+                    rl.DrawRectangleGradientEx(
+                        temp_rect,
+                        @bitCast(color),
+                        @bitCast(color1 orelse color),
+                        @bitCast(color2 orelse color),
+                        @bitCast(color3 orelse color),
+                    );
+                } else {
+                    rl.DrawRectangleLinesEx(temp_rect, thickness orelse 1.0, @bitCast(color));
+                }
+            }
+        } else {
+            if (fill) {
+                rl.DrawRectangleGradientEx(
+                    temp_rect,
+                    @bitCast(color),
+                    @bitCast(color1 orelse color),
+                    @bitCast(color2 orelse color),
+                    @bitCast(color3 orelse color),
+                );
+            } else {
+                rl.DrawRectangleLinesEx(temp_rect, thickness orelse 1.0, @bitCast(color));
+            }
+        }
+    }
+
+    inline fn renderTriangles(
+        vertices: []Float,
+        color: Color,
+        multiplier: ?[]const PosF,
+        fill: bool,
+    ) void {
+        if (multiplier) |m| {
+            for (0..m.len) |i| {
+                temp_p1.x = vertices[0] + active_offset[0] + m[i][0];
+                temp_p1.y = vertices[1] + active_offset[1] + m[i][1];
+                temp_p2.x = vertices[2] + active_offset[0] + m[i][0];
+                temp_p2.y = vertices[3] + active_offset[1] + m[i][1];
+                temp_p3.x = vertices[4] + active_offset[0] + m[i][0];
+                temp_p3.y = vertices[5] + active_offset[1] + m[i][1];
+                if (fill) {
+                    rl.DrawTriangle(temp_p1, temp_p2, temp_p3, @bitCast(color));
+                } else {
+                    rl.DrawTriangleLines(temp_p1, temp_p2, temp_p3, @bitCast(color));
+                }
+            }
+        } else {
+            temp_p1.x = vertices[0] + active_offset[0];
+            temp_p1.y = vertices[1] + active_offset[1];
+            temp_p2.x = vertices[2] + active_offset[0];
+            temp_p2.y = vertices[3] + active_offset[1];
+            temp_p3.x = vertices[4] + active_offset[0];
+            temp_p3.y = vertices[5] + active_offset[1];
+            if (fill) {
+                rl.DrawTriangle(temp_p1, temp_p2, temp_p3, @bitCast(color));
+            } else {
+                rl.DrawTriangleLines(temp_p1, temp_p2, temp_p3, @bitCast(color));
+            }
+        }
+    }
+
+    inline fn renderCircle(
+        vertices: []Float,
+        color: Color,
+        color1: ?Color,
+        multiplier: ?[]const PosF,
+        fill: bool,
+    ) void {
+        if (multiplier) |m| {
+            for (0..m.len) |i| {
+                temp_p1.x = vertices[0] + active_offset[0] + m[i][0];
+                temp_p1.y = vertices[1] + active_offset[1] + m[i][1];
+                if (fill) {
+                    if (color1) |gc| {
+                        rl.DrawCircleGradient(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], @bitCast(color), @bitCast(gc));
+                    } else {
+                        rl.DrawCircleV(temp_p1, vertices[2], @bitCast(color));
+                    }
+                } else {
+                    rl.DrawCircleLinesV(temp_p1, vertices[2], @bitCast(color));
+                }
+            }
+        } else {
+            temp_p1.x = vertices[0] + active_offset[0];
+            temp_p1.y = vertices[1] + active_offset[1];
+            if (fill) {
+                if (color1) |gc| {
+                    rl.DrawCircleGradient(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], @bitCast(color), @bitCast(gc));
+                } else {
+                    rl.DrawCircleV(temp_p1, vertices[2], @bitCast(color));
+                }
+            } else {
+                rl.DrawCircleLinesV(temp_p1, vertices[2], @bitCast(color));
+            }
+        }
+    }
+
+    inline fn renderArc(
+        vertices: []Float,
+        color: Color,
+        multiplier: ?[]const PosF,
+        fill: bool,
+    ) void {
+        if (multiplier) |m| {
+            for (0..m.len) |i| {
+                temp_p1.x = vertices[0] + active_offset[0] + m[i][0];
+                temp_p1.y = vertices[1] + active_offset[1] + m[i][1];
+                if (fill) {
+                    rl.DrawCircleSector(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
+                } else {
+                    rl.DrawCircleSectorLines(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
+                }
+            }
+        } else {
+            temp_p1.x = vertices[0] + active_offset[0];
+            temp_p1.y = vertices[1] + active_offset[1];
+            if (fill) {
+                rl.DrawCircleSector(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
+            } else {
+                rl.DrawCircleSectorLines(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
+            }
+        }
+    }
+
+    inline fn renderEllipse(
+        vertices: []Float,
+        color: Color,
+        multiplier: ?[]const PosF,
+        fill: bool,
+    ) void {
+        if (multiplier) |m| {
+            for (0..m.len) |i| {
+                temp_p1.x = vertices[0] + active_offset[0] + m[i][0];
+                temp_p1.y = vertices[1] + active_offset[1] + m[i][1];
+                if (fill) {
+                    rl.DrawEllipse(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
+                } else {
+                    rl.DrawEllipseLines(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
+                }
+            }
+        } else {
+            temp_p1.x = vertices[0] + active_offset[0];
+            temp_p1.y = vertices[1] + active_offset[1];
+            if (fill) {
+                rl.DrawEllipse(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
+            } else {
+                rl.DrawEllipseLines(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
+            }
+        }
     }
 
     fn printDebug(buffer: *StringBuffer) void {

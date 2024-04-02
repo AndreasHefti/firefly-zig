@@ -1,0 +1,52 @@
+const std = @import("std");
+const inari = @import("../inari/inari.zig");
+const firefly = inari.firefly;
+const utils = inari.utils;
+const Texture = firefly.graphics.Texture;
+const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Entity = firefly.api.Entity;
+const ETransform = firefly.graphics.ETransform;
+const ESprite = firefly.graphics.ESprite;
+const EMultiplier = firefly.api.EMultiplier;
+const Allocator = std.mem.Allocator;
+const Vector2f = utils.Vector2f;
+const Float = utils.Float;
+
+pub fn run(allocator: Allocator) !void {
+    try firefly.init(
+        allocator,
+        allocator,
+        allocator,
+        firefly.api.InitMode.DEVELOPMENT,
+    );
+    defer firefly.deinit();
+
+    firefly.Engine.start(600, 400, 60, "Hello Sprite", init);
+}
+
+fn init() void {
+    Texture.newAnd(.{
+        .name = "TestTexture",
+        .resource = "resources/logo.png",
+        .is_mipmap = false,
+    }).load();
+
+    var sprite_id = SpriteTemplate.new(.{
+        .texture_name = "TestTexture",
+        .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
+    });
+
+    var pos = firefly.api.ALLOC.alloc(Vector2f, 50000) catch unreachable;
+    var rndx = std.rand.DefaultPrng.init(32);
+    const rx = rndx.random();
+    for (0..50000) |i| {
+        pos[i][0] = rx.float(Float) * 600;
+        pos[i][1] = rx.float(Float) * 400;
+    }
+
+    _ = Entity.newAnd(.{ .name = "TestEntity" })
+        .with(ETransform{ .position = .{ 0, 0 } })
+        .with(ESprite{ .template_id = sprite_id })
+        .with(EMultiplier{ .positions = pos })
+        .activate();
+}

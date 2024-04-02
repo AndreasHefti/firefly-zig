@@ -17,6 +17,7 @@ const String = utils.String;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const Vector2f = utils.Vector2f;
+const Float = utils.Float;
 
 pub const Entity = struct {
     pub usingnamespace Component.Trait(Entity, .{ .name = "Entity" });
@@ -128,20 +129,12 @@ pub const EntityCondition = struct {
 
 pub const EMultiplier = struct {
     pub usingnamespace EComponent.Trait(@This(), "EMultiplier");
-    pub const NULL_POS_ENTRY = Vector2f{};
 
     id: Index = UNDEF_INDEX,
-    positions: DynArray(Vector2f) = undefined,
-
-    pub fn construct(self: *EMultiplier) void {
-        self.positions = DynArray(Vector2f).init(
-            api.COMPONENT_ALLOC,
-            NULL_POS_ENTRY,
-        ) catch unreachable;
-    }
+    positions: []const Vector2f = undefined,
 
     pub fn destruct(self: *EMultiplier) void {
-        self.positions.deinit();
+        api.ALLOC.free(self.positions);
         self.positions = undefined;
     }
 };

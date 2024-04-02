@@ -132,6 +132,10 @@ pub fn allocFloatArray(array: anytype) []Float {
     return firefly.api.ALLOC.dupe(Float, &array) catch unreachable;
 }
 
+pub fn allocVec2FArray(array: anytype) []const Vector2f {
+    return firefly.api.ALLOC.dupe(Vector2f, &array) catch unreachable;
+}
+
 //////////////////////////////////////////////////////////////
 //// Update Event and Render Event declarations
 //////////////////////////////////////////////////////////////
@@ -492,6 +496,7 @@ pub fn IRenderAPI() type {
             rotation: ?Float,
             tint_color: ?Color,
             blend_mode: ?BlendMode,
+            multiplier: ?[]const PosF,
         ) void = undefined,
         // TODO
         renderShape: *const fn (
@@ -508,6 +513,7 @@ pub fn IRenderAPI() type {
             color1: ?Color,
             color2: ?Color,
             color3: ?Color,
+            multiplier: ?[]const PosF,
         ) void = undefined,
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
         /// switches back to screen rendering

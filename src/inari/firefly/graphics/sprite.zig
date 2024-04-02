@@ -27,7 +27,8 @@ const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const Float = utils.Float;
 const RectF = utils.RectF;
-const Vec2f = utils.Vector2f;
+const PosF = utils.PosF;
+const Vector2f = utils.Vector2f;
 const Color = utils.Color;
 const BlendMode = api.BlendMode;
 
@@ -237,7 +238,7 @@ pub const SpriteSet = struct {
     name: String,
     texture_name: String,
     default_stamp: ?SpriteStamp = null,
-    set_dimensions: ?Vec2f = null,
+    set_dimensions: ?Vector2f = null,
 
     pub fn construct(self: SpriteSet) void {
         self._stamps = DynArray(SpriteStamp).new(api.COMPONENT_ALLOC);
@@ -358,7 +359,6 @@ const SimpleSpriteRenderer = struct {
         sprite_refs = ViewLayerMapping.new();
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, ESprite }),
-            .dismiss_kind = EComponentAspectGroup.newKindOf(.{EMultiplier}),
         };
     }
 
@@ -388,6 +388,7 @@ const SimpleSpriteRenderer = struct {
                 var es = ESprite.byId(id).?;
                 var trans = ETransform.byId(id).?;
                 if (es.template_id != NO_BINDING) {
+                    var multi = if (EMultiplier.byId(id)) |m| m.positions else null;
                     api.rendering.renderSprite(
                         es._texture_binding,
                         es._texture_bounds,
@@ -397,6 +398,7 @@ const SimpleSpriteRenderer = struct {
                         trans.rotation,
                         es.tint_color,
                         es.blend_mode,
+                        multi,
                     );
                 }
                 i = all.nextSetBit(id + 1);
