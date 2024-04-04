@@ -43,6 +43,7 @@ pub fn init() !void {
 
     Component.registerComponent(Layer);
     Component.registerComponent(View);
+    EComponent.registerEntityComponent(EView);
     EComponent.registerEntityComponent(ETransform);
     System(ViewRenderer).createSystem(
         "ViewRenderer",
@@ -288,18 +289,14 @@ pub const Layer = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// ETransform Entity
+//// EView Entity Component
 //////////////////////////////////////////////////////////////
 
-pub const ETransform = struct {
-    pub usingnamespace EComponent.Trait(ETransform, "ETransform");
+pub const EView = struct {
+    pub usingnamespace EComponent.Trait(EView, "EView");
 
     id: Index = UNDEF_INDEX,
-    position: PosF = .{ 0, 0 },
-    pivot: ?PosF = null,
-    scale: ?PosF = null,
-    rotation: ?Float = null,
-    view_id: ?Index = null,
+    view_id: Index = UNDEF_INDEX,
     layer_id: ?Index = null,
 
     pub fn setViewByName(self: *ETransform, view_name: String) void {
@@ -310,9 +307,26 @@ pub const ETransform = struct {
         self.layer_id = Layer.byName(layer_name).id;
     }
 
-    pub fn destruct(self: *ETransform) void {
+    pub fn destruct(self: *EView) void {
         self.layer_id = null;
-        self.view_id = null;
+        self.view_id = UNDEF_INDEX;
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// ETransform Entity Component
+//////////////////////////////////////////////////////////////
+
+pub const ETransform = struct {
+    pub usingnamespace EComponent.Trait(ETransform, "ETransform");
+
+    id: Index = UNDEF_INDEX,
+    position: PosF = .{ 0, 0 },
+    pivot: ?PosF = null,
+    scale: ?PosF = null,
+    rotation: ?Float = null,
+
+    pub fn destruct(self: *ETransform) void {
         self.position = .{ 0, 0 };
         self.pivot = null;
         self.scale = null;

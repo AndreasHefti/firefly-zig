@@ -15,6 +15,7 @@ const Texture = graphics.Texture;
 const EComponent = api.EComponent;
 const EComponentAspectGroup = api.EComponentAspectGroup;
 const EntityCondition = api.EntityCondition;
+const EView = graphics.EView;
 const EMultiplier = api.EMultiplier;
 const ETransform = graphics.ETransform;
 const ViewLayerMapping = graphics.ViewLayerMapping;
@@ -48,8 +49,8 @@ pub fn init() !void {
     Component.registerComponent(SpriteTemplate);
     EComponent.registerEntityComponent(ESprite);
     // init renderer
-    System(SimpleSpriteRenderer).createSystem(
-        "SimpleSpriteRenderer",
+    System(DefaultSpriteRenderer).createSystem(
+        graphics.DefaultRenderer.SPRITE,
         "Render Entities with ETransform and ESprite components",
         true,
     );
@@ -61,7 +62,7 @@ pub fn deinit() void {
         return;
 
     // deinit renderer
-    System(SimpleSpriteRenderer).disposeSystem();
+    System(DefaultSpriteRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -347,11 +348,10 @@ pub const SpriteSet = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Simple Sprite Renderer System
+//// Default Sprite Renderer System
 //////////////////////////////////////////////////////////////
 
-const SimpleSpriteRenderer = struct {
-    pub const view_render_order: usize = 0;
+const DefaultSpriteRenderer = struct {
     var entity_condition: EntityCondition = undefined;
     var sprite_refs: ViewLayerMapping = undefined;
 
@@ -369,14 +369,18 @@ const SimpleSpriteRenderer = struct {
     }
 
     pub fn notifyEntityChange(e: ComponentEvent) void {
-        if (e.c_id == null or !entity_condition.check(e.c_id.?))
-            return;
+        if (e.c_id) |id| {
+            if (!entity_condition.check(id))
+                return;
 
-        var transform = ETransform.byId(e.c_id.?).?;
-        switch (e.event_type) {
-            ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id.?),
-            ActionType.DEACTIVATING => sprite_refs.remove(transform.view_id, transform.layer_id, e.c_id.?),
-            else => {},
+            var eView = EView.byId(id);
+            var view_id = if (eView) |v| v.view_id else null;
+            var layer_id = if (eView) |v| v.layer_id else null;
+            switch (e.event_type) {
+                ActionType.ACTIVATED => sprite_refs.add(view_id, layer_id, id),
+                ActionType.DEACTIVATING => sprite_refs.remove(view_id, layer_id, id),
+                else => {},
+            }
         }
     }
 

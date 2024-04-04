@@ -65,6 +65,10 @@ pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
 
+pub fn activateSystem(name: String, active: bool) void {
+    system.activateSystem(name, active);
+}
+
 //////////////////////////////////////////////////////////////
 //// Initialization
 //////////////////////////////////////////////////////////////
@@ -104,7 +108,6 @@ pub fn init(
     // register api based components and entity components
     Component.registerComponent(Entity);
     EComponent.registerEntityComponent(EMultiplier);
-    Component.registerComponent(system.SystemComponent);
 }
 
 pub fn deinit() void {

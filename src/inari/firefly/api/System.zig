@@ -20,11 +20,9 @@ pub fn init() void {
 }
 
 pub fn deinit() void {
-    defer initialized = true;
+    defer initialized = false;
     if (!initialized)
         return;
-
-    Component.deinitComponent(SystemComponent);
 }
 
 pub fn System(comptime T: type) type {
@@ -72,7 +70,7 @@ pub fn System(comptime T: type) type {
             component_ref = SystemComponent.newAnd(.{
                 .name = name,
                 .info = info,
-                .onActivation = if (has_activation) T.systemActivation else null,
+                .onActivation = activation,
                 .onDestruct = destruct,
             });
 
@@ -80,7 +78,7 @@ pub fn System(comptime T: type) type {
                 T.systemInit();
 
             if (active)
-                activate();
+                SystemComponent.activateByName(name, true);
         }
 
         pub fn disposeSystem() void {
@@ -99,7 +97,52 @@ pub fn System(comptime T: type) type {
                 T.systemDeinit();
         }
 
-        pub fn activate() void {
+        fn activation(active: bool) void {
+            if (active) {
+                if (has_entity_event_subscription) {
+                    Entity.subscribe(T.notifyEntityChange);
+                }
+                if (has_update_event_subscription) {
+                    if (has_update_order) {
+                        api.subscribeUpdateAt(T.update_order, T.update);
+                    } else {
+                        api.subscribeUpdate(T.update);
+                    }
+                }
+                if (has_render_event_subscription) {
+                    if (has_render_order) {
+                        api.subscribeRenderAt(T.render_order, T.render);
+                    } else {
+                        api.subscribeRender(T.render);
+                    }
+                }
+                if (has_view_render_event_subscription) {
+                    if (has_view_render_order) {
+                        api.subscribeViewRenderAt(T.view_render_order, T.renderView);
+                    } else {
+                        api.subscribeViewRender(T.renderView);
+                    }
+                }
+            } else {
+                if (has_entity_event_subscription) {
+                    Entity.unsubscribe(T.notifyEntityChange);
+                }
+                if (has_update_event_subscription) {
+                    api.unsubscribeUpdate(T.update);
+                }
+                if (has_render_event_subscription) {
+                    api.unsubscribeRender(T.render);
+                }
+                if (has_view_render_event_subscription) {
+                    api.unsubscribeViewRender(T.renderView);
+                }
+            }
+
+            if (has_activation)
+                T.systemActivation(active);
+        }
+
+        fn activate() void {
             if (component_ref) |c| {
                 SystemComponent.activateById(c.id, true);
 
@@ -130,7 +173,7 @@ pub fn System(comptime T: type) type {
             }
         }
 
-        pub fn deactivate() void {
+        fn deactivate() void {
             if (component_ref) |c| {
                 if (has_entity_event_subscription) {
                     Entity.unsubscribe(T.notifyEntityChange);
@@ -151,7 +194,11 @@ pub fn System(comptime T: type) type {
     };
 }
 
-pub const SystemComponent = struct {
+pub fn activateSystem(name: String, active: bool) void {
+    SystemComponent.activateByName(name, active);
+}
+
+const SystemComponent = struct {
     pub usingnamespace Component.Trait(SystemComponent, .{ .name = "System", .subscription = false });
     // struct fields of a System
     id: Index = UNDEF_INDEX,

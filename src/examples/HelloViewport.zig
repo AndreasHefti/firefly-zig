@@ -6,6 +6,7 @@ const Texture = firefly.graphics.Texture;
 const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
+const EView = firefly.graphics.EView;
 const ESprite = firefly.graphics.ESprite;
 const Allocator = std.mem.Allocator;
 const View = firefly.graphics.View;
@@ -66,7 +67,8 @@ fn loadWithView() void {
     }).load();
 
     _ = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{ .view_id = viewId })
+        .with(ETransform{})
+        .with(EView{ .view_id = viewId })
         .with(ESprite{ .template_id = sprite_id })
         .activate();
 }

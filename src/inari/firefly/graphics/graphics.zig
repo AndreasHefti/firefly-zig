@@ -6,6 +6,7 @@ const assert = std.debug.assert;
 const sprite = @import("sprite.zig");
 const shape = @import("shape.zig");
 const view = @import("view.zig");
+const tile = @import("tile.zig");
 
 const Allocator = std.mem.Allocator;
 const Aspect = utils.Aspect;
@@ -21,6 +22,7 @@ const TextureBinding = firefly.api.TextureBinding;
 const TextureFilter = firefly.api.TextureFilter;
 const TextureWrap = firefly.api.TextureWrap;
 const ShaderBinding = firefly.api.ShaderBinding;
+const Component = firefly.api.Component;
 
 const NO_BINDING = firefly.api.NO_BINDING;
 const Index = utils.Index;
@@ -42,15 +44,32 @@ pub const ESprite = sprite.ESprite;
 pub const SpriteSet = sprite.SpriteSet;
 
 pub const EShape = shape.EShape;
-
-pub const Component = firefly.api.Component;
 pub const View = view.View;
 pub const Layer = view.Layer;
+pub const EView = view.EView;
 pub const ViewLayerMapping = view.ViewLayerMapping;
 pub const ETransform = view.ETransform;
 pub const ViewRenderEvent = firefly.api.ViewRenderEvent;
 pub const ViewRenderListener = firefly.api.ViewRenderListener;
 pub const ViewRenderer = view.ViewRenderer;
+
+pub const DefaultRenderer = struct {
+    pub const SHAPE = "DefaultShapeRenderer";
+    pub const SPRITE = "DefaultSpriteRenderer";
+};
+
+pub fn activateRenderer(name: String, active: bool) void {
+    firefly.api.activateSystem(name, active);
+}
+
+pub fn reorderRenderer(new_order: []const String) void {
+    for (new_order) |renderer_name| {
+        firefly.api.activateSystem(renderer_name, false);
+    }
+    for (new_order) |renderer_name| {
+        firefly.api.activateSystem(renderer_name, true);
+    }
+}
 
 //////////////////////////////////////////////////////////////
 //// module init
@@ -72,6 +91,7 @@ pub fn init(_: firefly.api.InitMode) !void {
     try view.init();
     try sprite.init();
     try shape.init();
+    try tile.init();
 }
 
 pub fn deinit() void {
@@ -79,11 +99,11 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    // deinit sprite package
+    // deinit sub packages
+    tile.deinit();
     shape.deinit();
     sprite.deinit();
     view.deinit();
-    // deinit Assets
 
     // deinit api if it was initialized by this package
     if (api_init) {

@@ -11,6 +11,7 @@ const EComponentAspectGroup = api.EComponentAspectGroup;
 const ComponentEvent = api.ComponentEvent;
 const ActionType = api.Component.ActionType;
 const EMultiplier = api.EMultiplier;
+const EView = graphics.EView;
 const ViewRenderEvent = graphics.ViewRenderEvent;
 const ViewLayerMapping = graphics.ViewLayerMapping;
 const ETransform = graphics.ETransform;
@@ -20,8 +21,6 @@ const Float = utils.Float;
 const Color = utils.Color;
 const BlendMode = api.BlendMode;
 const ShapeType = api.ShapeType;
-const PosF = utils.PosF;
-const Vector2f = utils.Vector2f;
 
 //////////////////////////////////////////////////////////////
 //// shape init
@@ -36,7 +35,7 @@ pub fn init() !void {
     EComponent.registerEntityComponent(EShape);
     // init renderer
     System(DefaultShapeRenderer).createSystem(
-        "DefaultShapeRenderer",
+        graphics.DefaultRenderer.SHAPE,
         "Default renderer for shape based entities",
         true,
     );
@@ -88,7 +87,6 @@ pub const EShape = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultShapeRenderer = struct {
-    pub const view_render_order: usize = 1;
     var entity_condition: EntityCondition = undefined;
     var sprite_refs: ViewLayerMapping = undefined;
 
@@ -106,14 +104,18 @@ const DefaultShapeRenderer = struct {
     }
 
     pub fn notifyEntityChange(e: ComponentEvent) void {
-        if (e.c_id == null or !entity_condition.check(e.c_id.?))
-            return;
+        if (e.c_id) |id| {
+            if (!entity_condition.check(id))
+                return;
 
-        var transform = ETransform.byId(e.c_id.?).?;
-        switch (e.event_type) {
-            ActionType.ACTIVATED => sprite_refs.add(transform.view_id, transform.layer_id, e.c_id.?),
-            ActionType.DEACTIVATING => sprite_refs.remove(transform.view_id, transform.layer_id, e.c_id.?),
-            else => {},
+            var eView = EView.byId(id);
+            var view_id = if (eView) |v| v.view_id else null;
+            var layer_id = if (eView) |v| v.layer_id else null;
+            switch (e.event_type) {
+                ActionType.ACTIVATED => sprite_refs.add(view_id, layer_id, id),
+                ActionType.DEACTIVATING => sprite_refs.remove(view_id, layer_id, id),
+                else => {},
+            }
         }
     }
 
