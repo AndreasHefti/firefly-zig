@@ -27,8 +27,6 @@ pub fn run(allocator: Allocator) !void {
 fn loadWithView() void {
     var viewId = View.new(.{
         .name = "TestView",
-        .width = 200,
-        .height = 200,
         .order = 1,
 
         // transform is used when rendering the texture to the screen (or another texture)
@@ -45,7 +43,7 @@ fn loadWithView() void {
         // Can be seen as the camera of the texture
         .projection = .{
             .clear_color = .{ 30, 30, 30, 255 },
-            .offset = .{ -10, -10 },
+            .plain = .{ -10, -10, 200, 200 },
             .pivot = .{ 0, 0 },
             .zoom = 2,
             .rotation = 0,

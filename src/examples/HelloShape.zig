@@ -34,7 +34,7 @@ pub fn run(allocator: Allocator) !void {
 
 fn example() void {
     // change rendering order
-    firefly.graphics.reorderRenderer(&[2]String{ DefaultRenderer.SPRITE, DefaultRenderer.SHAPE });
+    firefly.graphics.reorderRenderer(&[2]String{ DefaultRenderer.SHAPE, DefaultRenderer.SPRITE });
 
     _ = Entity.newAnd(.{ .name = "TestEntity4" })
         .with(ETransform{ .position = .{ 100, 100 } })

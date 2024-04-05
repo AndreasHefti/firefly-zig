@@ -12,6 +12,7 @@ const EventDispatch = utils.EventDispatch;
 const UpdateListener = api.UpdateListener;
 const RenderListener = api.RenderListener;
 const Timer = api.Timer;
+const View = inari.firefly.graphics.View;
 
 var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
@@ -25,6 +26,9 @@ pub fn start(
 ) void {
     api.window.openWindow(.{ .width = w, .height = h, .title = title, .fps = fps });
     defer api.window.closeWindow();
+
+    View.screen_projection = .{ .plain = .{ 0, 0, w, h } };
+    defer View.screen_projection = undefined;
 
     if (init_callback) |ic|
         ic();

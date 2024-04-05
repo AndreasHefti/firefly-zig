@@ -17,6 +17,7 @@ const ViewLayerMapping = graphics.ViewLayerMapping;
 const ETransform = graphics.ETransform;
 const SpriteTemplate = graphics.SpriteTemplate;
 const Component = api.Component;
+const Projection = api.Projection;
 
 const Direction = utils.Direction;
 const Vector2i = utils.Vector2i;
@@ -30,6 +31,7 @@ const Color = utils.Color;
 const BlendMode = api.BlendMode;
 const RectF = utils.RectF;
 const RectI = utils.RectI;
+const CInt = utils.CInt;
 const BindingId = api.BindingId;
 const NO_BINDING = api.NO_BINDING;
 
@@ -221,8 +223,34 @@ pub const TileGrid = struct {
         };
     }
 
-    pub fn getIterator(self: *TileGrid, clip: ?RectI) Iterator {
-        return Iterator.new(self, clip);
+    // private fun mapWorldClipToTileGridClip(worldClip: Vector4i, tileGrid: TileGrid, result: Vector4i) {
+    //         tmpClip(
+    //             floor((worldClip.x - tileGrid.position.x) / tileGrid.cellDim.v0).toInt(),
+    //             floor((worldClip.y - tileGrid.position.y) / tileGrid.cellDim.v1).toInt()
+    //         )
+    //         val x2 =
+    //             ceil((worldClip.x - tileGrid.position.x + worldClip.width) / tileGrid.cellDim.v0).toInt()
+    //         val y2 =
+    //             ceil((worldClip.y - tileGrid.position.y + worldClip.height) / tileGrid.cellDim.v1).toInt()
+    //         tmpClip.width = x2 - tmpClip.x
+    //         tmpClip.height = y2 - tmpClip.y
+    //         GeomUtils.intersection(tmpClip, tileGrid.normalisedWorldBounds, result)
+    //     }
+
+    pub fn getIterator(self: *TileGrid, projection: *Projection) Iterator {
+        // TODO is this still right and/or is there a better way?
+        var temp: RectI = .{
+            (projection.plain[0] - @as(CInt, @intFromFloat(self.world_position[0]))) / self.grid_width,
+            (projection.plain[1] - @as(CInt, @intFromFloat(self.world_position[1]))) / self.grid_height,
+            (projection.plain[0] - @as(CInt, @intFromFloat(self.world_position[0])) + projection.plain[2]) / self.grid_width,
+            (projection.plain[1] - @as(CInt, @intFromFloat(self.world_position[1])) + projection.plain[3]) / self.grid_height,
+        };
+        temp[2] = temp[2] - temp[0];
+        temp[3] = temp[3] - temp[1];
+        return Iterator.new(
+            self,
+            utils.getIntersectionRectI(temp, .{ 0, 0, self.grid_width, self.grid_height }),
+        );
     }
 
     pub const Iterator = struct {
@@ -286,5 +314,71 @@ pub const TileGrid = struct {
             "TileGrid[{d}|{?s}]\n  pos:{any} view:{any} layer:{any}\n  spherical:{any}\n  grid:{d}|{d}\n  cell:{d}|{d}\n  {any}",
             self,
         );
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Default Tile Grid Renderer
+//////////////////////////////////////////////////////////////
+
+const DefaultTileGridRenderer = struct {
+    var tile_grid_refs: ViewLayerMapping = undefined;
+
+    pub fn systemInit() void {
+        tile_grid_refs = ViewLayerMapping.new();
+    }
+
+    pub fn systemDeinit() void {
+        tile_grid_refs.deinit();
+        tile_grid_refs = undefined;
+    }
+
+    pub fn systemActivation(active: bool) void {
+        if (active) {
+            TileGrid.subscribe(notifyTileGridEvent);
+        } else {
+            TileGrid.unsubscribe(notifyTileGridEvent);
+        }
+    }
+
+    pub fn notifyTileGridEvent(e: ComponentEvent) void {
+        if (e.c_id) |id| {
+            var tile_grid = TileGrid.byId(id);
+            switch (e.event_type) {
+                ActionType.ACTIVATED => tile_grid_refs.add(tile_grid.view_id, tile_grid.layer_id, id),
+                ActionType.DEACTIVATING => tile_grid_refs.remove(tile_grid.view_id, tile_grid.layer_id, id),
+                else => {},
+            }
+        }
+    }
+
+    //var clip: RectI = .{ 0, 0, 0, 0 };
+    pub fn renderView(e: ViewRenderEvent) void {
+        if (tile_grid_refs.get(e.view_id, e.layer_id)) |all| {
+            var i = all.nextSetBit(0);
+            while (i) |grid_id| {
+                var tile_grid: *TileGrid = TileGrid.byId(grid_id).?;
+                api.rendering.addOffset(tile_grid.world_position);
+                var iterator = tile_grid.getIterator(e.projection);
+                while (iterator.next()) |entity_id| {
+                    var tile = ETile.byId(entity_id).?;
+                    var trans = ETransform.byId(entity_id).?;
+                    if (tile.sprite_template_id != NO_BINDING) {
+                        api.rendering.renderSprite(
+                            tile._texture_binding,
+                            tile._texture_bounds,
+                            trans.position,
+                            trans.pivot,
+                            trans.scale,
+                            trans.rotation,
+                            tile.tint_color,
+                            tile.blend_mode,
+                            null,
+                        );
+                    }
+                }
+                api.rendering.addOffset(tile_grid.world_position * utils.NEG_VEC2F);
+            }
+        }
     }
 };

@@ -142,8 +142,6 @@ pub const View = struct {
     name: ?String = null,
     /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
     order: u8 = undefined,
-    width: c_int,
-    height: c_int,
 
     position: PosF,
     pivot: ?PosF,
@@ -151,13 +149,13 @@ pub const View = struct {
     rotation: ?Float,
     tint_color: ?Color,
     blend_mode: ?BlendMode,
-    projection: ?Projection = Projection{},
+    projection: Projection = Projection{},
 
     render_texture_binding: ?RenderTextureBinding = null,
     shader_binding: ?BindingId = null,
     ordered_active_layer: ?DynArray(Index) = null,
 
-    pub var screen_projection: ?Projection = null;
+    pub var screen_projection: Projection = undefined;
     pub var screen_shader_binding: ?BindingId = null;
     pub var ordered_active_views: DynArray(Index) = undefined;
 
@@ -190,7 +188,7 @@ pub const View = struct {
                 return; // screen, no render texture load needed
 
             addViewMapping(view);
-            view.render_texture_binding = api.rendering.createRenderTexture(view.width, view.height);
+            view.render_texture_binding = api.rendering.createRenderTexture(&view.projection);
         } else {
             // dispose render texture for this view and cancel binding
             if (view.order == 0)
@@ -383,9 +381,10 @@ pub const ViewRenderer = struct {
             if (View.screen_shader_binding) |sb|
                 api.rendering.setActiveShader(sb);
 
-            api.rendering.startRendering(null, View.screen_projection);
+            api.rendering.startRendering(null, &View.screen_projection);
             VIEW_RENDER_EVENT.view_id = null;
             VIEW_RENDER_EVENT.layer_id = null;
+            VIEW_RENDER_EVENT.projection = &View.screen_projection;
             api.renderView(VIEW_RENDER_EVENT);
             api.rendering.endRendering();
         } else {
@@ -401,7 +400,7 @@ pub const ViewRenderer = struct {
             if (View.screen_shader_binding) |sb|
                 api.rendering.setActiveShader(sb);
             // activate render to screen
-            api.rendering.startRendering(null, View.screen_projection);
+            api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
             while (next) |id| {
                 var view: *View = View.byId(id);
@@ -430,7 +429,7 @@ pub const ViewRenderer = struct {
             if (view.shader_binding) |sb|
                 api.rendering.setActiveShader(sb);
             // activate FBO
-            api.rendering.startRendering(b.id, view.projection);
+            api.rendering.startRendering(b.id, &view.projection);
             // emit render events for all layers of the view in order to render to FBO
             if (view.ordered_active_layer != null) {
                 var it = view.ordered_active_layer.?.slots.nextSetBit(0);
@@ -445,6 +444,7 @@ pub const ViewRenderer = struct {
                     // send layer render event
                     VIEW_RENDER_EVENT.view_id = view.id;
                     VIEW_RENDER_EVENT.layer_id = layer_id;
+                    VIEW_RENDER_EVENT.projection = &view.projection;
                     api.renderView(VIEW_RENDER_EVENT);
                     // remove layer offset form render engine
                     if (layer.offset) |o|

@@ -42,11 +42,27 @@ pub const PosI = Vector2i;
 /// Float Position as Vector2 f32 [0]-->x [1]-->y
 pub const PosF = Vector2f;
 
+pub const NEG_VEC2I = Vector2i{ -1, -1 };
+pub const NEG_VEC3I = Vector3i{ -1, -1, -1 };
+pub const NEG_VEC4I = Vector4i{ -1, -1, -1, -1 };
+pub const NEG_VEC2F = Vector2f{ -1, -1 };
+pub const NEG_VEC3F = Vector3f{ -1, -1, -1 };
+pub const NEG_VEC4F = Vector4f{ -1, -1, -1, -1 };
+
 pub fn intersectsRectI(r1: RectI, r2: RectI) bool {
     return !(r2[0] >= r1[0] + r1[2] or r2[0] + r2[2] <= r1[0] or r2[1] >= r1[1] + r1[3] or r2[1] + r2[3] <= r1[1]);
 }
 
-pub fn intersectionRectI(r1: RectI, r2: RectI) RectI {
+pub fn intersectionRectI(r1: RectI, r2: RectI, result: *RectI) void {
+    result[0] = @max(r1[0], r2[0]);
+    result[1] = @max(r1[1], r2[1]);
+    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+    result[2] = @max(0, x2 - result[0] + 1);
+    result[3] = @max(0, y2 - result[1] + 1);
+}
+
+pub fn getIntersectionRectI(r1: RectI, r2: RectI) RectI {
     var x1 = @max(r1[0], r2[0]);
     var y1 = @max(r1[1], r2[1]);
     var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);

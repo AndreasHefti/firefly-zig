@@ -159,6 +159,7 @@ pub const RenderListener = *const fn (RenderEvent) void;
 pub const ViewRenderEvent = struct {
     view_id: ?Index = null,
     layer_id: ?Index = null,
+    projection: ?*Projection = null,
 };
 pub const ViewRenderListener = *const fn (ViewRenderEvent) void;
 
@@ -282,7 +283,7 @@ pub const ShapeType = enum {
 
 pub const Projection = struct {
     clear_color: ?Color = .{ 0, 0, 0, 255 },
-    offset: PosF = .{ 0, 0 },
+    plain: RectI = .{ 0, 0, 0, 0 },
     pivot: PosF = .{ 0, 0 },
     zoom: Float = 1,
     rotation: Float = 0,
@@ -294,7 +295,7 @@ pub const Projection = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "Projection[ clear_color:{any}, offset:{any}, pivot:{any}, zoom:{d}, rot:{d} ]",
+            "Projection[ clear_color:{any}, plain:{any}, pivot:{any}, zoom:{d}, rot:{d} ]",
             self,
         );
     }
@@ -453,8 +454,6 @@ pub fn IRenderAPI() type {
         setOffset: *const fn (Vector2f) void = undefined,
         /// Adds given offset to actual offset of the rendering engine
         addOffset: *const fn (Vector2f) void = undefined,
-        /// Set the projection and clear color of the base view
-        setBaseProjection: *const fn (Projection) void = undefined,
 
         /// Loads image data from file system and create new texture data loaded into GPU
         /// @param textureData The texture DAO. Sets binding, width and height to the DAO
@@ -463,7 +462,7 @@ pub fn IRenderAPI() type {
         /// @param textureId binding identifier of the texture to dispose.
         disposeTexture: *const fn (BindingId) void = undefined,
 
-        createRenderTexture: *const fn (width: CInt, height: CInt) RenderTextureBinding = undefined,
+        createRenderTexture: *const fn (projection: *Projection) RenderTextureBinding = undefined,
         disposeRenderTexture: *const fn (BindingId) void = undefined,
         /// create new shader from given shader data and load it to GPU
         createShader: *const fn (vertex_shader: ?String, fragment_shade: ?String, file: bool) ShaderBinding = undefined,
@@ -477,7 +476,7 @@ pub fn IRenderAPI() type {
         bindTexture: *const fn (String, BindingId) void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
         /// Uses Projection to update camera projection and clear target before start rendering
-        startRendering: *const fn (texture_id: ?BindingId, projection: ?Projection) void = undefined,
+        startRendering: *const fn (texture_id: ?BindingId, projection: *Projection) void = undefined,
         /// This renders a given RenderTextureData (BindingId) to the actual render target that can be
         /// rendering texture or the screen
         renderTexture: *const fn (

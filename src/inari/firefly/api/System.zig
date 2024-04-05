@@ -141,56 +141,6 @@ pub fn System(comptime T: type) type {
             if (has_activation)
                 T.systemActivation(active);
         }
-
-        fn activate() void {
-            if (component_ref) |c| {
-                SystemComponent.activateById(c.id, true);
-
-                if (has_entity_event_subscription) {
-                    Entity.subscribe(T.notifyEntityChange);
-                }
-                if (has_update_event_subscription) {
-                    if (has_update_order) {
-                        api.subscribeUpdateAt(T.update_order, T.update);
-                    } else {
-                        api.subscribeUpdate(T.update);
-                    }
-                }
-                if (has_render_event_subscription) {
-                    if (has_render_order) {
-                        api.subscribeRenderAt(T.render_order, T.render);
-                    } else {
-                        api.subscribeRender(T.render);
-                    }
-                }
-                if (has_view_render_event_subscription) {
-                    if (has_view_render_order) {
-                        api.subscribeViewRenderAt(T.view_render_order, T.renderView);
-                    } else {
-                        api.subscribeViewRender(T.renderView);
-                    }
-                }
-            }
-        }
-
-        fn deactivate() void {
-            if (component_ref) |c| {
-                if (has_entity_event_subscription) {
-                    Entity.unsubscribe(T.notifyEntityChange);
-                }
-                if (has_update_event_subscription) {
-                    api.unsubscribeUpdate(T.update);
-                }
-                if (has_render_event_subscription) {
-                    api.unsubscribeRender(T.render);
-                }
-                if (has_view_render_event_subscription) {
-                    api.unsubscribeViewRender(T.renderView);
-                }
-
-                SystemComponent.activateById(c.id, false);
-            }
-        }
     };
 }
 

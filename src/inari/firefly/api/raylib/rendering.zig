@@ -73,7 +73,7 @@ const RaylibRenderAPI = struct {
         if (initialized)
             return;
 
-        active_offset = default_offset;
+        //active_offset = default_offset;
         active_blend_mode = default_blend_mode;
         active_tint_color = default_tint_color;
         active_clear_color = default_clear_color;
@@ -84,7 +84,6 @@ const RaylibRenderAPI = struct {
 
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
-        interface.setBaseProjection = setBaseProjection;
 
         interface.loadTexture = loadTexture;
         interface.disposeTexture = disposeTexture;
@@ -130,11 +129,9 @@ const RaylibRenderAPI = struct {
     var render_textures: DynArray(RenderTexture2D) = undefined;
     var shaders: DynArray(Shader) = undefined;
 
-    var base_projection = Projection{};
-
     var active_shader: ?BindingId = null;
     var active_render_texture: ?BindingId = null;
-    var active_offset: Vector2f = undefined;
+    //var active_offset: Vector2f = undefined;
     var active_tint_color: rl.Color = undefined;
     var active_clear_color: ?rl.Color = undefined;
     var active_blend_mode: BlendMode = undefined;
@@ -154,16 +151,21 @@ const RaylibRenderAPI = struct {
     var temp_p3 = rl.Vector2{ .x = 0, .y = 0 };
     var temp_p4 = rl.Vector2{ .x = 0, .y = 0 };
 
-    fn setOffset(offset: Vector2f) void {
-        active_offset = offset;
+    fn setOffset(offset: PosF) void {
+        active_camera.offset = @bitCast(offset);
+        rl.BeginMode2D(active_camera);
     }
 
     fn addOffset(offset: Vector2f) void {
-        active_offset += offset;
+        //rlgl.rlTranslatef(offset[0], offset[1], 0);
+        active_camera.offset = @bitCast(@as(Vector2f, @bitCast(active_camera.offset)) + offset);
+        rl.BeginMode2D(active_camera);
     }
 
-    fn setBaseProjection(projection: Projection) void {
-        base_projection = projection;
+    fn minusOffset(offset: Vector2f) void {
+        //rlgl.rlTranslatef(-offset[0], -offset[1], 0);
+        active_camera.offset = @bitCast(@as(Vector2f, @bitCast(active_camera.offset)) - offset);
+        rl.BeginMode2D(active_camera);
     }
 
     fn loadTexture(
@@ -197,13 +199,13 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn createRenderTexture(width: CInt, height: CInt) RenderTextureBinding {
-        var tex = rl.LoadRenderTexture(width, height);
+    fn createRenderTexture(projection: *Projection) RenderTextureBinding {
+        var tex = rl.LoadRenderTexture(projection.plain[2], projection.plain[3]);
         var id = render_textures.add(tex);
         return RenderTextureBinding{
             .id = id,
-            .width = width,
-            .height = height,
+            .width = projection.plain[2],
+            .height = projection.plain[3],
         };
     }
 
@@ -264,21 +266,14 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn startRendering(binding_id: ?BindingId, projection: ?Projection) void {
+    fn startRendering(binding_id: ?BindingId, projection: *Projection) void {
         active_render_texture = binding_id;
-        if (projection) |p| {
-            active_camera.offset = @bitCast(p.offset);
-            active_camera.target = @bitCast(p.pivot);
-            active_camera.rotation = p.rotation;
-            active_camera.zoom = p.zoom;
-            active_clear_color = if (p.clear_color != null) @bitCast(p.clear_color.?) else null;
-        } else {
-            active_camera.offset = @bitCast(base_projection.offset);
-            active_camera.target = @bitCast(base_projection.pivot);
-            active_camera.rotation = base_projection.rotation;
-            active_camera.zoom = base_projection.zoom;
-            active_clear_color = if (base_projection.clear_color != null) @bitCast(base_projection.clear_color.?) else null;
-        }
+        active_camera.offset.x = @floatFromInt(projection.plain[0]);
+        active_camera.offset.y = @floatFromInt(projection.plain[1]);
+        active_camera.target = @bitCast(projection.pivot);
+        active_camera.rotation = projection.rotation;
+        active_camera.zoom = projection.zoom;
+        active_clear_color = if (projection.clear_color != null) @bitCast(projection.clear_color.?) else null;
 
         if (active_render_texture) |tex_id| {
             if (render_textures.get(tex_id)) |tex| {
@@ -318,14 +313,14 @@ const RaylibRenderAPI = struct {
             temp_source_rect.height = @floatFromInt(-tex.texture.height);
             // set destination rect
             if (scale) |s| {
-                temp_dest_rect.x = active_offset[0] + position[0];
-                temp_dest_rect.y = active_offset[1] + position[1];
+                temp_dest_rect.x = position[0];
+                temp_dest_rect.y = position[1];
                 temp_dest_rect.width = s[0] * @as(Float, @floatFromInt(tex.texture.width));
                 temp_dest_rect.height = s[1] * @as(Float, @floatFromInt(tex.texture.height));
                 temp_pivot = @bitCast((pivot orelse default_pivot) * s);
             } else {
-                temp_dest_rect.x = active_offset[0] + position[0];
-                temp_dest_rect.y = active_offset[1] + position[1];
+                temp_dest_rect.x = position[0];
+                temp_dest_rect.y = position[1];
                 temp_dest_rect.width = @floatFromInt(tex.texture.width);
                 temp_dest_rect.height = @floatFromInt(tex.texture.height);
                 temp_pivot = @bitCast(pivot orelse default_pivot);
@@ -370,9 +365,10 @@ const RaylibRenderAPI = struct {
             }
 
             if (multiplier) |m| {
+                addOffset(position);
                 for (0..m.len) |i| {
-                    temp_dest_rect.x = active_offset[0] + position[0] + m[i][0];
-                    temp_dest_rect.y = active_offset[1] + position[1] + m[i][1];
+                    temp_dest_rect.x = m[i][0];
+                    temp_dest_rect.y = m[i][1];
                     rl.DrawTexturePro(
                         tex.*,
                         @bitCast(texture_bounds),
@@ -382,9 +378,10 @@ const RaylibRenderAPI = struct {
                         if (tint_color) |tc| @bitCast(tc) else active_tint_color,
                     );
                 }
+                minusOffset(position);
             } else {
-                temp_dest_rect.x = active_offset[0] + position[0];
-                temp_dest_rect.y = active_offset[1] + position[1];
+                temp_dest_rect.x = position[0];
+                temp_dest_rect.y = position[1];
                 rl.DrawTexturePro(
                     tex.*,
                     @bitCast(texture_bounds),
@@ -418,6 +415,8 @@ const RaylibRenderAPI = struct {
         rl.BeginBlendMode(@intFromEnum(blend_mode orelse active_blend_mode));
 
         // apply translation functions if needed
+        // TODO check if this must be done for each when multiplier is present
+        addOffset(offset);
         if (scale != null or rotation != null) {
             rlgl.rlPushMatrix();
             if (pivot) |p| rlgl.rlTranslatef(p[0], p[1], 0);
@@ -426,8 +425,6 @@ const RaylibRenderAPI = struct {
             if (pivot) |p| rlgl.rlTranslatef(-p[0], -p[1], 0);
         }
 
-        active_offset[0] += offset[0];
-        active_offset[1] += offset[1];
         switch (shape_type) {
             ShapeType.POINT => renderPoint(vertices, color, multiplier),
             ShapeType.LINE => renderLine(vertices, color, multiplier),
@@ -442,8 +439,7 @@ const RaylibRenderAPI = struct {
         if (scale != null or rotation != null) {
             rlgl.rlPopMatrix();
         }
-        active_offset[0] -= offset[0];
-        active_offset[1] -= offset[1];
+        minusOffset(offset);
     }
 
     fn endRendering() void {
@@ -498,15 +494,15 @@ const RaylibRenderAPI = struct {
         if (multiplier) |m| {
             for (0..m.len) |i| {
                 rl.DrawPixel(
-                    @intFromFloat(vertices[0] + active_offset[0] + m[i][0]),
-                    @intFromFloat(vertices[1] + active_offset[1] + m[i][1]),
+                    @intFromFloat(vertices[0] + m[i][0]),
+                    @intFromFloat(vertices[1] + m[i][1]),
                     @bitCast(color),
                 );
             }
         } else {
             rl.DrawPixel(
-                @intFromFloat(vertices[0] + active_offset[0]),
-                @intFromFloat(vertices[1] + active_offset[1]),
+                @intFromFloat(vertices[0]),
+                @intFromFloat(vertices[1]),
                 @bitCast(color),
             );
         }
@@ -520,19 +516,19 @@ const RaylibRenderAPI = struct {
         if (multiplier) |m| {
             for (0..m.len) |i| {
                 rl.DrawLine(
-                    @intFromFloat(vertices[0] + active_offset[0] + m[i][0]),
-                    @intFromFloat(vertices[1] + active_offset[1] + m[i][1]),
-                    @intFromFloat(vertices[2] + active_offset[0] + m[i][0]),
-                    @intFromFloat(vertices[3] + active_offset[1] + m[i][1]),
+                    @intFromFloat(vertices[0] + m[i][0]),
+                    @intFromFloat(vertices[1] + m[i][1]),
+                    @intFromFloat(vertices[2] + m[i][0]),
+                    @intFromFloat(vertices[3] + m[i][1]),
                     @bitCast(color),
                 );
             }
         } else {
             rl.DrawLine(
-                @intFromFloat(vertices[0] + active_offset[0]),
-                @intFromFloat(vertices[1] + active_offset[1]),
-                @intFromFloat(vertices[2] + active_offset[0]),
-                @intFromFloat(vertices[3] + active_offset[1]),
+                @intFromFloat(vertices[0]),
+                @intFromFloat(vertices[1]),
+                @intFromFloat(vertices[2]),
+                @intFromFloat(vertices[3]),
                 @bitCast(color),
             );
         }
@@ -548,8 +544,8 @@ const RaylibRenderAPI = struct {
         fill: bool,
         thickness: ?Float,
     ) void {
-        temp_rect.x = vertices[0] + active_offset[0];
-        temp_rect.y = vertices[1] + active_offset[1];
+        temp_rect.x = vertices[0];
+        temp_rect.y = vertices[1];
         temp_rect.width = vertices[2];
         temp_rect.height = vertices[3];
         if (multiplier) |m| {
@@ -593,12 +589,12 @@ const RaylibRenderAPI = struct {
     ) void {
         if (multiplier) |m| {
             for (0..m.len) |i| {
-                temp_p1.x = vertices[0] + active_offset[0] + m[i][0];
-                temp_p1.y = vertices[1] + active_offset[1] + m[i][1];
-                temp_p2.x = vertices[2] + active_offset[0] + m[i][0];
-                temp_p2.y = vertices[3] + active_offset[1] + m[i][1];
-                temp_p3.x = vertices[4] + active_offset[0] + m[i][0];
-                temp_p3.y = vertices[5] + active_offset[1] + m[i][1];
+                temp_p1.x = vertices[0] + m[i][0];
+                temp_p1.y = vertices[1] + m[i][1];
+                temp_p2.x = vertices[2] + m[i][0];
+                temp_p2.y = vertices[3] + m[i][1];
+                temp_p3.x = vertices[4] + m[i][0];
+                temp_p3.y = vertices[5] + m[i][1];
                 if (fill) {
                     rl.DrawTriangle(temp_p1, temp_p2, temp_p3, @bitCast(color));
                 } else {
@@ -606,12 +602,12 @@ const RaylibRenderAPI = struct {
                 }
             }
         } else {
-            temp_p1.x = vertices[0] + active_offset[0];
-            temp_p1.y = vertices[1] + active_offset[1];
-            temp_p2.x = vertices[2] + active_offset[0];
-            temp_p2.y = vertices[3] + active_offset[1];
-            temp_p3.x = vertices[4] + active_offset[0];
-            temp_p3.y = vertices[5] + active_offset[1];
+            temp_p1.x = vertices[0];
+            temp_p1.y = vertices[1];
+            temp_p2.x = vertices[2];
+            temp_p2.y = vertices[3];
+            temp_p3.x = vertices[4];
+            temp_p3.y = vertices[5];
             if (fill) {
                 rl.DrawTriangle(temp_p1, temp_p2, temp_p3, @bitCast(color));
             } else {
@@ -629,8 +625,8 @@ const RaylibRenderAPI = struct {
     ) void {
         if (multiplier) |m| {
             for (0..m.len) |i| {
-                temp_p1.x = vertices[0] + active_offset[0] + m[i][0];
-                temp_p1.y = vertices[1] + active_offset[1] + m[i][1];
+                temp_p1.x = vertices[0] + m[i][0];
+                temp_p1.y = vertices[1] + m[i][1];
                 if (fill) {
                     if (color1) |gc| {
                         rl.DrawCircleGradient(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], @bitCast(color), @bitCast(gc));
@@ -642,8 +638,8 @@ const RaylibRenderAPI = struct {
                 }
             }
         } else {
-            temp_p1.x = vertices[0] + active_offset[0];
-            temp_p1.y = vertices[1] + active_offset[1];
+            temp_p1.x = vertices[0];
+            temp_p1.y = vertices[1];
             if (fill) {
                 if (color1) |gc| {
                     rl.DrawCircleGradient(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], @bitCast(color), @bitCast(gc));
@@ -664,8 +660,8 @@ const RaylibRenderAPI = struct {
     ) void {
         if (multiplier) |m| {
             for (0..m.len) |i| {
-                temp_p1.x = vertices[0] + active_offset[0] + m[i][0];
-                temp_p1.y = vertices[1] + active_offset[1] + m[i][1];
+                temp_p1.x = vertices[0] + m[i][0];
+                temp_p1.y = vertices[1] + m[i][1];
                 if (fill) {
                     rl.DrawCircleSector(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
                 } else {
@@ -673,8 +669,8 @@ const RaylibRenderAPI = struct {
                 }
             }
         } else {
-            temp_p1.x = vertices[0] + active_offset[0];
-            temp_p1.y = vertices[1] + active_offset[1];
+            temp_p1.x = vertices[0];
+            temp_p1.y = vertices[1];
             if (fill) {
                 rl.DrawCircleSector(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
             } else {
@@ -691,8 +687,8 @@ const RaylibRenderAPI = struct {
     ) void {
         if (multiplier) |m| {
             for (0..m.len) |i| {
-                temp_p1.x = vertices[0] + active_offset[0] + m[i][0];
-                temp_p1.y = vertices[1] + active_offset[1] + m[i][1];
+                temp_p1.x = vertices[0] + m[i][0];
+                temp_p1.y = vertices[1] + m[i][1];
                 if (fill) {
                     rl.DrawEllipse(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
                 } else {
@@ -700,8 +696,8 @@ const RaylibRenderAPI = struct {
                 }
             }
         } else {
-            temp_p1.x = vertices[0] + active_offset[0];
-            temp_p1.y = vertices[1] + active_offset[1];
+            temp_p1.x = vertices[0];
+            temp_p1.y = vertices[1];
             if (fill) {
                 rl.DrawEllipse(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
             } else {
@@ -714,7 +710,6 @@ const RaylibRenderAPI = struct {
         buffer.append("Raylib Renderer:\n");
         buffer.print("  default_offset: {any}\n", .{default_offset});
         buffer.print("  default_pivot: {any}\n", .{default_pivot});
-        buffer.print("  default_projection: {any}\n", .{base_projection});
         buffer.print("  default_blend_mode: {any}\n\n", .{default_blend_mode});
 
         buffer.print("  textures: {any}\n", .{textures});
@@ -724,7 +719,6 @@ const RaylibRenderAPI = struct {
         buffer.print("  active_camera: {any}\n", .{active_camera});
         buffer.print("  active_shader: {any}\n", .{active_shader});
         buffer.print("  active_render_texture: {any}\n", .{active_render_texture});
-        buffer.print("  active_offset: {any}\n", .{active_offset});
         buffer.print("  active_tint_color: {any}\n", .{active_tint_color});
         buffer.print("  active_clear_color: {any}\n", .{active_clear_color});
         buffer.print("  active_blend_mode: {any}\n", .{active_blend_mode});

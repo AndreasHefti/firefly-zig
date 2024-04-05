@@ -116,7 +116,6 @@ pub const DebugRenderAPI = struct {
 
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
-        interface.setBaseProjection = setBaseProjection;
 
         interface.loadTexture = loadTexture;
         interface.disposeTexture = disposeTexture;
@@ -182,11 +181,11 @@ pub const DebugRenderAPI = struct {
         textures.delete(binding);
     }
 
-    pub fn createRenderTexture(width: CInt, height: CInt) RenderTextureBinding {
+    pub fn createRenderTexture(projection: *Projection) RenderTextureBinding {
         var binding = RenderTextureBinding{
             .id = renderTextures.nextFreeSlot(),
-            .width = width,
-            .height = height,
+            .width = projection.plain[2],
+            .height = projection.plain[3],
         };
         _ = renderTextures.add(binding);
         return binding;
@@ -252,15 +251,12 @@ pub const DebugRenderAPI = struct {
         }
     }
 
-    pub fn startRendering(textureId: ?BindingId, projection: ?Projection) void {
+    pub fn startRendering(textureId: ?BindingId, projection: *Projection) void {
         if (textureId) |id| {
             currentRenderTexture = id;
         }
-        if (projection) |p| {
-            currentProjection = p;
-        } else {
-            currentProjection = Projection{};
-        }
+
+        currentProjection = projection.*;
     }
 
     pub fn setActiveShader(shaderId: BindingId) void {
@@ -275,8 +271,6 @@ pub const DebugRenderAPI = struct {
         currentOffset[0] += offset[0];
         currentOffset[1] += offset[1];
     }
-
-    pub fn setBaseProjection(_: Projection) void {}
 
     pub fn renderTexture(
         texture_id: BindingId,
