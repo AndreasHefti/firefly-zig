@@ -21,6 +21,7 @@ const Projection = api.Projection;
 
 const Direction = utils.Direction;
 const Vector2i = utils.Vector2i;
+const Vector4f = utils.Vector4f;
 const PosF = utils.PosF;
 const PosI = utils.PosI;
 const Index = utils.Index;
@@ -32,6 +33,7 @@ const BlendMode = api.BlendMode;
 const RectF = utils.RectF;
 const RectI = utils.RectI;
 const CInt = utils.CInt;
+const ClipI = utils.ClipI;
 const BindingId = api.BindingId;
 const NO_BINDING = api.NO_BINDING;
 
@@ -47,6 +49,12 @@ pub fn init() !void {
 
     Component.registerComponent(TileGrid);
     EComponent.registerEntityComponent(ETile);
+    // init renderer
+    System(DefaultTileGridRenderer).createSystem(
+        graphics.DefaultRenderer.TILE,
+        "Render Entities referenced in all active TileGrid",
+        true,
+    );
 }
 
 pub fn deinit() void {
@@ -54,7 +62,8 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    // TODO
+    // deinit renderer
+    System(DefaultTileGridRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -116,24 +125,33 @@ pub const TileGrid = struct {
     view_id: ?Index = null,
     layer_id: ?Index = null,
     spherical: bool = false,
+    /// captures the grid dimensions in usize and c_int
+    /// [2] = grid_pixel_width,
+    /// [3] = grid_pixel_height,
+    /// [4] = cell_pixel_width,
+    /// [5] = cell_pixel_height
+    dimensions: @Vector(4, usize),
 
-    grid_width: usize,
-    grid_height: usize,
-    cell_width: usize,
-    cell_height: usize,
-
+    _dimensionsF: Vector4f = undefined,
     _grid: [][]Index = undefined,
 
     pub fn construct(self: *TileGrid) void {
-        self._grid = api.COMPONENT_ALLOC.alloc([]Index, self.grid_height) catch unreachable;
-        for (0..self.grid_height) |i| {
-            self._grid[i] = api.COMPONENT_ALLOC.alloc(Index, self.grid_width) catch unreachable;
+        self._dimensionsF = .{
+            @as(Float, @floatFromInt(self.dimensions[0])),
+            @as(Float, @floatFromInt(self.dimensions[1])),
+            @as(Float, @floatFromInt(self.dimensions[2])),
+            @as(Float, @floatFromInt(self.dimensions[3])),
+        };
+
+        self._grid = api.COMPONENT_ALLOC.alloc([]Index, self.dimensions[1]) catch unreachable;
+        for (0..self.dimensions[1]) |i| {
+            self._grid[i] = api.COMPONENT_ALLOC.alloc(Index, self.dimensions[0]) catch unreachable;
         }
         self.clear();
     }
 
     pub fn destruct(self: *TileGrid) void {
-        for (0..self.grid_height) |i| {
+        for (0..self.dimensions[1]) |i| {
             api.COMPONENT_ALLOC.free(self._grid[i]);
         }
         api.COMPONENT_ALLOC.free(self._grid);
@@ -148,10 +166,12 @@ pub const TileGrid = struct {
     }
 
     pub fn resize(self: *TileGrid, grid_width: usize, grid_height: usize) void {
-        var width = @min(grid_width, self.grid_width);
-        var height = @min(grid_height, self.grid_height);
-        self.grid_width = grid_width;
-        self.grid_height = grid_height;
+        var width: usize = @min(grid_width, self.dimensions[0]);
+        var height: usize = @min(grid_height, self.dimensions[1]);
+        self.dimensions[0] = grid_width;
+        self.dimensions[1] = grid_height;
+        self._c_int_dimensions[0] = @as(CInt, @intCast(self.dimensions[0]));
+        self._c_int_dimensions[1] = @as(CInt, @intCast(self.dimensions[1]));
 
         var old_grid: [][]Index = self._grid;
         construct(self);
@@ -164,23 +184,15 @@ pub const TileGrid = struct {
         }
     }
 
-    pub fn setByNameP(self: *TileGrid, pos: PosI, tile_name: String) void {
-        setByName(self, pos[0], pos[1], tile_name);
-    }
-
     pub fn setByName(self: *TileGrid, x: usize, y: usize, tile_name: String) void {
         if (Entity.byName(tile_name)) |e| {
             set(self, x, y, e.id);
         }
     }
 
-    pub fn setP(self: *TileGrid, pos: PosI, tile_id: Index) void {
-        set(self, pos[0], pos[1], tile_id);
-    }
-
     pub fn set(self: *TileGrid, x: usize, y: usize, tile_id: Index) void {
         if (self.spherical) {
-            self._grid[y % self.grid_height][x % self.grid_width] = tile_id;
+            self._grid[y % self.dimensions[1]][x % self.dimensions[0]] = tile_id;
         } else {
             if (checkBounds) {
                 self._grid[y][x] = tile_id;
@@ -190,16 +202,12 @@ pub const TileGrid = struct {
 
     pub fn getAt(self: *TileGrid, world_pos: PosF) ?Index {
         var rel_pos: PosF = world_pos - self.world_position;
-        return get(self, rel_pos[0] / self.cell_width, rel_pos[1] / self.cell_height);
-    }
-
-    pub fn getP(self: *TileGrid, pos: PosI) ?Index {
-        return get(self, pos[0], pos[1]);
+        return get(self, map_cell_x(rel_pos[0]), map_cell_x(rel_pos[1]));
     }
 
     pub fn get(self: *TileGrid, x: usize, y: usize) ?Index {
         if (self.spherical) {
-            var r = self._grid[y % self.grid_height][x % self.grid_width];
+            var r = self._grid[y % self.dimensions[1]][x % self.dimensions[0]];
             if (r == UNDEF_INDEX) return null else return r;
         } else {
             if (checkBounds) {
@@ -223,86 +231,111 @@ pub const TileGrid = struct {
         };
     }
 
-    // private fun mapWorldClipToTileGridClip(worldClip: Vector4i, tileGrid: TileGrid, result: Vector4i) {
-    //         tmpClip(
-    //             floor((worldClip.x - tileGrid.position.x) / tileGrid.cellDim.v0).toInt(),
-    //             floor((worldClip.y - tileGrid.position.y) / tileGrid.cellDim.v1).toInt()
-    //         )
-    //         val x2 =
-    //             ceil((worldClip.x - tileGrid.position.x + worldClip.width) / tileGrid.cellDim.v0).toInt()
-    //         val y2 =
-    //             ceil((worldClip.y - tileGrid.position.y + worldClip.height) / tileGrid.cellDim.v1).toInt()
-    //         tmpClip.width = x2 - tmpClip.x
-    //         tmpClip.height = y2 - tmpClip.y
-    //         GeomUtils.intersection(tmpClip, tileGrid.normalisedWorldBounds, result)
-    //     }
+    inline fn checkBounds(self: *TileGrid, x: usize, y: usize) bool {
+        return x < self.dimensions[0] and y < self.dimensions[1];
+    }
 
-    pub fn getIterator(self: *TileGrid, projection: *Projection) Iterator {
-        // TODO is this still right and/or is there a better way?
-        var temp: RectI = .{
-            (projection.plain[0] - @as(CInt, @intFromFloat(self.world_position[0]))) / self.grid_width,
-            (projection.plain[1] - @as(CInt, @intFromFloat(self.world_position[1]))) / self.grid_height,
-            (projection.plain[0] - @as(CInt, @intFromFloat(self.world_position[0])) + projection.plain[2]) / self.grid_width,
-            (projection.plain[1] - @as(CInt, @intFromFloat(self.world_position[1])) + projection.plain[3]) / self.grid_height,
-        };
-        temp[2] = temp[2] - temp[0];
-        temp[3] = temp[3] - temp[1];
+    inline fn map_cell_x(self: *TileGrid, pixel_x: usize) usize {
+        return @truncate(pixel_x / self.dimensions[2]);
+    }
+
+    inline fn map_cell_y(self: *TileGrid, pixel_y: usize) usize {
+        return @truncate(pixel_y / self.dimensions[3]);
+    }
+
+    pub fn getIterator(self: *TileGrid, projection: *const Projection) ?Iterator {
+        var intersectionF = utils.getIntersectionRectF(
+            .{
+                self.world_position[0],
+                self.world_position[1],
+                self._dimensionsF[0] * self._dimensionsF[2],
+                self._dimensionsF[1] * self._dimensionsF[3],
+            },
+            projection.plain,
+        );
+
+        if (intersectionF[1] <= 0 or intersectionF[3] <= 0)
+            return null;
+
         return Iterator.new(
             self,
-            utils.getIntersectionRectI(temp, .{ 0, 0, self.grid_width, self.grid_height }),
+            .{
+                @as(usize, @intFromFloat((intersectionF[0] - self.world_position[0]) / self._dimensionsF[2])),
+                @as(usize, @intFromFloat((intersectionF[1] - self.world_position[1]) / self._dimensionsF[3])),
+                @min(@as(usize, @intFromFloat(intersectionF[2] / self._dimensionsF[2] + 1)), self.dimensions[0]),
+                @min(@as(usize, @intFromFloat(intersectionF[3] / self._dimensionsF[3] + 1)), self.dimensions[1]),
+            },
         );
     }
 
     pub const Iterator = struct {
-        _gridRef: *const TileGrid,
-        _clip: RectI,
+        _grid_ref: *const TileGrid,
+        _x1: usize,
+        _y1: usize,
+        _x2: usize,
+        _y2: usize,
         _x: usize,
         _y: usize,
 
-        world_position: PosI,
+        rel_position: PosF,
 
-        fn new(gridRef: *const TileGrid, clip: ?RectI) Iterator {
-            var x = if (clip) |c| c[0] else 0;
-            if (x > gridRef.grid_width)
-                x = gridRef.grid_width;
-            var y = if (clip) |c| c[1] else 0;
-            if (y > gridRef.grid_height)
-                y = gridRef.grid_height;
-            var w = if (clip) |c| x + c[2] else gridRef.grid_width;
-            if (w > gridRef.grid_width)
-                w = gridRef.grid_width;
-            var h = if (clip) |c| y + c[3] else gridRef.grid_height;
-            if (h > gridRef.grid_height)
-                h = gridRef.grid_height;
-            return .{
-                ._gridRef = gridRef,
-                ._clip = .{ x, y, w, h },
-                ._x = x - 1,
-                ._y = y,
-                .world_position = .{
-                    gridRef.world_position[0] + (x * gridRef.cell_width),
-                    gridRef.world_position[1] + (y * gridRef.cell_height),
-                },
-            };
+        fn new(grid_ref: *const TileGrid, clip: ?@Vector(4, usize)) Iterator {
+            if (clip) |c| {
+                // std.debug.print("clip: x1:{d} x2:{d} y1:{d} y2:{d} \n", .{
+                //     c[0],
+                //     @min(c[0] + c[2], grid_ref.dimensions[0]),
+                //     c[1],
+                //     @min(c[1] + c[3], grid_ref.dimensions[1]),
+                // });
+                return .{
+                    ._grid_ref = grid_ref,
+                    ._x1 = c[0],
+                    ._y1 = c[1],
+                    ._x2 = @min(c[0] + c[2], grid_ref.dimensions[0]),
+                    ._y2 = @min(c[1] + c[3], grid_ref.dimensions[1]),
+                    ._x = c[0],
+                    ._y = c[1],
+                    .rel_position = .{
+                        @as(Float, @floatFromInt(c[0])) * grid_ref._dimensionsF[2],
+                        @as(Float, @floatFromInt(c[1])) * grid_ref._dimensionsF[3],
+                    },
+                };
+            } else {
+                return .{
+                    ._grid_ref = grid_ref,
+                    ._x1 = 0,
+                    ._y1 = 0,
+                    ._x2 = grid_ref.dimensions[0],
+                    ._y2 = grid_ref.dimensions[1],
+                    ._x = 0,
+                    ._y = 0,
+                    .rel_position = .{
+                        grid_ref._dimensionsF[0] * grid_ref._dimensionsF[2],
+                        grid_ref._dimensionsF[1] * grid_ref._dimensionsF[3],
+                    },
+                };
+            }
         }
 
         pub fn next(self: *Iterator) ?Index {
-            self._x = self._x + 1;
-            if (self._x < self._clip[2])
-                return self._gridRef._grid[self._y][self._x];
+            defer self._x = self._x + 1;
+            if (self._x < self._x2) {
+                self.rel_position[0] = @floatFromInt(self._x * self._grid_ref.dimensions[2]);
+                self.rel_position[1] = @floatFromInt(self._y * self._grid_ref.dimensions[3]);
+                return self._grid_ref._grid[self._y][self._x];
+            }
 
-            self._x = self._clip[0];
+            self._x = self._x1;
             self._y = self._y + 1;
-            if (self._y < self._clip[3])
-                return self._gridRef._grid[self._y][self._x];
+            if (self._y < self._y2) {
+                self.rel_position[0] = @floatFromInt(self._x * self._grid_ref.dimensions[2]);
+                self.rel_position[1] = @floatFromInt(self._y * self._grid_ref.dimensions[3]);
+                return self._grid_ref._grid[self._y][self._x];
+            }
 
             return null;
         }
     };
-
-    inline fn checkBounds(self: *TileGrid, x: usize, y: usize) bool {
-        return x < self.grid_width and y < self.grid_width;
-    }
 
     pub fn format(
         self: TileGrid,
@@ -311,7 +344,7 @@ pub const TileGrid = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "TileGrid[{d}|{?s}]\n  pos:{any} view:{any} layer:{any}\n  spherical:{any}\n  grid:{d}|{d}\n  cell:{d}|{d}\n  {any}",
+            "TileGrid[{d}|{?s}]\n  pos:{any} view:{any} layer:{any}\n  spherical:{any}\n  dimensions:{any}\n  ud:{any}\n  {any}",
             self,
         );
     }
@@ -352,32 +385,34 @@ const DefaultTileGridRenderer = struct {
         }
     }
 
-    //var clip: RectI = .{ 0, 0, 0, 0 };
     pub fn renderView(e: ViewRenderEvent) void {
         if (tile_grid_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |grid_id| {
-                var tile_grid: *TileGrid = TileGrid.byId(grid_id).?;
+                var tile_grid: *TileGrid = TileGrid.byId(grid_id);
                 api.rendering.addOffset(tile_grid.world_position);
-                var iterator = tile_grid.getIterator(e.projection);
-                while (iterator.next()) |entity_id| {
-                    var tile = ETile.byId(entity_id).?;
-                    var trans = ETransform.byId(entity_id).?;
-                    if (tile.sprite_template_id != NO_BINDING) {
-                        api.rendering.renderSprite(
-                            tile._texture_binding,
-                            tile._texture_bounds,
-                            trans.position,
-                            trans.pivot,
-                            trans.scale,
-                            trans.rotation,
-                            tile.tint_color,
-                            tile.blend_mode,
-                            null,
-                        );
+                var iterator = tile_grid.getIterator(e.projection.?);
+                if (iterator) |*itr| {
+                    while (itr.next()) |entity_id| {
+                        var tile = ETile.byId(entity_id).?;
+                        var trans = ETransform.byId(entity_id).?;
+                        if (tile.sprite_template_id != NO_BINDING) {
+                            api.rendering.renderSprite(
+                                tile._texture_binding,
+                                tile._texture_bounds,
+                                itr.rel_position + trans.position,
+                                trans.pivot,
+                                trans.scale,
+                                trans.rotation,
+                                tile.tint_color,
+                                tile.blend_mode,
+                                null,
+                            );
+                        }
                     }
                 }
                 api.rendering.addOffset(tile_grid.world_position * utils.NEG_VEC2F);
+                i = all.nextSetBit(grid_id + 1);
             }
         }
     }

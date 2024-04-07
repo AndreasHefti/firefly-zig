@@ -3,6 +3,7 @@ const inari = @import("../inari.zig");
 const utils = inari.utils;
 const api = inari.firefly.api;
 const CString = utils.CString;
+const Float = utils.Float;
 
 const Allocator = std.mem.Allocator;
 const UpdateEvent = api.UpdateEvent;
@@ -18,13 +19,18 @@ var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 
 pub fn start(
-    w: c_int,
-    h: c_int,
+    w: Float,
+    h: Float,
     fps: c_int,
     title: CString,
     init_callback: ?*const fn () void,
 ) void {
-    api.window.openWindow(.{ .width = w, .height = h, .title = title, .fps = fps });
+    api.window.openWindow(.{
+        .width = @intFromFloat(w),
+        .height = @intFromFloat(h),
+        .title = title,
+        .fps = fps,
+    });
     defer api.window.closeWindow();
 
     View.screen_projection = .{ .plain = .{ 0, 0, w, h } };

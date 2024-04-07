@@ -180,6 +180,14 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
         pub fn nextActiveId(id: Index) ?Index {
             return adapter.pool.active_mapping.nextSetBit(id);
         }
+
+        pub fn activate(self: *T) *T {
+            if (self.id == UNDEF_INDEX)
+                return self;
+
+            activateById(self.id, true);
+            return self;
+        }
     };
 }
 

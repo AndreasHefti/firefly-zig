@@ -29,7 +29,7 @@ pub fn run(allocator: Allocator) !void {
     );
     defer firefly.deinit();
 
-    firefly.Engine.start(600, 400, 60, "Hello Sprite", example);
+    firefly.Engine.start(600, 400, 60, "Hello Shape", example);
 }
 
 fn example() void {

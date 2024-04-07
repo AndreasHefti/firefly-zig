@@ -72,14 +72,6 @@ pub const Entity = struct {
         EComponent.activateEntityComponents(self, active);
     }
 
-    pub fn activate(self: *Entity) *Entity {
-        if (self.id == UNDEF_INDEX)
-            return self;
-
-        Entity.activateById(self.id, true);
-        return self;
-    }
-
     pub fn deactivate(self: *Entity) *Entity {
         if (self.id == UNDEF_INDEX)
             return self;

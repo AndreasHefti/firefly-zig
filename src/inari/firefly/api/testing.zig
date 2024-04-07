@@ -184,8 +184,8 @@ pub const DebugRenderAPI = struct {
     pub fn createRenderTexture(projection: *Projection) RenderTextureBinding {
         var binding = RenderTextureBinding{
             .id = renderTextures.nextFreeSlot(),
-            .width = projection.plain[2],
-            .height = projection.plain[3],
+            .width = @intFromFloat(projection.plain[2]),
+            .height = @intFromFloat(projection.plain[3]),
         };
         _ = renderTextures.add(binding);
         return binding;

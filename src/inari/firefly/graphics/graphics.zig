@@ -43,6 +43,9 @@ pub const SpriteTemplate = sprite.SpriteTemplate;
 pub const ESprite = sprite.ESprite;
 pub const SpriteSet = sprite.SpriteSet;
 
+pub const ETile = tile.ETile;
+pub const TileGrid = tile.TileGrid;
+
 pub const EShape = shape.EShape;
 pub const View = view.View;
 pub const Layer = view.Layer;
@@ -56,6 +59,7 @@ pub const ViewRenderer = view.ViewRenderer;
 pub const DefaultRenderer = struct {
     pub const SHAPE = "DefaultShapeRenderer";
     pub const SPRITE = "DefaultSpriteRenderer";
+    pub const TILE = "DefaultTileGridRenderer";
 };
 
 pub fn activateRenderer(name: String, active: bool) void {

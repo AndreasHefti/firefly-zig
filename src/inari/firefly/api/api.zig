@@ -283,7 +283,7 @@ pub const ShapeType = enum {
 
 pub const Projection = struct {
     clear_color: ?Color = .{ 0, 0, 0, 255 },
-    plain: RectI = .{ 0, 0, 0, 0 },
+    plain: RectF = .{ 0, 0, 0, 0 },
     pivot: PosF = .{ 0, 0 },
     zoom: Float = 1,
     rotation: Float = 0,

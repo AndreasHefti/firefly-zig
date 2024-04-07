@@ -42,6 +42,8 @@ pub const PosI = Vector2i;
 /// Float Position as Vector2 f32 [0]-->x [1]-->y
 pub const PosF = Vector2f;
 
+pub const ClipI = @Vector(4, usize);
+
 pub const NEG_VEC2I = Vector2i{ -1, -1 };
 pub const NEG_VEC3I = Vector3i{ -1, -1, -1 };
 pub const NEG_VEC4I = Vector4i{ -1, -1, -1, -1 };
@@ -71,8 +73,35 @@ pub fn getIntersectionRectI(r1: RectI, r2: RectI) RectI {
     return RectI{ x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
 }
 
+pub fn getIntersectionNormalizedI(r1: RectI, r2: RectI) ClipI {
+    var x1 = @max(r1[0], r2[0]);
+    var y1 = @max(r1[1], r2[1]);
+    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+
+    return ClipI{ 0, 0, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
+}
+
 pub fn isRegionRectI(r1: RectI) bool {
     return r1[2] > 0 and r1[3] > 0;
+}
+
+pub fn intersectionRectF(r1: RectF, r2: RectF, result: *RectF) void {
+    result[0] = @max(r1[0], r2[0]);
+    result[1] = @max(r1[1], r2[1]);
+    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+    result[2] = @max(0, x2 - result[0] + 1);
+    result[3] = @max(0, y2 - result[1] + 1);
+}
+
+pub fn getIntersectionRectF(r1: RectF, r2: RectF) RectF {
+    var x1 = @max(r1[0], r2[0]);
+    var y1 = @max(r1[1], r2[1]);
+    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+
+    return RectF{ x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
 }
 
 /// Color as Vector4u8

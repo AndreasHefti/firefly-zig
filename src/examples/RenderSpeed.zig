@@ -21,7 +21,7 @@ pub fn run(allocator: Allocator) !void {
     );
     defer firefly.deinit();
 
-    firefly.Engine.start(600, 400, 60, "Hello Sprite", init);
+    firefly.Engine.start(600, 400, 144, "Hello Sprite", init);
 }
 
 fn init() void {
@@ -36,10 +36,10 @@ fn init() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    var pos = firefly.api.ALLOC.alloc(Vector2f, 50000) catch unreachable;
+    var pos = firefly.api.ALLOC.alloc(Vector2f, 100000) catch unreachable;
     var rndx = std.rand.DefaultPrng.init(32);
     const rx = rndx.random();
-    for (0..50000) |i| {
+    for (0..100000) |i| {
         pos[i][0] = rx.float(Float) * 600;
         pos[i][1] = rx.float(Float) * 400;
     }
