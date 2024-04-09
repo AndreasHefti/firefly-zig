@@ -27,6 +27,8 @@ pub fn run(allocator: Allocator) !void {
 }
 
 fn loadWithView() void {
+    firefly.api.rendering.setRenderBatch(1, 81920);
+
     var sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },

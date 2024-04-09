@@ -10,7 +10,7 @@ pub fn main() !void {
     // try @import("examples/SpriteMultiply.zig").run(allocator);
     // try @import("examples/HelloViewport.zig").run(allocator);
     // try @import("examples/HelloShape.zig").run(allocator);
-    try @import("examples/RenderSpeedRaw.zig").run(allocator);
+    //try @import("examples/RenderSpeedRaw.zig").run(allocator);
     try @import("examples/RenderSpeed.zig").run(allocator);
     try @import("examples/HelloTileGrid.zig").run(allocator);
 }

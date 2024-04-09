@@ -114,6 +114,7 @@ pub const DebugRenderAPI = struct {
         shaders = DynArray(ShaderData).new(api.ALLOC) catch unreachable;
         renderActionQueue = DynArray(RenderAction).new(api.ALLOC) catch unreachable;
 
+        interface.setRenderBatch = setRenderBatch;
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
 
@@ -148,6 +149,8 @@ pub const DebugRenderAPI = struct {
         renderTextures.deinit();
         shaders.deinit();
     }
+
+    fn setRenderBatch(_: ?CInt, _: ?CInt) void {}
 
     pub fn screenWidth() CInt {
         return screen_width;

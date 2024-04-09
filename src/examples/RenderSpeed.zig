@@ -21,10 +21,12 @@ pub fn run(allocator: Allocator) !void {
     );
     defer firefly.deinit();
 
-    firefly.Engine.start(600, 400, 144, "Hello Sprite", init);
+    firefly.Engine.start(600, 400, 60, "Hello Sprite", init);
 }
 
 fn init() void {
+    firefly.api.rendering.setRenderBatch(1, 81920);
+
     Texture.newAnd(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

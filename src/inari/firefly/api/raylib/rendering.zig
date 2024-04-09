@@ -82,6 +82,8 @@ const RaylibRenderAPI = struct {
         render_textures = DynArray(RenderTexture2D).new(api.ALLOC) catch unreachable;
         shaders = DynArray(Shader).new(api.ALLOC) catch unreachable;
 
+        interface.setRenderBatch = setRenderBatch;
+
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
 
@@ -150,6 +152,17 @@ const RaylibRenderAPI = struct {
     var temp_p2 = rl.Vector2{ .x = 0, .y = 0 };
     var temp_p3 = rl.Vector2{ .x = 0, .y = 0 };
     var temp_p4 = rl.Vector2{ .x = 0, .y = 0 };
+
+    var render_batch: ?rlgl.rlRenderBatch = null;
+
+    fn setRenderBatch(buffer_number: ?CInt, max_buffer_elements: ?CInt) void {
+        if (render_batch) |rb| {
+            rlgl.rlUnloadRenderBatch(rb);
+            render_batch = null;
+        }
+        render_batch = rlgl.rlLoadRenderBatch(buffer_number orelse 1, max_buffer_elements orelse 8192);
+        rlgl.rlSetRenderBatchActive(&render_batch.?);
+    }
 
     fn setOffset(offset: PosF) void {
         active_camera.offset = @bitCast(offset);

@@ -450,6 +450,11 @@ pub fn IRenderAPI() type {
     return struct {
         const Self = @This();
 
+        setRenderBatch: *const fn (
+            buffer_number: ?CInt,
+            max_buffer_elements: ?CInt,
+        ) void = undefined,
+
         /// Set rendering offset
         setOffset: *const fn (Vector2f) void = undefined,
         /// Adds given offset to actual offset of the rendering engine
