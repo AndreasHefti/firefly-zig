@@ -463,16 +463,18 @@ pub const EasedValueIntegration = struct {
 
     pub fn integrate(a: *Animation(EasedValueIntegration)) void {
         if (a._inverted)
-            a.integration._property.* = std.math.lerp(
-                a.integration.end_value,
-                a.integration.start_value,
+            a.integration._property.* = @mulAdd(
+                Float,
+                a.integration.start_value - a.integration.end_value,
                 a.integration.easing.f(a._t_normalized),
+                a.integration.end_value,
             )
         else
-            a.integration._property.* = std.math.lerp(
-                a.integration.start_value,
-                a.integration.end_value,
+            a.integration._property.* = @mulAdd(
+                Float,
+                a.integration.end_value - a.integration.start_value,
                 a.integration.easing.f(a._t_normalized),
+                a.integration.start_value,
             );
     }
 };

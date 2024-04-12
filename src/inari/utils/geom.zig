@@ -351,7 +351,7 @@ const ExponentialInOutEasing = struct {
         return if (tt <= 1)
             std.math.pow(Float, 2, 10 * tt - 10) / 2
         else
-            2 - std.math.pow(Float, 2, 10.0 - 10.0 * tt) / 2;
+            (2 - std.math.pow(Float, 2, 10.0 - 10.0 * tt)) / 2;
     }
 
     fn easing(self: *ExponentialInOutEasing) Easing {
@@ -511,9 +511,9 @@ const ElasticOutEasing = struct {
     fn f(self: *ElasticOutEasing, t: Float) Float {
         var a = if (self.amplitude >= 1) self.amplitude else 1;
         var p = self.period / TAU;
-        var s = std.math.asin(1 / a) * p;
-        var tt = t - 1;
-        return 1 - a * std.math.pow(Float, 2, -10 * tt) * std.math.sin((tt - s) / p);
+        var s: Float = std.math.asin(1 / a) * p;
+        var tt: Float = t + 1;
+        return 1.0 - (a * std.math.pow(Float, 2, -10 * tt) * std.math.sin((tt + s) / p));
     }
 
     fn easing(self: *ElasticOutEasing) Easing {
@@ -658,7 +658,7 @@ const PolyInOutEasing = struct {
         return if (tt <= 1)
             std.math.pow(Float, tt, self.exp) / 2
         else
-            2 - std.math.pow(Float, 2.0 - tt, self.exp) / 2;
+            (2 - std.math.pow(Float, 2.0 - tt, self.exp)) / 2;
     }
 
     fn easing(self: *PolyInOutEasing) Easing {

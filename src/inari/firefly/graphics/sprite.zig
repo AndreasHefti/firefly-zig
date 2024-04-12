@@ -99,7 +99,7 @@ pub const SpriteTemplate = struct {
     // TODO add construct to automatically bind the texture if it is already loaded
     pub fn construct(self: *SpriteTemplate) void {
         if (Texture.getResourceByName(self.texture_name)) |tex| {
-            if (tex.binding) |b| {
+            if (tex._binding) |b| {
                 self.texture_binding = b.id;
             }
         }
@@ -120,7 +120,7 @@ pub const SpriteTemplate = struct {
 
     fn onTextureLoad(asset: *Asset(Texture)) void {
         if (asset.getResource()) |r| {
-            if (r.binding) |b| {
+            if (r._binding) |b| {
                 var next = SpriteTemplate.nextId(0);
                 while (next) |id| {
                     var template = SpriteTemplate.byId(id);

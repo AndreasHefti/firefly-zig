@@ -467,6 +467,9 @@ pub fn IRenderAPI() type {
         /// @param textureId binding identifier of the texture to dispose.
         disposeTexture: *const fn (BindingId) void = undefined,
 
+        loadFont: *const fn (resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) BindingId = undefined,
+        disposeFont: *const fn (BindingId) void = undefined,
+
         createRenderTexture: *const fn (projection: *Projection) RenderTextureBinding = undefined,
         disposeRenderTexture: *const fn (BindingId) void = undefined,
         /// create new shader from given shader data and load it to GPU
@@ -522,6 +525,20 @@ pub fn IRenderAPI() type {
             color3: ?Color,
             multiplier: ?[]const PosF,
         ) void = undefined,
+
+        renderText: *const fn (
+            font_id: ?BindingId,
+            text: String,
+            position: PosF,
+            pivot: ?PosF,
+            rotation: ?Float,
+            size: ?Float,
+            char_spacing: ?Float,
+            line_spacing: ?Float,
+            tint_color: ?Color,
+            blend_mode: ?BlendMode,
+        ) void = undefined,
+
         /// This is called form the firefly API to notify the end of rendering for the actual render target (RenderTextureData).
         /// switches back to screen rendering
         endRendering: *const fn () void = undefined,

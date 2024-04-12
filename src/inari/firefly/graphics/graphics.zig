@@ -7,6 +7,7 @@ const sprite = @import("sprite.zig");
 const shape = @import("shape.zig");
 const view = @import("view.zig");
 const tile = @import("tile.zig");
+const text = @import("text.zig");
 
 const Allocator = std.mem.Allocator;
 const Aspect = utils.Aspect;
@@ -47,6 +48,10 @@ pub const ETile = tile.ETile;
 pub const TileGrid = tile.TileGrid;
 
 pub const EShape = shape.EShape;
+
+pub const EText = text.EText;
+pub const Font = text.Font;
+
 pub const View = view.View;
 pub const Layer = view.Layer;
 pub const EView = view.EView;
@@ -60,6 +65,7 @@ pub const DefaultRenderer = struct {
     pub const SHAPE = "DefaultShapeRenderer";
     pub const SPRITE = "DefaultSpriteRenderer";
     pub const TILE = "DefaultTileGridRenderer";
+    pub const TEXT = "DefaultTextRenderer";
 };
 
 pub fn activateRenderer(name: String, active: bool) void {
@@ -96,6 +102,7 @@ pub fn init(_: firefly.api.InitMode) !void {
     try sprite.init();
     try shape.init();
     try tile.init();
+    try text.init();
 }
 
 pub fn deinit() void {
@@ -104,6 +111,7 @@ pub fn deinit() void {
         return;
 
     // deinit sub packages
+    text.deinit();
     tile.deinit();
     shape.deinit();
     sprite.deinit();
@@ -128,13 +136,13 @@ pub const Shader = struct {
     fragment_shader_resource: ?String = null,
     file_resource: bool = true,
 
-    binding: ?ShaderBinding = null,
+    _binding: ?ShaderBinding = null,
 
     pub fn doLoad(_: *Asset(Shader), resource: *Shader) void {
-        if (resource.binding != null)
+        if (resource._binding != null)
             return; // already loaded
 
-        resource.binding = firefly.api.rendering.createShader(
+        resource._binding = firefly.api.rendering.createShader(
             resource.vertex_shader_resource,
             resource.fragment_shader_resource,
             resource.file_resource,
@@ -189,9 +197,9 @@ pub const Shader = struct {
     }
 
     pub fn doUnload(_: *Asset(Shader), resource: *Shader) void {
-        if (resource.binding) |b| {
+        if (resource._binding) |b| {
             firefly.api.rendering.disposeShader(b.id);
-            resource.binding = null;
+            resource._binding = null;
         }
     }
 };
@@ -209,13 +217,13 @@ pub const Texture = struct {
     filter: TextureFilter = TextureFilter.TEXTURE_FILTER_POINT,
     wrap: TextureWrap = TextureWrap.TEXTURE_WRAP_CLAMP,
 
-    binding: ?TextureBinding = null,
+    _binding: ?TextureBinding = null,
 
     pub fn doLoad(_: *Asset(Texture), resource: *Texture) void {
-        if (resource.binding != null)
+        if (resource._binding != null)
             return; // already loaded
 
-        resource.binding = firefly.api.rendering.loadTexture(
+        resource._binding = firefly.api.rendering.loadTexture(
             resource.resource,
             resource.is_mipmap,
             resource.filter,
@@ -224,9 +232,9 @@ pub const Texture = struct {
     }
 
     pub fn doUnload(_: *Asset(Texture), resource: *Texture) void {
-        if (resource.binding) |b| {
+        if (resource._binding) |b| {
             firefly.api.rendering.disposeTexture(b.id);
-            resource.binding = null;
+            resource._binding = null;
         }
     }
 };

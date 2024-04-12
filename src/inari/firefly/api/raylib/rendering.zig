@@ -33,6 +33,7 @@ const NO_BINDING = api.NO_BINDING;
 const EMPTY_STRING = utils.EMPTY_STRING;
 
 const Texture2D = rl.Texture2D;
+const Font = rl.Font;
 const RenderTexture2D = rl.RenderTexture2D;
 const Shader = rl.Shader;
 
@@ -73,9 +74,6 @@ const RaylibRenderAPI = struct {
         if (initialized)
             return;
 
-        //active_offset = default_offset;
-        active_blend_mode = default_blend_mode;
-        active_tint_color = default_tint_color;
         active_clear_color = default_clear_color;
 
         textures = DynArray(Texture2D).new(api.ALLOC) catch unreachable;
@@ -89,6 +87,8 @@ const RaylibRenderAPI = struct {
 
         interface.loadTexture = loadTexture;
         interface.disposeTexture = disposeTexture;
+        interface.loadFont = loadFont;
+        interface.disposeFont = disposeFont;
         interface.createRenderTexture = createRenderTexture;
         interface.disposeRenderTexture = disposeRenderTexture;
         interface.createShader = createShader;
@@ -99,6 +99,7 @@ const RaylibRenderAPI = struct {
         interface.renderTexture = renderTexture;
         interface.renderSprite = renderSprite;
         interface.renderShape = renderShape;
+        interface.renderText = renderText;
         interface.endRendering = endRendering;
 
         interface.printDebug = printDebug;
@@ -123,20 +124,22 @@ const RaylibRenderAPI = struct {
     const default_tint_color = rl.Color{ .r = 255, .g = 255, .b = 255, .a = 255 };
     const default_clear_color = rl.Color{ .r = 0, .g = 0, .b = 0, .a = 255 };
     const default_pivot = PosF{ 0, 0 };
-
     const default_blend_mode = BlendMode.ALPHA;
+
+    var default_font_size: CInt = 32;
+    var default_char_num: CInt = 95;
 
     var window_handle: ?api.WindowHandle = null;
     var textures: DynArray(Texture2D) = undefined;
+    var fonts: DynArray(Font) = undefined;
     var render_textures: DynArray(RenderTexture2D) = undefined;
     var shaders: DynArray(Shader) = undefined;
 
     var active_shader: ?BindingId = null;
     var active_render_texture: ?BindingId = null;
-    //var active_offset: Vector2f = undefined;
-    var active_tint_color: rl.Color = undefined;
+    //var active_tint_color: rl.Color = undefined;
     var active_clear_color: ?rl.Color = undefined;
-    var active_blend_mode: BlendMode = undefined;
+
     var active_camera = rl.Camera2D{
         .offset = rl.Vector2{ .x = 0, .y = 0 },
         .target = rl.Vector2{ .x = 0, .y = 0 },
@@ -209,6 +212,25 @@ const RaylibRenderAPI = struct {
         if (textures.get(binding)) |tex| {
             rl.UnloadTexture(tex.*);
             textures.delete(binding);
+        }
+    }
+
+    fn loadFont(resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) BindingId {
+        return fonts.add(rl.LoadFontEx(
+            @ptrCast(resource),
+            size orelse default_font_size,
+            code_points orelse 0,
+            char_num orelse default_char_num,
+        ));
+    }
+
+    fn disposeFont(binding: BindingId) void {
+        if (binding == NO_BINDING)
+            return;
+
+        if (fonts.get(binding)) |f| {
+            rl.UnloadFont(f.*);
+            fonts.delete(binding);
         }
     }
 
@@ -306,7 +328,7 @@ const RaylibRenderAPI = struct {
         if (active_clear_color) |cc|
             rl.ClearBackground(@bitCast(cc));
 
-        rl.BeginBlendMode(@intFromEnum(active_blend_mode));
+        rl.BeginBlendMode(@intFromEnum(default_blend_mode));
     }
 
     fn renderTexture(
@@ -321,7 +343,9 @@ const RaylibRenderAPI = struct {
         if (render_textures.get(texture_id)) |tex| {
 
             // set blend mode
-            rl.BeginBlendMode(@intFromEnum(blend_mode orelse active_blend_mode));
+            if (blend_mode) |bm| {
+                rl.BeginBlendMode(@intFromEnum(bm));
+            }
 
             // set source rect
             temp_source_rect.width = @floatFromInt(tex.texture.width);
@@ -348,7 +372,7 @@ const RaylibRenderAPI = struct {
                 temp_dest_rect,
                 temp_pivot,
                 rotation orelse 0,
-                if (tint_color) |tc| @bitCast(tc) else active_tint_color,
+                if (tint_color) |tc| @bitCast(tc) else default_tint_color,
             );
         }
     }
@@ -367,7 +391,9 @@ const RaylibRenderAPI = struct {
         if (textures.get(texture_id)) |tex| {
 
             // set blend mode
-            rl.BeginBlendMode(@intFromEnum(blend_mode orelse active_blend_mode));
+            if (blend_mode) |bm| {
+                rl.BeginBlendMode(@intFromEnum(bm));
+            }
 
             // scaling
             if (scale) |s| {
@@ -391,7 +417,7 @@ const RaylibRenderAPI = struct {
                         temp_dest_rect,
                         temp_pivot,
                         rotation orelse 0,
-                        if (tint_color) |tc| @bitCast(tc) else active_tint_color,
+                        if (tint_color) |tc| @bitCast(tc) else default_tint_color,
                     );
                 }
                 minusOffset(position);
@@ -404,7 +430,7 @@ const RaylibRenderAPI = struct {
                     temp_dest_rect,
                     temp_pivot,
                     rotation orelse 0,
-                    if (tint_color) |tc| @bitCast(tc) else active_tint_color,
+                    if (tint_color) |tc| @bitCast(tc) else default_tint_color,
                 );
             }
         }
@@ -428,7 +454,9 @@ const RaylibRenderAPI = struct {
     ) void {
 
         // set blend mode
-        rl.BeginBlendMode(@intFromEnum(blend_mode orelse active_blend_mode));
+        if (blend_mode) |bm| {
+            rl.BeginBlendMode(@intFromEnum(bm));
+        }
 
         // apply translation functions if needed
         // TODO check if this must be done for each when multiplier is present
@@ -456,6 +484,43 @@ const RaylibRenderAPI = struct {
             rlgl.rlPopMatrix();
         }
         minusOffset(offset);
+    }
+
+    fn renderText(
+        font_id: ?BindingId,
+        text: String,
+        position: PosF,
+        pivot: ?PosF,
+        rotation: ?Float,
+        size: ?Float,
+        char_spacing: ?Float,
+        line_spacing: ?Float,
+        tint_color: ?Color,
+        blend_mode: ?BlendMode,
+    ) void {
+        var font = rl.GetFontDefault();
+        if (font_id) |fid| {
+            if (fonts.get(fid)) |f| font = f.*;
+        }
+
+        if (blend_mode) |bm| {
+            rl.BeginBlendMode(@intFromEnum(bm));
+        }
+
+        if (line_spacing) |ls| {
+            rl.SetTextLineSpacing(@as(CInt, @intFromFloat(ls)));
+        }
+
+        rl.DrawTextPro(
+            font,
+            @ptrCast(text),
+            rl.Vector2{ .x = position[0], .y = position[1] },
+            @bitCast(pivot orelse default_pivot),
+            rotation orelse 0,
+            size orelse 8,
+            char_spacing orelse 10,
+            if (tint_color) |tc| @bitCast(tc) else default_tint_color,
+        );
     }
 
     fn endRendering() void {
@@ -735,8 +800,6 @@ const RaylibRenderAPI = struct {
         buffer.print("  active_camera: {any}\n", .{active_camera});
         buffer.print("  active_shader: {any}\n", .{active_shader});
         buffer.print("  active_render_texture: {any}\n", .{active_render_texture});
-        buffer.print("  active_tint_color: {any}\n", .{active_tint_color});
         buffer.print("  active_clear_color: {any}\n", .{active_clear_color});
-        buffer.print("  active_blend_mode: {any}\n", .{active_blend_mode});
     }
 };
