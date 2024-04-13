@@ -25,12 +25,6 @@ const Asset = firefly.api.Asset;
 const Texture = firefly.graphics.Texture;
 const SpriteTemplate = firefly.graphics.SpriteTemplate;
 
-test {
-    std.testing.refAllDecls(@import("api/testing.zig"));
-    std.testing.refAllDecls(@import("graphics/testing.zig"));
-    std.testing.refAllDecls(@import("physics/testing.zig"));
-}
-
 // //////////////////////////////////////////////////////////////
 // //// TESTING Firefly
 // //////////////////////////////////////////////////////////////

@@ -20,7 +20,7 @@ pub const AnimationIntegration = animation.AnimationIntegration;
 
 var initialized = false;
 
-pub fn init(_: firefly.api.InitMode) !void {
+pub fn init(_: firefly.api.InitContext) !void {
     defer initialized = true;
     if (initialized)
         return;

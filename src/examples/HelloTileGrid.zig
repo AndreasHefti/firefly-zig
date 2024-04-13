@@ -14,13 +14,8 @@ const BlendMode = firefly.api.BlendMode;
 const TileGrid = firefly.graphics.TileGrid;
 const PosF = utils.PosF;
 
-pub fn run(allocator: Allocator) !void {
-    try firefly.init(
-        allocator,
-        allocator,
-        allocator,
-        firefly.api.InitMode.DEVELOPMENT,
-    );
+pub fn run(init_c: firefly.api.InitContext) !void {
+    try firefly.init(init_c);
     defer firefly.deinit();
 
     firefly.Engine.start(600, 400, 60, "Hello Tile Grid", loadWithView);

@@ -4,7 +4,6 @@ const firefly = inari.firefly;
 const utils = inari.utils;
 
 const Allocator = std.mem.Allocator;
-const testing = @import("testing.zig");
 const asset = @import("asset.zig");
 const component = @import("Component.zig");
 const system = @import("System.zig");
@@ -32,13 +31,22 @@ const StringBuffer = utils.StringBuffer;
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const InitMode = enum { TESTING, DEVELOPMENT, PRODUCTION };
+pub const RUN_ON = enum { RAYLIB };
+
+pub const InitContext = struct {
+    component_allocator: Allocator,
+    entity_allocator: Allocator,
+    allocator: Allocator,
+    run_on_low_level_api: RUN_ON = RUN_ON.RAYLIB,
+};
+
 pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
 
 pub var rendering: IRenderAPI() = undefined;
 pub var window: IWindowAPI() = undefined;
+pub var input: IInputAPI() = undefined;
 
 pub const Asset = asset.Asset;
 pub const AssetAspectGroup = asset.AssetAspectGroup;
@@ -75,30 +83,23 @@ pub fn activateSystem(name: String, active: bool) void {
 
 var initialized = false;
 
-pub fn init(
-    component_allocator: Allocator,
-    entity_allocator: Allocator,
-    allocator: Allocator,
-    initMode: InitMode,
-) !void {
+pub fn init(context: InitContext) !void {
     defer initialized = true;
     if (initialized)
         return;
 
-    COMPONENT_ALLOC = component_allocator;
-    ENTITY_ALLOC = entity_allocator;
-    ALLOC = allocator;
+    COMPONENT_ALLOC = context.component_allocator;
+    ENTITY_ALLOC = context.entity_allocator;
+    ALLOC = context.allocator;
 
     UPDATE_EVENT_DISPATCHER = EventDispatch(UpdateEvent).new(ALLOC);
     RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).new(ALLOC);
     VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(ALLOC);
 
-    if (initMode == InitMode.TESTING) {
-        rendering = try testing.createTestRenderAPI();
-    } else {
-        //rendering = try testing.createTestRenderAPI();
+    if (context.run_on_low_level_api == RUN_ON.RAYLIB) {
         rendering = try @import("raylib/rendering.zig").createRenderAPI();
         window = try @import("raylib/window.zig").createWindowAPI();
+        input = try @import("raylib/input.zig").createInputAPI();
     }
 
     try Component.init();
@@ -337,114 +338,15 @@ pub const RenderTextureBinding = struct {
     }
 };
 
-// pub const TransformDataCollector = struct {
-//     position: PosF = .{ 0, 0 },
-//     pivot: PosF = .{ 0, 0 },
-//     scale: PosF = .{ 1, 1 },
-//     rotation: Float = 0,
-
-//     pub fn clear(self: *TransformData) void {
-//         self.position = .{ 0, 0 };
-//         self.pivot = .{ 0, 0 };
-//         self.scale = .{ 1, 1 };
-//         self.rotation = 0;
-//     }
-
-//     pub fn set(self: *TransformData, other: TransformData) void {
-//         self.position = other.position;
-//         self.pivot = other.pivot;
-//         self.scale = other.scale;
-//         self.rotation = other.rotation;
-//     }
-
-//     pub fn setDiscrete(self: *TransformData, other: TransformData) void {
-//         self.position = @floor(other.position);
-//         self.pivot = @floor(other.pivot);
-//         self.scale = other.scale;
-//         self.rotation = other.rotation;
-//     }
-
-//     pub fn add(self: *TransformData, other: TransformData) void {
-//         self.position += other.position;
-//         self.pivot += other.pivot;
-//         self.scale += other.scale;
-//         self.rotation += other.rotation;
-//     }
-
-//     pub fn minus(self: *TransformData, other: TransformData) void {
-//         self.position -= other.position;
-//         self.pivot -= other.pivot;
-//         self.scale -= other.scale;
-//         self.rotation -= other.rotation;
-//     }
-
-//     pub fn move(self: *TransformData, offset: Vector2f) void {
-//         self.position += offset;
-//     }
-
-//     pub fn moveDiscrete(self: *TransformData, offset: Vector2f) void {
-//         self.position += @floor(offset);
-//     }
-
-//     pub fn hasRotation(self: *TransformData) bool {
-//         return self.rotation != 0;
-//     }
-
-//     pub fn hasScale(self: *TransformData) bool {
-//         return self.scale[0] != 1 or self.scale[1] != 1;
-//     }
-
-//     pub fn format(
-//         self: TransformData,
-//         comptime _: []const u8,
-//         _: std.fmt.FormatOptions,
-//         writer: anytype,
-//     ) !void {
-//         try writer.print(
-//             "TransformData[ pos:{any}, pivot:{any}, scale:{any}, rot:{d} ]",
-//             self,
-//         );
-//     }
-// };
-
 pub const ShaderBinding = struct {
     id: BindingId = NO_BINDING,
 
-    _set_uniform_float: *const fn (BindingId, String, *Float) bool = undefined,
-    _set_uniform_vec2: *const fn (BindingId, String, *Vector2f) bool = undefined,
-    _set_uniform_vec3: *const fn (BindingId, String, *Vector3f) bool = undefined,
-    _set_uniform_vec4: *const fn (BindingId, String, *Vector4f) bool = undefined,
-    _set_uniform_texture: *const fn (BindingId, String, BindingId) bool = undefined,
+    _set_uniform_float: *const fn (BindingId, String, *Float) bool,
+    _set_uniform_vec2: *const fn (BindingId, String, *Vector2f) bool,
+    _set_uniform_vec3: *const fn (BindingId, String, *Vector3f) bool,
+    _set_uniform_vec4: *const fn (BindingId, String, *Vector4f) bool,
+    _set_uniform_texture: *const fn (BindingId, String, BindingId) bool,
 };
-
-pub const WindowData = struct {
-    width: CInt,
-    height: CInt,
-    fps: CInt,
-    title: CString,
-    flags: CUInt = 0,
-};
-
-pub fn IWindowAPI() type {
-    return struct {
-        const Self = @This();
-
-        openWindow: *const fn (WindowData) void = undefined,
-        hasWindowClosed: *const fn () bool = undefined,
-        getWindowData: *const fn () *WindowData = undefined,
-        closeWindow: *const fn () void = undefined,
-
-        showFPS: *const fn (CInt, CInt) void = undefined,
-        toggleFullscreen: *const fn () void = undefined,
-        toggleBorderlessWindowed: *const fn () void = undefined,
-
-        pub fn init(initImpl: *const fn (*IWindowAPI()) void) Self {
-            var self = Self{};
-            _ = initImpl(&self);
-            return self;
-        }
-    };
-}
 
 pub fn IRenderAPI() type {
     return struct {
@@ -548,6 +450,169 @@ pub fn IRenderAPI() type {
         deinit: *const fn () void = undefined,
 
         pub fn init(initImpl: *const fn (*IRenderAPI()) void) Self {
+            var self = Self{};
+            _ = initImpl(&self);
+            return self;
+        }
+    };
+}
+
+pub const WindowData = struct {
+    width: CInt,
+    height: CInt,
+    fps: CInt,
+    title: CString,
+    flags: CUInt = 0,
+};
+
+pub fn IWindowAPI() type {
+    return struct {
+        const Self = @This();
+
+        openWindow: *const fn (WindowData) void = undefined,
+        hasWindowClosed: *const fn () bool = undefined,
+        getWindowData: *const fn () *WindowData = undefined,
+        closeWindow: *const fn () void = undefined,
+
+        showFPS: *const fn (CInt, CInt) void = undefined,
+        toggleFullscreen: *const fn () void = undefined,
+        toggleBorderlessWindowed: *const fn () void = undefined,
+
+        pub fn init(initImpl: *const fn (*IWindowAPI()) void) Self {
+            var self = Self{};
+            _ = initImpl(&self);
+            return self;
+        }
+    };
+}
+
+pub const InputDevice = enum(u8) {
+    KEYBOARD,
+    GAME_PAD_1,
+    GAME_PAD_2,
+    MOUSE,
+};
+
+pub const InputActionType = enum(u8) {
+    ON,
+    OFF,
+    PRESSED,
+    RELEASED,
+};
+
+pub const InputButtonType = enum(usize) {
+    UP,
+    RIGHT,
+    DOWN,
+    LEFT,
+
+    ENTER,
+    QUIT,
+    FIRE_1,
+    FIRE_2,
+    PAUSE,
+
+    BUTTON_A,
+    BUTTON_B,
+    BUTTON_C,
+    BUTTON_D,
+
+    BUTTON_W,
+    BUTTON_X,
+    BUTTON_Y,
+    BUTTON_Z,
+
+    BUTTON_0,
+    BUTTON_1,
+    BUTTON_2,
+    BUTTON_3,
+    BUTTON_4,
+    BUTTON_5,
+    BUTTON_6,
+    BUTTON_7,
+    BUTTON_8,
+    BUTTON_9,
+};
+
+// Mouse buttons
+pub const MouseAction = enum(usize) {
+    MOUSE_BUTTON_LEFT = 0, // Mouse button left
+    MOUSE_BUTTON_RIGHT = 1, // Mouse button right
+    MOUSE_BUTTON_MIDDLE = 2, // Mouse button middle (pressed wheel)
+    MOUSE_BUTTON_SIDE = 3, // Mouse button side (advanced mouse device)
+    MOUSE_BUTTON_EXTRA = 4, // Mouse button extra (advanced mouse device)
+    MOUSE_BUTTON_FORWARD = 5, // Mouse button forward (advanced mouse device)
+    MOUSE_BUTTON_BACK = 6, // Mouse button back (advanced mouse device)
+};
+
+pub const GamepadAction = enum(usize) {
+    GAMEPAD_BUTTON_UNKNOWN = 0, // Unknown button, just for error checking
+    GAMEPAD_BUTTON_LEFT_FACE_UP = 2, // Gamepad left DPAD up button
+    GAMEPAD_BUTTON_LEFT_FACE_RIGHT = 3, // Gamepad left DPAD right button
+    GAMEPAD_BUTTON_LEFT_FACE_DOWN = 4, // Gamepad left DPAD down button
+    GAMEPAD_BUTTON_LEFT_FACE_LEFT = 5, // Gamepad left DPAD left button
+    GAMEPAD_BUTTON_RIGHT_FACE_UP = 6, // Gamepad right button up (i.e. PS3: Triangle, Xbox: Y)
+    GAMEPAD_BUTTON_RIGHT_FACE_RIGHT = 7, // Gamepad right button right (i.e. PS3: Circle, Xbox: B)
+    GAMEPAD_BUTTON_RIGHT_FACE_DOWN = 8, // Gamepad right button down (i.e. PS3: Cross, Xbox: A)
+    GAMEPAD_BUTTON_RIGHT_FACE_LEFT = 9, // Gamepad right button left (i.e. PS3: Square, Xbox: X)
+    GAMEPAD_BUTTON_LEFT_TRIGGER_1 = 10, // Gamepad top/back trigger left (first), it could be a trailing button
+    GAMEPAD_BUTTON_LEFT_TRIGGER_2 = 11, // Gamepad top/back trigger left (second), it could be a trailing button
+    GAMEPAD_BUTTON_RIGHT_TRIGGER_1 = 12, // Gamepad top/back trigger right (one), it could be a trailing button
+    GAMEPAD_BUTTON_RIGHT_TRIGGER_2 = 13, // Gamepad top/back trigger right (second), it could be a trailing button
+    GAMEPAD_BUTTON_MIDDLE_LEFT = 14, // Gamepad center buttons, left one (i.e. PS3: Select)
+    GAMEPAD_BUTTON_MIDDLE = 15, // Gamepad center buttons, middle one (i.e. PS3: PS, Xbox: XBOX)
+    GAMEPAD_BUTTON_MIDDLE_RIGHT = 16, // Gamepad center buttons, right one (i.e. PS3: Start)
+    GAMEPAD_BUTTON_LEFT_THUMB = 17, // Gamepad joystick pressed button left
+    GAMEPAD_BUTTON_RIGHT_THUMB = 18, // Gamepad joystick pressed button right
+};
+
+pub const GamepadAxis = enum(CInt) {
+    GAMEPAD_AXIS_LEFT_X = 0, // Gamepad left stick X axis
+    GAMEPAD_AXIS_LEFT_Y = 1, // Gamepad left stick Y axis
+    GAMEPAD_AXIS_RIGHT_X = 2, // Gamepad right stick X axis
+    GAMEPAD_AXIS_RIGHT_Y = 3, // Gamepad right stick Y axis
+    GAMEPAD_AXIS_LEFT_TRIGGER = 4, // Gamepad back trigger left, pressure level: [1..-1]
+    GAMEPAD_AXIS_RIGHT_TRIGGER = 5, // Gamepad back trigger right, pressure level: [1..-1]
+};
+
+pub fn IInputAPI() type {
+    return struct {
+        const Self = @This();
+
+        // check the button type for specified action. Button type must have been mapped on one or many devices
+        checkButton: *const fn (InputButtonType, InputActionType, ?InputDevice) bool = undefined,
+        // get the current normalized action value between -1 and 1
+        // if the action is digital on/off --> 0 <= off, > 0 = on
+        getButtonValue: *const fn (InputButtonType, ?InputDevice) Float = undefined,
+        // clears all mappings
+        clear_mappings: *const fn () void = undefined,
+
+        // KEYBOARD
+        // Get key pressed (keycode), call it multiple times for keys queued, returns 0 when the queue is empty
+        getKeyPressed: *const fn () CInt = undefined,
+        // Get char pressed (unicode), call it multiple times for chars queued, returns 0 when the queue is empty
+        getCharPressed: *const fn () CInt = undefined,
+        // key mappings
+        setKeyButtonMapping: *const fn (keycode: usize, InputButtonType) void = undefined,
+
+        // GAMEPAD
+        // Check if a gamepad is available
+        isGamepadAvailable: *const fn (InputDevice) bool = undefined,
+        // Get gamepad internal name id
+        getGamepadName: *const fn (InputDevice) String = undefined,
+
+        getGamepadAxisMovement: *const fn (InputDevice, GamepadAxis) Float = undefined,
+        // gamepad mappings
+        setGamepad1Mapping: *const fn (InputDevice) void = undefined,
+        setGamepad2Mapping: *const fn (InputDevice) void = undefined,
+        setGamepadButtonMapping: *const fn (InputDevice, GamepadAction, InputButtonType) void = undefined,
+
+        // MOUSE
+        getMousePosition: *const fn () PosF = undefined,
+        getMouseDelta: *const fn () Vector2f = undefined,
+        setMouseButtonMapping: *const fn (MouseAction, InputButtonType) void = undefined,
+
+        pub fn init(initImpl: *const fn (*IInputAPI()) void) Self {
             var self = Self{};
             _ = initImpl(&self);
             return self;

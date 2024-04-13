@@ -6,14 +6,21 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    // try @import("examples/HelloSprite.zig").run(allocator);
-    // try @import("examples/SpriteMultiply.zig").run(allocator);
-    // try @import("examples/HelloViewport.zig").run(allocator);
-    // try @import("examples/HelloShape.zig").run(allocator);
-    //try @import("examples/RenderSpeedRaw.zig").run(allocator);
-    try @import("examples/EasingExample.zig").run(allocator);
-    //try @import("examples/RenderSpeed.zig").run(allocator);
-    try @import("examples/HelloTileGrid.zig").run(allocator);
+    var init_context = inari.firefly.api.InitContext{
+        .allocator = allocator,
+        .entity_allocator = allocator,
+        .component_allocator = allocator,
+        .run_on_low_level_api = inari.firefly.api.RUN_ON.RAYLIB,
+    };
+
+    // try @import("examples/HelloSprite.zig").run(init_context);
+    // try @import("examples/SpriteMultiply.zig").run(init_context);
+    // try @import("examples/HelloViewport.zig").run(init_context);
+    // try @import("examples/HelloShape.zig").run(init_context);
+    //try @import("examples/RenderSpeedRaw.zig").run(init_context);
+    try @import("examples/EasingExample.zig").run(init_context);
+    //try @import("examples/RenderSpeed.zig").run(init_context);
+    try @import("examples/HelloTileGrid.zig").run(init_context);
 }
 
 test "API Tests" {

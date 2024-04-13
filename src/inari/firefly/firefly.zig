@@ -34,19 +34,14 @@ pub fn initDebug(allocator: Allocator) !void {
     try init(allocator, allocator, allocator, api.InitMode.DEVELOPMENT);
 }
 
-pub fn init(
-    component_allocator: Allocator,
-    entity_allocator: Allocator,
-    allocator: Allocator,
-    initMode: api.InitMode,
-) !void {
+pub fn init(init_c: api.InitContext) !void {
     defer initialized = true;
     if (initialized)
         return;
 
-    try api.init(component_allocator, entity_allocator, allocator, initMode);
-    try graphics.init(initMode);
-    try physics.init(initMode);
+    try api.init(init_c);
+    try graphics.init(init_c);
+    try physics.init(init_c);
 }
 
 pub fn deinit() void {

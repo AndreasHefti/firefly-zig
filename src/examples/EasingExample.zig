@@ -16,13 +16,8 @@ const String = utils.String;
 const Float = utils.Float;
 const EText = firefly.graphics.EText;
 
-pub fn run(allocator: Allocator) !void {
-    try firefly.init(
-        allocator,
-        allocator,
-        allocator,
-        firefly.api.InitMode.DEVELOPMENT,
-    );
+pub fn run(init_c: firefly.api.InitContext) !void {
+    try firefly.init(init_c);
     defer firefly.deinit();
 
     firefly.Engine.start(600, 900, 60, "Hello Sprite", init);
@@ -53,9 +48,9 @@ fn init() void {
     create("Quart In:", Easing.Quart_In);
     create("Quart Out:", Easing.Quart_Out);
     create("Quart In Out:", Easing.Quart_In_Out);
-    create("Exponential In:", Easing.Exponential_In);
-    create("Exponential Out:", Easing.Exponential_Out);
-    create("Exponential In Out:", Easing.Exponential_In_Out);
+    create("Exp In:", Easing.Exponential_In);
+    create("Exp Out:", Easing.Exponential_Out);
+    create("Exp In Out:", Easing.Exponential_In_Out);
     create("Sin In:", Easing.Sin_In);
     create("Sin Out:", Easing.Sin_Out);
     create("Sin In Out:", Easing.Sin_In_Out);

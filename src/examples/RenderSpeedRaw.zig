@@ -6,7 +6,7 @@ const Allocator = std.mem.Allocator;
 
 const count: usize = 100000;
 
-pub fn run(allocator: Allocator) !void {
+pub fn run(init_c: firefly.api.InitContext) !void {
     rl.InitWindow(960, 540, "My Window Name");
     rl.SetTargetFPS(60);
     defer rl.CloseWindow();
@@ -16,7 +16,7 @@ pub fn run(allocator: Allocator) !void {
     var tint_color: rl.Color = .{ .r = 255, .g = 255, .b = 255, .a = 255 };
     var clear_color: rl.Color = .{ .r = 0, .g = 0, .b = 0, .a = 255 };
 
-    var nanos = allocator.alloc(@Vector(4, f32), count) catch unreachable;
+    var nanos = init_c.allocator.alloc(@Vector(4, f32), count) catch unreachable;
     var rndx = std.rand.DefaultPrng.init(32);
     const rx = rndx.random();
     for (0..count) |i| {

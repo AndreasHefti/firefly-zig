@@ -88,7 +88,7 @@ pub fn reorderRenderer(new_order: []const String) void {
 var initialized = false;
 var api_init = false;
 
-pub fn init(_: firefly.api.InitMode) !void {
+pub fn init(_: firefly.api.InitContext) !void {
     defer initialized = true;
     if (initialized)
         return;
