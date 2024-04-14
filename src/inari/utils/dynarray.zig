@@ -83,12 +83,17 @@ pub const DynIndexArray = struct {
     }
 
     fn growOne(self: *DynIndexArray) void {
-        const old_mem = self.items;
-        if (!self.allocator.resize(old_mem, self.items.len + self.grow_size)) {
-            const new_memory = self.allocator.alloc(Index, self.items.len + self.grow_size) catch unreachable;
-            @memcpy(new_memory[0..self.items.len], self.items);
-            self.allocator.free(self.items);
-            self.items = new_memory;
+        if (self.items.len == 0) {
+            self.items = self.allocator.alloc(Index, self.grow_size) catch unreachable;
+        } else {
+            if (self.allocator.resize(self.items, self.items.len + self.grow_size)) {
+                self.items.len = self.items.len + self.grow_size;
+            } else {
+                const new_memory = self.allocator.alloc(Index, self.items.len + self.grow_size) catch unreachable;
+                @memcpy(new_memory[0..self.items.len], self.items);
+                self.allocator.free(self.items);
+                self.items = new_memory;
+            }
         }
         for (self.size_pointer..self.items.len) |i| {
             self.items[i] = UNDEF_INDEX;
