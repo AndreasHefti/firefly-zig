@@ -1,6 +1,7 @@
 const std = @import("std");
 const inari = @import("../../inari.zig");
 const animation = @import("animation.zig");
+const movement = @import("movement.zig");
 const utils = inari.utils;
 const firefly = inari.firefly;
 
@@ -26,6 +27,7 @@ pub fn init(_: firefly.api.InitContext) !void {
         return;
 
     animation.init();
+    movement.init();
     // TODO
 
 }
@@ -36,5 +38,6 @@ pub fn deinit() void {
         return;
 
     animation.deinit();
+    movement.deinit();
     // TODO
 }

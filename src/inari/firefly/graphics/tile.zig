@@ -355,6 +355,7 @@ pub const TileGrid = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultTileGridRenderer = struct {
+    pub const component_register_type = TileGrid;
     var tile_grid_refs: ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
@@ -366,23 +367,12 @@ const DefaultTileGridRenderer = struct {
         tile_grid_refs = undefined;
     }
 
-    pub fn systemActivation(active: bool) void {
-        if (active) {
-            TileGrid.subscribe(notifyTileGridEvent);
-        } else {
-            TileGrid.unsubscribe(notifyTileGridEvent);
-        }
-    }
-
-    pub fn notifyTileGridEvent(e: ComponentEvent) void {
-        if (e.c_id) |id| {
-            var tile_grid = TileGrid.byId(id);
-            switch (e.event_type) {
-                ActionType.ACTIVATED => tile_grid_refs.add(tile_grid.view_id, tile_grid.layer_id, id),
-                ActionType.DEACTIVATING => tile_grid_refs.remove(tile_grid.view_id, tile_grid.layer_id, id),
-                else => {},
-            }
-        }
+    pub fn componentRegistration(id: Index, register: bool) void {
+        var tile_grid = TileGrid.byId(id);
+        if (register)
+            tile_grid_refs.add(tile_grid.view_id, tile_grid.layer_id, id)
+        else
+            tile_grid_refs.remove(tile_grid.view_id, tile_grid.layer_id, id);
     }
 
     pub fn renderView(e: ViewRenderEvent) void {

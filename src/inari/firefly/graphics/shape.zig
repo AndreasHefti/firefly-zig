@@ -87,11 +87,11 @@ pub const EShape = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultShapeRenderer = struct {
-    var entity_condition: EntityCondition = undefined;
-    var sprite_refs: ViewLayerMapping = undefined;
+    pub var entity_condition: EntityCondition = undefined;
+    var shape_refs: ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
-        sprite_refs = ViewLayerMapping.new();
+        shape_refs = ViewLayerMapping.new();
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, EShape }),
         };
@@ -99,28 +99,19 @@ const DefaultShapeRenderer = struct {
 
     pub fn systemDeinit() void {
         entity_condition = undefined;
-        sprite_refs.deinit();
-        sprite_refs = undefined;
+        shape_refs.deinit();
+        shape_refs = undefined;
     }
 
-    pub fn notifyEntityChange(e: ComponentEvent) void {
-        if (e.c_id) |id| {
-            if (!entity_condition.check(id))
-                return;
-
-            var eView = EView.byId(id);
-            var view_id = if (eView) |v| v.view_id else null;
-            var layer_id = if (eView) |v| v.layer_id else null;
-            switch (e.event_type) {
-                ActionType.ACTIVATED => sprite_refs.add(view_id, layer_id, id),
-                ActionType.DEACTIVATING => sprite_refs.remove(view_id, layer_id, id),
-                else => {},
-            }
-        }
+    pub fn entityRegistration(id: Index, register: bool) void {
+        if (register)
+            shape_refs.addWithEView(EView.byId(id), id)
+        else
+            shape_refs.removeWithEView(EView.byId(id), id);
     }
 
     pub fn renderView(e: ViewRenderEvent) void {
-        if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
+        if (shape_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the shape

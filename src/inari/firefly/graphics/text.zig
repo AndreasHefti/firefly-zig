@@ -125,7 +125,7 @@ pub const EText = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultTextRenderer = struct {
-    var entity_condition: EntityCondition = undefined;
+    pub var entity_condition: EntityCondition = undefined;
     var text_refs: ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
@@ -140,20 +140,11 @@ const DefaultTextRenderer = struct {
         text_refs = undefined;
     }
 
-    pub fn notifyEntityChange(e: ComponentEvent) void {
-        if (e.c_id) |id| {
-            if (!entity_condition.check(id))
-                return;
-
-            var eView = EView.byId(id);
-            var view_id = if (eView) |v| v.view_id else null;
-            var layer_id = if (eView) |v| v.layer_id else null;
-            switch (e.event_type) {
-                ActionType.ACTIVATED => text_refs.add(view_id, layer_id, id),
-                ActionType.DEACTIVATING => text_refs.remove(view_id, layer_id, id),
-                else => {},
-            }
-        }
+    pub fn entityRegistration(id: Index, register: bool) void {
+        if (register)
+            text_refs.addWithEView(EView.byId(id), id)
+        else
+            text_refs.removeWithEView(EView.byId(id), id);
     }
 
     pub fn renderView(e: ViewRenderEvent) void {

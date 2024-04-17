@@ -200,7 +200,7 @@ const RaylibInputAPI = struct {
             return switch (action) {
                 InputActionType.ON => rl.IsKeyDown(code),
                 InputActionType.OFF => rl.IsKeyUp(code),
-                InputActionType.PRESSED => rl.IsKeyPressed(code),
+                InputActionType.TYPED => rl.IsKeyPressed(code),
                 InputActionType.RELEASED => rl.IsKeyReleased(code),
             };
         }
@@ -212,7 +212,7 @@ const RaylibInputAPI = struct {
             return switch (action) {
                 InputActionType.ON => rl.IsGamepadButtonDown(gamepad_1_code, code),
                 InputActionType.OFF => rl.IsGamepadButtonUp(gamepad_1_code, code),
-                InputActionType.PRESSED => rl.IsGamepadButtonPressed(gamepad_1_code, code),
+                InputActionType.TYPED => rl.IsGamepadButtonPressed(gamepad_1_code, code),
                 InputActionType.RELEASED => rl.IsGamepadButtonReleased(gamepad_1_code, code),
             };
         }
@@ -224,7 +224,7 @@ const RaylibInputAPI = struct {
             return switch (action) {
                 InputActionType.ON => rl.IsGamepadButtonDown(gamepad_2_code, code),
                 InputActionType.OFF => rl.IsGamepadButtonUp(gamepad_2_code, code),
-                InputActionType.PRESSED => rl.IsGamepadButtonPressed(gamepad_2_code, code),
+                InputActionType.TYPED => rl.IsGamepadButtonPressed(gamepad_2_code, code),
                 InputActionType.RELEASED => rl.IsGamepadButtonReleased(gamepad_2_code, code),
             };
         }
@@ -236,7 +236,7 @@ const RaylibInputAPI = struct {
             return switch (action) {
                 InputActionType.ON => rl.IsMouseButtonDown(code),
                 InputActionType.OFF => rl.IsMouseButtonUp(code),
-                InputActionType.PRESSED => rl.IsMouseButtonPressed(code),
+                InputActionType.TYPED => rl.IsMouseButtonPressed(code),
                 InputActionType.RELEASED => rl.IsMouseButtonReleased(code),
             };
         }

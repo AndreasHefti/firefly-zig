@@ -5,6 +5,8 @@ const api = inari.firefly.api;
 const trait = std.meta.trait;
 
 const Component = api.Component;
+const ComponentEvent = api.ComponentEvent;
+const ActionType = api.Component.ActionType;
 const Entity = api.Entity;
 const String = utils.String;
 const Index = utils.Index;
@@ -37,7 +39,12 @@ pub fn System(comptime T: type) type {
     comptime var has_update_event_subscription: bool = false;
     comptime var has_render_event_subscription: bool = false;
     comptime var has_view_render_event_subscription: bool = false;
-    comptime var has_entity_event_subscription: bool = false;
+
+    comptime var has_entity_registration: bool = false;
+    comptime var has_entity_condition: bool = false;
+
+    comptime var has_component_registration: bool = false;
+    comptime var has_component_condition: bool = false;
 
     comptime {
         if (!trait.is(.Struct)(T))
@@ -53,7 +60,14 @@ pub fn System(comptime T: type) type {
         has_update_event_subscription = trait.hasDecls(T, .{"update"});
         has_render_event_subscription = trait.hasDecls(T, .{"render"});
         has_view_render_event_subscription = trait.hasDecls(T, .{"renderView"});
-        has_entity_event_subscription = trait.hasDecls(T, .{"notifyEntityChange"});
+
+        has_entity_registration = trait.hasDecls(T, .{"entityRegistration"});
+        has_entity_condition = trait.hasDecls(T, .{"entity_condition"});
+
+        has_component_registration = trait.hasDecls(T, .{"componentRegistration"});
+        has_component_condition = trait.hasDecls(T, .{"componentCondition"});
+        if (has_component_registration and !trait.hasDecls(T, .{"component_register_type"}))
+            @compileError("Expects have field: component_register_type: Type, that holds the type of the component to register for");
     }
 
     return struct {
@@ -97,10 +111,39 @@ pub fn System(comptime T: type) type {
                 T.systemDeinit();
         }
 
+        fn notifyComponentChange(e: ComponentEvent) void {
+            if (e.c_id) |id| {
+                if (has_component_condition and !T.componentCondition(id))
+                    return;
+
+                switch (e.event_type) {
+                    ActionType.ACTIVATED => T.componentRegistration(id, true),
+                    ActionType.DEACTIVATING => T.componentRegistration(id, false),
+                    else => {},
+                }
+            }
+        }
+
+        fn notifyEntityChange(e: ComponentEvent) void {
+            if (e.c_id) |id| {
+                if (has_entity_condition and !T.entity_condition.check(id))
+                    return;
+
+                switch (e.event_type) {
+                    ActionType.ACTIVATED => T.entityRegistration(id, true),
+                    ActionType.DEACTIVATING => T.entityRegistration(id, false),
+                    else => {},
+                }
+            }
+        }
+
         fn activation(active: bool) void {
             if (active) {
-                if (has_entity_event_subscription) {
-                    Entity.subscribe(T.notifyEntityChange);
+                if (has_entity_registration) {
+                    Entity.subscribe(notifyEntityChange);
+                }
+                if (has_component_registration) {
+                    T.component_register_type.subscribe(notifyComponentChange);
                 }
                 if (has_update_event_subscription) {
                     if (has_update_order) {
@@ -124,8 +167,11 @@ pub fn System(comptime T: type) type {
                     }
                 }
             } else {
-                if (has_entity_event_subscription) {
-                    Entity.unsubscribe(T.notifyEntityChange);
+                if (has_entity_registration) {
+                    Entity.unsubscribe(notifyEntityChange);
+                }
+                if (has_component_registration) {
+                    T.component_register_type.unsubscribe(notifyComponentChange);
                 }
                 if (has_update_event_subscription) {
                     api.unsubscribeUpdate(T.update);

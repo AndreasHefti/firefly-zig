@@ -47,23 +47,17 @@ fn init() void {
 }
 
 fn update(_: UpdateEvent) void {
-    if (firefly.api.input.checkButton(InputButtonType.UP, InputActionType.ON, null)) {
-        if (Entity.byName("TestEntity")) |entity| {
+    if (Entity.byName("TestEntity")) |entity| {
+        if (firefly.api.input.checkButtonPressed(InputButtonType.UP)) {
             ETransform.byId(entity.id).?.position[1] -= 1;
         }
-    }
-    if (firefly.api.input.checkButton(InputButtonType.DOWN, InputActionType.ON, null)) {
-        if (Entity.byName("TestEntity")) |entity| {
+        if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN)) {
             ETransform.byId(entity.id).?.position[1] += 1;
         }
-    }
-    if (firefly.api.input.checkButton(InputButtonType.LEFT, InputActionType.ON, null)) {
-        if (Entity.byName("TestEntity")) |entity| {
+        if (firefly.api.input.checkButtonPressed(InputButtonType.LEFT)) {
             ETransform.byId(entity.id).?.position[0] -= 1;
         }
-    }
-    if (firefly.api.input.checkButton(InputButtonType.RIGHT, InputActionType.ON, null)) {
-        if (Entity.byName("TestEntity")) |entity| {
+        if (firefly.api.input.checkButtonPressed(InputButtonType.RIGHT)) {
             ETransform.byId(entity.id).?.position[0] += 1;
         }
     }

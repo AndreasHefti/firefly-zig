@@ -496,7 +496,7 @@ pub const InputDevice = enum(u8) {
 pub const InputActionType = enum(u8) {
     ON,
     OFF,
-    PRESSED,
+    TYPED,
     RELEASED,
 };
 
@@ -578,6 +578,22 @@ pub const GamepadAxis = enum(CInt) {
 pub fn IInputAPI() type {
     return struct {
         const Self = @This();
+
+        pub fn checkButtonPressed(self: Self, button: InputButtonType) bool {
+            return self.checkButton(button, InputActionType.ON, null);
+        }
+
+        pub fn checkButtonOff(self: Self, button: InputButtonType) bool {
+            return self.checkButton(button, InputActionType.OFF, null);
+        }
+
+        pub fn checkButtonReleased(self: Self, button: InputButtonType) bool {
+            return self.checkButton(button, InputActionType.RELEASED, null);
+        }
+
+        pub fn checkButtonTyped(self: Self, button: InputButtonType) bool {
+            return self.checkButton(button, InputActionType.TYPED, null);
+        }
 
         // check the button type for specified action. Button type must have been mapped on one or many devices
         checkButton: *const fn (InputButtonType, InputActionType, ?InputDevice) bool = undefined,

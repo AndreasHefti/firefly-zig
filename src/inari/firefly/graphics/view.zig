@@ -88,6 +88,14 @@ pub const ViewLayerMapping = struct {
         self.undef_mapping.deinit();
     }
 
+    pub fn addWithEView(self: *ViewLayerMapping, view: ?*EView, id: Index) void {
+        if (view) |v| {
+            self.add(v.view_id, v.layer_id, id);
+        } else {
+            self.add(null, null, id);
+        }
+    }
+
     pub fn add(self: *ViewLayerMapping, view_id: ?Index, layer_id: ?Index, id: Index) void {
         getIdMapping(self, view_id, layer_id).set(id);
     }
@@ -100,6 +108,14 @@ pub const ViewLayerMapping = struct {
             return null;
         }
         return &self.undef_mapping;
+    }
+
+    pub fn removeWithEView(self: *ViewLayerMapping, view: ?*EView, id: Index) void {
+        if (view) |v| {
+            self.remove(v.view_id, v.layer_id, id);
+        } else {
+            self.remove(null, null, id);
+        }
     }
 
     pub fn remove(self: *ViewLayerMapping, view_id: ?Index, layer_id: ?Index, id: Index) void {

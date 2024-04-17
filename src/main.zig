@@ -17,10 +17,10 @@ pub fn main() !void {
     // try @import("examples/SpriteMultiply.zig").run(init_context);
     // try @import("examples/HelloViewport.zig").run(init_context);
     // try @import("examples/HelloShape.zig").run(init_context);
-    //try @import("examples/RenderSpeedRaw.zig").run(init_context);
-    //try @import("examples/EasingExample.zig").run(init_context);
-    //try @import("examples/RenderSpeed.zig").run(init_context);
-    //try @import("examples/HelloTileGrid.zig").run(init_context);
+    // try @import("examples/RenderSpeedRaw.zig").run(init_context);
+    // try @import("examples/EasingExample.zig").run(init_context);
+    // try @import("examples/RenderSpeed.zig").run(init_context);
+    // try @import("examples/HelloTileGrid.zig").run(init_context);
     try @import("examples/InputExample1.zig").run(init_context);
 }
 
