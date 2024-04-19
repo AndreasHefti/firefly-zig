@@ -21,7 +21,8 @@ pub fn main() !void {
     // try @import("examples/EasingExample.zig").run(init_context);
     // try @import("examples/RenderSpeed.zig").run(init_context);
     // try @import("examples/HelloTileGrid.zig").run(init_context);
-    try @import("examples/InputExample1.zig").run(init_context);
+    try @import("examples/HelloGravity.zig").run(init_context);
+    //try @import("examples/InputExample1.zig").run(init_context);
 }
 
 test "API Tests" {

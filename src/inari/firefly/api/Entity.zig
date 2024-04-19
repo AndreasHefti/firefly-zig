@@ -146,7 +146,7 @@ pub const EComponentAspectGroup = AspectGroup(struct {
     pub const name = "EComponent";
 });
 pub const EComponentKind = EComponentAspectGroup.Kind;
-pub const EComponentAspect = EComponentAspectGroup.Aspect;
+pub const EComponentAspect = *const EComponentAspectGroup.Aspect;
 
 pub const EComponent = struct {
     var initialized = false;
@@ -157,7 +157,7 @@ pub const EComponent = struct {
             pub const COMPONENT_TYPE_NAME = type_name;
             pub const pool = EComponentPool(T);
             // component type pool function references
-            pub var aspect: *const EComponentAspect = undefined;
+            pub var aspect: EComponentAspect = undefined;
             pub fn byId(id: Index) ?*T {
                 return pool.items.get(id);
             }

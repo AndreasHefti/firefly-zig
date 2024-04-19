@@ -52,7 +52,7 @@ pub const ComponentAspectGroup = AspectGroup(struct {
     pub const name = "Component";
 });
 pub const ComponentKind = ComponentAspectGroup.Kind;
-pub const ComponentAspect = ComponentAspectGroup.Aspect;
+pub const ComponentAspect = *const ComponentAspectGroup.Aspect;
 
 const ComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
@@ -76,7 +76,7 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
         // component type fields
         pub const COMPONENT_TYPE_NAME = context.name;
         pub const pool = ComponentPool(T);
-        pub var aspect: *const ComponentAspect = undefined;
+        pub var aspect: ComponentAspect = undefined;
 
         pub fn isInitialized() bool {
             return pool._type_init;

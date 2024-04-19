@@ -12,8 +12,8 @@ pub const UpdateScheduler = struct {
     ticks: usize = 0,
     last_update: usize = 0,
     fn update(self: *UpdateScheduler) void {
-        if (lastUpdateTime - self.last_update >= 1000 / self.resolution) {
-            self.last_update = lastUpdateTime;
+        if (last_update_time - self.last_update >= 1000 / self.resolution) {
+            self.last_update = last_update_time;
             self.ticks += 1;
             self.needs_update = true;
         } else self.needs_update = false;
@@ -21,7 +21,7 @@ pub const UpdateScheduler = struct {
 };
 
 var initialized = false;
-var lastUpdateTime: usize = undefined;
+var last_update_time: usize = undefined;
 var scheduler: ArrayList(UpdateScheduler) = undefined;
 
 pub fn init() void {
@@ -30,7 +30,7 @@ pub fn init() void {
         return;
 
     scheduler = ArrayList(UpdateScheduler).init(api.ALLOC);
-    lastUpdateTime = utils.i64_usize(std.time.milliTimestamp());
+    last_update_time = utils.i64_usize(std.time.milliTimestamp());
 }
 
 pub fn deinit() void {
@@ -42,13 +42,13 @@ pub fn deinit() void {
 }
 
 pub var time: usize = 0;
-pub var timeElapsed: usize = 0;
+pub var time_elapsed: usize = 0;
 
 pub fn tick() void {
-    var currentTime: usize = utils.i64_usize(std.time.milliTimestamp());
-    time += timeElapsed;
-    timeElapsed = currentTime - lastUpdateTime;
-    lastUpdateTime = currentTime;
+    var current_time: usize = utils.i64_usize(std.time.milliTimestamp());
+    time += time_elapsed;
+    time_elapsed = current_time - last_update_time;
+    last_update_time = current_time;
 }
 
 pub fn update() void {

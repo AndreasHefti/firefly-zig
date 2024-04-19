@@ -193,7 +193,7 @@ pub fn Animation(comptime Integration: type) type {
         }
 
         fn update(self: *Self) void {
-            self._t_normalized += 1.0 * utils.usize_f32(Timer.timeElapsed) / utils.usize_f32(self.duration);
+            self._t_normalized += 1.0 * utils.usize_f32(Timer.time_elapsed) / utils.usize_f32(self.duration);
             if (self._t_normalized >= 1.0) {
                 self._t_normalized = 0.0;
                 if (self._suspending or !self.looping) {

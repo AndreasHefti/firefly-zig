@@ -340,6 +340,11 @@ pub const ETransform = struct {
     scale: ?PosF = null,
     rotation: ?Float = null,
 
+    pub fn move(self: *ETransform, x: Float, y: Float) void {
+        self.position[0] += x;
+        self.position[1] += y;
+    }
+
     pub fn destruct(self: *ETransform) void {
         self.position = .{ 0, 0 };
         self.pivot = null;
