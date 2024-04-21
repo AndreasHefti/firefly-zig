@@ -193,7 +193,7 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
 
 fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
     return struct {
-        pub fn processActive(f: *const fn (*const T) void) void {
+        pub fn processActive(f: *const fn (*T) void) void {
             var i: Index = 0;
             while (adapter.pool.active_mapping.nextSetBit(i)) |next| {
                 f(adapter.pool.items.get(next).?);
@@ -201,7 +201,7 @@ fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
             }
         }
 
-        pub fn processBitSet(indices: *BitSet, f: *const fn (*const T) void) void {
+        pub fn processBitSet(indices: *BitSet, f: *const fn (*T) void) void {
             var i: Index = 0;
             while (indices.nextSetBit(i)) |next| {
                 f(adapter.pool.items.get(next));
@@ -209,7 +209,7 @@ fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
             }
         }
 
-        fn processIndexed(indices: []Index, f: *const fn (*const T) void) void {
+        fn processIndexed(indices: []Index, f: *const fn (*T) void) void {
             for (indices) |i| {
                 f(adapter.pool.items.get(i));
             }
@@ -304,15 +304,6 @@ pub fn ComponentPool(comptime T: type) type {
 
     // component type constraints and function references
     comptime var has_aspect: bool = false;
-    comptime var has_new: bool = false;
-    comptime var has_exists: bool = false;
-    comptime var has_existsName: bool = false;
-    comptime var has_byId: bool = false;
-    comptime var has_byName: bool = false;
-    comptime var has_activateById: bool = false;
-    comptime var has_activateByName: bool = false;
-    comptime var has_disposeById: bool = false;
-    comptime var has_disposeByName: bool = false;
     comptime var has_subscribe: bool = false;
     comptime var has_name_mapping: bool = false;
 
@@ -326,26 +317,18 @@ pub fn ComponentPool(comptime T: type) type {
     comptime var has_destruct: bool = false;
 
     comptime {
+        has_name_mapping = trait.hasField("name")(T);
+
         if (!trait.is(.Struct)(T))
             @compileError("Expects component type is a struct.");
         if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
             @compileError("Expects component type to have field: COMPONENT_TYPE_NAME: String, that defines a unique name of the component type.");
         if (!trait.hasField("id")(T))
             @compileError("Expects component type to have field: id: Index, that holds the index-id of the component");
-        if (has_name_mapping and !trait.hasField("name")(T))
-            @compileError("Expects component type to have field: name: String, that holds the name of the component");
+        // if (has_name_mapping and @TypeOf(T.name) != std.builtin.Type.Optional)
+        //     @compileError("Expects component type to have optional field: name: ?String, that holds the name of the component");
 
-        has_name_mapping = trait.hasField("name")(T);
         has_aspect = trait.hasDecls(T, .{"type_aspect"});
-        has_new = trait.hasDecls(T, .{"new"});
-        has_exists = trait.hasDecls(T, .{"exists"});
-        has_existsName = trait.hasDecls(T, .{"existsName"});
-        has_disposeById = trait.hasDecls(T, .{"disposeById"});
-        has_disposeByName = trait.hasDecls(T, .{"disposeByName"});
-        has_byId = trait.hasDecls(T, .{"byId"});
-        has_byName = has_name_mapping and trait.hasDecls(T, .{"byName"});
-        has_activateById = trait.hasDecls(T, .{"activateById"});
-        has_activateByName = has_name_mapping and trait.hasDecls(T, .{"activateByName"});
         has_subscribe = trait.hasDecls(T, .{"subscribe"});
         has_component_type_init = trait.hasDecls(T, .{"componentTypeInit"});
         has_component_type_deinit = trait.hasDecls(T, .{"componentTypeDeinit"});

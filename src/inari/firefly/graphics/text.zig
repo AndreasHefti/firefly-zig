@@ -44,7 +44,7 @@ pub fn init() !void {
 
     // init renderer
     System(DefaultTextRenderer).createSystem(
-        graphics.DefaultRenderer.TEXT,
+        inari.firefly.Engine.DefaultRenderer.TEXT,
         "Render Entities with ETransform and EText components",
         true,
     );

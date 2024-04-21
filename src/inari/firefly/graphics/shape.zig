@@ -35,7 +35,7 @@ pub fn init() !void {
     EComponent.registerEntityComponent(EShape);
     // init renderer
     System(DefaultShapeRenderer).createSystem(
-        graphics.DefaultRenderer.SHAPE,
+        inari.firefly.Engine.DefaultRenderer.SHAPE,
         "Default renderer for shape based entities",
         true,
     );

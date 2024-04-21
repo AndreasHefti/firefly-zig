@@ -50,7 +50,7 @@ pub fn init() !void {
     EComponent.registerEntityComponent(ESprite);
     // init renderer
     System(DefaultSpriteRenderer).createSystem(
-        graphics.DefaultRenderer.SPRITE,
+        inari.firefly.Engine.DefaultRenderer.SPRITE,
         "Render Entities with ETransform and ESprite components",
         true,
     );

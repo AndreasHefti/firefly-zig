@@ -238,8 +238,6 @@ pub const EComponent = struct {
 
 pub fn EComponentPool(comptime T: type) type {
 
-    // check component type constraints
-    comptime var has_byId: bool = false;
     // component function interceptors
     comptime var has_init: bool = false;
     comptime var has_deinit: bool = false;
@@ -258,10 +256,8 @@ pub fn EComponentPool(comptime T: type) type {
         if (!trait.hasField("id")(T))
             @compileError("Expects component type to have field named id");
 
-        has_byId = trait.hasDecls(T, .{"byId"});
-
-        has_init = trait.hasDecls(T, .{"ecTypeInit"});
-        has_deinit = trait.hasDecls(T, .{"ecTypeDeinit"});
+        has_init = trait.hasDecls(T, .{"typeInit"});
+        has_deinit = trait.hasDecls(T, .{"typeDeinit"});
 
         has_construct = trait.hasDecls(T, .{"construct"});
         has_destruct = trait.hasDecls(T, .{"destruct"});
@@ -291,7 +287,7 @@ pub fn EComponentPool(comptime T: type) type {
                 .to_string = toString,
             });
             if (has_init)
-                T.ecTypeInit();
+                T.typeInit();
         }
 
         pub fn deinit() void {
@@ -308,7 +304,7 @@ pub fn EComponentPool(comptime T: type) type {
             }
 
             if (has_deinit)
-                T.ecTypeDeinit();
+                T.typeDeinit();
 
             items.clear();
             items.deinit();

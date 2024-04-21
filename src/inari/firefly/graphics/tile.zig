@@ -51,7 +51,7 @@ pub fn init() !void {
     EComponent.registerEntityComponent(ETile);
     // init renderer
     System(DefaultTileGridRenderer).createSystem(
-        graphics.DefaultRenderer.TILE,
+        inari.firefly.Engine.DefaultRenderer.TILE,
         "Render Entities referenced in all active TileGrid",
         true,
     );

@@ -175,12 +175,14 @@ pub fn DynArray(comptime T: type) type {
             return .{ .i = index, .ref = get(self, index).? };
         }
 
-        pub fn remove(self: *Self, t: T) void {
+        pub fn remove(self: *Self, t: *T) void {
             var i: usize = 0;
             while (self.slots.nextSetBit(i)) |next| {
-                if (std.meta.eql(t, self.get(next).*)) {
-                    delete(self, i);
-                    return;
+                if (self.get(next)) |e| {
+                    if (std.meta.eql(t, e)) {
+                        delete(self, i);
+                        return;
+                    }
                 }
                 i = next + 1;
             }

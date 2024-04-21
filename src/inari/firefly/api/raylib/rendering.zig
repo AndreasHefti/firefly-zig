@@ -79,6 +79,7 @@ const RaylibRenderAPI = struct {
         textures = DynArray(Texture2D).new(api.ALLOC) catch unreachable;
         render_textures = DynArray(RenderTexture2D).new(api.ALLOC) catch unreachable;
         shaders = DynArray(Shader).new(api.ALLOC) catch unreachable;
+        fonts = DynArray(Font).new(api.ALLOC) catch unreachable;
 
         interface.setRenderBatch = setRenderBatch;
 
@@ -111,12 +112,38 @@ const RaylibRenderAPI = struct {
         if (!initialized)
             return;
 
+        var next = textures.slots.nextSetBit(0);
+        while (next) |i| {
+            disposeTexture(i);
+            next = textures.slots.nextSetBit(i + 1);
+        }
         textures.clear();
         textures.deinit();
+
+        next = render_textures.slots.nextSetBit(0);
+        while (next) |i| {
+            disposeRenderTexture(i);
+            next = render_textures.slots.nextSetBit(i + 1);
+        }
         render_textures.clear();
         render_textures.deinit();
+
+        next = shaders.slots.nextSetBit(0);
+        while (next) |i| {
+            disposeShader(i);
+            next = shaders.slots.nextSetBit(i + 1);
+        }
         shaders.clear();
         shaders.deinit();
+
+        next = fonts.slots.nextSetBit(0);
+        while (next) |i| {
+            disposeFont(i);
+            next = fonts.slots.nextSetBit(i + 1);
+        }
+        fonts.clear();
+        fonts.deinit();
+
         singleton = null;
     }
 

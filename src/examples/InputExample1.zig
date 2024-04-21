@@ -13,6 +13,7 @@ const Allocator = std.mem.Allocator;
 const String = utils.String;
 const Float = utils.Float;
 const UpdateEvent = firefly.api.UpdateEvent;
+const KeyboardKey = firefly.api.KeyboardKey;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -38,10 +39,10 @@ fn init() void {
         .with(ESprite{ .template_id = sprite_id })
         .activate();
 
-    firefly.api.input.setKeyButtonMapping(265, InputButtonType.UP);
-    firefly.api.input.setKeyButtonMapping(264, InputButtonType.DOWN);
-    firefly.api.input.setKeyButtonMapping(263, InputButtonType.LEFT);
-    firefly.api.input.setKeyButtonMapping(262, InputButtonType.RIGHT);
+    firefly.api.input.setKeyMapping(KeyboardKey.KEY_UP, InputButtonType.UP);
+    firefly.api.input.setKeyMapping(KeyboardKey.KEY_DOWN, InputButtonType.DOWN);
+    firefly.api.input.setKeyMapping(KeyboardKey.KEY_LEFT, InputButtonType.LEFT);
+    firefly.api.input.setKeyMapping(KeyboardKey.KEY_RIGHT, InputButtonType.RIGHT);
 
     firefly.api.subscribeUpdate(update);
 }

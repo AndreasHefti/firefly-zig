@@ -33,7 +33,11 @@ const RaylibWindowAPI = struct {
         interface.showFPS = showFPS;
         interface.toggleFullscreen = toggleFullscreen;
         interface.toggleBorderlessWindowed = toggleBorderlessWindowed;
+
+        interface.deinit = deinit;
     }
+
+    fn deinit() void {}
 
     fn openWindow(data: WindowData) void {
         if (!initialized)

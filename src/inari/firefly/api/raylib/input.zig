@@ -68,6 +68,8 @@ const RaylibInputAPI = struct {
         interface.getMousePosition = getMousePosition;
         interface.getMouseDelta = getMouseDelta;
         interface.setMouseButtonMapping = setMouseButtonMapping;
+
+        interface.deinit = deinit;
     }
 
     fn deinit() void {

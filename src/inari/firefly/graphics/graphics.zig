@@ -61,26 +61,6 @@ pub const ViewRenderEvent = firefly.api.ViewRenderEvent;
 pub const ViewRenderListener = firefly.api.ViewRenderListener;
 pub const ViewRenderer = view.ViewRenderer;
 
-pub const DefaultRenderer = struct {
-    pub const SHAPE = "DefaultShapeRenderer";
-    pub const SPRITE = "DefaultSpriteRenderer";
-    pub const TILE = "DefaultTileGridRenderer";
-    pub const TEXT = "DefaultTextRenderer";
-};
-
-pub fn activateRenderer(name: String, active: bool) void {
-    firefly.api.activateSystem(name, active);
-}
-
-pub fn reorderRenderer(new_order: []const String) void {
-    for (new_order) |renderer_name| {
-        firefly.api.activateSystem(renderer_name, false);
-    }
-    for (new_order) |renderer_name| {
-        firefly.api.activateSystem(renderer_name, true);
-    }
-}
-
 //////////////////////////////////////////////////////////////
 //// module init
 //////////////////////////////////////////////////////////////

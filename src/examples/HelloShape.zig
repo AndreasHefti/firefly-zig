@@ -18,7 +18,7 @@ const Texture = firefly.graphics.Texture;
 const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const ESprite = firefly.graphics.ESprite;
 const EMultiplier = firefly.api.EMultiplier;
-const DefaultRenderer = firefly.graphics.DefaultRenderer;
+const Engine = firefly.Engine;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -29,7 +29,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 
 fn example() void {
     // change rendering order
-    firefly.graphics.reorderRenderer(&[2]String{ DefaultRenderer.SHAPE, DefaultRenderer.SPRITE });
+    Engine.reorderRenderer(&[2]String{ Engine.DefaultRenderer.SHAPE, Engine.DefaultRenderer.SPRITE });
 
     _ = Entity.newAnd(.{ .name = "TestEntity4" })
         .with(ETransform{ .position = .{ 100, 100 } })

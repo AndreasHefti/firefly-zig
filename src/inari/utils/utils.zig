@@ -93,7 +93,8 @@ pub const StringBuffer = struct {
         };
     }
 
-    pub fn deinit(self: StringBuffer) void {
+    pub fn deinit(self: *StringBuffer) void {
+        clear(self);
         self.buffer.deinit();
     }
 

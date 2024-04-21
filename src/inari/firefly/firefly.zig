@@ -10,6 +10,7 @@ const Allocator = std.mem.Allocator;
 
 // packages
 pub const api = @import("api/api.zig");
+pub const control = @import("control/control.zig");
 pub const graphics = @import("graphics/graphics.zig");
 pub const physics = @import("physics/physics.zig");
 
@@ -40,6 +41,7 @@ pub fn init(init_c: api.InitContext) !void {
         return;
 
     try api.init(init_c);
+    try control.init(init_c);
     try graphics.init(init_c);
     try physics.init(init_c);
 }
@@ -51,5 +53,6 @@ pub fn deinit() void {
 
     physics.deinit();
     graphics.deinit();
+    control.deinit();
     api.deinit();
 }

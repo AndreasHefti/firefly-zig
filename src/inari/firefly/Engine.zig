@@ -14,9 +14,30 @@ const UpdateListener = api.UpdateListener;
 const RenderListener = api.RenderListener;
 const Timer = api.Timer;
 const View = inari.firefly.graphics.View;
+const String = utils.String;
 
 var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
+
+pub const DefaultRenderer = struct {
+    pub const SHAPE = "DefaultShapeRenderer";
+    pub const SPRITE = "DefaultSpriteRenderer";
+    pub const TILE = "DefaultTileGridRenderer";
+    pub const TEXT = "DefaultTextRenderer";
+};
+
+pub fn activateRenderer(name: String, active: bool) void {
+    api.activateSystem(name, active);
+}
+
+pub fn reorderRenderer(new_order: []const String) void {
+    for (new_order) |renderer_name| {
+        api.activateSystem(renderer_name, false);
+    }
+    for (new_order) |renderer_name| {
+        api.activateSystem(renderer_name, true);
+    }
+}
 
 pub fn start(
     w: Float,

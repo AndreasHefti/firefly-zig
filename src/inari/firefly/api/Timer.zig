@@ -12,7 +12,7 @@ pub const UpdateScheduler = struct {
     ticks: usize = 0,
     last_update: usize = 0,
     fn update(self: *UpdateScheduler) void {
-        if (last_update_time - self.last_update >= 1000 / self.resolution) {
+        if (last_update_time - self.last_update >= @as(usize, @intFromFloat(1000 / self.resolution))) {
             self.last_update = last_update_time;
             self.ticks += 1;
             self.needs_update = true;
@@ -49,12 +49,8 @@ pub fn tick() void {
     time += time_elapsed;
     time_elapsed = current_time - last_update_time;
     last_update_time = current_time;
-}
-
-pub fn update() void {
-    for (scheduler.items) |*s| {
-        s.update();
-    }
+    // update schedulers
+    for (scheduler.items) |*s| s.update();
 }
 
 pub fn getScheduler(resolution: Float) *UpdateScheduler {
@@ -66,8 +62,6 @@ pub fn getScheduler(resolution: Float) *UpdateScheduler {
     }
 
     // otherwise create new one
-    scheduler.append(UpdateScheduler{
-        .resolution = resolution,
-    });
+    scheduler.append(UpdateScheduler{ .resolution = resolution }) catch unreachable;
     return &scheduler.items[scheduler.items.len - 1];
 }
