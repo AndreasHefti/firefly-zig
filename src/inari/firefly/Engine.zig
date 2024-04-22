@@ -19,6 +19,21 @@ const String = utils.String;
 var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 
+pub const CoreSystems = struct {
+    pub const StateSystem = "StateSystem";
+    pub const EntityStateSystem = "EntityStateSystem";
+    pub const AnimationSystem = "AnimationSystem";
+    pub const MovementSystem = "MovementSystem";
+};
+
+pub fn isSystemActive(name: String) bool {
+    return api.System.isActiveByName(name);
+}
+
+pub fn activateSystem(name: String, active: bool) void {
+    api.activateSystem(name, active);
+}
+
 pub const DefaultRenderer = struct {
     pub const SHAPE = "DefaultShapeRenderer";
     pub const SPRITE = "DefaultSpriteRenderer";

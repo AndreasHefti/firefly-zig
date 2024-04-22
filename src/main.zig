@@ -13,7 +13,7 @@ pub fn main() !void {
         .run_on_low_level_api = inari.firefly.api.RUN_ON.RAYLIB,
     };
 
-    // try @import("examples/HelloFirefly.zig").run(init_context);
+    try @import("examples/HelloFirefly.zig").run(init_context);
 
     // try @import("examples/HelloSprite.zig").run(init_context);
     // try @import("examples/SpriteMultiply.zig").run(init_context);
@@ -25,7 +25,7 @@ pub fn main() !void {
     // try @import("examples/HelloTileGrid.zig").run(init_context);
     // try @import("examples/HelloGravity.zig").run(init_context);
     // try @import("examples/InputExample1.zig").run(init_context);
-    try @import("examples/StateExample.zig").run(init_context);
+    //try @import("examples/StateExample2.zig").run(init_context);
 }
 
 test "API Tests" {

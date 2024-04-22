@@ -194,6 +194,10 @@ pub fn activateSystem(name: String, active: bool) void {
     SystemComponent.activateByName(name, active);
 }
 
+pub fn isSystemActive(name: String) bool {
+    SystemComponent.isActiveByName(name);
+}
+
 const SystemComponent = struct {
     pub usingnamespace Component.Trait(SystemComponent, .{ .name = "System", .subscription = false });
     // struct fields of a System

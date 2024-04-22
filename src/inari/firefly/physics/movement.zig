@@ -32,7 +32,7 @@ pub fn init() void {
 
     EComponent.registerEntityComponent(EMovement);
     System(MovementSystem).createSystem(
-        "MovementSystem",
+        firefly.Engine.CoreSystems.MovementSystem,
         "Processes the movement for all Entities with EMovement component",
         true,
     );

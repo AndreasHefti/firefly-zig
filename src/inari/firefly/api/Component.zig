@@ -170,6 +170,14 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
         pub fn isActiveById(index: Index) bool {
             return adapter.pool.active_mapping.isSet(index);
         }
+        pub fn isActiveByName(name: String) bool {
+            if (adapter.pool.name_mapping) |*nm| {
+                if (nm.get(name)) |id| {
+                    return adapter.pool.active_mapping.isSet(id);
+                }
+            }
+            return false;
+        }
         pub fn isActive(self: T) bool {
             return adapter.pool.active_mapping.isSet(self.id);
         }

@@ -39,12 +39,12 @@ pub fn init() void {
         return;
 
     IndexFrame.init();
-    System(AnimationIntegration).createSystem(
-        "AnimationIntegration",
+    System(AnimationSystem).createSystem(
+        firefly.Engine.CoreSystems.AnimationSystem,
         "Updates all active animations",
         true,
     );
-    AnimationIntegration.registerAnimationType(EasedValueIntegration);
+    AnimationSystem.registerAnimationType(EasedValueIntegration);
     EComponent.registerEntityComponent(EAnimation);
 }
 
@@ -54,7 +54,7 @@ pub fn deinit() void {
         return;
 
     IndexFrame.deinit();
-    System(AnimationIntegration).disposeSystem();
+    System(AnimationSystem).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -296,7 +296,7 @@ pub const EAnimation = struct {
     ) *EAnimation {
         var i = integration;
         i.init(self.id);
-        self.animations.set(AnimationIntegration.animation_refs.add(Animation(@TypeOf(integration)).new(
+        self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
             animation.duration,
             animation.looping,
             animation.inverse_on_loop,
@@ -315,7 +315,7 @@ pub const EAnimation = struct {
     ) *Entity {
         var i = integration;
         i.init(self.id);
-        self.animations.set(AnimationIntegration.animation_refs.add(Animation(@TypeOf(integration)).new(
+        self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
             animation.duration,
             animation.looping,
             animation.inverse_on_loop,
@@ -331,9 +331,9 @@ pub const EAnimation = struct {
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
             if (active) {
-                AnimationIntegration.resetById(i);
+                AnimationSystem.resetById(i);
             } else {
-                AnimationIntegration.activateById(i, false);
+                AnimationSystem.activateById(i, false);
             }
             next = self.animations.nextSetBit(i + 1);
         }
@@ -342,7 +342,7 @@ pub const EAnimation = struct {
     pub fn destruct(self: *EAnimation) void {
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
-            AnimationIntegration.disposeAnimation(i);
+            AnimationSystem.disposeAnimation(i);
             next = self.animations.nextSetBit(i + 1);
         }
 
@@ -355,7 +355,7 @@ pub const EAnimation = struct {
 //// Animation Integration System
 //////////////////////////////////////////////////////////////
 
-pub const AnimationIntegration = struct {
+pub const AnimationSystem = struct {
     const sys_name = "AnimationSystem ";
 
     var animation_type_refs: DynArray(AnimationTypeReference) = undefined;

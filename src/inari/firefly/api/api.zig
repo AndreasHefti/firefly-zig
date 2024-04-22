@@ -78,6 +78,10 @@ pub fn activateSystem(name: String, active: bool) void {
     system.activateSystem(name, active);
 }
 
+pub fn isSystemActive(name: String) bool {
+    return system.isSystemActive(name);
+}
+
 //////////////////////////////////////////////////////////////
 //// Initialization
 //////////////////////////////////////////////////////////////

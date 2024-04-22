@@ -12,6 +12,7 @@ const Float = utils.Float;
 
 pub const State = state.State;
 pub const StateEngine = state.StateEngine;
+pub const EntityStateEngine = state.EntityStateEngine;
 pub const EState = state.EState;
 
 //////////////////////////////////////////////////////////////

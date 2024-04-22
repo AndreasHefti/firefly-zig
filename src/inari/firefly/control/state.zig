@@ -29,13 +29,16 @@ pub fn init() void {
         return;
 
     Component.registerComponent(StateEngine);
-    System(StateEngineSystem).createSystem(
-        "StateEngineSystem",
+    Component.registerComponent(EntityStateEngine);
+    EComponent.registerEntityComponent(EState);
+
+    System(StateSystem).createSystem(
+        firefly.Engine.CoreSystems.StateSystem,
         "Updates all active StateEngine components, and change state on conditions",
         false,
     );
-    System(StateEntitySystem).createSystem(
-        "StateEntitySystem",
+    System(EntityStateSystem).createSystem(
+        firefly.Engine.CoreSystems.EntityStateSystem,
         "Updates all active Entities with EState components, and change state on conditions",
         false,
     );
@@ -46,8 +49,8 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    System(StateEngineSystem).disposeSystem();
-    System(StateEntitySystem).disposeSystem();
+    System(StateSystem).disposeSystem();
+    System(EntityStateSystem).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -55,10 +58,11 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const State = struct {
-    name: String,
-    condition: ?*const fn (cid: Index, current: ?*State) bool = null,
-    init: ?*const fn (cid: Index) void = null,
-    dispose: ?*const fn (cid: Index) void = null,
+    id: Index = UNDEF_INDEX,
+    name: ?String,
+    condition: ?*const fn (Index, current: ?*State) bool = null,
+    init: ?*const fn (Index) void = null,
+    dispose: ?*const fn (Index) void = null,
 
     pub fn equals(self: *State, other: ?*State) bool {
         if (other) |s| {
@@ -122,61 +126,51 @@ pub const StateEngine = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// EState Entity Component
+//// EntityStateEngine
 //////////////////////////////////////////////////////////////
+
+pub const EntityStateEngine = struct {
+    pub usingnamespace Component.Trait(EntityStateEngine, .{ .name = "EntityStateEngine" });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String,
+    states: DynArray(State) = undefined,
+
+    pub fn construct(self: *EntityStateEngine) void {
+        self.states = DynArray(State).newWithRegisterSize(api.ALLOC, 10) catch unreachable;
+    }
+
+    pub fn destruct(self: *EntityStateEngine) void {
+        self.states.deinit();
+    }
+
+    pub fn withState(self: *EntityStateEngine, state: State) *EntityStateEngine {
+        _ = self.states.add(state);
+        return self;
+    }
+
+    fn setNewState(entity: *EState, target: *State) void {
+        if (entity.current_state) |cs|
+            if (cs.dispose) |df| df(entity.id);
+
+        if (target.init) |in| in(entity.id);
+        entity.current_state = target;
+    }
+};
 
 pub const EState = struct {
     pub usingnamespace EComponent.Trait(@This(), "EState");
 
     id: Index = UNDEF_INDEX,
-    states: DynArray(State) = undefined,
+    state_engine: *EntityStateEngine,
     current_state: ?*State = null,
-
-    pub fn construct(self: *EState) void {
-        self.states = DynArray(State).newWithRegisterSize(api.ALLOC, 10) catch unreachable;
-    }
-
-    pub fn destruct(self: *EState) void {
-        self.states.deinit();
-    }
-
-    pub fn withState(self: *EState, state: State) *EState {
-        var s = self.states.addAndGet(state);
-        if (state.condition) |condition| {
-            if (condition(self.id, self.current_state))
-                setNewState(self, s.ref);
-        }
-        return self;
-    }
-
-    pub fn setState(self: *EState, name: String) void {
-        var next_state: ?*State = null;
-        var next = self.states.slots.nextSetBit(0);
-        while (next) |i| {
-            next_state = self.states.get(i).?;
-            if (next_state.hasName(name))
-                break;
-            next_state = null;
-            next = self.states.slots.nextSetBit(i + 1);
-        }
-
-        if (next_state) |ns| setNewState(ns);
-    }
-
-    fn setNewState(self: *EState, target: *State) void {
-        if (self.current_state) |cs| {
-            if (cs.dispose) |df| df(self.id);
-            if (target.init) |in| in(self.id);
-            self.current_state = target;
-        }
-    }
 };
 
 //////////////////////////////////////////////////////////////
 //// State Systems
 //////////////////////////////////////////////////////////////
 
-const StateEngineSystem = struct {
+const StateSystem = struct {
     pub fn update(_: UpdateEvent) void {
         StateEngine.processActive(processEngine);
     }
@@ -200,7 +194,7 @@ const StateEngineSystem = struct {
     }
 };
 
-const StateEntitySystem = struct {
+const EntityStateSystem = struct {
     pub var entity_condition: EntityCondition = undefined;
     var entities: BitSet = undefined;
 
@@ -230,17 +224,24 @@ const StateEntitySystem = struct {
     }
 
     inline fn processEntity(entity: *EState) void {
-        var next = entity.states.slots.nextSetBit(0);
+        var next = entity.state_engine.states.slots.nextSetBit(0);
         while (next) |i| {
-            if (entity.states.get(i)) |state| {
+            if (entity.state_engine.states.get(i)) |state| {
+                if (entity.current_state) |cs| {
+                    if (state == cs) {
+                        next = entity.state_engine.states.slots.nextSetBit(i + 1);
+                        continue;
+                    }
+                }
+
                 if (state.condition) |condition| {
                     if (condition(entity.id, entity.current_state)) {
-                        entity.setNewState(state);
+                        EntityStateEngine.setNewState(entity, state);
                         return;
                     }
                 }
             }
-            next = entity.states.slots.nextSetBit(i + 1);
+            next = entity.state_engine.states.slots.nextSetBit(i + 1);
         }
     }
 };

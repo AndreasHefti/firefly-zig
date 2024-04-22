@@ -127,6 +127,8 @@ pub const BitSet = struct {
     /// Returns true if the bit at the specified index
     /// is present in the set, false otherwise.
     pub fn isSet(self: Self, index: usize) bool {
+        if (index >= self.unmanaged.bit_length)
+            return false;
         return self.unmanaged.isSet(index);
     }
 
