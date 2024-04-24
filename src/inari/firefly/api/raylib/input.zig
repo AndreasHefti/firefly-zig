@@ -91,6 +91,8 @@ const RaylibInputAPI = struct {
         gamepad_1_code_mapping = undefined;
         gamepad_2_code_mapping = undefined;
         mouse_code_mapping = undefined;
+
+        singleton = null;
     }
 
     // check the button type for specified action. Button type must have been mapped on one or many devices

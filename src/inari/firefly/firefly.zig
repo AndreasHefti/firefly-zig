@@ -24,7 +24,7 @@ pub fn initTesting() !void {
     if (initialized)
         return;
 
-    try init(std.testing.allocator, std.testing.allocator, std.testing.allocator, api.InitMode.TESTING);
+    try init(std.testing.allocator);
 }
 
 pub fn initDebug(allocator: Allocator) !void {

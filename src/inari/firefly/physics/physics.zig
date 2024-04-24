@@ -3,6 +3,7 @@ const inari = @import("../../inari.zig");
 const animation = @import("animation.zig");
 const movement = @import("movement.zig");
 const audio = @import("audio.zig");
+const contact = @import("contact.zig");
 const utils = inari.utils;
 const firefly = inari.firefly;
 const Float = utils.Float;
@@ -17,7 +18,7 @@ pub const EasedValueIntegration = animation.EasedValueIntegration;
 pub const IAnimation = animation.IAnimation;
 pub const Animation = animation.Animation;
 pub const EAnimation = animation.EAnimation;
-pub const AnimationIntegration = animation.AnimationIntegration;
+pub const AnimationSystem = animation.AnimationSystem;
 
 pub const EMovement = movement.EMovement;
 pub const SimpleStepIntegrator = movement.SimpleStepIntegrator;
@@ -42,6 +43,7 @@ pub fn init(_: firefly.api.InitContext) !void {
     animation.init();
     movement.init();
     audio.init();
+    contact.init();
     // TODO
 
 }
@@ -54,5 +56,6 @@ pub fn deinit() void {
     animation.deinit();
     movement.deinit();
     audio.deinit();
+    contact.deinit();
     // TODO
 }

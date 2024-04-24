@@ -438,14 +438,14 @@ test "vec math" {
 
 // BitMask tests
 test "Init BitMask" {
-    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    var mask = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 10, 10 });
     defer mask.deinit();
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
     sb.print("{any}", .{mask});
     const expected =
-        \\BitMask[10|10]
+        \\BitMask[{ 0, 0, 10, 10 }]
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
@@ -463,7 +463,7 @@ test "Init BitMask" {
 }
 
 test "BitMask setBitsRegionFrom" {
-    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    var mask = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 10, 10 });
     defer mask.deinit();
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
@@ -473,7 +473,7 @@ test "BitMask setBitsRegionFrom" {
 
     sb.print("{any}", .{mask});
     var expected =
-        \\BitMask[10|10]
+        \\BitMask[{ 0, 0, 10, 10 }]
         \\  1,1,1,0,0,0,0,0,0,0,
         \\  1,0,1,0,0,0,0,0,0,0,
         \\  1,1,1,0,0,0,0,0,0,0,
@@ -494,7 +494,7 @@ test "BitMask setBitsRegionFrom" {
 
     sb.print("{any}", .{mask});
     expected =
-        \\BitMask[10|10]
+        \\BitMask[{ 0, 0, 10, 10 }]
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
@@ -515,7 +515,7 @@ test "BitMask setBitsRegionFrom" {
 
     sb.print("{any}", .{mask});
     expected =
-        \\BitMask[10|10]
+        \\BitMask[{ 0, 0, 10, 10 }]
         \\  0,1,0,0,0,0,0,0,0,0,
         \\  1,1,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
@@ -536,7 +536,7 @@ test "BitMask setBitsRegionFrom" {
 
     sb.print("{any}", .{mask});
     expected =
-        \\BitMask[10|10]
+        \\BitMask[{ 0, 0, 10, 10 }]
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
@@ -553,58 +553,62 @@ test "BitMask setBitsRegionFrom" {
 }
 
 test "BitMask set region and create intersection mask" {
-    var mask1 = utils.BitMask.new(std.testing.allocator, 5, 5);
+    var mask1 = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 5, 5 });
     defer mask1.deinit();
-    var mask2 = utils.BitMask.new(std.testing.allocator, 5, 5);
+    var mask2 = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 5, 5 });
     defer mask2.deinit();
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    mask1.setRegion(.{ 0, 0, 5, 1 }, true);
-    mask1.setRegion(.{ 0, 0, 1, 5 }, true);
-    mask1.setRegion(.{ 4, 0, 1, 5 }, true);
-    mask1.setRegion(.{ 0, 4, 5, 1 }, true);
+    mask1.setRegionRel(.{ 0, 0, 5, 1 }, true);
+    mask1.setRegionRel(.{ 0, 0, 1, 5 }, true);
+    mask1.setRegionRel(.{ 4, 0, 1, 5 }, true);
+    mask1.setRegionRel(.{ 0, 4, 5, 1 }, true);
 
-    mask2.setRegion(.{ 0, 0, 5, 1 }, true);
-    mask2.setRegion(.{ 0, 0, 1, 5 }, true);
-    mask2.setRegion(.{ 4, 0, 1, 5 }, true);
-    mask2.setRegion(.{ 0, 4, 5, 1 }, true);
+    mask2.setRegionRel(.{ 0, 0, 5, 1 }, true);
+    mask2.setRegionRel(.{ 0, 0, 1, 5 }, true);
+    mask2.setRegionRel(.{ 4, 0, 1, 5 }, true);
+    mask2.setRegionRel(.{ 0, 4, 5, 1 }, true);
 
     sb.print("{any}", .{mask1});
     sb.print("{any}", .{mask2});
 
-    var mask3 = mask1.createIntersectionMask(mask2, 2, 2, utils.bitOpAND);
+    // Set offset on mask2
+    mask2.region[0] = 2;
+    mask2.region[1] = 2;
+
+    var mask3 = mask1.createIntersectionMask(mask2, utils.bitOpAND);
     defer mask3.deinit();
     sb.print("{any}", .{mask3});
-    var mask4 = mask1.createIntersectionMask(mask2, 2, 2, utils.bitOpOR);
+    var mask4 = mask1.createIntersectionMask(mask2, utils.bitOpOR);
     defer mask4.deinit();
     sb.print("{any}", .{mask4});
-    var mask5 = mask1.createIntersectionMask(mask2, 2, 2, utils.bitOpXOR);
+    var mask5 = mask1.createIntersectionMask(mask2, utils.bitOpXOR);
     defer mask5.deinit();
     sb.print("{any}", .{mask5});
 
     var expected =
-        \\BitMask[5|5]
+        \\BitMask[{ 0, 0, 5, 5 }]
         \\  1,1,1,1,1,
         \\  1,0,0,0,1,
         \\  1,0,0,0,1,
         \\  1,0,0,0,1,
         \\  1,1,1,1,1,
-        \\BitMask[5|5]
+        \\BitMask[{ 0, 0, 5, 5 }]
         \\  1,1,1,1,1,
         \\  1,0,0,0,1,
         \\  1,0,0,0,1,
         \\  1,0,0,0,1,
         \\  1,1,1,1,1,
-        \\BitMask[3|3]
+        \\BitMask[{ 2, 2, 3, 3 }]
         \\  0,0,1,
         \\  0,0,0,
         \\  1,0,0,
-        \\BitMask[3|3]
+        \\BitMask[{ 2, 2, 3, 3 }]
         \\  1,1,1,
         \\  1,0,1,
         \\  1,1,1,
-        \\BitMask[3|3]
+        \\BitMask[{ 2, 2, 3, 3 }]
         \\  1,1,0,
         \\  1,0,1,
         \\  0,1,1,
@@ -615,7 +619,7 @@ test "BitMask set region and create intersection mask" {
 }
 
 test "BitMask clip" {
-    var mask1 = utils.BitMask.new(std.testing.allocator, 10, 10);
+    var mask1 = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 10, 10 });
     defer mask1.deinit();
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
@@ -637,7 +641,7 @@ test "BitMask clip" {
     sb.print("{any}", .{mask3});
 
     var expected =
-        \\BitMask[10|10]
+        \\BitMask[{ 0, 0, 10, 10 }]
         \\  0,1,0,1,0,1,0,1,0,1,
         \\  0,1,0,1,0,1,0,1,0,1,
         \\  0,1,0,1,0,1,0,1,0,1,
@@ -648,13 +652,13 @@ test "BitMask clip" {
         \\  0,1,0,1,0,1,0,1,0,1,
         \\  0,1,0,1,0,1,0,1,0,1,
         \\  0,1,0,1,0,1,0,1,0,1,
-        \\BitMask[5|5]
+        \\BitMask[{ 0, 0, 5, 5 }]
         \\  0,1,0,1,0,
         \\  0,1,0,1,0,
         \\  0,1,0,1,0,
         \\  0,1,0,1,0,
         \\  0,1,0,1,0,
-        \\BitMask[5|5]
+        \\BitMask[{ 5, 5, 5, 5 }]
         \\  1,0,1,0,1,
         \\  1,0,1,0,1,
         \\  1,0,1,0,1,

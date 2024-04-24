@@ -4,8 +4,12 @@
 
     .dependencies = .{
         .raylib = .{
+            // Zig 11
             .url = "https://github.com/raysan5/raylib/archive/e52ae870f297961b9ac23d2e6eca4937a24ac6c0.tar.gz",
             .hash = "1220b9dc848ba1359453ce8a68fa844bcbc2cacda462b47498f12d3fd932c63390ee",
+            // Zig 12
+            // .url = "https://github.com/raysan5/raylib/archive/f15455552da353dfb7055b6fa020ba73d71de88e.tar.gz",
+            // .hash = "1220f4c20b801db653e9938cca7e39273f1894e68192f555e648296112358cef9046",
         },
     },
     .paths = .{
