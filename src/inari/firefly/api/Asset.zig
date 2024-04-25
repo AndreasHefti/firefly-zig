@@ -2,7 +2,6 @@ const std = @import("std");
 const inari = @import("../../inari.zig");
 const utils = inari.utils;
 const api = inari.firefly.api;
-const trait = std.meta.trait;
 
 const DynArray = utils.DynArray;
 const Component = api.Component;
@@ -34,7 +33,7 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
         }
 
         pub fn newAnd(data: T) *Asset(T) {
-            var asset = Asset(T).newAnd(.{
+            const asset = Asset(T).newAnd(.{
                 .name = data.name,
                 .resource_id = Asset(T).resources.add(data),
             });
@@ -84,23 +83,20 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
 }
 
 pub fn Asset(comptime T: type) type {
-    comptime var has_init = false;
-    comptime var has_deinit = false;
+    const has_init = @hasDecl(T, "assetTypeInit");
+    const has_deinit = @hasDecl(T, "assetTypeDeinit");
 
     comptime {
-        if (!trait.is(.Struct)(T))
+        if (@typeInfo(T) != .Struct)
             @compileError("Expects asset type is a struct.");
-        if (!trait.hasDecls(T, .{"ASSET_TYPE_NAME"}))
+        if (!@hasDecl(T, "ASSET_TYPE_NAME"))
             @compileError("Expects asset type to have field ASSET_TYPE_NAME: String that defines a unique name of the asset type.");
-        if (!trait.hasDecls(T, .{"aspect"}))
+        if (!@hasDecl(T, "aspect"))
             @compileError("Expects asset type to have field aspect: *const ASPECT_GROUP_TYPE.Aspect, that defines the asset type aspect");
-        if (!trait.hasDecls(T, .{"doLoad"}))
+        if (!@hasDecl(T, "doLoad"))
             @compileError("Expects asset type to have fn doLoad(asset: *Asset(T)) void, that loads the asset");
-        if (!trait.hasDecls(T, .{"doUnload"}))
+        if (!@hasDecl(T, "doUnload"))
             @compileError("Expects asset type to have fn doUnload(asset: *Asset(T)) void, that unloads the asset");
-
-        has_init = trait.hasDecls(T, .{"assetTypeInit"});
-        has_deinit = trait.hasDecls(T, .{"assetTypeDeinit"});
     }
 
     return struct {

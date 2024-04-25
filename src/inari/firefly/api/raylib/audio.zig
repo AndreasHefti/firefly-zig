@@ -107,7 +107,7 @@ const RaylibAudioAPI = struct {
     }
 
     fn loadSound(file: String, channels: usize) SoundBinding {
-        var sound = rl.LoadSound(@ptrCast(file));
+        const sound = rl.LoadSound(@ptrCast(file));
         var sound_binding = SoundBinding{ .id = sounds.add(sound) };
         if (channels > 0) sound_binding.channel_1 = sounds.add(rl.LoadSoundAlias(sound));
         if (channels > 1) sound_binding.channel_2 = sounds.add(rl.LoadSoundAlias(sound));
@@ -205,7 +205,7 @@ const RaylibAudioAPI = struct {
     }
 
     fn loadMusic(file: String) BindingId {
-        var m = rl.LoadMusicStream(@ptrCast(file));
+        const m = rl.LoadMusicStream(@ptrCast(file));
         return music.add(m);
     }
 

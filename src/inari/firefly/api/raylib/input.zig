@@ -149,7 +149,7 @@ const RaylibInputAPI = struct {
     // Get gamepad internal name id
     fn getGamepadName(device: InputDevice) String {
         const name: [*c]const u8 = rl.GetGamepadName(@intFromEnum(device));
-        var _name: String = std.mem.sliceTo(name, 0);
+        const _name: String = std.mem.sliceTo(name, 0);
         return _name;
     }
     fn getGamepadAxisMovement(device: InputDevice, axis: GamepadAxis) Float {
@@ -199,7 +199,7 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkKeyboard(button: InputButtonType, action: InputActionType) bool {
-        var code: CInt = @intCast(keyboard_code_mapping.get(@intFromEnum(button)));
+        const code: CInt = @intCast(keyboard_code_mapping.get(@intFromEnum(button)));
         if (code != UNDEF_INDEX) {
             return switch (action) {
                 InputActionType.ON => rl.IsKeyDown(code),
@@ -211,7 +211,7 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkPad1(button: InputButtonType, action: InputActionType) bool {
-        var code: CInt = @intCast(gamepad_1_code_mapping.get(@intFromEnum(button)));
+        const code: CInt = @intCast(gamepad_1_code_mapping.get(@intFromEnum(button)));
         if (code != UNDEF_INDEX) {
             return switch (action) {
                 InputActionType.ON => rl.IsGamepadButtonDown(gamepad_1_code, code),
@@ -223,7 +223,7 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkPad2(button: InputButtonType, action: InputActionType) bool {
-        var code: CInt = @intCast(gamepad_2_code_mapping.get(@intFromEnum(button)));
+        const code: CInt = @intCast(gamepad_2_code_mapping.get(@intFromEnum(button)));
         if (code != UNDEF_INDEX) {
             return switch (action) {
                 InputActionType.ON => rl.IsGamepadButtonDown(gamepad_2_code, code),
@@ -235,7 +235,7 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkMouse(button: InputButtonType, action: InputActionType) bool {
-        var code: CInt = @intCast(mouse_code_mapping.get(@intFromEnum(button)));
+        const code: CInt = @intCast(mouse_code_mapping.get(@intFromEnum(button)));
         if (code != UNDEF_INDEX) {
             return switch (action) {
                 InputActionType.ON => rl.IsMouseButtonDown(code),

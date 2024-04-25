@@ -143,7 +143,7 @@ pub fn Animation(comptime Integration: type) type {
             finish_callback: ?*const fn () void,
             integration: Integration,
         ) IAnimation {
-            var _new = Self{
+            const _new = Self{
                 .duration = duration,
                 .looping = looping,
                 .inverse_on_loop = inverse_on_loop,
@@ -152,9 +152,9 @@ pub fn Animation(comptime Integration: type) type {
                 .finish_callback = finish_callback,
                 .integration = integration,
             };
-            var index = animations.add(_new);
+            const index = animations.add(_new);
 
-            var self = animations.get(index).?;
+            const self = animations.get(index).?;
             return IAnimation{
                 .id = index,
                 .animation = self,
@@ -505,7 +505,7 @@ pub const IndexFrame = struct {
         var result = IndexFrameList.new();
 
         for (sprite_set.sprites_indices.items) |spi| {
-            var index = frames.add(IndexFrame{
+            const index = frames.add(IndexFrame{
                 .index = sprite_set.byListIndex(spi).texture_binding,
                 .duration = duration,
             });
@@ -521,7 +521,7 @@ pub const IndexFrame = struct {
         var result = IndexFrameList.new();
         var i: usize = 0;
         while (i < data.len) {
-            var index = frames.add(IndexFrame{
+            const index = frames.add(IndexFrame{
                 .index = data[i],
                 .duration = data[i + 1],
             });
@@ -567,8 +567,8 @@ pub const IndexFrameList = struct {
     }
 
     pub fn getIndexAt(self: *IndexFrameList, t_normalized: Float, invert: bool) Index {
-        var d: usize = self.duration();
-        var t: usize = utils.f32_usize(t_normalized * utils.usize_f32(d));
+        const d: usize = self.duration();
+        const t: usize = utils.f32_usize(t_normalized * utils.usize_f32(d));
 
         if (invert) {
             var _t: usize = d;
@@ -597,7 +597,7 @@ pub const IndexFrameList = struct {
     }
 
     pub fn next(self: *IndexFrameList) ?*IndexFrame {
-        var _next = self.indices.nextSetBit(self._state_pointer + 1);
+        const _next = self.indices.nextSetBit(self._state_pointer + 1);
         if (_next) |n| {
             self._state_pointer = n;
             return IndexFrame.frames.get(n);
@@ -606,7 +606,7 @@ pub const IndexFrameList = struct {
     }
 
     pub fn prev(self: *IndexFrameList) ?*IndexFrame {
-        var _next = self.indices.prevSetBit(self._state_pointer - 1);
+        const _next = self.indices.prevSetBit(self._state_pointer - 1);
         if (_next) |n| {
             self._state_pointer = n;
             return IndexFrame.frames.get(n);
@@ -659,7 +659,7 @@ pub const BezierCurveIntegrator = struct {
     }
 
     pub fn integrate(a: *Animation(BezierCurveIntegrator)) void {
-        var pos = a.integration.bezier_function.fp(a.easing(a._t_normalized), a._inverted);
+        const pos = a.integration.bezier_function.fp(a.easing(a._t_normalized), a._inverted);
         a.integration._property_x = pos[0];
         a.integration._property_y = pos[1];
         a.integration._property_a = std.math.radiansToDegrees(

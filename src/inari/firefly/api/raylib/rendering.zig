@@ -262,11 +262,11 @@ const RaylibRenderAPI = struct {
     }
 
     fn createRenderTexture(projection: *Projection) RenderTextureBinding {
-        var tex = rl.LoadRenderTexture(
+        const tex = rl.LoadRenderTexture(
             @intFromFloat(projection.plain[2]),
             @intFromFloat(projection.plain[3]),
         );
-        var id = render_textures.add(tex);
+        const id = render_textures.add(tex);
         return RenderTextureBinding{
             .id = id,
             .width = @intFromFloat(projection.plain[2]),
@@ -424,12 +424,12 @@ const RaylibRenderAPI = struct {
 
             // scaling
             if (scale) |s| {
-                temp_dest_rect.width = @fabs(texture_bounds[2]) * s[0];
-                temp_dest_rect.height = @fabs(texture_bounds[3]) * s[1];
+                temp_dest_rect.width = @abs(texture_bounds[2]) * s[0];
+                temp_dest_rect.height = @abs(texture_bounds[3]) * s[1];
                 temp_pivot = @bitCast((pivot orelse default_pivot) * s);
             } else {
-                temp_dest_rect.width = @fabs(texture_bounds[2]);
-                temp_dest_rect.height = @fabs(texture_bounds[3]);
+                temp_dest_rect.width = @abs(texture_bounds[2]);
+                temp_dest_rect.height = @abs(texture_bounds[3]);
                 temp_pivot = @bitCast(pivot orelse default_pivot);
             }
 
@@ -584,7 +584,7 @@ const RaylibRenderAPI = struct {
 
     fn setShaderValue(shader_id: BindingId, name: String, val: anytype, v_type: CInt) bool {
         if (shaders.get(shader_id)) |shader| {
-            var location = rl.GetShaderLocation(shader.*, @ptrCast(name));
+            const location = rl.GetShaderLocation(shader.*, @ptrCast(name));
             if (location < 0)
                 return false;
 

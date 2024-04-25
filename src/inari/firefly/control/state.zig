@@ -94,7 +94,7 @@ pub const StateEngine = struct {
     }
 
     pub fn withState(self: *StateEngine, state: State) *StateEngine {
-        var s = self.states.addAndGet(state);
+        const s = self.states.addAndGet(state);
         if (state.condition) |condition| {
             if (condition(self.id, self.current_state))
                 setNewState(self, s.ref);

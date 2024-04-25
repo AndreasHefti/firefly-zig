@@ -45,7 +45,7 @@ pub var time: usize = 0;
 pub var time_elapsed: usize = 0;
 
 pub fn tick() void {
-    var current_time: usize = utils.i64_usize(std.time.milliTimestamp());
+    const current_time: usize = utils.i64_usize(std.time.milliTimestamp());
     time += time_elapsed;
     time_elapsed = current_time - last_update_time;
     last_update_time = current_time;

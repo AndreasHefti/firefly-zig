@@ -125,7 +125,7 @@ pub const ViewLayerMapping = struct {
     fn getIdMapping(self: *ViewLayerMapping, view_id: ?Index, layer_id: ?Index) *BitSet {
         if (view_id) |vid| {
             var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, vid);
-            var l_id = layer_id orelse 0;
+            const l_id = layer_id orelse 0;
             if (!layer_mapping.exists(l_id)) {
                 return layer_mapping.set(BitSet.new(api.ALLOC) catch unreachable, l_id);
             }
@@ -424,7 +424,7 @@ pub const ViewRenderer = struct {
             api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
             while (next) |id| {
-                var view: *View = View.byId(id);
+                const view: *View = View.byId(id);
                 if (view.render_texture_binding) |b| {
                     api.rendering.renderTexture(
                         b.id,
@@ -455,7 +455,7 @@ pub const ViewRenderer = struct {
             if (view.ordered_active_layer != null) {
                 var it = view.ordered_active_layer.?.slots.nextSetBit(0);
                 while (it) |layer_id| {
-                    var layer: *const Layer = Layer.byId(layer_id);
+                    const layer: *const Layer = Layer.byId(layer_id);
                     // apply layer shader to render engine if set
                     if (layer.shader_binding) |sb|
                         api.rendering.setActiveShader(sb);

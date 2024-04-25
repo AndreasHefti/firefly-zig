@@ -29,7 +29,7 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    var sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });

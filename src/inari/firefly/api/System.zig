@@ -2,7 +2,6 @@ const std = @import("std");
 const inari = @import("../../inari.zig");
 const utils = inari.utils;
 const api = inari.firefly.api;
-const trait = std.meta.trait;
 
 const Component = api.Component;
 const ComponentEvent = api.ComponentEvent;
@@ -28,45 +27,28 @@ pub fn deinit() void {
 }
 
 pub fn System(comptime T: type) type {
-    comptime var has_init: bool = false;
-    comptime var has_activation: bool = false;
-    comptime var has_deinit: bool = false;
+    const has_init: bool = @hasDecl(T, "systemInit");
+    const has_activation: bool = @hasDecl(T, "systemActivation");
+    const has_deinit: bool = @hasDecl(T, "systemDeinit");
 
-    comptime var has_render_order: bool = false;
-    comptime var has_view_render_order: bool = false;
-    comptime var has_update_order: bool = false;
+    const has_render_order: bool = @hasDecl(T, "render_order");
+    const has_view_render_order: bool = @hasDecl(T, "view_render_order");
+    const has_update_order: bool = @hasDecl(T, "update_order");
 
-    comptime var has_update_event_subscription: bool = false;
-    comptime var has_render_event_subscription: bool = false;
-    comptime var has_view_render_event_subscription: bool = false;
+    const has_update_event_subscription: bool = @hasDecl(T, "update");
+    const has_render_event_subscription: bool = @hasDecl(T, "render");
+    const has_view_render_event_subscription: bool = @hasDecl(T, "renderView");
 
-    comptime var has_entity_registration: bool = false;
-    comptime var has_entity_condition: bool = false;
+    const has_entity_registration: bool = @hasDecl(T, "entityRegistration");
+    const has_entity_condition: bool = @hasDecl(T, "entity_condition");
 
-    comptime var has_component_registration: bool = false;
-    comptime var has_component_condition: bool = false;
+    const has_component_registration: bool = @hasDecl(T, "componentRegistration");
+    const has_component_condition: bool = @hasDecl(T, "componentCondition");
 
     comptime {
-        if (!trait.is(.Struct)(T))
+        if (@typeInfo(T) != .Struct)
             @compileError("Expects component type is a struct.");
-
-        has_init = trait.hasDecls(T, .{"systemInit"});
-        has_activation = trait.hasDecls(T, .{"systemActivation"});
-        has_deinit = trait.hasDecls(T, .{"systemDeinit"});
-        has_render_order = trait.hasDecls(T, .{"render_order"});
-        has_view_render_order = trait.hasDecls(T, .{"view_render_order"});
-        has_update_order = trait.hasDecls(T, .{"update_order"});
-
-        has_update_event_subscription = trait.hasDecls(T, .{"update"});
-        has_render_event_subscription = trait.hasDecls(T, .{"render"});
-        has_view_render_event_subscription = trait.hasDecls(T, .{"renderView"});
-
-        has_entity_registration = trait.hasDecls(T, .{"entityRegistration"});
-        has_entity_condition = trait.hasDecls(T, .{"entity_condition"});
-
-        has_component_registration = trait.hasDecls(T, .{"componentRegistration"});
-        has_component_condition = trait.hasDecls(T, .{"componentCondition"});
-        if (has_component_registration and !trait.hasDecls(T, .{"component_register_type"}))
+        if (has_component_registration and !@hasDecl(T, "component_register_type"))
             @compileError("Expects have field: component_register_type: Type, that holds the type of the component to register for");
     }
 

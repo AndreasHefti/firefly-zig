@@ -20,7 +20,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn loadWithView() void {
-    var viewId = View.new(.{
+    const viewId = View.new(.{
         .name = "TestView",
         .order = 1,
 
@@ -46,7 +46,7 @@ fn loadWithView() void {
     });
     View.activateById(viewId, true);
 
-    var sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
         .flip_x = true,

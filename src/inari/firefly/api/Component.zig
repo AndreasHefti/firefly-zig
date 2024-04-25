@@ -2,7 +2,6 @@ const std = @import("std");
 const inari = @import("../../inari.zig");
 const utils = inari.utils;
 const api = inari.firefly.api;
-const trait = std.meta.trait;
 
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
@@ -311,38 +310,32 @@ pub const ComponentEvent = struct {
 pub fn ComponentPool(comptime T: type) type {
 
     // component type constraints and function references
-    comptime var has_aspect: bool = false;
-    comptime var has_subscribe: bool = false;
-    comptime var has_name_mapping: bool = false;
+    const has_aspect: bool = @hasDecl(T, "type_aspect");
+    const has_subscribe: bool = @hasDecl(T, "subscribe");
+    const has_name_mapping: bool = @hasField(T, "name");
 
     // component type init/deinit functions
-    comptime var has_component_type_init: bool = false;
-    comptime var has_component_type_deinit: bool = false;
+    const has_component_type_init: bool = @hasDecl(T, "componentTypeInit");
+    const has_component_type_deinit: bool = @hasDecl(T, "componentTypeDeinit");
 
     // component member function interceptors
-    comptime var has_construct: bool = false;
-    comptime var has_activation: bool = false;
-    comptime var has_destruct: bool = false;
+    const has_construct: bool = @hasDecl(T, "construct");
+    const has_activation: bool = @hasDecl(T, "activation");
+    const has_destruct = @hasDecl(T, "destruct");
 
     comptime {
-        has_name_mapping = trait.hasField("name")(T);
-
-        if (!trait.is(.Struct)(T))
+        if (@typeInfo(T) != .Struct)
             @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
+        if (!@hasDecl(T, "COMPONENT_TYPE_NAME"))
             @compileError("Expects component type to have field: COMPONENT_TYPE_NAME: String, that defines a unique name of the component type.");
-        if (!trait.hasField("id")(T))
+        if (!@hasField(T, "id"))
             @compileError("Expects component type to have field: id: Index, that holds the index-id of the component");
-        // if (has_name_mapping and @TypeOf(T.name) != std.builtin.Type.Optional)
-        //     @compileError("Expects component type to have optional field: name: ?String, that holds the name of the component");
 
-        has_aspect = trait.hasDecls(T, .{"type_aspect"});
-        has_subscribe = trait.hasDecls(T, .{"subscribe"});
-        has_component_type_init = trait.hasDecls(T, .{"componentTypeInit"});
-        has_component_type_deinit = trait.hasDecls(T, .{"componentTypeDeinit"});
-        has_construct = trait.hasDecls(T, .{"construct"});
-        has_activation = trait.hasDecls(T, .{"activation"});
-        has_destruct = trait.hasDecls(T, .{"destruct"});
+        // const typeInfo = @typeInfo(T);
+        // @compileLog(.{typeInfo.Struct.fields});
+        // if (has_name_mapping and @TypeOf(@field(T, "name")) != std.builtin.Type.Optional) {
+        //     @compileError("Expects component type to have optional field: name: ?String, that holds the name of the component");
+        // }
     }
 
     return struct {
@@ -363,6 +356,8 @@ pub fn ComponentPool(comptime T: type) type {
         pub fn init() void {
             if (_type_init)
                 return;
+
+            //std.debug.print("*********** field: {any}", .{});
 
             errdefer Self.deinit();
             defer {
@@ -418,7 +413,7 @@ pub fn ComponentPool(comptime T: type) type {
         }
 
         fn register(c: T) *T {
-            var id = items.add(c);
+            const id = items.add(c);
             if (items.get(id)) |result| {
                 result.id = id;
 

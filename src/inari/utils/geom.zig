@@ -64,26 +64,26 @@ pub fn intersectsRectI(r1: RectI, r2: RectI) bool {
 pub fn intersectionRectI(r1: RectI, r2: RectI, result: *RectI) void {
     result[0] = @max(r1[0], r2[0]);
     result[1] = @max(r1[1], r2[1]);
-    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
-    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
     result[2] = @max(0, x2 - result[0] + 1);
     result[3] = @max(0, y2 - result[1] + 1);
 }
 
 pub fn getIntersectionRectI(r1: RectI, r2: RectI) RectI {
-    var x1 = @max(r1[0], r2[0]);
-    var y1 = @max(r1[1], r2[1]);
-    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
-    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+    const x1 = @max(r1[0], r2[0]);
+    const y1 = @max(r1[1], r2[1]);
+    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
 
     return RectI{ x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
 }
 
 pub fn getIntersectionNormalizedI(r1: RectI, r2: RectI) ClipI {
-    var x1 = @max(r1[0], r2[0]);
-    var y1 = @max(r1[1], r2[1]);
-    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
-    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+    const x1 = @max(r1[0], r2[0]);
+    const y1 = @max(r1[1], r2[1]);
+    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
 
     return ClipI{ 0, 0, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
 }
@@ -95,17 +95,17 @@ pub fn isRegionRectI(r1: RectI) bool {
 pub fn intersectionRectF(r1: RectF, r2: RectF, result: *RectF) void {
     result[0] = @max(r1[0], r2[0]);
     result[1] = @max(r1[1], r2[1]);
-    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
-    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
     result[2] = @max(0, x2 - result[0] + 1);
     result[3] = @max(0, y2 - result[1] + 1);
 }
 
 pub fn getIntersectionRectF(r1: RectF, r2: RectF) RectF {
-    var x1 = @max(r1[0], r2[0]);
-    var y1 = @max(r1[1], r2[1]);
-    var x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
-    var y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+    const x1 = @max(r1[0], r2[0]);
+    const y1 = @max(r1[1], r2[1]);
+    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
 
     return RectF{ x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
 }
@@ -166,7 +166,7 @@ pub fn magnitude4f(v: *Vector4f) f32 {
 }
 
 pub fn normalize2i(v: *Vector2i) void {
-    var m: i32 = @intFromFloat(magnitude2i(v));
+    const m: i32 = @intFromFloat(magnitude2i(v));
     if (m == 0) {
         v[0] = 0;
         v[1] = 0;
@@ -176,7 +176,7 @@ pub fn normalize2i(v: *Vector2i) void {
     }
 }
 pub fn normalize3i(v: *Vector3i) void {
-    var m: i32 = @intFromFloat(magnitude3i(v));
+    const m: i32 = @intFromFloat(magnitude3i(v));
     if (m == 0) {
         v[0] = 0;
         v[1] = 0;
@@ -188,7 +188,7 @@ pub fn normalize3i(v: *Vector3i) void {
     }
 }
 pub fn normalize4i(v: *Vector4i) void {
-    var m: i32 = @intFromFloat(magnitude4i(v));
+    const m: i32 = @intFromFloat(magnitude4i(v));
     if (m == 0) {
         v[0] = 0;
         v[1] = 0;
@@ -203,7 +203,7 @@ pub fn normalize4i(v: *Vector4i) void {
 }
 
 pub fn normalize2f(v: *Vector2f) void {
-    var m = magnitude2f(v);
+    const m = magnitude2f(v);
     if (m == 0) {
         v[0] = 0;
         v[1] = 0;
@@ -214,7 +214,7 @@ pub fn normalize2f(v: *Vector2f) void {
 }
 
 pub fn normalize3f(v: *Vector3f) void {
-    var m = magnitude3f(v);
+    const m = magnitude3f(v);
     if (m == 0) {
         v[0] = 0;
         v[1] = 0;
@@ -226,7 +226,7 @@ pub fn normalize3f(v: *Vector3f) void {
     }
 }
 pub fn normalize4f(v: *Vector4f) void {
-    var m = magnitude4f(v);
+    const m = magnitude4f(v);
     if (m == 0) {
         v[0] = 0;
         v[1] = 0;
@@ -241,14 +241,14 @@ pub fn normalize4f(v: *Vector4f) void {
 }
 
 pub fn distance2i(p1: *Vector2i, p2: *Vector2i) f32 {
-    var dx = p2[0] - p1[0];
-    var dy = p2[1] - p1[1];
+    const dx = p2[0] - p1[0];
+    const dy = p2[1] - p1[1];
 
     return @sqrt(@as(f32, @floatFromInt(dx * dx + dy * dy)));
 }
 
 pub fn distance2f(p1: *Vector2f, p2: *Vector2f) f32 {
-    var d = p2.* - p1.*;
+    const d = p2.* - p1.*;
     return @sqrt(d[0] * d[0] + d[1] * d[1]);
 }
 
@@ -353,7 +353,7 @@ const ExponentialInOutEasing = struct {
     var default = ExponentialInOutEasing{};
 
     fn f(_: *ExponentialInOutEasing, t: Float) Float {
-        var tt = t * 2;
+        const tt = t * 2;
         return if (tt <= 1)
             std.math.pow(Float, 2, 10 * tt - 10) / 2
         else
@@ -417,7 +417,7 @@ const CircOutEasing = struct {
     var default = CircOutEasing{};
 
     fn f(_: *CircOutEasing, t: Float) Float {
-        var tt = t - 1;
+        const tt = t - 1;
         return std.math.sqrt(1 - tt * tt);
     }
 
@@ -430,11 +430,11 @@ const CircInOutEasing = struct {
     var default = CircInOutEasing{};
 
     fn f(_: *CircInOutEasing, t: Float) Float {
-        var tt = t * 2;
+        const tt = t * 2;
         if (tt <= 1) {
             return (1 - std.math.sqrt(1 - tt * tt)) / 2.0;
         } else {
-            var ttt = tt - 2;
+            const ttt = tt - 2;
             return (std.math.sqrt(1 - ttt * ttt) + 1) / 2.0;
         }
     }
@@ -472,7 +472,7 @@ const BackOutEasing = struct {
     back_factor: Float = 1.70158,
 
     fn f(self: *BackOutEasing, t: Float) Float {
-        var tt = t - 1;
+        const tt = t - 1;
         return tt * tt * ((self.back_factor + 1) * tt + self.back_factor) + 1;
     }
 
@@ -492,10 +492,10 @@ const ElasticInEasing = struct {
     period: Float = 0.3,
 
     fn f(self: *ElasticInEasing, t: Float) Float {
-        var a = if (self.amplitude >= 1) self.amplitude else 1;
-        var p = self.period / TAU;
-        var s = std.math.asin(1 / a) * p;
-        var tt = t - 1;
+        const a = if (self.amplitude >= 1) self.amplitude else 1;
+        const p = self.period / TAU;
+        const s = std.math.asin(1 / a) * p;
+        const tt = t - 1;
         return a * std.math.pow(Float, 2, 10 * tt) * std.math.sin((s - tt) / p);
     }
 
@@ -515,10 +515,10 @@ const ElasticOutEasing = struct {
     period: Float = 0.3,
 
     fn f(self: *ElasticOutEasing, t: Float) Float {
-        var a = if (self.amplitude >= 1) self.amplitude else 1;
-        var p = self.period / TAU;
-        var s: Float = std.math.asin(1 / a) * p;
-        var tt: Float = t + 1;
+        const a = if (self.amplitude >= 1) self.amplitude else 1;
+        const p = self.period / TAU;
+        const s: Float = std.math.asin(1 / a) * p;
+        const tt: Float = t + 1;
         return 1.0 - (a * std.math.pow(Float, 2, -10 * tt) * std.math.sin((tt + s) / p));
     }
 
@@ -545,21 +545,21 @@ const BounceInEasing = struct {
     b9: Float = 63.0 / 64.0,
 
     fn f(self: *BounceInEasing, t: Float) Float {
-        var _t: Float = 1.0 - t;
-        var b0: Float = 1 / self.b1 / self.b1;
+        const _t: Float = 1.0 - t;
+        const b0: Float = 1 / self.b1 / self.b1;
 
         if (_t < self.b1)
             return 1.0 - (b0 * _t * _t);
         if (_t < self.b3) {
-            var tt = _t - self.b2;
+            const tt = _t - self.b2;
             return 1.0 - (b0 * tt * tt + self.b4);
         }
         if (_t < self.b6) {
-            var tt = _t - self.b5;
+            const tt = _t - self.b5;
             return 1.0 - (b0 * tt * tt + self.b7);
         }
 
-        var tt = _t - self.b8;
+        const tt = _t - self.b8;
         return 1.0 - (b0 * tt * tt + self.b9);
     }
 
@@ -585,19 +585,19 @@ const BounceOutEasing = struct {
     b9: Float = 63.0 / 64.0,
 
     fn f(self: *BounceOutEasing, t: Float) Float {
-        var b0: Float = 1.0 / self.b1 / self.b1;
+        const b0: Float = 1.0 / self.b1 / self.b1;
         if (t < self.b1)
             return b0 * t * t;
         if (t < self.b3) {
-            var tt = t - self.b2;
+            const tt = t - self.b2;
             return b0 * tt * tt + self.b4;
         }
         if (t < self.b6) {
-            var tt = t - self.b5;
+            const tt = t - self.b5;
             return b0 * tt * tt + self.b7;
         }
 
-        var tt = t - self.b8;
+        const tt = t - self.b8;
         return b0 * tt * tt + self.b9;
     }
 
@@ -660,7 +660,7 @@ const PolyInOutEasing = struct {
     exp: Float,
 
     fn f(self: *PolyInOutEasing, t: Float) Float {
-        var tt = t * 2;
+        const tt = t * 2;
         return if (tt <= 1)
             std.math.pow(Float, tt, self.exp) / 2
         else
@@ -705,11 +705,11 @@ pub const CubicBezierFunction = struct {
     //
     //  v(t) = s0 * v0 + s1 * v1 + s2 * v2 + s3 * v3
     fn vt(v0: Vector2f, v1: Vector2f, v2: Vector2f, v3: Vector2f, t: Float) Vector2f {
-        var u: Float = 1.0 - t;
-        var s0: Vector2f = @splat(u * u * u);
-        var s1: Vector2f = @splat(3.0 * u * u * t);
-        var s2: Vector2f = @splat(3.0 * u * t * t);
-        var s3: Vector2f = @splat(t * t * t);
+        const u: Float = 1.0 - t;
+        const s0: Vector2f = @splat(u * u * u);
+        const s1: Vector2f = @splat(3.0 * u * u * t);
+        const s2: Vector2f = @splat(3.0 * u * t * t);
+        const s3: Vector2f = @splat(t * t * t);
 
         return v0 * s0 + v1 * s1 + v2 * s2 + v3 * s3;
     }
@@ -718,10 +718,10 @@ pub const CubicBezierFunction = struct {
     // ax(rad) = atan2(v'.y(t), v'.x(t))
     //
     fn ax(v0: Vector2f, v1: Vector2f, v2: Vector2f, v3: Vector2f, t: Float) Float {
-        var u: Float = 1.0 - t;
-        var s0: Vector2f = @splat(std.math.pow(Float, u, 2));
-        var s1: Vector2f = @splat(2.0 * t * u);
-        var s2: Vector2f = @splat(std.math.pow(Float, t, 2.0));
+        const u: Float = 1.0 - t;
+        const s0: Vector2f = @splat(std.math.pow(Float, u, 2));
+        const s1: Vector2f = @splat(2.0 * t * u);
+        const s2: Vector2f = @splat(std.math.pow(Float, t, 2.0));
 
         return angleX(s0 * (v1 - v0) + s1 * (v2 - v1) + s2 * (v3 - v2));
     }
@@ -985,7 +985,7 @@ pub const BitMask = struct {
     }
 
     fn getEmptyIntersectionMask(self: BitMask, region: RectI) BitMask {
-        var intersection_region = getIntersectionRectI(self.region, region);
+        const intersection_region = getIntersectionRectI(self.region, region);
         if (!isRegionRectI(intersection_region))
             return BitMask.new(self._allocator, .{ region[0], region[1], 0, 0 });
 

@@ -24,7 +24,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 fn loadWithView() void {
     firefly.api.rendering.setRenderBatch(1, 81920);
 
-    var sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
@@ -35,7 +35,7 @@ fn loadWithView() void {
         .is_mipmap = false,
     }).load();
 
-    var tile = Entity.newAnd(.{ .name = "TestEntity" })
+    const tile = Entity.newAnd(.{ .name = "TestEntity" })
         .with(ETransform{})
         .with(ETile{ .sprite_template_id = sprite_id })
         .activate();

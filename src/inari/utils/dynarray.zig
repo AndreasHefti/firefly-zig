@@ -54,7 +54,7 @@ pub const DynIndexArray = struct {
         if (at > self.size_pointer) {
             return UNDEF_INDEX;
         }
-        var res = self.items[at];
+        const res = self.items[at];
         for (at..self.size_pointer - 1) |i| {
             self.items[i] = self.items[i + 1];
         }
@@ -113,7 +113,7 @@ pub fn DynArray(comptime T: type) type {
                 if (self.index == UNDEF_INDEX)
                     return null;
 
-                var n = self.array.get(self.index);
+                const n = self.array.get(self.index);
                 self.index = self.array.slots.nextSetBit(self.index + 1) orelse UNDEF_INDEX;
                 return n;
             }
@@ -171,7 +171,7 @@ pub fn DynArray(comptime T: type) type {
         }
 
         pub fn addAndGet(self: *Self, t: T) struct { i: usize, ref: *T } {
-            var index = add(self, t);
+            const index = add(self, t);
             return .{ .i = index, .ref = get(self, index).? };
         }
 

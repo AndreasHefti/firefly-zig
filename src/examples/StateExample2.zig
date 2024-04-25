@@ -41,12 +41,12 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    var sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    var state_engine = EntityStateEngine.newAnd(.{ .name = "MoveX" })
+    const state_engine = EntityStateEngine.newAnd(.{ .name = "MoveX" })
         .withState(.{ .id = 1, .name = "right down", .condition = rightDown })
         .withState(.{ .id = 2, .name = "right up", .condition = rightUp })
         .withState(.{ .id = 3, .name = "left down", .condition = leftDown })
@@ -59,9 +59,9 @@ fn init() void {
 }
 
 fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
-    var vx = random.float(Float) * 200 + 1;
-    var vy = random.float(Float) * 200 + 1;
-    var entity_id = Entity.newAnd(.{})
+    const vx = random.float(Float) * 200 + 1;
+    const vy = random.float(Float) * 200 + 1;
+    const entity_id = Entity.newAnd(.{})
         .with(ETransform{ .position = .{ 0, 0 } })
         .with(ESprite{ .template_id = sprite_id })
         .with(EMovement{ .velocity = .{ vx, vy } })
@@ -86,8 +86,8 @@ inline fn changeY(entity_id: Index) void {
 
 // 1
 fn rightDown(entity_id: Index, current: ?*State) bool {
-    var c_id = current.?.id;
-    var trans = ETransform.byId(entity_id).?;
+    const c_id = current.?.id;
+    const trans = ETransform.byId(entity_id).?;
     if ((trans.position[0] < min_x and c_id == 3) or (trans.position[1] < min_y and c_id == 2)) {
         if (c_id == 3) changeX(entity_id) else changeY(entity_id);
         return true;
@@ -97,8 +97,8 @@ fn rightDown(entity_id: Index, current: ?*State) bool {
 
 // 2
 fn rightUp(entity_id: Index, current: ?*State) bool {
-    var c_id = current.?.id;
-    var trans = ETransform.byId(entity_id).?;
+    const c_id = current.?.id;
+    const trans = ETransform.byId(entity_id).?;
     if ((trans.position[0] < min_x and c_id == 4) or (trans.position[1] > max_y and c_id == 1)) {
         if (c_id == 4) changeX(entity_id) else changeY(entity_id);
         return true;
@@ -108,8 +108,8 @@ fn rightUp(entity_id: Index, current: ?*State) bool {
 
 // 3
 fn leftDown(entity_id: Index, current: ?*State) bool {
-    var trans = ETransform.byId(entity_id).?;
-    var c_id = current.?.id;
+    const trans = ETransform.byId(entity_id).?;
+    const c_id = current.?.id;
     //std.debug.print("c_id: {any}\n", .{(trans.position[0] > max_x and c_id == 1)});
     if ((trans.position[0] > max_x and c_id == 1) or (trans.position[1] < min_y and c_id == 4)) {
         if (c_id == 1) changeX(entity_id) else changeY(entity_id);
@@ -120,8 +120,8 @@ fn leftDown(entity_id: Index, current: ?*State) bool {
 
 // 4
 fn leftUp(entity_id: Index, current: ?*State) bool {
-    var c_id = current.?.id;
-    var trans = ETransform.byId(entity_id).?;
+    const c_id = current.?.id;
+    const trans = ETransform.byId(entity_id).?;
     if ((trans.position[0] > max_x and c_id == 2) or (trans.position[1] > max_y and c_id == 3)) {
         if (c_id == 2) changeX(entity_id) else changeY(entity_id);
         return true;

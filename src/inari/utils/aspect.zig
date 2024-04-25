@@ -16,7 +16,7 @@ const ShiftInt = std.math.Log2Int(MaskInt);
 pub fn AspectGroup(comptime T: type) type {
     return struct {
         const Group = @This();
-        const _name: String = if (std.meta.trait.hasDecls(T, .{"name"})) T.name else @typeName(T);
+        const _name: String = if (@hasDecl(T, "name")) T.name else @typeName(T);
 
         var _aspects: [MaxIndex]Aspect = [_]Aspect{undefined} ** MaxIndex;
         var _aspect_count: u8 = 0;
@@ -114,7 +114,7 @@ pub fn AspectGroup(comptime T: type) type {
                 return &aspect;
             } else if (at == *Aspect or at == *const Aspect) {
                 return aspect;
-            } else if (std.meta.trait.hasDecls(aspect, .{"aspect"})) {
+            } else if (@hasDecl(aspect, "aspect")) {
                 return getAspectFromAnytype(aspect.aspect);
             } else {
                 return null;

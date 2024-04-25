@@ -86,7 +86,7 @@ pub const ETile = struct {
             if (self.sprite_template_id == UNDEF_INDEX)
                 @panic("Missing sprite_template_id");
 
-            var template = SpriteTemplate.byId(self.sprite_template_id);
+            const template = SpriteTemplate.byId(self.sprite_template_id);
             self._texture_bounds = template.texture_bounds;
             self._texture_binding = template.texture_binding;
 
@@ -166,14 +166,14 @@ pub const TileGrid = struct {
     }
 
     pub fn resize(self: *TileGrid, grid_width: usize, grid_height: usize) void {
-        var width: usize = @min(grid_width, self.dimensions[0]);
-        var height: usize = @min(grid_height, self.dimensions[1]);
+        const width: usize = @min(grid_width, self.dimensions[0]);
+        const height: usize = @min(grid_height, self.dimensions[1]);
         self.dimensions[0] = grid_width;
         self.dimensions[1] = grid_height;
         self._c_int_dimensions[0] = @as(CInt, @intCast(self.dimensions[0]));
         self._c_int_dimensions[1] = @as(CInt, @intCast(self.dimensions[1]));
 
-        var old_grid: [][]Index = self._grid;
+        const old_grid: [][]Index = self._grid;
         construct(self);
 
         // copy from old
@@ -201,17 +201,17 @@ pub const TileGrid = struct {
     }
 
     pub fn getAt(self: *TileGrid, world_pos: PosF) ?Index {
-        var rel_pos: PosF = world_pos - self.world_position;
+        const rel_pos: PosF = world_pos - self.world_position;
         return get(self, map_cell_x(rel_pos[0]), map_cell_x(rel_pos[1]));
     }
 
     pub fn get(self: *TileGrid, x: usize, y: usize) ?Index {
         if (self.spherical) {
-            var r = self._grid[y % self.dimensions[1]][x % self.dimensions[0]];
+            const r = self._grid[y % self.dimensions[1]][x % self.dimensions[0]];
             if (r == UNDEF_INDEX) return null else return r;
         } else {
             if (checkBounds) {
-                var r = self._grid[y][x];
+                const r = self._grid[y][x];
                 if (r == UNDEF_INDEX) return null else return r;
             } else return null;
         }
@@ -244,7 +244,7 @@ pub const TileGrid = struct {
     }
 
     pub fn getIterator(self: *TileGrid, projection: *const Projection) ?Iterator {
-        var intersectionF = utils.getIntersectionRectF(
+        const intersectionF = utils.getIntersectionRectF(
             .{
                 self.world_position[0],
                 self.world_position[1],
@@ -368,7 +368,7 @@ const DefaultTileGridRenderer = struct {
     }
 
     pub fn componentRegistration(id: Index, register: bool) void {
-        var tile_grid = TileGrid.byId(id);
+        const tile_grid = TileGrid.byId(id);
         if (register)
             tile_grid_refs.add(tile_grid.view_id, tile_grid.layer_id, id)
         else
@@ -384,8 +384,8 @@ const DefaultTileGridRenderer = struct {
                 var iterator = tile_grid.getIterator(e.projection.?);
                 if (iterator) |*itr| {
                     while (itr.next()) |entity_id| {
-                        var tile = ETile.byId(entity_id).?;
-                        var trans = ETransform.byId(entity_id).?;
+                        const tile = ETile.byId(entity_id).?;
+                        const trans = ETransform.byId(entity_id).?;
                         if (tile.sprite_template_id != NO_BINDING) {
                             api.rendering.renderSprite(
                                 tile._texture_binding,

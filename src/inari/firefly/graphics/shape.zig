@@ -115,9 +115,9 @@ const DefaultShapeRenderer = struct {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the shape
-                var es = EShape.byId(id).?;
-                var trans = ETransform.byId(id).?;
-                var multi = if (EMultiplier.byId(id)) |m| m.positions else null;
+                const es = EShape.byId(id).?;
+                const trans = ETransform.byId(id).?;
+                const multi = if (EMultiplier.byId(id)) |m| m.positions else null;
                 api.rendering.renderShape(
                     es.shape_type,
                     es.vertices,

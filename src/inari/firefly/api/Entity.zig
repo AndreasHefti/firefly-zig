@@ -2,7 +2,6 @@ const std = @import("std");
 const inari = @import("../../inari.zig");
 const utils = inari.utils;
 const api = inari.firefly.api;
-const trait = std.meta.trait;
 
 const Allocator = std.mem.Allocator;
 const StringBuffer = utils.StringBuffer;
@@ -56,7 +55,7 @@ pub const Entity = struct {
         EComponent.checkValid(c);
 
         const T = @TypeOf(c);
-        var comp = @as(T, c);
+        const comp = @as(T, c);
         _ = EComponentPool(T).register(comp, self.id);
         self.kind = self.kind.withAspect(T);
         return self;
@@ -227,7 +226,7 @@ pub const EComponent = struct {
             return;
 
         for (0..EComponentAspectGroup.size()) |i| {
-            var aspect = EComponentAspectGroup.getAspectById(i);
+            const aspect = EComponentAspectGroup.getAspectById(i);
             if (entity.kind.hasAspect(aspect)) {
                 if (INTERFACE_TABLE.get(aspect.id)) |ref|
                     ref.activate(entity.id, active);
@@ -239,29 +238,22 @@ pub const EComponent = struct {
 pub fn EComponentPool(comptime T: type) type {
 
     // component function interceptors
-    comptime var has_init: bool = false;
-    comptime var has_deinit: bool = false;
+    const has_init: bool = @hasDecl(T, "typeInit");
+    const has_deinit: bool = @hasDecl(T, "typeDeinit");
     // component struct based interceptors / methods
-    comptime var has_construct: bool = false;
-    comptime var has_destruct: bool = false;
-    comptime var has_activation: bool = false;
+    const has_construct: bool = @hasDecl(T, "construct");
+    const has_destruct: bool = @hasDecl(T, "destruct");
+    const has_activation: bool = @hasDecl(T, "activation");
 
     comptime {
-        if (!trait.is(.Struct)(T))
+        if (@typeInfo(T) != .Struct)
             @compileError("Expects component type is a struct.");
-        if (!trait.hasDecls(T, .{"COMPONENT_TYPE_NAME"}))
+        if (!@hasDecl(T, "COMPONENT_TYPE_NAME"))
             @compileError("Expects component type to have member named 'COMPONENT_TYPE_NAME' that defines a unique name of the component type.");
-        if (!trait.hasDecls(T, .{"aspect"}))
+        if (!@hasDecl(T, "aspect"))
             @compileError("Expects component type to have member aspect, that defines the entity component runtime type identifier.");
-        if (!trait.hasField("id")(T))
+        if (!@hasField(T, "id"))
             @compileError("Expects component type to have field named id");
-
-        has_init = trait.hasDecls(T, .{"typeInit"});
-        has_deinit = trait.hasDecls(T, .{"typeDeinit"});
-
-        has_construct = trait.hasDecls(T, .{"construct"});
-        has_destruct = trait.hasDecls(T, .{"destruct"});
-        has_activation = trait.hasDecls(T, .{"activation"});
     }
 
     return struct {
@@ -363,8 +355,8 @@ pub fn EComponentPool(comptime T: type) type {
 
         fn checkComponentTrait(c: T) void {
             comptime {
-                if (!trait.is(.Struct)(@TypeOf(c))) @compileError("Expects component is a struct.");
-                if (!trait.hasField("id")(@TypeOf(c))) @compileError("Expects component to have field 'id'.");
+                if (@typeInfo(@TypeOf(c)) != .Struct) @compileError("Expects component is a struct.");
+                if (!@hasField(@TypeOf(c), "id")) @compileError("Expects component to have field 'id'.");
             }
         }
     };

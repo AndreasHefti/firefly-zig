@@ -106,7 +106,7 @@ pub const SpriteTemplate = struct {
     }
 
     fn notifyAssetEvent(e: ComponentEvent) void {
-        var asset: *Asset(Texture) = Asset(Texture).byId(e.c_id.?);
+        const asset: *Asset(Texture) = Asset(Texture).byId(e.c_id.?);
         if (asset.name == null)
             return;
 
@@ -151,7 +151,7 @@ pub const SpriteTemplate = struct {
     fn onTextureDispose(asset: *Asset(Texture)) void {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
-            var template = SpriteTemplate.byId(id);
+            const template = SpriteTemplate.byId(id);
             if (asset.name) |an| {
                 if (utils.stringEquals(template.texture_name, an)) {
                     SpriteTemplate.disposeById(id);
@@ -194,7 +194,7 @@ pub const ESprite = struct {
             if (self.template_id == UNDEF_INDEX)
                 @panic("Missing template_id");
 
-            var template = SpriteTemplate.byId(self.template_id);
+            const template = SpriteTemplate.byId(self.template_id);
             self._texture_bounds = template.texture_bounds;
             self._texture_binding = template.texture_binding;
 
@@ -271,14 +271,14 @@ pub const SpriteSet = struct {
             if (resource.default_stamp == null)
                 @panic("SpriteSet needs default_stamp when loading with set_dimensions");
 
-            var default_stamp = resource.default_stamp.?;
+            const default_stamp = resource.default_stamp.?;
             if (default_stamp.sprite_dim == null)
                 @panic("SpriteSet needs default_stamp with sprite_dim");
 
-            var width: usize = @intFromFloat(dim[0]);
-            var height: usize = @intFromFloat(dim[1]);
-            var default_dim = default_stamp.sprite_dim.?;
-            var default_prefix = if (default_stamp.name) |p| p else resource.name;
+            const width: usize = @intFromFloat(dim[0]);
+            const height: usize = @intFromFloat(dim[1]);
+            const default_dim = default_stamp.sprite_dim.?;
+            const default_prefix = if (default_stamp.name) |p| p else resource.name;
 
             for (0..height) |y| { // 0..height
                 for (0..width) |x| { // 0..width
@@ -310,7 +310,7 @@ pub const SpriteSet = struct {
             }
         } else {
             // in this case just load the existing stamps that has defined sprite_dim (others are ignored)
-            var default_prefix = if (resource.default_stamp.?.name) |p| p else resource.name;
+            const default_prefix = if (resource.default_stamp.?.name) |p| p else resource.name;
             var next = resource._stamps.slots.nextSetBit(0);
             while (next) |i| {
                 if (resource._stamps.get(i)) |stamp| {
@@ -380,10 +380,10 @@ const DefaultSpriteRenderer = struct {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the sprite
-                var es = ESprite.byId(id).?;
-                var trans = ETransform.byId(id).?;
+                const es = ESprite.byId(id).?;
+                const trans = ETransform.byId(id).?;
                 if (es.template_id != NO_BINDING) {
-                    var multi = if (EMultiplier.byId(id)) |m| m.positions else null;
+                    const multi = if (EMultiplier.byId(id)) |m| m.positions else null;
                     api.rendering.renderSprite(
                         es._texture_binding,
                         es._texture_bounds,

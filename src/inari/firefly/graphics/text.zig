@@ -153,7 +153,7 @@ const DefaultTextRenderer = struct {
             while (i) |id| {
                 // render the sprite
                 if (EText.byId(id)) |text| {
-                    var trans = ETransform.byId(id).?;
+                    const trans = ETransform.byId(id).?;
                     api.rendering.renderText(
                         text.font_id,
                         text.text,

@@ -156,7 +156,7 @@ pub const EMovement = struct {
 //////////////////////////////////////////////////////////////
 
 pub fn SimpleStepIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
-    var accMass: Float = 1 / movement.mass * movement.mass_factor;
+    const accMass: Float = 1 / movement.mass * movement.mass_factor;
 
     movement.velocity[0] += delta_time_seconds * movement.gravity[0] / accMass;
     movement.velocity[1] += delta_time_seconds * movement.gravity[1] / accMass;
@@ -175,7 +175,7 @@ pub fn SimpleStepIntegrator(movement: *EMovement, delta_time_seconds: Float) boo
 }
 
 pub fn VerletIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
-    var accMass: Float = 1 / movement.mass * movement.mass_factor;
+    const accMass: Float = 1 / movement.mass * movement.mass_factor;
 
     movement.velocity[0] += delta_time_seconds * (movement.acceleration[0] + ((movement.gravity[0] + movement.force[0]) / accMass)) / 2;
     movement.velocity[1] += delta_time_seconds * (movement.acceleration[1] + ((movement.gravity[1] + movement.force[1]) / accMass)) / 2;
@@ -194,7 +194,7 @@ pub fn VerletIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
 }
 
 pub fn EulerIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
-    var accMass: Float = 1 / movement.mass * movement.mass_factor;
+    const accMass: Float = 1 / movement.mass * movement.mass_factor;
 
     movement.acceleration[0] = (movement.gravity[0] + movement.force[0]) / accMass;
     movement.acceleration[1] = (movement.gravity[1] + movement.force[1]) / accMass;
@@ -278,7 +278,7 @@ const MovementSystem = struct {
     }
 
     pub fn update(_: UpdateEvent) void {
-        var dt: Float = @min(@as(Float, @floatFromInt(Timer.time_elapsed)) / 1000, 0.5);
+        const dt: Float = @min(@as(Float, @floatFromInt(Timer.time_elapsed)) / 1000, 0.5);
         moved.clear();
         var next = movements.nextSetBit(0);
         while (next) |i| {

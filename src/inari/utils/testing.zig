@@ -20,7 +20,7 @@ test "StringBuffer" {
     sb.append("Test34");
     sb.print("Test{s}", .{"56"});
 
-    var str = sb.toString();
+    const str = sb.toString();
     try std.testing.expectEqualStrings("Test12Test34Test56", str);
 }
 
@@ -308,22 +308,22 @@ test "initialize" {
     try std.testing.expectEqualStrings("TestGroup", TEST_ASPECT_GROUP.name());
     try std.testing.expect(TEST_ASPECT_GROUP.size() == 0);
 
-    var aspect1 = TEST_ASPECT_GROUP.getAspect("aspect1");
+    const aspect1 = TEST_ASPECT_GROUP.getAspect("aspect1");
     try std.testing.expect(TEST_ASPECT_GROUP.size() == 1);
     try std.testing.expect(aspect1.id == 0);
     try std.testing.expectEqualStrings("aspect1", aspect1.name);
 
-    var aspect2 = TEST_ASPECT_GROUP.getAspect("aspect2");
+    const aspect2 = TEST_ASPECT_GROUP.getAspect("aspect2");
     try std.testing.expect(TEST_ASPECT_GROUP.size() == 2);
     try std.testing.expect(aspect2.id == 1);
     try std.testing.expectEqualStrings("aspect2", aspect2.name);
 }
 
 test "kind" {
-    var aspect1 = TEST_ASPECT_GROUP.getAspect("aspect1");
-    var aspect2 = TEST_ASPECT_GROUP.getAspect("aspect2");
-    var aspect3 = TEST_ASPECT_GROUP.getAspect("aspect3");
-    var aspect4 = TEST_ASPECT_GROUP.getAspect("aspect4");
+    const aspect1 = TEST_ASPECT_GROUP.getAspect("aspect1");
+    const aspect2 = TEST_ASPECT_GROUP.getAspect("aspect2");
+    const aspect3 = TEST_ASPECT_GROUP.getAspect("aspect3");
+    const aspect4 = TEST_ASPECT_GROUP.getAspect("aspect4");
 
     var kind1 = TEST_ASPECT_GROUP.newKindOf(.{ aspect1, aspect2, aspect3 });
     var kind2 = TEST_ASPECT_GROUP.newKindOf(.{ aspect2, aspect3 });
@@ -432,7 +432,7 @@ test "vec math" {
     // distance
     var p1 = Vector2i{ 1, 1 };
     var p2 = Vector2i{ 2, 2 };
-    var dp1p2 = utils.distance2i(&p1, &p2);
+    const dp1p2 = utils.distance2i(&p1, &p2);
     try std.testing.expect(dp1p2 == 1.4142135381698608);
 }
 
@@ -587,7 +587,7 @@ test "BitMask set region and create intersection mask" {
     defer mask5.deinit();
     sb.print("{any}", .{mask5});
 
-    var expected =
+    const expected =
         \\BitMask[{ 0, 0, 5, 5 }]
         \\  1,1,1,1,1,
         \\  1,0,0,0,1,
@@ -640,7 +640,7 @@ test "BitMask clip" {
     defer mask3.deinit();
     sb.print("{any}", .{mask3});
 
-    var expected =
+    const expected =
         \\BitMask[{ 0, 0, 10, 10 }]
         \\  0,1,0,1,0,1,0,1,0,1,
         \\  0,1,0,1,0,1,0,1,0,1,
@@ -682,7 +682,7 @@ test "Strings in DynArray" {
 
     try std.testing.expect(listOfStrings.size() == 5);
 
-    var two = listOfStrings.get(1);
+    const two = listOfStrings.get(1);
     try std.testing.expectEqualStrings(two.?.*, "two");
 }
 
@@ -706,7 +706,7 @@ fn testSliceFromList() !DynArray([]SomeType) {
 
     try std.testing.expect(listOfSlices.size() == 1);
 
-    var s2: *[]SomeType = listOfSlices.get(0).?;
+    const s2: *[]SomeType = listOfSlices.get(0).?;
     try std.testing.expect(s2.*.len == 2);
     try std.testing.expect(s2.*[1].id == 1);
     return listOfSlices;
@@ -716,13 +716,13 @@ test "DynArray copy of struct toKampanie  heap" {
     var list: DynArray(SomeType) = DynArray(SomeType).new(std.testing.allocator) catch unreachable;
     defer list.deinit();
 
-    var s1 = SomeType{ .id = 1 };
+    const s1 = SomeType{ .id = 1 };
     var s2 = SomeType{ .id = 2 };
 
     _ = list.add(s1);
     _ = list.add(s2);
 
-    var _s1 = list.get(0).?;
+    const _s1 = list.get(0).?;
     var _s2 = list.get(1).?;
 
     try std.testing.expect(_s1.id == 1);

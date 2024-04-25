@@ -11,10 +11,10 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     rl.SetTargetFPS(60);
     defer rl.CloseWindow();
 
-    var resName: []const u8 = "resources/logo.png";
-    var tex = rl.LoadTexture(@ptrCast(resName));
-    var tint_color: rl.Color = .{ .r = 255, .g = 255, .b = 255, .a = 255 };
-    var clear_color: rl.Color = .{ .r = 0, .g = 0, .b = 0, .a = 255 };
+    const resName: []const u8 = "resources/logo.png";
+    const tex = rl.LoadTexture(@ptrCast(resName));
+    const tint_color: rl.Color = .{ .r = 255, .g = 255, .b = 255, .a = 255 };
+    const clear_color: rl.Color = .{ .r = 0, .g = 0, .b = 0, .a = 255 };
 
     var nanos = init_c.allocator.alloc(@Vector(4, f32), count) catch unreachable;
     var rndx = std.rand.DefaultPrng.init(32);

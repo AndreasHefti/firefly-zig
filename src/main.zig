@@ -6,7 +6,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    var init_context = inari.firefly.api.InitContext{
+    const init_context = inari.firefly.api.InitContext{
         .allocator = allocator,
         .entity_allocator = allocator,
         .component_allocator = allocator,
@@ -19,13 +19,13 @@ pub fn main() !void {
     try @import("examples/SpriteMultiply.zig").run(init_context);
     try @import("examples/HelloViewport.zig").run(init_context);
     try @import("examples/HelloShape.zig").run(init_context);
-    try @import("examples/RenderSpeedRaw.zig").run(init_context);
-    try @import("examples/EasingExample.zig").run(init_context);
-    try @import("examples/RenderSpeed.zig").run(init_context);
-    try @import("examples/HelloTileGrid.zig").run(init_context);
-    try @import("examples/HelloGravity.zig").run(init_context);
-    try @import("examples/InputExample1.zig").run(init_context);
-    try @import("examples/StateExample2.zig").run(init_context);
+    // try @import("examples/RenderSpeedRaw.zig").run(init_context);
+    // try @import("examples/EasingExample.zig").run(init_context);
+    // try @import("examples/RenderSpeed.zig").run(init_context);
+    // try @import("examples/HelloTileGrid.zig").run(init_context);
+    // try @import("examples/HelloGravity.zig").run(init_context);
+    // try @import("examples/InputExample1.zig").run(init_context);
+    // try @import("examples/StateExample2.zig").run(init_context);
 }
 
 test "API Tests" {
