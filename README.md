@@ -7,13 +7,13 @@ Note: Firefly is unter heavy development and way far from release or completed f
 TODO:
   - Reimplement Asset(Shader) and Asset(SpriteSet)
   - Go on with porting from FlyKo
-      - Tiles
-      - Text
-      - Shapes
-      - Move Collision-Detection amd Collision-Resolving
-      - Audio
-      - Behavior and State Engine
-      - TileMap and WorldMap
+      - ~~Tiles~~
+      - ~~Text~~
+      - ~~Shapes~~
+      - ~~Move Collision-Detection~~ and Collision-Resolving
+      - ~~Audio~~
+      - Behavior and ~~State Engine~~
+      - ~~TileMap~~ and WorldMap
       - ...
 
  
