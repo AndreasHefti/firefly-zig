@@ -14,6 +14,20 @@ pub const DynIndexArray = struct {
     grow_size: usize,
     allocator: Allocator,
 
+    pub fn format(
+        self: DynIndexArray,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("DynIndexArray[ ", .{});
+        for (self.items) |i| {
+            if (i != UNDEF_INDEX)
+                try writer.print("{d},", .{i});
+        }
+        try writer.print(" ]", .{});
+    }
+
     pub fn init(allocator: Allocator, grow_size: usize) DynIndexArray {
         return DynIndexArray{
             .items = &[_]Index{},

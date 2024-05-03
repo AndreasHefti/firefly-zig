@@ -40,11 +40,12 @@ pub fn init() void {
 
     IndexFrame.init();
     System(AnimationSystem).createSystem(
-        firefly.Engine.CoreSystems.AnimationSystem,
+        firefly.Engine.CoreSystems.AnimationSystem.name,
         "Updates all active animations",
         true,
     );
     AnimationSystem.registerAnimationType(EasedValueIntegration);
+    AnimationSystem.registerAnimationType(IndexFrameIntegration);
     EComponent.registerEntityComponent(EAnimation);
 }
 
@@ -356,8 +357,6 @@ pub const EAnimation = struct {
 //////////////////////////////////////////////////////////////
 
 pub const AnimationSystem = struct {
-    const sys_name = "AnimationSystem ";
-
     var animation_type_refs: DynArray(AnimationTypeReference) = undefined;
     var animation_refs: DynArray(IAnimation) = undefined;
 
@@ -559,7 +558,8 @@ pub const IndexFrameList = struct {
         var d: usize = 0;
         var _next = self.indices.nextSetBit(0);
         while (_next) |i| {
-            d += IndexFrame.frames.get(i).duration;
+            if (IndexFrame.frames.get(i)) |f|
+                d += f.duration;
             _next = self.indices.nextSetBit(i + 1);
         }
         self._duration = d;
@@ -574,16 +574,22 @@ pub const IndexFrameList = struct {
             var _t: usize = d;
             var _next = self.indices.prevSetBit(self.indices.capacity());
             while (_next) |i| {
-                _t -= IndexFrame.frames.get(i).duration;
-                if (_t <= t) return i;
+                if (IndexFrame.frames.get(i)) |f| {
+                    _t -= f.duration;
+                }
+                if (_t <= t)
+                    return i;
                 _next = self.indices.prevSetBit(i - 1);
             }
         } else {
             var _t: usize = 0;
             var _next = self.indices.nextSetBit(0);
             while (_next) |i| {
-                _t += IndexFrame.frames.get(i).duration;
-                if (_t >= t) return i;
+                if (IndexFrame.frames.get(i)) |f| {
+                    _t += f.duration;
+                }
+                if (_t >= t)
+                    return i;
                 _next = self.indices.nextSetBit(i + 1);
             }
         }
@@ -615,17 +621,25 @@ pub const IndexFrameList = struct {
     }
 };
 
-pub const IndexFrameIntegrator = struct {
-    pub const resolver = AnimationResolver(IndexFrameIntegrator);
+pub const IndexFrameIntegration = struct {
+    pub const resolver = AnimationResolver(IndexFrameIntegration);
 
     timeline: IndexFrameList,
-    property_ref: *const fn (Index) void,
+    property_ref: ?*const fn (Index) *Index,
 
-    pub fn integrate(a: *Animation(IndexFrameIntegrator)) void {
-        a.integration.property_ref(a.integration.timeline.getIndexAt(
+    _property: *Index = undefined,
+
+    pub fn init(self: *IndexFrameIntegration, id: Index) void {
+        if (self.property_ref) |ref| {
+            self._property = ref(id);
+        }
+    }
+
+    pub fn integrate(a: *Animation(IndexFrameIntegration)) void {
+        a.integration._property.* = a.integration.timeline.getIndexAt(
             a._t_normalized,
             a._inverted,
-        ));
+        );
     }
 };
 
@@ -633,8 +647,8 @@ pub const IndexFrameIntegrator = struct {
 //// Bezier Curve Animation
 //////////////////////////////////////////////////////////////
 
-pub const BezierCurveIntegrator = struct {
-    pub const resolver = AnimationResolver(BezierCurveIntegrator);
+pub const BezierCurveIntegration = struct {
+    pub const resolver = AnimationResolver(BezierCurveIntegration);
 
     bezier_function: utils.CubicBezierFunction = undefined,
     easing: Easing = Easing.Linear,
@@ -646,7 +660,7 @@ pub const BezierCurveIntegrator = struct {
     _property_y: *Float = undefined,
     _property_a: *Float = undefined,
 
-    pub fn init(self: *BezierCurveIntegrator, id: Index) void {
+    pub fn init(self: *BezierCurveIntegration, id: Index) void {
         if (self.property_ref_x) |i| {
             self._property_x = i(id);
         }
@@ -658,11 +672,11 @@ pub const BezierCurveIntegrator = struct {
         }
     }
 
-    pub fn integrate(a: *Animation(BezierCurveIntegrator)) void {
+    pub fn integrate(a: *Animation(BezierCurveIntegration)) void {
         const pos = a.integration.bezier_function.fp(a.easing(a._t_normalized), a._inverted);
-        a.integration._property_x = pos[0];
-        a.integration._property_y = pos[1];
-        a.integration._property_a = std.math.radiansToDegrees(
+        a.integration._property_x.* = pos[0];
+        a.integration._property_y.* = pos[1];
+        a.integration._property_a.* = std.math.radiansToDegrees(
             Float,
             a.integration.bezier_function.fax(
                 a.easing(a._t_normalized),

@@ -7,7 +7,7 @@ const Allocator = std.mem.Allocator;
 const count: usize = 100000;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
-    rl.InitWindow(960, 540, "My Window Name");
+    rl.InitWindow(960, 540, "Render Speed Raw");
     rl.SetTargetFPS(60);
     defer rl.CloseWindow();
 

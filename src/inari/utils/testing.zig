@@ -11,6 +11,28 @@ const DynArray = utils.DynArray;
 const DynIndexArray = utils.DynIndexArray;
 const BitSet = utils.BitSet;
 const Vector2i = utils.Vector2i;
+const RectI = utils.RectI;
+const RectF = utils.RectF;
+const PosI = utils.PosI;
+
+test "float to int" {
+    try std.testing.expect(2 == @as(usize, @intFromFloat(@ceil(1.1))));
+}
+
+test "rectIFromRectF" {
+    try std.testing.expectEqual(
+        RectI{ 1, 1, 10, 10 },
+        utils.rectIFromRectF(RectF{ 1, 1, 10, 10 }),
+    );
+    try std.testing.expectEqual(
+        RectI{ 1, 1, 10, 10 },
+        utils.rectIFromRectF(RectF{ 1.1, 1.2, 10, 10 }),
+    );
+    try std.testing.expectEqual(
+        RectI{ 1, 1, 11, 11 },
+        utils.rectIFromRectF(RectF{ 1, 1, 10.1, 10.1 }),
+    );
+}
 
 test "StringBuffer" {
     var sb = StringBuffer.init(std.testing.allocator);
@@ -23,20 +45,6 @@ test "StringBuffer" {
     const str = sb.toString();
     try std.testing.expectEqualStrings("Test12Test34Test56", str);
 }
-
-// test "repl test" {
-//     var v = getReadwrite();
-//     v[0] = 0;
-// }
-
-// var v1: utils.Vector2f = Vector2f{ 0, 0 };
-// pub fn getReadonly() *const Vector2f {
-//     return &v1;
-// }
-
-// pub fn getReadwrite() *Vector2f {
-//     return &v1;
-// }
 
 test "Events and Listeners" {
     var ED = EventDispatch([]const u8).new(std.testing.allocator);
@@ -298,6 +306,9 @@ test "test ensure capacity" {
     try std.testing.expect(!bitset2.isSet(7));
     try std.testing.expect(bitset2.isSet(8));
     try std.testing.expect(!bitset2.isSet(9));
+
+    bitset2.set(1000);
+    try std.testing.expect(bitset2.lengthOfMaskArray() == 16);
 }
 
 const TEST_ASPECT_GROUP = utils.AspectGroup(struct {
@@ -401,14 +412,14 @@ test "easing interface" {
         \\Expo In:      5 * f(0.5) --> 0.15625
         \\Expo Out:     5 * f(0.5) --> 4.84375
         \\Expo InOut:   5 * f(0.5) --> 2.5
-        \\Sin In:       5 * f(0.5) --> 1.4644660949707031
-        \\Sin Out:      5 * f(0.5) --> 3.535533905029297
+        \\Sin In:       5 * f(0.5) --> 1.4644661
+        \\Sin Out:      5 * f(0.5) --> 3.535534
         \\Sin InOut:    5 * f(0.5) --> 2.5
-        \\Circ In:      5 * f(0.5) --> 0.669873058795929
-        \\Circ Out:     5 * f(0.5) --> 4.330126762390137
+        \\Circ In:      5 * f(0.5) --> 0.66987306
+        \\Circ Out:     5 * f(0.5) --> 4.330127
         \\Circ InOut:   5 * f(0.5) --> 2.5
-        \\Back In:      5 * f(0.5) --> -0.43848752975463867
-        \\Back Out:     5 * f(0.5) --> 5.438487529754639
+        \\Back In:      5 * f(0.5) --> -0.43848753
+        \\Back Out:     5 * f(0.5) --> 5.4384875
         \\Bounce In:    5 * f(0.5) --> 1.171875
         \\Bounce Out:   5 * f(0.5) --> 3.828125
         \\
@@ -437,15 +448,16 @@ test "vec math" {
 }
 
 // BitMask tests
+
 test "Init BitMask" {
-    var mask = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 10, 10 });
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
     defer mask.deinit();
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
     sb.print("{any}", .{mask});
     const expected =
-        \\BitMask[{ 0, 0, 10, 10 }]
+        \\BitMask[10|10]
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
@@ -462,62 +474,77 @@ test "Init BitMask" {
     try std.testing.expectEqualStrings(expected, sb.toString());
 }
 
-test "BitMask setBitsRegionFrom" {
-    var mask = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 10, 10 });
+test "BitMask Fill/Reset" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
     defer mask.deinit();
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    const bits = [_]u8{ 1, 1, 1, 1, 0, 1, 1, 1, 1 };
-    mask.setRegionFrom(.{ 0, 0, 3, 3 }, bits[0..bits.len]);
-
+    mask.fill();
     sb.print("{any}", .{mask});
-    var expected =
-        \\BitMask[{ 0, 0, 10, 10 }]
-        \\  1,1,1,0,0,0,0,0,0,0,
-        \\  1,0,1,0,0,0,0,0,0,0,
-        \\  1,1,1,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
+
+    try mask.reset(5, 5);
+    sb.print("{any}", .{mask});
+
+    try mask.reset(15, 15);
+    mask.fill();
+    sb.print("{any}", .{mask});
+
+    const expected =
+        \\BitMask[10|10]
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\BitMask[5|5]
+        \\  0,0,0,0,0,
+        \\  0,0,0,0,0,
+        \\  0,0,0,0,0,
+        \\  0,0,0,0,0,
+        \\  0,0,0,0,0,
+        \\BitMask[15|15]
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
         \\
     ;
-    try std.testing.expectEqualStrings(expected, sb.toString());
 
-    mask.clearMask();
-    sb.clear();
-    mask.setRegionFrom(.{ 3, 3, 3, 3 }, bits[0..bits.len]);
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask Set Bits" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    mask.setBitAt(1, 1);
+    mask.setBitAt(9, 9);
+    mask.setBitAt(20, 1);
 
     sb.print("{any}", .{mask});
-    expected =
-        \\BitMask[{ 0, 0, 10, 10 }]
+    const expected =
+        \\BitMask[10|10]
         \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,1,1,1,0,0,0,0,
-        \\  0,0,0,1,0,1,0,0,0,0,
-        \\  0,0,0,1,1,1,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
-        \\
-    ;
-    try std.testing.expectEqualStrings(expected, sb.toString());
-
-    mask.clearMask();
-    sb.clear();
-    mask.setRegionFrom(.{ -1, -1, 3, 3 }, bits[0..bits.len]);
-
-    sb.print("{any}", .{mask});
-    expected =
-        \\BitMask[{ 0, 0, 10, 10 }]
         \\  0,1,0,0,0,0,0,0,0,0,
-        \\  1,1,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
@@ -525,18 +552,54 @@ test "BitMask setBitsRegionFrom" {
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,1,
         \\
     ;
-    try std.testing.expectEqualStrings(expected, sb.toString());
 
-    mask.clearMask();
-    sb.clear();
-    mask.setRegionFrom(.{ 8, 8, 3, 3 }, bits[0..bits.len]);
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask Set RectI 1" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    mask.setRectI(.{ 2, 2, 5, 5 }, true);
 
     sb.print("{any}", .{mask});
-    expected =
-        \\BitMask[{ 0, 0, 10, 10 }]
+    const expected =
+        \\BitMask[10|10]
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask Set RectI 2" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    mask.setRectI(.{ -2, -2, 5, 5 }, true);
+
+    sb.print("{any}", .{mask});
+    const expected =
+        \\BitMask[10|10]
+        \\  1,1,1,0,0,0,0,0,0,0,
+        \\  1,1,1,0,0,0,0,0,0,0,
+        \\  1,1,1,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
@@ -544,126 +607,241 @@ test "BitMask setBitsRegionFrom" {
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
         \\  0,0,0,0,0,0,0,0,0,0,
-        \\  0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask Set RectI 3" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    mask.setRectI(.{ 8, 0, 5, 5 }, true);
+    mask.setRectI(.{ 7, 8, 5, 5 }, true);
+
+    sb.print("{any}", .{mask});
+    const expected =
+        \\BitMask[10|10]
         \\  0,0,0,0,0,0,0,0,1,1,
-        \\  0,0,0,0,0,0,0,0,1,0,
+        \\  0,0,0,0,0,0,0,0,1,1,
+        \\  0,0,0,0,0,0,0,0,1,1,
+        \\  0,0,0,0,0,0,0,0,1,1,
+        \\  0,0,0,0,0,0,0,0,1,1,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,1,1,1,
+        \\  0,0,0,0,0,0,0,1,1,1,
         \\
     ;
+
     try std.testing.expectEqualStrings(expected, sb.toString());
 }
-
-test "BitMask set region and create intersection mask" {
-    var mask1 = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 5, 5 });
-    defer mask1.deinit();
-    var mask2 = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 5, 5 });
-    defer mask2.deinit();
+test "BitMask Set RectI 4" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    mask1.setRegionRel(.{ 0, 0, 5, 1 }, true);
-    mask1.setRegionRel(.{ 0, 0, 1, 5 }, true);
-    mask1.setRegionRel(.{ 4, 0, 1, 5 }, true);
-    mask1.setRegionRel(.{ 0, 4, 5, 1 }, true);
+    mask.setRectI(.{ 0, 0, 10, 10 }, true);
 
-    mask2.setRegionRel(.{ 0, 0, 5, 1 }, true);
-    mask2.setRegionRel(.{ 0, 0, 1, 5 }, true);
-    mask2.setRegionRel(.{ 4, 0, 1, 5 }, true);
-    mask2.setRegionRel(.{ 0, 4, 5, 1 }, true);
-
-    sb.print("{any}", .{mask1});
-    sb.print("{any}", .{mask2});
-
-    // Set offset on mask2
-    mask2.region[0] = 2;
-    mask2.region[1] = 2;
-
-    var mask3 = mask1.createIntersectionMask(mask2, utils.bitOpAND);
-    defer mask3.deinit();
-    sb.print("{any}", .{mask3});
-    var mask4 = mask1.createIntersectionMask(mask2, utils.bitOpOR);
-    defer mask4.deinit();
-    sb.print("{any}", .{mask4});
-    var mask5 = mask1.createIntersectionMask(mask2, utils.bitOpXOR);
-    defer mask5.deinit();
-    sb.print("{any}", .{mask5});
-
+    sb.print("{any}", .{mask});
     const expected =
-        \\BitMask[{ 0, 0, 5, 5 }]
-        \\  1,1,1,1,1,
-        \\  1,0,0,0,1,
-        \\  1,0,0,0,1,
-        \\  1,0,0,0,1,
-        \\  1,1,1,1,1,
-        \\BitMask[{ 0, 0, 5, 5 }]
-        \\  1,1,1,1,1,
-        \\  1,0,0,0,1,
-        \\  1,0,0,0,1,
-        \\  1,0,0,0,1,
-        \\  1,1,1,1,1,
-        \\BitMask[{ 2, 2, 3, 3 }]
-        \\  0,0,1,
-        \\  0,0,0,
-        \\  1,0,0,
-        \\BitMask[{ 2, 2, 3, 3 }]
-        \\  1,1,1,
-        \\  1,0,1,
-        \\  1,1,1,
-        \\BitMask[{ 2, 2, 3, 3 }]
-        \\  1,1,0,
-        \\  1,0,1,
-        \\  0,1,1,
+        \\BitMask[10|10]
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
         \\
     ;
 
     try std.testing.expectEqualStrings(expected, sb.toString());
 }
 
-test "BitMask clip" {
-    var mask1 = utils.BitMask.new(std.testing.allocator, .{ 0, 0, 10, 10 });
-    defer mask1.deinit();
+test "BitMask Set RectI 5" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
 
-    for (0..10) |y| {
-        for (0..10) |x| {
-            if (@mod(x, 2) > 0) {
-                mask1.setBitAt(x, y);
-            }
-        }
-    }
-    sb.print("{any}", .{mask1});
+    mask.setRectI(.{ -56, 3, 100, 100 }, true);
 
-    var mask2 = mask1.clip(.{ -5, -5, 10, 10 });
-    defer mask2.deinit();
-    sb.print("{any}", .{mask2});
-    var mask3 = mask1.clip(.{ 5, 5, 10, 10 });
-    defer mask3.deinit();
-    sb.print("{any}", .{mask3});
+    sb.print("{any}", .{mask});
+    const expected =
+        \\BitMask[10|10]
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\
+    ;
+
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask Set RectF 1" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    mask.setRectF(.{ 2.11, 2.22, 4.1, 4.00001 }, true);
+
+    sb.print("{any}", .{mask});
+    const expected =
+        \\BitMask[10|10]
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask Set RectF 2" {
+    var mask = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    mask.setRectF(.{ -2.11, -2.22, 4.1, -4.00001 }, true);
+
+    sb.print("{any}", .{mask});
+    const expected =
+        \\BitMask[10|10]
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask SetCircleI 1" {
+    var mask = utils.BitMask.new(std.testing.allocator, 15, 15);
+    defer mask.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    mask.setCircleI(.{ 7, 7, 7 }, true);
+    sb.print("{any}", .{mask});
+
+    mask.setCircleI(.{ 7, 7, 4 }, false);
+    sb.print("{any}", .{mask});
 
     const expected =
-        \\BitMask[{ 0, 0, 10, 10 }]
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\  0,1,0,1,0,1,0,1,0,1,
-        \\BitMask[{ 0, 0, 5, 5 }]
-        \\  0,1,0,1,0,
-        \\  0,1,0,1,0,
-        \\  0,1,0,1,0,
-        \\  0,1,0,1,0,
-        \\  0,1,0,1,0,
-        \\BitMask[{ 5, 5, 5, 5 }]
-        \\  1,0,1,0,1,
-        \\  1,0,1,0,1,
-        \\  1,0,1,0,1,
-        \\  1,0,1,0,1,
-        \\  1,0,1,0,1,
+        \\BitMask[15|15]
+        \\  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,
+        \\  0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,
+        \\  0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+        \\  0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+        \\  0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+        \\  0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+        \\  0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+        \\  0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+        \\  0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+        \\  0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,
+        \\  0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,
+        \\  0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        \\BitMask[15|15]
+        \\  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        \\  0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,
+        \\  0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,
+        \\  0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,
+        \\  0,1,1,1,1,0,0,0,0,0,1,1,1,1,0,
+        \\  0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,
+        \\  0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,
+        \\  0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,
+        \\  0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,
+        \\  0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,
+        \\  0,1,1,1,1,0,0,0,0,0,1,1,1,1,0,
+        \\  0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,
+        \\  0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,
+        \\  0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,
+        \\  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        \\
+    ;
+
+    try std.testing.expectEqualStrings(expected, sb.toString());
+}
+
+test "BitMask Intersection 1" {
+    var mask1 = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask1.deinit();
+    var mask2 = utils.BitMask.new(std.testing.allocator, 10, 10);
+    defer mask2.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    mask2.setRectI(.{ 0, 0, 10, 1 }, true);
+    mask2.setRectI(.{ 0, 0, 1, 10 }, true);
+    mask2.setRectI(.{ 9, 0, 1, 10 }, true);
+    mask2.setRectI(.{ 0, 9, 10, 1 }, true);
+
+    mask1.setIntersection(mask2, .{ -5, -5 }, utils.bitOpOR);
+    mask1.setIntersection(mask2, .{ 5, 5 }, utils.bitOpOR);
+    mask1.setIntersection(mask2, .{ -6, 6 }, utils.bitOpOR);
+    mask1.setIntersection(mask2, .{ 6, -6 }, utils.bitOpOR);
+
+    sb.print("{any}", .{mask2});
+    sb.print("{any}", .{mask1});
+    const expected =
+        \\BitMask[10|10]
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\  1,0,0,0,0,0,0,0,0,1,
+        \\  1,0,0,0,0,0,0,0,0,1,
+        \\  1,0,0,0,0,0,0,0,0,1,
+        \\  1,0,0,0,0,0,0,0,0,1,
+        \\  1,0,0,0,0,0,0,0,0,1,
+        \\  1,0,0,0,0,0,0,0,0,1,
+        \\  1,0,0,0,0,0,0,0,0,1,
+        \\  1,0,0,0,0,0,0,0,0,1,
+        \\  1,1,1,1,1,1,1,1,1,1,
+        \\BitMask[10|10]
+        \\  0,0,0,0,1,0,1,0,0,0,
+        \\  0,0,0,0,1,0,1,0,0,0,
+        \\  0,0,0,0,1,0,1,0,0,0,
+        \\  0,0,0,0,1,0,1,1,1,1,
+        \\  1,1,1,1,1,0,0,0,0,0,
+        \\  0,0,0,0,0,1,1,1,1,1,
+        \\  1,1,1,1,0,1,0,0,0,0,
+        \\  0,0,0,1,0,1,0,0,0,0,
+        \\  0,0,0,1,0,1,0,0,0,0,
+        \\  0,0,0,1,0,1,0,0,0,0,
         \\
     ;
 
@@ -737,4 +915,56 @@ test "DynArray copy of struct toKampanie  heap" {
 
     try std.testing.expect(_s2.id == 3);
     try std.testing.expect(list.get(1).?.id == 3);
+}
+
+test "intersectsRectIOffset1" {
+    const pos1: PosI = .{ 10, 10 };
+    const r1: RectI = .{ 0, 0, 10, 10 };
+
+    const pos2: PosI = .{ -10, -10 };
+    const r2: RectI = .{ 0, 0, 10, 10 };
+
+    const offset: Vector2i = .{ pos1[0] - pos2[0], pos1[1] - pos2[1] };
+
+    try std.testing.expect(utils.intersectsRectI(r1, r2));
+    try std.testing.expect(!utils.intersectsRectIOffset(r1, r2, offset));
+}
+
+test "intersectsRectIOffset2" {
+    const pos1: PosI = .{ 0, 0 };
+    const r1: RectI = .{ 20, 20, 10, 10 };
+
+    const pos2: PosI = .{ 25, 25 };
+    const r2: RectI = .{ 0, 0, 10, 10 };
+
+    const offset: Vector2i = .{ pos1[0] - pos2[0], pos1[1] - pos2[1] };
+
+    try std.testing.expect(!utils.intersectsRectI(r1, r2));
+    try std.testing.expect(utils.intersectsRectIOffset(r1, r2, offset));
+}
+
+test "TEMPPerformance1" {
+    const start_time = std.time.microTimestamp();
+    for (0..1000000) |i| {
+        const v = Vector2i{ utils.usize_cint(i), 10000 };
+        _ = testTEMPPerformance(v);
+    }
+    const end_time = std.time.microTimestamp();
+    std.debug.print("took: {d} ", .{end_time - start_time});
+}
+
+var temp_v = Vector2i{ 0, 0 };
+test "TEMPPerformance2" {
+    const start_time = std.time.microTimestamp();
+    for (0..1000000) |i| {
+        temp_v[0] = utils.usize_cint(i);
+        temp_v[1] = 10000;
+        _ = testTEMPPerformance(temp_v);
+    }
+    const end_time = std.time.microTimestamp();
+    std.debug.print("took: {d} ", .{end_time - start_time});
+}
+
+fn testTEMPPerformance(v: Vector2i) bool {
+    return v[0] - v[1] > 0;
 }

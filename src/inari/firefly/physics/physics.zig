@@ -7,6 +7,7 @@ const contact = @import("contact.zig");
 const utils = inari.utils;
 const firefly = inari.firefly;
 const Float = utils.Float;
+const Index = utils.Index;
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
@@ -21,6 +22,16 @@ pub const EAnimation = animation.EAnimation;
 pub const AnimationSystem = animation.AnimationSystem;
 
 pub const EMovement = movement.EMovement;
+pub const MovementEvent = movement.MovementEvent;
+pub const MovementListener = movement.MovementListener;
+pub const subscribe = movement.subscribe;
+pub const unsubscribe = movement.unsubscribe;
+pub const MovementAspectGroup = movement.MovementAspectGroup;
+pub const MovementAspect = movement.MovementAspect;
+pub const MovementKind = movement.MovementKind;
+pub const BasicMovement = movement.BasicMovement;
+pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: Float) bool;
+
 pub const SimpleStepIntegrator = movement.SimpleStepIntegrator;
 pub const VerletIntegrator = movement.VerletIntegrator;
 pub const EulerIntegrator = movement.EulerIntegrator;
@@ -28,6 +39,24 @@ pub const EulerIntegrator = movement.EulerIntegrator;
 pub const AudioPlayer = audio.AudioPlayer;
 pub const Sound = audio.Sound;
 pub const Music = audio.Music;
+
+pub const ContactBounds = contact.ContactBounds;
+pub const Contact = contact.Contact;
+pub const ContactScan = contact.ContactScan;
+pub const EContact = contact.EContact;
+pub const EContactScan = contact.EContactScan;
+pub const ContactConstraint = contact.ContactConstraint;
+pub const IContactMap = contact.IContactMap;
+pub const ContactTypeAspectGroup = contact.ContactTypeAspectGroup;
+pub const ContactTypeAspect = contact.ContactTypeAspect;
+pub const ContactTypeKind = contact.ContactTypeKind;
+pub const BasicContactTypes = contact.BasicContactTypes;
+pub const ContactMaterialAspectGroup = contact.ContactMaterialAspectGroup;
+pub const ContactMaterialAspect = contact.ContactMaterialAspect;
+pub const ContactMaterialKind = contact.ContactMaterialKind;
+pub const BasicContactMaterials = contact.BasicContactMaterials;
+pub const DebugCollisionResolver = contact.DebugCollisionResolver;
+pub const addDummyContactMap = contact.addDummyContactMap;
 
 //////////////////////////////////////////////////////////////
 //// module init

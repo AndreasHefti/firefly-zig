@@ -10,8 +10,6 @@ const String = utils.String;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 
-var initialized = false;
-
 pub const AssetAspectGroup = AspectGroup(struct {
     pub const name = "Asset";
 });

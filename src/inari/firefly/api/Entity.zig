@@ -51,6 +51,16 @@ pub const Entity = struct {
         }
     }
 
+    pub fn hasComponent(self: *Entity, entity_component_type: anytype) bool {
+        if (EComponentAspectGroup.getAspectFromAnytype(entity_component_type)) |aspect|
+            return self.kind.hasAspect(aspect);
+        return false;
+    }
+
+    pub fn hasEntityComponent(entity_id: Index, entity_component_type: anytype) bool {
+        return Entity.byId(entity_id).hasComponent(entity_component_type);
+    }
+
     pub fn with(self: *Entity, c: anytype) *Entity {
         EComponent.checkValid(c);
 
@@ -99,13 +109,21 @@ pub const Entity = struct {
 
 pub const EntityCondition = struct {
     accept_kind: ?EComponentKind = null,
+    accept_full_only: bool = true,
     dismiss_kind: ?EComponentKind = null,
     condition: ?Condition(Index) = null,
 
     pub fn check(self: *EntityCondition, id: Index) bool {
         const e_kind = Entity.byId(id).kind;
-        if (self.accept_kind) |*ak| if (!ak.isPartOf(e_kind))
-            return false;
+        if (self.accept_kind) |*ak| {
+            if (self.accept_full_only) {
+                if (!ak.isPartOf(e_kind))
+                    return false;
+            } else {
+                if (!e_kind.hasAnyAspect(ak.*))
+                    return false;
+            }
+        }
         if (self.dismiss_kind) |*dk| if (!dk.isNotPartOf(e_kind))
             return false;
         if (self.condition) |*c| if (!c.check(id))

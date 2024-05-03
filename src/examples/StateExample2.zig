@@ -21,6 +21,8 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
+    // Since the StateEngineSystem is not activated by default, we need to active it first
+    firefly.Engine.CoreSystems.EntityStateSystem.activate();
     firefly.Engine.start(600, 400, 60, "State Example", init);
 }
 
@@ -32,9 +34,6 @@ var rndx = std.rand.DefaultPrng.init(32);
 const random = rndx.random();
 
 fn init() void {
-    // Since the StateEngineSystem is not activated by default, we need to active it first
-    firefly.api.activateSystem("StateEntitySystem", true);
-
     Texture.newAnd(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

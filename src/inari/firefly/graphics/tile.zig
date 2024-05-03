@@ -126,10 +126,10 @@ pub const TileGrid = struct {
     layer_id: ?Index = null,
     spherical: bool = false,
     /// captures the grid dimensions in usize and c_int
-    /// [2] = grid_pixel_width,
-    /// [3] = grid_pixel_height,
-    /// [4] = cell_pixel_width,
-    /// [5] = cell_pixel_height
+    /// [0] = grid_pixel_width,
+    /// [1] = grid_pixel_height,
+    /// [2] = cell_pixel_width,
+    /// [3] = cell_pixel_height
     dimensions: @Vector(4, usize),
 
     _dimensionsF: Vector4f = undefined,
@@ -243,7 +243,11 @@ pub const TileGrid = struct {
         return @truncate(pixel_y / self.dimensions[3]);
     }
 
-    pub fn getIterator(self: *TileGrid, projection: *const Projection) ?Iterator {
+    pub inline fn getIteratorForProjection(self: *TileGrid, projection: *const Projection) ?Iterator {
+        return getIteratorWorldClipF(self, projection.plain);
+    }
+
+    pub fn getIteratorWorldClipF(self: *TileGrid, clip: RectF) ?Iterator {
         const intersectionF = utils.getIntersectionRectF(
             .{
                 self.world_position[0],
@@ -251,7 +255,7 @@ pub const TileGrid = struct {
                 self._dimensionsF[0] * self._dimensionsF[2],
                 self._dimensionsF[1] * self._dimensionsF[3],
             },
-            projection.plain,
+            clip,
         );
 
         if (intersectionF[1] <= 0 or intersectionF[3] <= 0)
@@ -381,7 +385,7 @@ const DefaultTileGridRenderer = struct {
             while (i) |grid_id| {
                 var tile_grid: *TileGrid = TileGrid.byId(grid_id);
                 api.rendering.addOffset(tile_grid.world_position);
-                var iterator = tile_grid.getIterator(e.projection.?);
+                var iterator = tile_grid.getIteratorForProjection(e.projection.?);
                 if (iterator) |*itr| {
                     while (itr.next()) |entity_id| {
                         const tile = ETile.byId(entity_id).?;

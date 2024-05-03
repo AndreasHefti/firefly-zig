@@ -174,15 +174,6 @@ const RaylibRenderAPI = struct {
         .zoom = 1,
     };
 
-    var temp_source_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
-    var temp_dest_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
-    var temp_pivot = rl.Vector2{ .x = 0, .y = 0 };
-    var temp_rect = rl.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
-    var temp_p1 = rl.Vector2{ .x = 0, .y = 0 };
-    var temp_p2 = rl.Vector2{ .x = 0, .y = 0 };
-    var temp_p3 = rl.Vector2{ .x = 0, .y = 0 };
-    var temp_p4 = rl.Vector2{ .x = 0, .y = 0 };
-
     var render_batch: ?rlgl.rlRenderBatch = null;
 
     fn setRenderBatch(buffer_number: ?CInt, max_buffer_elements: ?CInt) void {
@@ -370,37 +361,48 @@ const RaylibRenderAPI = struct {
         if (render_textures.get(texture_id)) |tex| {
 
             // set blend mode
-            if (blend_mode) |bm| {
+            if (blend_mode) |bm|
                 rl.BeginBlendMode(@intFromEnum(bm));
-            }
 
-            // set source rect
-            temp_source_rect.width = @floatFromInt(tex.texture.width);
-            // NOTE: render to texture has inverted y axis.
-            temp_source_rect.height = @floatFromInt(-tex.texture.height);
-            // set destination rect
             if (scale) |s| {
-                temp_dest_rect.x = position[0];
-                temp_dest_rect.y = position[1];
-                temp_dest_rect.width = s[0] * @as(Float, @floatFromInt(tex.texture.width));
-                temp_dest_rect.height = s[1] * @as(Float, @floatFromInt(tex.texture.height));
-                temp_pivot = @bitCast((pivot orelse default_pivot) * s);
+                rl.DrawTexturePro(
+                    tex.texture,
+                    .{
+                        .x = 0,
+                        .y = 0,
+                        .width = @floatFromInt(tex.texture.width),
+                        .height = @floatFromInt(-tex.texture.height),
+                    },
+                    .{
+                        .x = position[0],
+                        .y = position[1],
+                        .width = s[0] * @as(Float, @floatFromInt(tex.texture.width)),
+                        .height = s[1] * @as(Float, @floatFromInt(tex.texture.height)),
+                    },
+                    @bitCast((pivot orelse default_pivot) * s),
+                    rotation orelse 0,
+                    if (tint_color) |tc| @bitCast(tc) else default_tint_color,
+                );
             } else {
-                temp_dest_rect.x = position[0];
-                temp_dest_rect.y = position[1];
-                temp_dest_rect.width = @floatFromInt(tex.texture.width);
-                temp_dest_rect.height = @floatFromInt(tex.texture.height);
-                temp_pivot = @bitCast(pivot orelse default_pivot);
+                rl.DrawTexturePro(
+                    tex.texture,
+                    .{
+                        .x = 0,
+                        .y = 0,
+                        .width = @floatFromInt(tex.texture.width),
+                        .height = @floatFromInt(-tex.texture.height),
+                    },
+                    .{
+                        .x = position[0],
+                        .y = position[1],
+                        .width = @floatFromInt(tex.texture.width),
+                        .height = @floatFromInt(-tex.texture.height),
+                    },
+                    if (scale) |s| @bitCast((pivot orelse default_pivot) * s) else @bitCast(pivot orelse default_pivot),
+                    rotation orelse 0,
+                    if (tint_color) |tc| @bitCast(tc) else default_tint_color,
+                );
             }
-
-            rl.DrawTexturePro(
-                tex.texture,
-                temp_source_rect,
-                temp_dest_rect,
-                temp_pivot,
-                rotation orelse 0,
-                if (tint_color) |tc| @bitCast(tc) else default_tint_color,
-            );
         }
     }
 
@@ -418,46 +420,55 @@ const RaylibRenderAPI = struct {
         if (textures.get(texture_id)) |tex| {
 
             // set blend mode
-            if (blend_mode) |bm| {
+            if (blend_mode) |bm|
                 rl.BeginBlendMode(@intFromEnum(bm));
-            }
 
-            // scaling
-            if (scale) |s| {
-                temp_dest_rect.width = @abs(texture_bounds[2]) * s[0];
-                temp_dest_rect.height = @abs(texture_bounds[3]) * s[1];
-                temp_pivot = @bitCast((pivot orelse default_pivot) * s);
-            } else {
-                temp_dest_rect.width = @abs(texture_bounds[2]);
-                temp_dest_rect.height = @abs(texture_bounds[3]);
-                temp_pivot = @bitCast(pivot orelse default_pivot);
-            }
+            const tint: rl.Color = if (tint_color) |tc| @bitCast(tc) else default_tint_color;
+            const _pivot: rl.Vector2 = if (scale) |s|
+                @bitCast((pivot orelse default_pivot) * s)
+            else
+                @bitCast(pivot orelse default_pivot);
+
+            var dest_rect = if (scale) |s|
+                rl.Rectangle{
+                    .x = 0,
+                    .y = 0,
+                    .width = @abs(texture_bounds[2]) * s[0],
+                    .height = @abs(texture_bounds[3]) * s[1],
+                }
+            else
+                rl.Rectangle{
+                    .x = 0,
+                    .y = 0,
+                    .width = @abs(texture_bounds[2]),
+                    .height = @abs(texture_bounds[3]),
+                };
 
             if (multiplier) |m| {
                 addOffset(position);
                 for (0..m.len) |i| {
-                    temp_dest_rect.x = m[i][0];
-                    temp_dest_rect.y = m[i][1];
+                    dest_rect.x = m[i][0];
+                    dest_rect.y = m[i][1];
                     rl.DrawTexturePro(
                         tex.*,
                         @bitCast(texture_bounds),
-                        temp_dest_rect,
-                        temp_pivot,
+                        dest_rect,
+                        _pivot,
                         rotation orelse 0,
-                        if (tint_color) |tc| @bitCast(tc) else default_tint_color,
+                        tint,
                     );
                 }
                 minusOffset(position);
             } else {
-                temp_dest_rect.x = position[0];
-                temp_dest_rect.y = position[1];
+                dest_rect.x = position[0];
+                dest_rect.y = position[1];
                 rl.DrawTexturePro(
                     tex.*,
                     @bitCast(texture_bounds),
-                    temp_dest_rect,
-                    temp_pivot,
+                    dest_rect,
+                    _pivot,
                     rotation orelse 0,
-                    if (tint_color) |tc| @bitCast(tc) else default_tint_color,
+                    tint,
                 );
             }
         }
@@ -652,39 +663,40 @@ const RaylibRenderAPI = struct {
         fill: bool,
         thickness: ?Float,
     ) void {
-        temp_rect.x = vertices[0];
-        temp_rect.y = vertices[1];
-        temp_rect.width = vertices[2];
-        temp_rect.height = vertices[3];
+        var rect = rl.Rectangle{
+            .x = vertices[0],
+            .y = vertices[1],
+            .width = vertices[2],
+            .height = vertices[3],
+        };
+
         if (multiplier) |m| {
-            temp_p1.x = temp_rect.x;
-            temp_p1.y = temp_rect.y;
             for (0..m.len) |i| {
-                temp_rect.x = vertices[0] + temp_p1.x + m[i][0];
-                temp_rect.y = vertices[1] + temp_p1.y + m[i][1];
+                rect.x = vertices[0] + rect.x + m[i][0];
+                rect.y = vertices[1] + rect.y + m[i][1];
                 if (fill) {
                     rl.DrawRectangleGradientEx(
-                        temp_rect,
+                        rect,
                         @bitCast(color),
                         @bitCast(color1 orelse color),
                         @bitCast(color2 orelse color),
                         @bitCast(color3 orelse color),
                     );
                 } else {
-                    rl.DrawRectangleLinesEx(temp_rect, thickness orelse 1.0, @bitCast(color));
+                    rl.DrawRectangleLinesEx(rect, thickness orelse 1.0, @bitCast(color));
                 }
             }
         } else {
             if (fill) {
                 rl.DrawRectangleGradientEx(
-                    temp_rect,
+                    rect,
                     @bitCast(color),
                     @bitCast(color1 orelse color),
                     @bitCast(color2 orelse color),
                     @bitCast(color3 orelse color),
                 );
             } else {
-                rl.DrawRectangleLinesEx(temp_rect, thickness orelse 1.0, @bitCast(color));
+                rl.DrawRectangleLinesEx(rect, thickness orelse 1.0, @bitCast(color));
             }
         }
     }
@@ -697,29 +709,37 @@ const RaylibRenderAPI = struct {
     ) void {
         if (multiplier) |m| {
             for (0..m.len) |i| {
-                temp_p1.x = vertices[0] + m[i][0];
-                temp_p1.y = vertices[1] + m[i][1];
-                temp_p2.x = vertices[2] + m[i][0];
-                temp_p2.y = vertices[3] + m[i][1];
-                temp_p3.x = vertices[4] + m[i][0];
-                temp_p3.y = vertices[5] + m[i][1];
                 if (fill) {
-                    rl.DrawTriangle(temp_p1, temp_p2, temp_p3, @bitCast(color));
+                    rl.DrawTriangle(
+                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
+                        .{ .x = vertices[2] + m[i][0], .y = vertices[3] + m[i][1] },
+                        .{ .x = vertices[4] + m[i][0], .y = vertices[5] + m[i][1] },
+                        @bitCast(color),
+                    );
                 } else {
-                    rl.DrawTriangleLines(temp_p1, temp_p2, temp_p3, @bitCast(color));
+                    rl.DrawTriangleLines(
+                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
+                        .{ .x = vertices[2] + m[i][0], .y = vertices[3] + m[i][1] },
+                        .{ .x = vertices[4] + m[i][0], .y = vertices[5] + m[i][1] },
+                        @bitCast(color),
+                    );
                 }
             }
         } else {
-            temp_p1.x = vertices[0];
-            temp_p1.y = vertices[1];
-            temp_p2.x = vertices[2];
-            temp_p2.y = vertices[3];
-            temp_p3.x = vertices[4];
-            temp_p3.y = vertices[5];
             if (fill) {
-                rl.DrawTriangle(temp_p1, temp_p2, temp_p3, @bitCast(color));
+                rl.DrawTriangle(
+                    .{ .x = vertices[0], .y = vertices[1] },
+                    .{ .x = vertices[2], .y = vertices[3] },
+                    .{ .x = vertices[4], .y = vertices[5] },
+                    @bitCast(color),
+                );
             } else {
-                rl.DrawTriangleLines(temp_p1, temp_p2, temp_p3, @bitCast(color));
+                rl.DrawTriangleLines(
+                    .{ .x = vertices[0], .y = vertices[1] },
+                    .{ .x = vertices[2], .y = vertices[3] },
+                    .{ .x = vertices[4], .y = vertices[5] },
+                    @bitCast(color),
+                );
             }
         }
     }
@@ -733,29 +753,53 @@ const RaylibRenderAPI = struct {
     ) void {
         if (multiplier) |m| {
             for (0..m.len) |i| {
-                temp_p1.x = vertices[0] + m[i][0];
-                temp_p1.y = vertices[1] + m[i][1];
                 if (fill) {
                     if (color1) |gc| {
-                        rl.DrawCircleGradient(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], @bitCast(color), @bitCast(gc));
+                        rl.DrawCircleGradient(
+                            @intFromFloat(vertices[0] + m[i][0]),
+                            @intFromFloat(vertices[1] + m[i][1]),
+                            vertices[2],
+                            @bitCast(color),
+                            @bitCast(gc),
+                        );
                     } else {
-                        rl.DrawCircleV(temp_p1, vertices[2], @bitCast(color));
+                        rl.DrawCircleV(
+                            .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
+                            vertices[2],
+                            @bitCast(color),
+                        );
                     }
                 } else {
-                    rl.DrawCircleLinesV(temp_p1, vertices[2], @bitCast(color));
+                    rl.DrawCircleLinesV(
+                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
+                        vertices[2],
+                        @bitCast(color),
+                    );
                 }
             }
         } else {
-            temp_p1.x = vertices[0];
-            temp_p1.y = vertices[1];
             if (fill) {
                 if (color1) |gc| {
-                    rl.DrawCircleGradient(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], @bitCast(color), @bitCast(gc));
+                    rl.DrawCircleGradient(
+                        @intFromFloat(vertices[0]),
+                        @intFromFloat(vertices[1]),
+                        vertices[2],
+                        @bitCast(color),
+                        @bitCast(gc),
+                    );
                 } else {
-                    rl.DrawCircleV(temp_p1, vertices[2], @bitCast(color));
+                    rl.DrawCircleV(
+                        .{ .x = vertices[0], .y = vertices[1] },
+                        vertices[2],
+                        @bitCast(color),
+                    );
                 }
             } else {
-                rl.DrawCircleLinesV(temp_p1, vertices[2], @bitCast(color));
+                rl.DrawCircleLinesV(
+                    .{ .x = vertices[0], .y = vertices[1] },
+                    vertices[2],
+                    @bitCast(color),
+                );
             }
         }
     }
@@ -768,21 +812,45 @@ const RaylibRenderAPI = struct {
     ) void {
         if (multiplier) |m| {
             for (0..m.len) |i| {
-                temp_p1.x = vertices[0] + m[i][0];
-                temp_p1.y = vertices[1] + m[i][1];
                 if (fill) {
-                    rl.DrawCircleSector(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
+                    rl.DrawCircleSector(
+                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
+                        vertices[2],
+                        vertices[3],
+                        vertices[4],
+                        @intFromFloat(vertices[5]),
+                        @bitCast(color),
+                    );
                 } else {
-                    rl.DrawCircleSectorLines(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
+                    rl.DrawCircleSectorLines(
+                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
+                        vertices[2],
+                        vertices[3],
+                        vertices[4],
+                        @intFromFloat(vertices[5]),
+                        @bitCast(color),
+                    );
                 }
             }
         } else {
-            temp_p1.x = vertices[0];
-            temp_p1.y = vertices[1];
             if (fill) {
-                rl.DrawCircleSector(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
+                rl.DrawCircleSector(
+                    .{ .x = vertices[0], .y = vertices[1] },
+                    vertices[2],
+                    vertices[3],
+                    vertices[4],
+                    @intFromFloat(vertices[5]),
+                    @bitCast(color),
+                );
             } else {
-                rl.DrawCircleSectorLines(temp_p1, vertices[2], vertices[3], vertices[4], @intFromFloat(vertices[5]), @bitCast(color));
+                rl.DrawCircleSectorLines(
+                    .{ .x = vertices[0], .y = vertices[1] },
+                    vertices[2],
+                    vertices[3],
+                    vertices[4],
+                    @intFromFloat(vertices[5]),
+                    @bitCast(color),
+                );
             }
         }
     }
@@ -795,21 +863,41 @@ const RaylibRenderAPI = struct {
     ) void {
         if (multiplier) |m| {
             for (0..m.len) |i| {
-                temp_p1.x = vertices[0] + m[i][0];
-                temp_p1.y = vertices[1] + m[i][1];
                 if (fill) {
-                    rl.DrawEllipse(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
+                    rl.DrawEllipse(
+                        @intFromFloat(vertices[0] + m[i][0]),
+                        @intFromFloat(vertices[1] + m[i][1]),
+                        vertices[2],
+                        vertices[3],
+                        @bitCast(color),
+                    );
                 } else {
-                    rl.DrawEllipseLines(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
+                    rl.DrawEllipseLines(
+                        @intFromFloat(vertices[0] + m[i][0]),
+                        @intFromFloat(vertices[1] + m[i][1]),
+                        vertices[2],
+                        vertices[3],
+                        @bitCast(color),
+                    );
                 }
             }
         } else {
-            temp_p1.x = vertices[0];
-            temp_p1.y = vertices[1];
             if (fill) {
-                rl.DrawEllipse(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
+                rl.DrawEllipse(
+                    @intFromFloat(vertices[0]),
+                    @intFromFloat(vertices[1]),
+                    vertices[2],
+                    vertices[3],
+                    @bitCast(color),
+                );
             } else {
-                rl.DrawEllipseLines(@intFromFloat(temp_p1.x), @intFromFloat(temp_p1.y), vertices[2], vertices[3], @bitCast(color));
+                rl.DrawEllipseLines(
+                    @intFromFloat(vertices[0]),
+                    @intFromFloat(vertices[1]),
+                    vertices[2],
+                    vertices[3],
+                    @bitCast(color),
+                );
             }
         }
     }

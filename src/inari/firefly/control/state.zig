@@ -33,12 +33,12 @@ pub fn init() void {
     EComponent.registerEntityComponent(EState);
 
     System(StateSystem).createSystem(
-        firefly.Engine.CoreSystems.StateSystem,
+        firefly.Engine.CoreSystems.StateSystem.name,
         "Updates all active StateEngine components, and change state on conditions",
         false,
     );
     System(EntityStateSystem).createSystem(
-        firefly.Engine.CoreSystems.EntityStateSystem,
+        firefly.Engine.CoreSystems.EntityStateSystem.name,
         "Updates all active Entities with EState components, and change state on conditions",
         false,
     );

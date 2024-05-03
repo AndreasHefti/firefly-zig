@@ -108,7 +108,7 @@ pub fn AspectGroup(comptime T: type) type {
             }
         }
 
-        fn getAspectFromAnytype(aspect: anytype) ?*const Aspect {
+        pub fn getAspectFromAnytype(aspect: anytype) ?*const Aspect {
             const at = @TypeOf(aspect);
             if (at == Aspect) {
                 return &aspect;
@@ -126,6 +126,10 @@ pub fn AspectGroup(comptime T: type) type {
             const group = Group;
             /// The bitmask to store indices of owned aspects of this kind
             _mask: MaskInt = 0,
+
+            pub fn clear(self: *Kind) void {
+                self._mask = 0;
+            }
 
             pub fn isPartOf(self: Kind, other: Kind) bool {
                 return other._mask & self._mask == self._mask;
@@ -168,18 +172,24 @@ pub fn AspectGroup(comptime T: type) type {
 
             pub fn withAspect(self: Kind, aspect: anytype) Kind {
                 var k = self;
-                if (getAspectFromAnytype(aspect)) |a| {
+                if (getAspectFromAnytype(aspect)) |a|
                     with(&k, a.id);
-                }
+
                 return k;
             }
 
             pub fn hasAspect(self: Kind, aspect: anytype) bool {
-                if (getAspectFromAnytype(aspect)) |a| {
-                    return has(self, a.id);
-                } else {
-                    return false;
-                }
+                if (getAspectFromAnytype(aspect)) |a|
+                    return self._mask & maskBit(a.id) != 0;
+
+                return false;
+            }
+
+            pub fn hasAnyAspect(self: Kind, other: Kind) bool {
+                if (self.isEquals(other))
+                    return self._mask & other._mask > 0;
+
+                return false;
             }
 
             pub fn has(self: Kind, index: u8) bool {

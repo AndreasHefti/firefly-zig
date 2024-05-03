@@ -43,8 +43,8 @@ pub const BitSet = struct {
 
     /// Resizes to a new length.  If the new length is larger
     /// than the old length, fills any added bits with `fill`.
-    pub fn resize(self: *@This(), new_len: usize, fill: bool) !void {
-        try self.unmanaged.resize(self.allocator, new_len, fill);
+    pub fn resize(self: *@This(), new_len: usize, value: bool) !void {
+        try self.unmanaged.resize(self.allocator, new_len, value);
     }
 
     /// deinitialize the array and releases its memory.
@@ -67,8 +67,16 @@ pub const BitSet = struct {
         return self.unmanaged.capacity();
     }
 
+    pub fn clearAndFree(self: *Self) void {
+        self.unmanaged.resize(self.allocator, 0, false) catch unreachable;
+    }
+
     pub fn clear(self: *Self) void {
         self.unmanaged.setRangeValue(.{ .start = 0, .end = self.unmanaged.bit_length }, false);
+    }
+
+    pub fn fill(self: *Self) void {
+        self.unmanaged.setRangeValue(.{ .start = 0, .end = self.unmanaged.bit_length }, true);
     }
 
     pub inline fn lengthOfMaskArray(self: Self) usize {
@@ -122,6 +130,24 @@ pub const BitSet = struct {
         }
 
         return i;
+    }
+
+    pub fn setAnd(self: *BitSet, other: *BitSet) void {
+        const self_num_masks = self.unmanaged.numMasks(self.bit_length);
+        const other_num_masks = other.unmanaged.numMasks(other.bit_length);
+        const min_num_masks = @min(self_num_masks, other_num_masks);
+        for (self.masks[0..min_num_masks], 0..) |*mask, i| {
+            mask.* &= other.masks[i];
+        }
+    }
+
+    pub fn setOr(self: *BitSet, other: *BitSet) void {
+        const self_num_masks = self.unmanaged.numMasks(self.bit_length);
+        const other_num_masks = other.unmanaged.numMasks(other.bit_length);
+        const min_num_masks = @min(self_num_masks, other_num_masks);
+        for (self.masks[0..min_num_masks], 0..) |*mask, i| {
+            mask.* |= other.masks[i];
+        }
     }
 
     /// Returns true if the bit at the specified index

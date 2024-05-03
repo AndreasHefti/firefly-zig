@@ -9,6 +9,7 @@ const component = @import("Component.zig");
 const system = @import("System.zig");
 const timer = @import("Timer.zig");
 const entity = @import("entity.zig");
+const control = @import("control.zig");
 const EventDispatch = utils.EventDispatch;
 const Condition = utils.Condition;
 const String = utils.String;
@@ -71,6 +72,9 @@ pub const EComponent = entity.EComponent;
 pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
+pub const EControl = control.EControl;
+pub const Control = control.Control;
+
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
 
@@ -115,6 +119,8 @@ pub fn init(context: InitContext) !void {
     // register api based components and entity components
     Component.registerComponent(Entity);
     EComponent.registerEntityComponent(EMultiplier);
+
+    control.init();
 }
 
 pub fn deinit() void {
@@ -122,6 +128,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    control.deinit();
     system.deinit();
     Component.deinit();
     rendering.deinit();

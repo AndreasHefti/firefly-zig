@@ -43,6 +43,7 @@ pub const PosI = Vector2i;
 pub const PosF = Vector2f;
 
 pub const CircleI = Vector3i;
+pub const CircleF = Vector3f;
 
 pub const ClipI = @Vector(4, usize);
 
@@ -53,15 +54,190 @@ pub const NEG_VEC2F = Vector2f{ -1, -1 };
 pub const NEG_VEC3F = Vector3f{ -1, -1, -1 };
 pub const NEG_VEC4F = Vector4f{ -1, -1, -1, -1 };
 
+pub inline fn rectIFromRectF(rect: RectF) RectI {
+    return .{
+        @intFromFloat(@floor(rect[0])),
+        @intFromFloat(@floor(rect[1])),
+        @intFromFloat(@ceil(rect[2])),
+        @intFromFloat(@ceil(rect[3])),
+    };
+}
+
+pub inline fn rectFFromRectI(rect: RectI) RectF {
+    return .{
+        @floatFromInt(rect[0]),
+        @floatFromInt(rect[1]),
+        @floatFromInt(rect[2]),
+        @floatFromInt(rect[3]),
+    };
+}
+
+pub inline fn rectIToClip(rect: RectI) ClipI {
+    return .{
+        utils.i32_usize(rect[0]),
+        utils.i32_usize(rect[1]),
+        utils.i32_usize(rect[2]),
+        utils.i32_usize(rect[3]),
+    };
+}
+
+pub inline fn rectFToClip(rect: RectF) ClipI {
+    return .{
+        @intFromFloat(@floor(rect[0])),
+        @intFromFloat(@floor(rect[1])),
+        @intFromFloat(@ceil(rect[2])),
+        @intFromFloat(@ceil(rect[3])),
+    };
+}
+
+pub inline fn posIFromPosF(pos: PosF) PosI {
+    return .{
+        @intFromFloat(@floor(pos[0])),
+        @intFromFloat(@floor(pos[1])),
+    };
+}
+
+pub inline fn posFFromPosI(pos: PosI) PosF {
+    return .{
+        @floatFromInt(pos[0]),
+        @floatFromInt(pos[1]),
+    };
+}
+
+pub inline fn areaRectI(r: RectI) CInt {
+    return r[2] * r[3];
+}
+
+pub inline fn areaRectF(r: RectF) Float {
+    return r[2] * r[3];
+}
+
 pub fn containsRectI(r: RectI, x: CInt, y: CInt) bool {
     return x >= r[0] and y >= r[1] and x < r[0] + r[2] and y < r[1] + r[3];
+}
+
+pub fn containsRectF(r: RectF, x: Float, y: Float) bool {
+    return x >= r[0] and y >= r[1] and x < r[0] + r[2] and y < r[1] + r[3];
+}
+
+pub fn containsCircI(c: CircleI, x: CInt, y: CInt) bool {
+    const dx = c[0] - x;
+    const dy = c[1] - y;
+    return std.math.sqrt(utils.cint_usize(dx * dx + dy * dy)) < c[2];
+}
+
+pub fn containsCircF(c: CircleF, x: Float, y: Float) bool {
+    const dx = c[0] - x;
+    const dy = c[1] - y;
+    return std.math.sqrt(dx * dx + dy * dy) < c[2];
 }
 
 pub fn intersectsRectI(r1: RectI, r2: RectI) bool {
     return !(r2[0] >= r1[0] + r1[2] or r2[0] + r2[2] <= r1[0] or r2[1] >= r1[1] + r1[3] or r2[1] + r2[3] <= r1[1]);
 }
 
+pub fn intersectsRectF(r1: RectF, r2: RectF) bool {
+    return !(r2[0] >= r1[0] + r1[2] or r2[0] + r2[2] <= r1[0] or r2[1] >= r1[1] + r1[3] or r2[1] + r2[3] <= r1[1]);
+}
+
+pub fn intersectsRectIOffset(r1: RectI, r2: RectI, offset: Vector2i) bool {
+    const r1x = r1[0] + offset[0];
+    const r1y = r1[1] + offset[1];
+    return !(r2[0] >= r1x + r1[2] or r2[0] + r2[2] <= r1x or r2[1] >= r1y + r1[3] or r2[1] + r2[3] <= r1y);
+}
+
+pub fn intersectsRectFOffset(r1: RectF, r2: RectF, offset: Vector2f) bool {
+    const r1x = r1[0] + offset[0];
+    const r1y = r1[1] + offset[1];
+    return !(r2[0] >= r1x + r1[2] or r2[0] + r2[2] <= r1x or r2[1] >= r1y + r1[3] or r2[1] + r2[3] <= r1y);
+}
+
+pub fn intersectsCI(c1: CircleI, c2: CircleI) bool {
+    const dx = (c1[0] + c1[2]) - (c2[0] + c2[2]);
+    const dy = (c1[1] + c1[2]) - (c2[1] + c2[2]);
+    return std.math.sqrt(dx * dx + dy * dy) < c1[3] + c2[3];
+}
+
+pub fn intersectsCF(c1: CircleF, c2: CircleF) bool {
+    const dx = (c1[0] + c1[2]) - (c2[0] + c2[2]);
+    const dy = (c1[1] + c1[2]) - (c2[1] + c2[2]);
+    return std.math.sqrt(dx * dx + dy * dy) < c1[2] + c2[2];
+}
+
+pub fn intersectsCIOffset(c1: CircleI, c2: CircleI, offset: Vector2i) bool {
+    const dx = (c1[0] + offset[0] + c1[2]) - (c2[0] + c2[2]);
+    const dy = (c1[1] + offset[1] + c1[2]) - (c2[1] + c2[2]);
+    return std.math.sqrt(dx * dx + dy * dy) < c1[2] + c2[2];
+}
+
+pub fn intersectsCFOffset(c1: CircleF, c2: CircleF, offset: Vector2f) bool {
+    const dx = (c1[0] + offset[0] + c1[2]) - (c2[0] + c2[2]);
+    const dy = (c1[1] + offset[1] + c1[2]) - (c2[1] + c2[2]);
+    return std.math.sqrt(dx * dx + dy * dy) < c1[2] + c2[2];
+}
+
+pub fn intersectsCRI(c: CircleI, r: RectI) bool {
+    const dx = c[0] - r[0] - @divTrunc(r[2], 2);
+    const dy = c[1] - r[1] - @divTrunc(r[3], 2);
+
+    if (dx > c[2] or dy > c[2])
+        return false;
+
+    return if (dx <= 0 or dy <= 0)
+        true
+    else
+        dx * dx + dy * dy <= c[2] * c[2];
+}
+
+pub fn intersectsCRF(c: CircleF, r: RectF) bool {
+    const dx = c[0] - r[0] - r[2] / 2;
+    const dy = c[1] - r[1] - r[3] / 2;
+
+    if (dx > c[2] or dy > c[2])
+        return false;
+
+    return if (dx <= 0 or dy <= 0)
+        true
+    else
+        dx * dx + dy * dy <= c[2] * c[2];
+}
+
+pub fn intersectsCRIOffset(c: CircleI, r: RectI, offset: Vector2i) bool {
+    const dx = @abs(c[0] + offset[0] - r[0]) - r[2] / 2;
+    const dy = @abs(c[1] + offset[1] - r[1]) - r[3] / 2;
+
+    if (dx > c[2] or dy > c[2])
+        return false;
+
+    return if (dx <= 0 or dy <= 0)
+        true
+    else
+        dx * dx + dy * dy <= c[2] * c[2];
+}
+
+pub fn intersectsCRFOffset(c: CircleF, r: RectF, offset: Vector2f) bool {
+    const dx = @abs(c[0] + offset[0] - r[0]) - r[2] / 2;
+    const dy = @abs(c[1] + offset[1] - r[1]) - r[3] / 2;
+
+    if (dx > c[2] or dy > c[2])
+        return false;
+
+    return if (dx <= 0 or dy <= 0)
+        true
+    else
+        dx * dx + dy * dy <= c[2] * c[2];
+}
+
 pub fn intersectionRectI(r1: RectI, r2: RectI, result: *RectI) void {
+    result[0] = @max(r1[0], r2[0]);
+    result[1] = @max(r1[1], r2[1]);
+    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+    result[2] = @max(0, x2 - result[0] + 1);
+    result[3] = @max(0, y2 - result[1] + 1);
+}
+
+pub fn intersectionRectF(r1: RectF, r2: RectF, result: *RectF) void {
     result[0] = @max(r1[0], r2[0]);
     result[1] = @max(r1[1], r2[1]);
     const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
@@ -79,6 +255,15 @@ pub fn getIntersectionRectI(r1: RectI, r2: RectI) RectI {
     return RectI{ x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
 }
 
+pub fn getIntersectionRectF(r1: RectF, r2: RectF) RectF {
+    const x1 = @max(r1[0], r2[0]);
+    const y1 = @max(r1[1], r2[1]);
+    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
+    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
+
+    return RectF{ x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
+}
+
 pub fn getIntersectionNormalizedI(r1: RectI, r2: RectI) ClipI {
     const x1 = @max(r1[0], r2[0]);
     const y1 = @max(r1[1], r2[1]);
@@ -92,22 +277,8 @@ pub fn isRegionRectI(r1: RectI) bool {
     return r1[2] > 0 and r1[3] > 0;
 }
 
-pub fn intersectionRectF(r1: RectF, r2: RectF, result: *RectF) void {
-    result[0] = @max(r1[0], r2[0]);
-    result[1] = @max(r1[1], r2[1]);
-    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
-    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
-    result[2] = @max(0, x2 - result[0] + 1);
-    result[3] = @max(0, y2 - result[1] + 1);
-}
-
-pub fn getIntersectionRectF(r1: RectF, r2: RectF) RectF {
-    const x1 = @max(r1[0], r2[0]);
-    const y1 = @max(r1[1], r2[1]);
-    const x2 = @min(r1[0] + r1[2] - 1, r2[0] + r2[2] - 1);
-    const y2 = @min(r1[1] + r1[3] - 1, r2[1] + r2[3] - 1);
-
-    return RectF{ x1, y1, @max(0, x2 - x1 + 1), @max(0, y2 - y1 + 1) };
+pub fn isRegionRectF(r1: RectF) bool {
+    return r1[2] > 0 and r1[3] > 0;
 }
 
 /// Color as Vector4u8
@@ -732,236 +903,161 @@ pub const CubicBezierFunction = struct {
 //////////////////////////////////////////////////////////////
 
 pub const BitMask = struct {
-
-    // BitMask properties
-    region: RectI,
+    width: usize,
+    height: usize,
     bits: BitSet,
 
-    // internal references
-    _length: usize,
-    _temp_bits: BitSet,
-    _allocator: std.mem.Allocator,
-
-    pub fn new(allocator: std.mem.Allocator, region: RectI) BitMask {
-        const l: usize = utils.cint_usize(region[2] * region[3]);
+    pub fn new(allocator: std.mem.Allocator, width: usize, height: usize) BitMask {
         return BitMask{
-            .region = region,
-            .bits = BitSet.newEmpty(allocator, l) catch unreachable,
-            ._length = l,
-            ._temp_bits = BitSet.newEmpty(allocator, l) catch unreachable,
-            ._allocator = allocator,
+            .width = width,
+            .height = height,
+            .bits = BitSet.newEmpty(allocator, width * height) catch unreachable,
         };
     }
 
     pub fn deinit(self: *BitMask) void {
         self.bits.deinit();
-        self._temp_bits.deinit();
-        self.region = RectI{ 0, 0, 0, 0 };
         self.bits = undefined;
-        self._allocator = undefined;
     }
 
     pub fn isEmpty(self: *BitMask) bool {
         return self.bits.nextSetBit(0) == null;
     }
 
-    pub fn isSetRel(self: BitMask, x: CInt, y: CInt) bool {
-        const x1 = x - self.region[0];
-        const y1 = y - self.region[1];
-        if (x1 < 0 or y1 < 0)
-            return false;
-
-        return self.isSet(
-            utils.cint_usize(x1),
-            utils.cint_usize(y1),
-        );
+    pub fn fill(self: *BitMask) void {
+        self.bits.fill();
     }
 
-    pub fn isSet(self: BitMask, x: usize, y: usize) bool {
-        if (x >= self.region[2] or y >= self.region[3])
-            return false;
-
-        return self.bits.isSet(y * utils.cint_usize(self.region[2]) + x);
+    pub fn reset(self: *BitMask, width: usize, height: usize) !void {
+        self.width = width;
+        self.height = height;
+        self.bits.clear();
+        try self.bits.resize(width * height, false);
     }
 
-    pub fn setBit(self: *BitMask, index: usize) void {
-        self.bits.set(index);
-    }
-
-    pub fn setBitAtRel(self: *BitMask, x: CInt, y: CInt) void {
-        const x1 = x - self.region[0];
-        const y1 = y - self.region[1];
-        if (x1 < 0 or y1 < 0)
-            return;
-
-        self.setBitAt(utils.cint_usize(x1), utils.cint_usize(y1));
+    pub fn clear(self: *BitMask) void {
+        self.bits.clear();
     }
 
     pub fn setBitAt(self: *BitMask, x: usize, y: usize) void {
-        self.setBitValueAt(x, y, true);
-    }
-
-    pub fn setBitValueAtRel(self: *BitMask, x: CInt, y: CInt, bit: bool) void {
-        const x1 = x - self.region[0];
-        const y1 = y - self.region[1];
-        if (x1 < 0 or y1 < 0)
+        if (x >= self.width or y >= self.height)
             return;
 
-        self.setBitValueAt(utils.cint_usize(x1), utils.cint_usize(y1), bit);
+        self.bits.set(y * self.width + x);
     }
 
-    pub fn setBitValueAt(self: *BitMask, x: usize, y: usize, bit: bool) void {
-        if (x >= utils.cint_usize(self.region[2]) or y >= utils.cint_usize(self.region[3]))
+    pub fn setBitValueAt(self: *BitMask, x: usize, y: usize, value: bool) void {
+        if (x >= self.width or y >= self.height)
             return;
 
-        self.bits.setValue(y * utils.cint_usize(self.region[2]) + x, bit);
+        self.bits.setValue(y * self.width + x, value);
     }
 
-    pub fn setBits(self: *BitMask, bits: []u8) void {
-        for (0..bits.len) |i| {
-            if (bits[i] == 1)
-                self.bits.set(i)
-            else
-                self.bits.setValue(i, false);
-        }
+    pub fn isBitSetAt(self: BitMask, x: usize, y: usize) bool {
+        if (x >= self.width or y >= self.height)
+            return false;
+
+        return self.bits.isSet(y * self.width + x);
     }
 
-    pub fn setRegionRel(self: *BitMask, region: RectI, bit: bool) void {
-        if (!isRegionRectI(region) or !utils.intersectsRectI(self.region, region))
+    pub fn setRectI(self: *BitMask, rect: RectI, value: bool) void {
+        if (rect[2] <= 0 or rect[3] <= 0)
             return;
 
-        var x: CInt = region[0];
-        var y: CInt = region[1];
-        const x1 = x + region[2];
-        const y1 = y + region[3];
-        while (y < y1) {
-            while (x < x1) {
-                self.setBitValueAtRel(x, y, bit);
-                x += 1;
+        self.setClip(rectIToClip(.{
+            if (rect[0] < 0) 0 else rect[0],
+            if (rect[1] < 0) 0 else rect[1],
+            if (rect[0] < 0) rect[0] + rect[2] else rect[2],
+            if (rect[1] < 0) rect[1] + rect[3] else rect[3],
+        }), value);
+    }
+
+    pub fn setRectFOffset(self: *BitMask, rect: RectF, offset: Vector2f, value: bool) void {
+        setRectF(self, .{ rect[0] + offset[0], rect[1] + offset[1], rect[2], rect[3] }, value);
+    }
+
+    pub fn setRectF(self: *BitMask, rect: RectF, value: bool) void {
+        if (rect[2] <= 0 or rect[3] <= 0)
+            return;
+
+        self.setClip(rectFToClip(.{
+            if (rect[0] < 0) 0 else rect[0],
+            if (rect[1] < 0) 0 else rect[1],
+            if (rect[0] < 0) rect[0] + rect[2] else rect[2],
+            if (rect[1] < 0) rect[1] + rect[3] else rect[3],
+        }), value);
+    }
+
+    pub fn setClip(self: *BitMask, clip: ClipI, value: bool) void {
+        if (clip[0] >= self.width or clip[1] >= self.height)
+            return; // clip out of range
+
+        for (clip[1]..@min(clip[1] + clip[3], self.height)) |y| {
+            for (clip[0]..@min(clip[0] + clip[2], self.width)) |x| {
+                self.bits.setValue(y * self.width + x, value);
             }
-            x = region[0];
-            y += 1;
         }
-
-        // for (0..utils.i32_usize(region[3])) |y| {
-        //     for (0..utils.i32_usize(region[2])) |x| {
-        //         const rel_x: i32 = region[0] + utils.usize_i32(x);
-        //         const rel_y: i32 = region[1] + utils.usize_i32(y);
-        //         if (rel_x >= 0 and rel_y >= 0 and rel_x < self.width and rel_y < self.height)
-        //             self.bits.setValue(utils.i32_usize(rel_y) * self.width + utils.i32_usize(rel_x), bit);
-        //     }
-        // }
     }
 
-    pub fn setRegionFrom(self: *BitMask, region: RectI, bits: []const u8) void {
-        if (!isRegionRectI(region))
-            return;
-
-        var x: CInt = region[0];
-        var y: CInt = region[1];
-        const x1 = x + region[2];
-        const y1 = y + region[3];
-        var i: usize = 0;
-        while (y < y1) {
-            while (x < x1) {
-                self.setBitValueAtRel(x, y, bits[i] != 0);
-                x += 1;
-                i += 1;
+    pub fn setCircleF(self: *BitMask, circle: CircleF, value: bool) void {
+        for (0..self.height) |y| {
+            for (0..self.width) |x| {
+                if (utils.containsCircF(circle, @floatFromInt(x), @floatFromInt(y)))
+                    self.bits.setValue(y * self.width + x, value);
             }
-            x = region[0];
-            y += 1;
         }
-
-        // for (0..utils.i32_usize(region[3])) |y| {
-        //     for (0..utils.i32_usize(region[2])) |x| {
-        //         const rel_x: i32 = region[0] + utils.usize_i32(x);
-        //         const rel_y: i32 = region[1] + utils.usize_i32(y);
-        //         if (rel_x >= 0 and rel_y >= 0 and rel_x < self.width and rel_y < self.height)
-        //             self.bits.setValue(
-        //                 utils.i32_usize(rel_y) * self.width + utils.i32_usize(rel_x),
-        //                 bits[y * utils.i32_usize(region[2]) + x] != 0,
-        //             );
-        //     }
-        // }
     }
 
-    pub fn clip(self: BitMask, region: RectI) BitMask {
-        var result = getEmptyIntersectionMask(self, region);
-
-        var x: CInt = result.region[0];
-        var y: CInt = result.region[1];
-        const x1 = x + result.region[2];
-        const y1 = y + result.region[3];
-        while (y < y1) {
-            while (x < x1) {
-                result.setBitValueAtRel(x, y, self.isSetRel(x, y));
-                x += 1;
+    pub fn setCircleI(self: *BitMask, circle: CircleI, value: bool) void {
+        for (0..self.height) |y| {
+            for (0..self.width) |x| {
+                if (utils.containsCircI(circle, @intCast(x), @intCast(y)))
+                    self.bits.setValue(y * self.width + x, value);
             }
-            x = result.region[0];
-            y += 1;
         }
-
-        return result;
-
-        // var result = getEmptyIntersectionMask(self, region);
-        // if (result) |*r| {
-        //     defer result.deinit();
-        //     result.fill();
-        //     return createIntersectionMask(
-        //         self,
-        //         result.*,
-        //         if (region[0] < 0) 0 else region[0],
-        //         if (region[1] < 0) 0 else region[1],
-        //         bitOpAND,
-        //     );
-        // }
-        // return result;
     }
 
-    pub fn createIntersectionMask(
-        self: BitMask,
+    pub fn setIntersectionF(
+        self: *BitMask,
         other: BitMask,
+        offset: Vector2f,
         comptime bit_op: BitOperation,
-    ) BitMask {
-        var result = getEmptyIntersectionMask(self, other.region);
+    ) void {
+        setIntersection(
+            self,
+            other,
+            .{
+                @intFromFloat(@floor(offset[0])),
+                @intFromFloat(@floor(offset[1])),
+            },
+            bit_op,
+        );
+    }
 
-        var x: CInt = result.region[0];
-        var y: CInt = result.region[1];
-        const x1 = x + result.region[2];
-        const y1 = y + result.region[3];
-        while (y < y1) {
-            while (x < x1) {
-                result.setBitValueAtRel(x, y, bit_op(self.isSetRel(x, y), other.isSetRel(x, y)));
-                x += 1;
+    pub fn setIntersection(
+        self: *BitMask,
+        other: BitMask,
+        offset: ?Vector2i,
+        comptime bit_op: BitOperation,
+    ) void {
+        if (offset) |off| {
+            for (0..self.height) |y| {
+                for (0..self.width) |x| {
+                    const x1: CInt = utils.usize_cint(x) - off[0];
+                    const y1: CInt = utils.usize_cint(y) - off[1];
+                    if (x1 >= 0 and y1 >= 0 and x1 < other.width and y1 < other.height)
+                        self.setBitValueAt(
+                            x,
+                            y,
+                            bit_op(self.isBitSetAt(x, y), other.isBitSetAt(@intCast(x1), @intCast(y1))),
+                        );
+                }
             }
-            x = result.region[0];
-            y += 1;
+        } else {
+            for (0..self.height) |y|
+                for (0..self.width) |x|
+                    self.setBitValueAt(x, y, bit_op(self.isBitSetAt(x, y), other.isBitSetAt(x, y)));
         }
-
-        return result;
-
-        // for (0..result.height) |y| {
-        //     for (0..result.width) |x| {
-        //         var x1: usize = if (x_offset > 0) x + utils.i32_usize(x_offset) else x;
-        //         var y1: usize = if (y_offset > 0) y + utils.i32_usize(y_offset) else y;
-        //         var x2: usize = if (x_offset < 0) x + utils.i32_usize(x_offset) else x;
-        //         var y2: usize = if (y_offset < 0) y + utils.i32_usize(y_offset) else y;
-        //         result.setBitValueAt(x, y, bit_op(self.isSet(x1, y1), other.isSet(x2, y2)));
-        //     }
-        // }
-
-    }
-
-    pub fn fill(self: *BitMask) void {
-        clearMask(self);
-        for (0..self._length) |i| {
-            self.bits.set(i);
-        }
-    }
-
-    pub fn clearMask(self: *BitMask) void {
-        self.bits.clear();
-        self._temp_bits.clear();
     }
 
     pub fn format(
@@ -970,11 +1066,11 @@ pub const BitMask = struct {
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.print("BitMask[{any}]\n", .{self.region});
-        for (0..utils.cint_usize(self.region[3])) |y| {
+        try writer.print("BitMask[{any}|{any}]\n", .{ self.width, self.height });
+        for (0..self.height) |y| {
             try writer.writeAll("  ");
-            for (0..utils.cint_usize(self.region[2])) |x| {
-                if (self.isSet(x, y)) {
+            for (0..self.width) |x| {
+                if (self.isBitSetAt(x, y)) {
                     try writer.writeAll("1,");
                 } else {
                     try writer.writeAll("0,");
@@ -982,13 +1078,5 @@ pub const BitMask = struct {
             }
             try writer.writeAll("\n");
         }
-    }
-
-    fn getEmptyIntersectionMask(self: BitMask, region: RectI) BitMask {
-        const intersection_region = getIntersectionRectI(self.region, region);
-        if (!isRegionRectI(intersection_region))
-            return BitMask.new(self._allocator, .{ region[0], region[1], 0, 0 });
-
-        return BitMask.new(self._allocator, intersection_region);
     }
 };

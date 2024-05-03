@@ -357,8 +357,6 @@ pub fn ComponentPool(comptime T: type) type {
             if (_type_init)
                 return;
 
-            //std.debug.print("*********** field: {any}", .{});
-
             errdefer Self.deinit();
             defer {
                 _ = COMPONENT_INTERFACE_TABLE.add(ComponentTypeInterface{

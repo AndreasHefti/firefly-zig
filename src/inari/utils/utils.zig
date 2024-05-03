@@ -31,37 +31,39 @@ pub fn stringEquals(s1: String, s2: String) bool {
     return std.mem.eql(u8, s1, s2);
 }
 
-pub fn usize_i32(v: usize) i32 {
+pub inline fn usize_i32(v: usize) i32 {
     return @as(i32, @intCast(v));
 }
 
-pub fn i32_usize(v: i32) usize {
+pub inline fn i32_usize(v: i32) usize {
     if (v < 0) return 0;
     return @as(usize, @intCast(v));
 }
 
-pub fn i64_usize(v: i64) usize {
+pub inline fn i64_usize(v: i64) usize {
     if (v < 0) return 0;
     return @as(usize, @intCast(v));
 }
 
-pub fn usize_i64(v: usize) i64 {
+pub inline fn usize_i64(v: usize) i64 {
     return @as(i64, @intCast(v));
 }
 
-pub fn usize_f32(v: usize) f32 {
+pub inline fn usize_f32(v: usize) f32 {
     return @as(f32, @floatFromInt(v));
 }
 
-pub fn f32_usize(v: f32) usize {
+pub inline fn f32_usize(v: f32) usize {
+    if (v < 0) return 0;
     return @as(usize, @intFromFloat(v));
 }
 
-pub fn cint_usize(v: c_int) usize {
+pub inline fn cint_usize(v: c_int) usize {
+    if (v < 0) return 0;
     return @as(usize, @intCast(v));
 }
 
-pub fn usize_cint(v: usize) c_int {
+pub inline fn usize_cint(v: usize) c_int {
     return @as(c_int, @intCast(v));
 }
 

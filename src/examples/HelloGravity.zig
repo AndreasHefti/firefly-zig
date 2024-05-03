@@ -111,4 +111,12 @@ fn init() void {
         .with(ESprite{ .template_id = sprite_id })
         .with(EMovement{ .gravity = Vector2f{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.2, .integrator = firefly.physics.EulerIntegrator })
         .activate();
+
+    x += 50;
+
+    _ = Entity.newAnd(.{})
+        .with(ETransform{ .position = .{ x, 0 } })
+        .with(ESprite{ .template_id = sprite_id })
+    //  .with(EMovement{ .gravity = Vector2f{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.2, .integrator = firefly.physics.EulerIntegrator })
+        .activate();
 }

@@ -8,6 +8,7 @@ const Timer = api.Timer;
 const UpdateScheduler = api.UpdateScheduler;
 const System = api.System;
 const EComponent = api.EComponent;
+const EComponentAspectGroup = api.EComponentAspectGroup;
 const EventDispatch = utils.EventDispatch;
 const ETransform = firefly.graphics.ETransform;
 const EntityCondition = api.EntityCondition;
@@ -32,7 +33,7 @@ pub fn init() void {
 
     EComponent.registerEntityComponent(EMovement);
     System(MovementSystem).createSystem(
-        firefly.Engine.CoreSystems.MovementSystem,
+        firefly.Engine.CoreSystems.MovementSystem.name,
         "Processes the movement for all Entities with EMovement component",
         true,
     );
@@ -65,6 +66,20 @@ pub const MovementEvent = struct {
     moved: *BitSet = undefined,
 };
 pub const MovementListener = *const fn (MovementEvent) void;
+
+pub fn subscribe(listener: MovementListener) void {
+    if (!initialized)
+        return;
+
+    MovementSystem.event_dispatch.register(listener);
+}
+
+pub fn unsubscribe(listener: MovementListener) void {
+    if (!initialized)
+        return;
+
+    MovementSystem.event_dispatch.unregister(listener);
+}
 
 pub const MovementAspectGroup = AspectGroup(struct {
     pub const name = "Movement";
@@ -254,6 +269,9 @@ const MovementSystem = struct {
     var event: MovementEvent = MovementEvent{};
 
     pub fn systemInit() void {
+        entity_condition = EntityCondition{
+            .accept_kind = EComponentAspectGroup.newKindOf(.{EMovement}),
+        };
         movements = BitSet.new(api.ALLOC) catch unreachable;
         moved = BitSet.new(api.ALLOC) catch unreachable;
         event.moved = &moved;
@@ -268,6 +286,7 @@ const MovementSystem = struct {
         event.moved = undefined;
         event_dispatch.deinit();
         event_dispatch = undefined;
+        entity_condition = undefined;
     }
 
     pub fn entityRegistration(id: Index, register: bool) void {

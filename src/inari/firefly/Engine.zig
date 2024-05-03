@@ -20,10 +20,83 @@ var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 
 pub const CoreSystems = struct {
-    pub const StateSystem = "StateSystem";
-    pub const EntityStateSystem = "EntityStateSystem";
-    pub const AnimationSystem = "AnimationSystem";
-    pub const MovementSystem = "MovementSystem";
+    pub const StateSystem = struct {
+        pub const name = "StateSystem";
+        pub fn isActive() bool {
+            return isSystemActive(name);
+        }
+        pub fn activate() void {
+            activateSystem(name, true);
+        }
+        pub fn deactivate() void {
+            activateSystem(name, false);
+        }
+    };
+
+    pub const EntityStateSystem = struct {
+        pub const name = "EntityStateSystem";
+        pub fn isActive() bool {
+            return isSystemActive(name);
+        }
+        pub fn activate() void {
+            activateSystem(name, true);
+        }
+        pub fn deactivate() void {
+            activateSystem(name, false);
+        }
+    };
+
+    pub const AnimationSystem = struct {
+        pub const name = "AnimationSystem";
+        pub fn isActive() bool {
+            return isSystemActive(name);
+        }
+        pub fn activate() void {
+            activateSystem(name, true);
+        }
+        pub fn deactivate() void {
+            activateSystem(name, false);
+        }
+    };
+
+    pub const MovementSystem = struct {
+        pub const name = "MovementSystem";
+        pub fn isActive() bool {
+            return isSystemActive(name);
+        }
+        pub fn activate() void {
+            activateSystem(name, true);
+        }
+        pub fn deactivate() void {
+            activateSystem(name, false);
+        }
+    };
+
+    pub const EntityControlSystem = struct {
+        pub const name = "EntityControlSystem";
+        pub fn isActive() bool {
+            return isSystemActive(name);
+        }
+        pub fn activate() void {
+            activateSystem(name, true);
+        }
+        pub fn deactivate() void {
+            activateSystem(name, false);
+        }
+    };
+
+    pub const ContactSystem = struct {
+        pub const name = "ContactSystem";
+        pub fn isActive() bool {
+            return isSystemActive(name);
+        }
+        pub fn activate() void {
+            activateSystem(name, true);
+        }
+        pub fn deactivate() void {
+            activateSystem(name, false);
+        }
+    };
 };
 
 pub fn isSystemActive(name: String) bool {

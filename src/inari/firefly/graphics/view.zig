@@ -68,6 +68,18 @@ pub const ViewLayerMapping = struct {
     undef_mapping: BitSet,
     mapping: DynArray(DynArray(BitSet)),
 
+    pub fn match(view1_id: ?Index, view2_id: ?Index, layer1_id: ?Index, layer2_id: ?Index) bool {
+        if (view1_id) |v1| {
+            if (view2_id) |v2|
+                return v1 != v2;
+        }
+        if (layer1_id) |l1| {
+            if (layer2_id) |l2|
+                return l1 != l2;
+        }
+        return true;
+    }
+
     pub fn new() ViewLayerMapping {
         return ViewLayerMapping{
             .undef_mapping = BitSet.new(api.ALLOC) catch unreachable,

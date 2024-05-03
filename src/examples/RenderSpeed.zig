@@ -16,7 +16,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
-    firefly.Engine.start(600, 400, 60, "Hello Sprite", init);
+    firefly.Engine.start(600, 400, 60, "Render Speed", init);
 }
 
 fn init() void {

@@ -217,6 +217,19 @@ pub const ESprite = struct {
         self.tint_color = null;
         self.blend_mode = null;
     }
+
+    pub const Property = struct {
+        pub fn FrameId(id: Index) *Index {
+            return &ESprite.byId(id).?.id;
+        }
+        pub fn TintColor(id: Index) *Color {
+            var sprite = ESprite.byId(id).?;
+            if (sprite.tint_color == null) {
+                sprite.tint_color = Color{};
+            }
+            return &sprite.tint_color.?;
+        }
+    };
 };
 
 //////////////////////////////////////////////////////////////
