@@ -37,6 +37,11 @@ pub fn build(b: *std.Build) void {
     firefly.linkLibC();
     b.installArtifact(firefly);
 
+    const module = b.addModule("firefly", .{
+        .root_source_file = .{ .path = "src/inari/inari.zig" },
+    });
+    module.addIncludePath(raylib_dep.path(""));
+
     // modules
     //const utils = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
 
