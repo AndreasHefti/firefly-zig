@@ -108,10 +108,17 @@ pub fn activateSystem(name: String, active: bool) void {
 }
 
 pub const DefaultRenderer = struct {
-    pub const SHAPE = "DefaultShapeRenderer";
-    pub const SPRITE = "DefaultSpriteRenderer";
     pub const TILE = "DefaultTileGridRenderer";
+    pub const SPRITE = "DefaultSpriteRenderer";
+    pub const SHAPE = "DefaultShapeRenderer";
     pub const TEXT = "DefaultTextRenderer";
+
+    pub const DEFAULT_RENDER_ORDER = [_]String{
+        DefaultRenderer.TILE,
+        DefaultRenderer.SPRITE,
+        DefaultRenderer.SHAPE,
+        DefaultRenderer.TEXT,
+    };
 };
 
 pub fn activateRenderer(name: String, active: bool) void {
@@ -134,6 +141,8 @@ pub fn start(
     title: CString,
     init_callback: ?*const fn () void,
 ) void {
+    reorderRenderer(&DefaultRenderer.DEFAULT_RENDER_ORDER);
+
     api.window.openWindow(.{
         .width = @intFromFloat(w),
         .height = @intFromFloat(h),

@@ -17,9 +17,12 @@ const EControl = firefly.api.EControl;
 const Allocator = std.mem.Allocator;
 const Float = utils.Float;
 const Vector2f = utils.Vector2f;
+const PosF = utils.PosF;
 const ContactBounds = firefly.physics.ContactBounds;
 const ContactConstraint = firefly.physics.ContactConstraint;
 const Index = utils.Index;
+const ETile = firefly.graphics.ETile;
+const TileGrid = firefly.graphics.TileGrid;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -63,6 +66,24 @@ fn init() void {
         .with(ESprite{ .template_id = sprite_id })
         .with(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
         .activate();
+
+    // tile grid
+    const tile = Entity.newAnd(.{ .name = "TestEntity" })
+        .with(ETransform{})
+        .with(ETile{ .sprite_template_id = sprite_id })
+        .with(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
+        .activate();
+
+    var tile_grid: *TileGrid = TileGrid.newAnd(.{
+        .name = "TileGrid1",
+        .world_position = PosF{ 50, 300 },
+        .dimensions = .{ 10, 3, 32, 32 },
+    }).activate();
+
+    for (0..3) |y| {
+        for (0..10) |_x|
+            tile_grid._grid[y][_x] = tile.id;
+    }
 }
 
 fn control(id: Index) void {

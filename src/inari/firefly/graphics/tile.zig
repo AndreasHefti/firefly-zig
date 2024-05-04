@@ -258,7 +258,7 @@ pub const TileGrid = struct {
             clip,
         );
 
-        if (intersectionF[1] <= 0 or intersectionF[3] <= 0)
+        if (intersectionF[2] <= 0 or intersectionF[3] <= 0)
             return null;
 
         return Iterator.new(

@@ -6,6 +6,7 @@ const api = firefly.api;
 
 const System = api.System;
 const TileGrid = firefly.graphics.TileGrid;
+const ETile = firefly.graphics.ETile;
 const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
 const EView = firefly.graphics.EView;
 const MovementEvent = firefly.physics.MovementEvent;
@@ -324,13 +325,9 @@ pub const ContactConstraint = struct {
 
             const t1 = ETransform.byId(self_entity).?;
             const t2 = ETransform.byId(other_entity).?;
+            const t2_pos = if (other_offset) |off| t2.position + off else t2.position;
 
-            if (intersectContactBounds(
-                &self.scan.bounds,
-                &e_contact.bounds,
-                t1.position,
-                if (other_offset) |off| t2.position + off else t2.position,
-            )) {
+            if (intersectContactBounds(&self.scan.bounds, &e_contact.bounds, t1.position, t2_pos)) {
 
                 // now we have an intersection if this is simple scan just add the entity id to the scan result
                 self.scan.entities.add(other_entity);
@@ -345,8 +342,8 @@ pub const ContactConstraint = struct {
                     ) catch unreachable;
                     // offset for contact mask relative to others world position
                     const offset: Vector2f = .{
-                        (t1.position[0] + self.scan.bounds.rect[0]) - t2.position[0] + e_contact.bounds.rect[0],
-                        (t1.position[1] + self.scan.bounds.rect[1]) - t2.position[1] + e_contact.bounds.rect[1],
+                        t2_pos[0] + e_contact.bounds.rect[0] - (t1.position[0] + self.scan.bounds.rect[0]),
+                        t2_pos[1] + e_contact.bounds.rect[1] - (t1.position[1] + self.scan.bounds.rect[1]),
                     };
 
                     contact.entity_id = other_entity;
@@ -660,6 +657,7 @@ const ContactSystem = struct {
     pub fn systemInit() void {
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EContact}),
+            .dismiss_kind = EComponentAspectGroup.newKindOf(.{ETile}),
         };
         contact_maps = DynArray(IContactMap).newWithRegisterSize(api.ALLOC, 5) catch unreachable;
         firefly.physics.subscribe(processMoved);
@@ -787,12 +785,14 @@ const ContactSystem = struct {
             if (ViewLayerMapping.match(tile_grid.view_id, view_id, tile_grid.layer_id, layer_id)) {
                 if (tile_grid.getIteratorWorldClipF(world_contact_bounds)) |iterator| {
                     var it = iterator;
-                    while (it.next()) |entity_id|
+                    while (it.next()) |entity_id| {
+                        std.debug.print("****************** it.world_position: {any}\n", .{it.rel_position + tile_grid.world_position});
                         has_any_contact = has_any_contact or constraint.scanEntity(
                             e_scan.id,
                             entity_id,
-                            it.rel_position,
+                            it.rel_position + tile_grid.world_position,
                         );
+                    }
                 }
             }
 

@@ -47,9 +47,8 @@ fn loadWithView() void {
     }).activate();
 
     for (0..10) |y| {
-        for (0..10) |x| {
+        for (0..10) |x|
             tile_grid._grid[y][x] = tile.id;
-        }
     }
 
     firefly.api.subscribeUpdate(update);
