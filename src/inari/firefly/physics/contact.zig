@@ -786,7 +786,6 @@ const ContactSystem = struct {
                 if (tile_grid.getIteratorWorldClipF(world_contact_bounds)) |iterator| {
                     var it = iterator;
                     while (it.next()) |entity_id| {
-                        std.debug.print("****************** it.world_position: {any}\n", .{it.rel_position + tile_grid.world_position});
                         has_any_contact = has_any_contact or constraint.scanEntity(
                             e_scan.id,
                             entity_id,

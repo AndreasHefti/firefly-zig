@@ -16,6 +16,27 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = std.builtin.OptimizeMode.Debug;
 
+    const raylib_dep = b.dependency("raylib", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const firefly_zig = b.addStaticLibrary(.{
+        .name = "firefly-zig",
+        .root_source_file = .{ .path = "src/inari/inari.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    firefly_zig.linkLibrary(raylib_dep.artifact("raylib"));
+
+    // firefly_zig.addCSourceFiles(.{
+    //     .dependency = raylib_dep,
+    // });
+
+    firefly_zig.linkLibC();
+    b.installArtifact(firefly_zig);
+
     // modules
     //const utils = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
 
@@ -34,15 +55,6 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    //exe.addModule("utils", utils);
-    // exe.linkLibrary(firefly);
-    // b.installArtifact(firefly);
-
-    // const raylib_optimize = b.option(
-    //     std.builtin.OptimizeMode,
-    //     "raylib-optimize",
-    //     "Prioritize performance, safety, or binary size (-O flag), defaults to value of optimize option",
-    // ) orelse std.builtin.OptimizeMode.Debug;
 
     // const strip = b.option(
     //     bool,
@@ -51,10 +63,6 @@ pub fn build(b: *std.Build) void {
     // ) orelse true;
     // exe.strip = strip;
 
-    const raylib_dep = b.dependency("raylib", .{
-        .target = target,
-        .optimize = optimize,
-    });
     exe.linkLibrary(raylib_dep.artifact("raylib"));
 
     // This declares intent for the executable to be installed into the
