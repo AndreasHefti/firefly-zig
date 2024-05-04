@@ -28,11 +28,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    firefly.linkLibrary(raylib_dep.artifact("raylib"));
-
-    // firefly_zig.addCSourceFiles(.{
-    //     .dependency = raylib_dep,
-    // });
+    firefly.installHeadersDirectory(raylib_dep.path(""), "", .{
+        .include_extensions = &.{"raylib.h"},
+    });
 
     firefly.linkLibC();
     b.installArtifact(firefly);
