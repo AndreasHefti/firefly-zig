@@ -27,12 +27,12 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    //firefly.linkLibrary(raylib_dep.artifact("raylib"));
+    firefly.linkLibrary(raylib_dep.artifact("raylib"));
 
     //firefly.addCSourceFiles(.{ .root = raylib_dep.path("") });
-    firefly.installHeadersDirectory(raylib_dep.path(""), "", .{});
+    //firefly.installHeadersDirectory(raylib_dep.path(""), "", .{});
 
-    firefly.linkLibC();
+    //firefly.linkLibC();
     b.installArtifact(firefly);
 
     const module = b.addModule("firefly", .{
