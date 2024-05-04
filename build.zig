@@ -21,21 +21,21 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const firefly_zig = b.addStaticLibrary(.{
-        .name = "firefly-zig",
+    const firefly = b.addStaticLibrary(.{
+        .name = "firefly",
         .root_source_file = .{ .path = "src/inari/inari.zig" },
         .target = target,
         .optimize = optimize,
     });
 
-    firefly_zig.linkLibrary(raylib_dep.artifact("raylib"));
+    firefly.linkLibrary(raylib_dep.artifact("raylib"));
 
     // firefly_zig.addCSourceFiles(.{
     //     .dependency = raylib_dep,
     // });
 
-    firefly_zig.linkLibC();
-    b.installArtifact(firefly_zig);
+    firefly.linkLibC();
+    b.installArtifact(firefly);
 
     // modules
     //const utils = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
