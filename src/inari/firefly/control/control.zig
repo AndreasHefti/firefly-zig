@@ -1,9 +1,8 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
+const firefly = @import("../firefly.zig");
 const state = @import("state.zig");
+const utils = firefly.utils;
 
-const utils = inari.utils;
-const firefly = inari.firefly;
 const Float = utils.Float;
 
 //////////////////////////////////////////////////////////////

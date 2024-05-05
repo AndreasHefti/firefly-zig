@@ -1,9 +1,8 @@
 const std = @import("std");
-const inari = @import("../../../inari.zig");
+const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
-
-const utils = inari.utils;
-const api = inari.firefly.api;
+const utils = firefly.utils;
+const api = firefly.api;
 
 const IAudioAPI = api.IAudioAPI;
 const SoundBinding = api.SoundBinding;

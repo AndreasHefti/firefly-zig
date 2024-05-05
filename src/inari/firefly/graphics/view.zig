@@ -1,8 +1,8 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const utils = inari.utils;
-const api = inari.firefly.api;
-const graphics = inari.firefly.graphics;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
 const ArrayList = std.ArrayList;
 const EventDispatch = utils.EventDispatch;

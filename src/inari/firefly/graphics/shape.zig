@@ -1,8 +1,8 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const utils = inari.utils;
-const api = inari.firefly.api;
-const graphics = inari.firefly.graphics;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
 const System = api.System;
 const EComponent = api.EComponent;
@@ -35,7 +35,7 @@ pub fn init() !void {
     EComponent.registerEntityComponent(EShape);
     // init renderer
     System(DefaultShapeRenderer).createSystem(
-        inari.firefly.Engine.DefaultRenderer.SHAPE,
+        firefly.Engine.DefaultRenderer.SHAPE,
         "Default renderer for shape based entities",
         true,
     );

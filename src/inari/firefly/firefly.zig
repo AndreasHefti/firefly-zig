@@ -1,7 +1,4 @@
 const std = @import("std");
-//const inari = @import("../../inari.zig");
-//const utils = inari.utils;
-
 const Allocator = std.mem.Allocator;
 
 //////////////////////////////////////////////////////////////
@@ -13,8 +10,7 @@ pub const api = @import("api/api.zig");
 pub const control = @import("control/control.zig");
 pub const graphics = @import("graphics/graphics.zig");
 pub const physics = @import("physics/physics.zig");
-
-// API
+pub const utils = @import("utils/utils.zig");
 pub const Engine = @import("Engine.zig");
 
 var initialized = false;

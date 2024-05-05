@@ -1,11 +1,10 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
+const firefly = @import("../firefly.zig");
 const animation = @import("animation.zig");
 const movement = @import("movement.zig");
 const audio = @import("audio.zig");
 const contact = @import("contact.zig");
-const utils = inari.utils;
-const firefly = inari.firefly;
+const utils = firefly.utils;
 const Float = utils.Float;
 const Index = utils.Index;
 

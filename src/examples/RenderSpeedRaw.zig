@@ -1,7 +1,6 @@
 const std = @import("std");
 const rl = @cImport(@cInclude("raylib.h"));
-const inari = @import("../inari/inari.zig");
-const firefly = inari.firefly;
+const firefly = @import("../inari/firefly/firefly.zig");
 const Allocator = std.mem.Allocator;
 
 const count: usize = 100000;

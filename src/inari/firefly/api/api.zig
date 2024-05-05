@@ -1,7 +1,6 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const firefly = inari.firefly;
-const utils = inari.utils;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
 
 const Allocator = std.mem.Allocator;
 const asset = @import("asset.zig");

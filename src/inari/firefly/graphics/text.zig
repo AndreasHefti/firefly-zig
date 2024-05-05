@@ -1,8 +1,8 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const utils = inari.utils;
-const api = inari.firefly.api;
-const graphics = inari.firefly.graphics;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
 const System = api.System;
 const Entity = api.Entity;
@@ -44,7 +44,7 @@ pub fn init() !void {
 
     // init renderer
     System(DefaultTextRenderer).createSystem(
-        inari.firefly.Engine.DefaultRenderer.TEXT,
+        firefly.Engine.DefaultRenderer.TEXT,
         "Render Entities with ETransform and EText components",
         true,
     );

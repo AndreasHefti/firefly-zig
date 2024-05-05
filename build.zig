@@ -16,30 +16,29 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = std.builtin.OptimizeMode.Debug;
 
+    // define the raylib dependency
     const raylib_dep = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
     });
 
+    // create firefly library
     const firefly = b.addStaticLibrary(.{
         .name = "firefly",
-        .root_source_file = .{ .path = "src/lib.zig" },
+        .root_source_file = .{ .path = "src/inari/firefly/firefly.zig" },
         .target = target,
         .optimize = optimize,
     });
 
-    // firefly.installHeadersDirectory(raylib_dep.path("src/"), "", .{
-    //     .include_extensions = &.{".h"},
-    // });
-    // firefly.linkLibrary(raylib_dep.artifact("raylib"));
-    // firefly.linkLibC();
     b.installArtifact(firefly);
 
+    // expose firefly library as a module
     const firefly_module = b.addModule("firefly", .{
-        .root_source_file = .{ .path = "src/lib.zig" },
+        .root_source_file = .{ .path = "src/inari/firefly/firefly.zig" },
     });
     firefly_module.addIncludePath(raylib_dep.path("src/"));
 
+    // build executable for examples
     const exe = b.addExecutable(.{
         .name = "firefly-zig",
         // In this case the main source file is merely a path, however, in more
@@ -49,20 +48,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // const strip = b.option(
-    //     bool,
-    //     "strip",
-    //     "Strip debug info to reduce binary size, defaults to false",
-    // ) orelse true;
-    // exe.strip = strip;
-
-    //exe.linkLibrary(raylib_dep.artifact("raylib"));
-    //exe.root_module.addImport("firefly", firefly_module);
     exe.linkLibrary(raylib_dep.artifact("raylib"));
-
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
     b.installArtifact(exe);
 
     // This *creates* a Run step in the build graph, to be executed when another

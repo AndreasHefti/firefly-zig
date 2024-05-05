@@ -1,10 +1,9 @@
 const std = @import("std");
-const inari = @import("../../../inari.zig");
+const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
 const rlgl = @cImport(@cInclude("rlgl.h"));
-
-const utils = inari.utils;
-const api = inari.firefly.api;
+const utils = firefly.utils;
+const api = firefly.api;
 
 const String = utils.String;
 const IRenderAPI = api.IRenderAPI;

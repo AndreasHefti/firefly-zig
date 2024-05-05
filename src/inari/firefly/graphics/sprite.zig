@@ -1,8 +1,8 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const utils = inari.utils;
-const api = inari.firefly.api;
-const graphics = inari.firefly.graphics;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
 const DynArray = utils.DynArray;
 const DynIndexArray = utils.DynIndexArray;
@@ -50,7 +50,7 @@ pub fn init() !void {
     EComponent.registerEntityComponent(ESprite);
     // init renderer
     System(DefaultSpriteRenderer).createSystem(
-        inari.firefly.Engine.DefaultRenderer.SPRITE,
+        firefly.Engine.DefaultRenderer.SPRITE,
         "Render Entities with ETransform and ESprite components",
         true,
     );

@@ -1,7 +1,7 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const utils = inari.utils;
-const api = inari.firefly.api;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
 
 const System = api.System;
 const EComponent = api.EComponent;
@@ -25,7 +25,7 @@ pub fn init() void {
 
     EComponent.registerEntityComponent(EControl);
     System(EntityControlSystem).createSystem(
-        inari.firefly.Engine.CoreSystems.EntityControlSystem.name,
+        firefly.Engine.CoreSystems.EntityControlSystem.name,
         "Processes active entities with EControl for every frame",
         false,
     );

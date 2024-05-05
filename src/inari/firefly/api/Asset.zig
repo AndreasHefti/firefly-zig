@@ -1,7 +1,7 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const utils = inari.utils;
-const api = inari.firefly.api;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
 
 const DynArray = utils.DynArray;
 const Component = api.Component;

@@ -1,7 +1,6 @@
 const std = @import("std");
-const inari = @import("../inari/inari.zig");
-const firefly = inari.firefly;
-const utils = inari.utils;
+const firefly = @import("../inari/firefly/firefly.zig");
+const utils = firefly.utils;
 
 const StringBuffer = utils.StringBuffer;
 

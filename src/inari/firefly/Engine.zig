@@ -1,7 +1,7 @@
 const std = @import("std");
-const inari = @import("../inari.zig");
-const utils = inari.utils;
-const api = inari.firefly.api;
+const firefly = @import("firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
 const CString = utils.CString;
 const Float = utils.Float;
 
@@ -13,7 +13,7 @@ const EventDispatch = utils.EventDispatch;
 const UpdateListener = api.UpdateListener;
 const RenderListener = api.RenderListener;
 const Timer = api.Timer;
-const View = inari.firefly.graphics.View;
+const View = firefly.graphics.View;
 const String = utils.String;
 
 var UPDATE_EVENT = UpdateEvent{};

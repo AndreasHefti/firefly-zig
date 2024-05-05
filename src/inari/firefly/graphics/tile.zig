@@ -1,8 +1,8 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const utils = inari.utils;
-const api = inari.firefly.api;
-const graphics = inari.firefly.graphics;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
 const System = api.System;
 const Entity = api.Entity;
@@ -51,7 +51,7 @@ pub fn init() !void {
     EComponent.registerEntityComponent(ETile);
     // init renderer
     System(DefaultTileGridRenderer).createSystem(
-        inari.firefly.Engine.DefaultRenderer.TILE,
+        firefly.Engine.DefaultRenderer.TILE,
         "Render Entities referenced in all active TileGrid",
         true,
     );

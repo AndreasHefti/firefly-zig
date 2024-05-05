@@ -1,7 +1,6 @@
 const std = @import("std");
-const inari = @import("../../inari.zig");
-const utils = inari.utils;
-const firefly = inari.firefly;
+const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
 const api = firefly.api;
 
 const System = api.System;
@@ -15,7 +14,7 @@ const Entity = api.Entity;
 const EComponent = api.EComponent;
 const EntityCondition = api.EntityCondition;
 const EComponentAspectGroup = api.EComponentAspectGroup;
-const ETransform = inari.firefly.graphics.ETransform;
+const ETransform = firefly.graphics.ETransform;
 const AspectGroup = utils.AspectGroup;
 const DynArray = utils.DynArray;
 const DynIndexArray = utils.DynIndexArray;
