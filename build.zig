@@ -27,30 +27,18 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    firefly.linkLibrary(raylib_dep.artifact("raylib"));
 
-    //firefly.addCSourceFiles(.{ .root = raylib_dep.path("src/") });
-    firefly.installHeadersDirectory(raylib_dep.path(""), "", .{
-        .include_extensions = &.{ ".h", ".zig" },
-    });
-
-    firefly.linkLibC();
+    // firefly.installHeadersDirectory(raylib_dep.path("src/"), "", .{
+    //     .include_extensions = &.{".h"},
+    // });
+    // firefly.linkLibrary(raylib_dep.artifact("raylib"));
+    // firefly.linkLibC();
     b.installArtifact(firefly);
 
-    const module = b.addModule("firefly", .{
+    const firefly_module = b.addModule("firefly", .{
         .root_source_file = .{ .path = "src/lib.zig" },
     });
-    module.addIncludePath(raylib_dep.path(""));
-
-    // modules
-    //const utils = b.addModule("utils", .{ .source_file = .{ .path = "src/inari/utils/utils.zig" } });
-
-    // const firefly = b.addStaticLibrary(.{
-    //     .name = "firefly",
-    //     .root_source_file = .{ .path = "src/inari/inari.zig" },
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
+    firefly_module.addIncludePath(raylib_dep.path("src/"));
 
     const exe = b.addExecutable(.{
         .name = "firefly-zig",
@@ -68,6 +56,8 @@ pub fn build(b: *std.Build) void {
     // ) orelse true;
     // exe.strip = strip;
 
+    //exe.linkLibrary(raylib_dep.artifact("raylib"));
+    //exe.root_module.addImport("firefly", firefly_module);
     exe.linkLibrary(raylib_dep.artifact("raylib"));
 
     // This declares intent for the executable to be installed into the

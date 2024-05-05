@@ -35,6 +35,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
+    //firefly.api.window.toggleFullscreen();
     Texture.newAnd(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
