@@ -39,35 +39,73 @@ pub fn deinit() void {
     System(EntityControlSystem).disposeSystem();
 }
 
+pub const Control = *const fn (Index) void;
+
+pub const ControlNode = struct {
+    control: Control,
+    next: ?*ControlNode = null,
+
+    pub fn update(self: *ControlNode, id: Index) void {
+        self.control(id);
+        if (self.next) |n| n.update(id);
+    }
+
+    pub fn add(self: *ControlNode, control: Control) void {
+        if (self.next) |n|
+            n.add(control)
+        else {
+            self.next = api.COMPONENT_ALLOC.create(ControlNode) catch unreachable;
+            self.next.?.control = control;
+            self.next.?.next = null;
+        }
+    }
+
+    fn deinit(self: *ControlNode) void {
+        if (self.next) |n|
+            n.deinit();
+        api.COMPONENT_ALLOC.destroy(self);
+    }
+};
+
 //////////////////////////////////////////////////////////////////////////
 //// Entity Control
 //////////////////////////////////////////////////////////////////////////
-
-pub const Control = *const fn (Index) void;
 
 pub const EControl = struct {
     pub usingnamespace EComponent.Trait(@This(), "EControl");
 
     id: Index = UNDEF_INDEX,
-    controls: DynArray(Control) = undefined,
+    controls: ?*ControlNode = null,
 
-    pub fn construct(self: *EControl) void {
-        self.controls = DynArray(Control).newWithRegisterSize(api.ENTITY_ALLOC, 5) catch unreachable;
+    fn update(self: *EControl, id: Index) void {
+        if (self.controls) |c| c.update(id);
     }
 
     pub fn withControl(self: *EControl, control: Control) *EControl {
-        _ = self.controls.add(control);
+        addControl(self, control);
         return self;
     }
 
     pub fn withControlAnd(self: *EControl, control: Control) *Entity {
-        _ = self.controls.add(control);
+        addControl(self, control);
         return Entity.byId(self.id);
     }
 
     pub fn destruct(self: *EControl) void {
-        self.controls.deinit();
-        self.controls = undefined;
+        if (self.controls) |c|
+            c.deinit();
+
+        self.controls = null;
+    }
+
+    fn addControl(self: *EControl, control: Control) void {
+        if (self.controls) |c|
+            c.add(control)
+        else {
+            self.controls = api.COMPONENT_ALLOC.create(ControlNode) catch unreachable;
+            self.controls.?.control = control;
+            self.controls.?.next = null;
+        }
     }
 };
 
@@ -96,13 +134,9 @@ const EntityControlSystem = struct {
     pub fn update(_: UpdateEvent) void {
         var next = entities.nextSetBit(0);
         while (next) |i| {
-            if (EControl.byId(i)) |ec| {
-                var next_e = ec.controls.slots.nextSetBit(0);
-                while (next_e) |ci| {
-                    if (ec.controls.get(ci)) |c| c.*(i);
-                    next_e = ec.controls.slots.nextSetBit(i + 1);
-                }
-            }
+            if (EControl.byId(i)) |ec|
+                ec.update(i);
+
             next = entities.nextSetBit(i + 1);
         }
     }

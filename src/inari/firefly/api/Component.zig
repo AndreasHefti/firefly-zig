@@ -3,6 +3,9 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 
+const Control = api.Control;
+const ControlNode = api.ControlNode;
+const UpdateEvent = api.UpdateEvent;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const StringBuffer = utils.StringBuffer;
@@ -111,10 +114,12 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
         }
 
         // optional component type features
-        pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This()) else struct {};
-        pub usingnamespace if (context.activation) ActivationTrait(T, @This()) else struct {};
-        pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This()) else struct {};
-        pub usingnamespace if (context.processing) ProcessingTrait(T, @This()) else struct {};
+        const empty_struct = struct {};
+        pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This()) else empty_struct;
+        pub usingnamespace if (context.activation) ActivationTrait(T, @This()) else empty_struct;
+        pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This()) else empty_struct;
+        pub usingnamespace if (context.processing) ProcessingTrait(T, @This()) else empty_struct;
+        pub usingnamespace if (@hasField(T, "controls")) ControlTrait(T, @This()) else empty_struct;
     };
 }
 
@@ -224,6 +229,25 @@ fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
     };
 }
 
+fn ControlTrait(comptime T: type, comptime _: anytype) type {
+    return struct {
+        fn update(self: *T, id: Index) void {
+            if (self.controls) |c| c.update(id);
+        }
+
+        pub fn withControl(self: *T, control: Control) *T {
+            if (self.controls) |c|
+                c.add(control)
+            else {
+                self.controls = api.COMPONENT_ALLOC.create(ControlNode) catch unreachable;
+                self.controls.?.control = control;
+                self.controls.?.next = null;
+            }
+            return self;
+        }
+    };
+}
+
 pub fn registerComponent(comptime T: type) void {
     ComponentPool(T).init();
 }
@@ -323,6 +347,9 @@ pub fn ComponentPool(comptime T: type) type {
     const has_activation: bool = @hasDecl(T, "activation");
     const has_destruct = @hasDecl(T, "destruct");
 
+    // control
+    const has_controls: bool = @hasField(T, "controls");
+
     comptime {
         if (@typeInfo(T) != .Struct)
             @compileError("Expects component type is a struct.");
@@ -385,6 +412,9 @@ pub fn ComponentPool(comptime T: type) type {
                     std.log.err("Failed to initialize component of type: {any}", .{T});
                 };
             }
+
+            if (has_controls)
+                api.subscribeUpdate(update);
         }
 
         /// Release all allocated memory.
@@ -408,6 +438,16 @@ pub fn ComponentPool(comptime T: type) type {
 
             if (name_mapping) |*nm| nm.deinit();
             if (has_aspect) T.type_aspect = undefined;
+            if (has_controls) api.unsubscribeUpdate(update);
+        }
+
+        fn update(_: UpdateEvent) void {
+            var next = Self.active_mapping.nextSetBit(0);
+            while (next) |i| {
+                if (Self.items.get(i)) |c|
+                    c.update(c.id);
+                next = Self.active_mapping.nextSetBit(i + 1);
+            }
         }
 
         fn register(c: T) *T {

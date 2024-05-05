@@ -10,6 +10,7 @@ const ESprite = firefly.graphics.ESprite;
 const Allocator = std.mem.Allocator;
 const View = firefly.graphics.View;
 const BlendMode = firefly.api.BlendMode;
+const Index = utils.Index;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -19,7 +20,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn loadWithView() void {
-    const viewId = View.new(.{
+    const viewId = View.newAnd(.{
         .name = "TestView",
         .order = 1,
 
@@ -42,7 +43,9 @@ fn loadWithView() void {
             .zoom = 2,
             .rotation = 0,
         },
-    });
+    })
+        .withControl(view_control)
+        .id;
     View.activateById(viewId, true);
 
     const sprite_id = SpriteTemplate.new(.{
@@ -63,4 +66,12 @@ fn loadWithView() void {
         .with(EView{ .view_id = viewId })
         .with(ESprite{ .template_id = sprite_id })
         .activate();
+}
+
+fn view_control(view_id: Index) void {
+    var view = View.byId(view_id);
+    view.projection.plain[0] += 0.2;
+    view.projection.plain[1] += 0.6;
+    view.position[0] += 1;
+    view.position[1] += 0.6;
 }

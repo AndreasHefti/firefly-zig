@@ -73,6 +73,7 @@ pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const EControl = control.EControl;
 pub const Control = control.Control;
+pub const ControlNode = control.ControlNode;
 
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);

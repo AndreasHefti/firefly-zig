@@ -22,6 +22,7 @@ const ActionType = Component.ActionType;
 const Projection = api.Projection;
 const Entity = api.Entity;
 const EComponent = api.EComponent;
+const ControlNode = api.ControlNode;
 const RenderEvent = api.RenderEvent;
 const System = api.System;
 const ViewRenderEvent = api.ViewRenderEvent;
@@ -178,6 +179,8 @@ pub const View = struct {
     tint_color: ?Color,
     blend_mode: ?BlendMode,
     projection: Projection = Projection{},
+
+    controls: ?*ControlNode = null,
 
     render_texture_binding: ?RenderTextureBinding = null,
     shader_binding: ?BindingId = null,
