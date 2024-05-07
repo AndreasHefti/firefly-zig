@@ -4,6 +4,7 @@ const utils = firefly.utils;
 const api = firefly.api;
 const CString = utils.CString;
 const Float = utils.Float;
+const CInt = utils.CInt;
 
 const Allocator = std.mem.Allocator;
 const UpdateEvent = api.UpdateEvent;
@@ -12,6 +13,7 @@ const RenderEventType = api.RenderEventType;
 const EventDispatch = utils.EventDispatch;
 const UpdateListener = api.UpdateListener;
 const RenderListener = api.RenderListener;
+const WindowData = api.WindowData;
 const Timer = api.Timer;
 const View = firefly.graphics.View;
 const String = utils.String;
@@ -135,23 +137,33 @@ pub fn reorderRenderer(new_order: []const String) void {
 }
 
 pub fn start(
-    w: Float,
-    h: Float,
-    fps: c_int,
+    w: CInt,
+    h: CInt,
+    fps: CInt,
     title: CString,
+    init_callback: ?*const fn () void,
+) void {
+    startWindow(
+        .{ .width = w, .height = h, .fps = fps, .title = title },
+        init_callback,
+    );
+}
+
+pub fn startWindow(
+    window: WindowData,
     init_callback: ?*const fn () void,
 ) void {
     reorderRenderer(&DefaultRenderer.DEFAULT_RENDER_ORDER);
 
-    api.window.openWindow(.{
-        .width = @intFromFloat(w),
-        .height = @intFromFloat(h),
-        .title = title,
-        .fps = fps,
-    });
+    api.window.openWindow(window);
     defer api.window.closeWindow();
 
-    View.screen_projection = .{ .plain = .{ 0, 0, w, h } };
+    View.screen_projection = .{ .plain = .{
+        0,
+        0,
+        @floatFromInt(window.width),
+        @floatFromInt(window.height),
+    } };
     defer View.screen_projection = undefined;
 
     if (init_callback) |ic|

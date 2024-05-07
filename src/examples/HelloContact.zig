@@ -22,6 +22,7 @@ const ContactConstraint = firefly.physics.ContactConstraint;
 const Index = utils.Index;
 const ETile = firefly.graphics.ETile;
 const TileGrid = firefly.graphics.TileGrid;
+const WindowFlag = firefly.api.WindowFlag;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -30,11 +31,18 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     firefly.Engine.CoreSystems.ContactSystem.activate();
     firefly.Engine.CoreSystems.EntityControlSystem.activate();
     firefly.physics.addDummyContactMap(null, null);
-    firefly.Engine.start(800, 600, 60, "Hello Contact", init);
+    firefly.Engine.startWindow(.{
+        .width = 800,
+        .height = 600,
+        .fps = 60,
+        .title = "Hello Contact",
+        .flags = &[_]WindowFlag{WindowFlag.FLAG_WINDOW_RESIZABLE},
+    }, init);
 }
 
 fn init() void {
     //firefly.api.window.toggleFullscreen();
+
     Texture.newAnd(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
@@ -86,9 +94,9 @@ fn init() void {
     }
 }
 
-fn control(id: Index) void {
-    if (EContactScan.byId(id)) |scan| {
-        if (EShape.byId(id)) |shape| {
+fn control(entity: *Entity) void {
+    if (EContactScan.byId(entity.id)) |scan| {
+        if (EShape.byId(entity.id)) |shape| {
             if (scan.hasAnyContact()) {
                 shape.color[0] = 255;
                 shape.color[2] = 0;

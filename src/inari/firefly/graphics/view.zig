@@ -180,7 +180,7 @@ pub const View = struct {
     blend_mode: ?BlendMode,
     projection: Projection = Projection{},
 
-    controls: ?*ControlNode = null,
+    controls: ?*ControlNode(View) = null,
 
     render_texture_binding: ?RenderTextureBinding = null,
     shader_binding: ?BindingId = null,

@@ -3,7 +3,6 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 
-const Control = api.Control;
 const ControlNode = api.ControlNode;
 const UpdateEvent = api.UpdateEvent;
 const ArrayList = std.ArrayList;
@@ -229,20 +228,17 @@ fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
     };
 }
 
-fn ControlTrait(comptime T: type, comptime _: anytype) type {
+fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
     return struct {
         fn update(self: *T, id: Index) void {
-            if (self.controls) |c| c.update(id);
+            if (self.controls) |c| c.update(adapter.byId(id));
         }
 
-        pub fn withControl(self: *T, control: Control) *T {
+        pub fn withControl(self: *T, control: ControlNode(T).Control) *T {
             if (self.controls) |c|
                 c.add(control)
-            else {
-                self.controls = api.COMPONENT_ALLOC.create(ControlNode) catch unreachable;
-                self.controls.?.control = control;
-                self.controls.?.next = null;
-            }
+            else
+                self.controls = ControlNode(T).new(control);
             return self;
         }
     };

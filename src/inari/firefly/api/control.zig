@@ -39,33 +39,43 @@ pub fn deinit() void {
     System(EntityControlSystem).disposeSystem();
 }
 
-pub const Control = *const fn (Index) void;
+pub fn ControlNode(comptime T: type) type {
+    return struct {
+        pub const Control = *const fn (*T) void;
+        const Self = @This();
 
-pub const ControlNode = struct {
-    control: Control,
-    next: ?*ControlNode = null,
+        control: Control,
+        next: ?*ControlNode(T) = null,
 
-    pub fn update(self: *ControlNode, id: Index) void {
-        self.control(id);
-        if (self.next) |n| n.update(id);
-    }
-
-    pub fn add(self: *ControlNode, control: Control) void {
-        if (self.next) |n|
-            n.add(control)
-        else {
-            self.next = api.COMPONENT_ALLOC.create(ControlNode) catch unreachable;
-            self.next.?.control = control;
-            self.next.?.next = null;
+        pub fn new(control: Control) *Self {
+            var result = api.COMPONENT_ALLOC.create(Self) catch unreachable;
+            result.control = control;
+            result.next = null;
+            return result;
         }
-    }
 
-    fn deinit(self: *ControlNode) void {
-        if (self.next) |n|
-            n.deinit();
-        api.COMPONENT_ALLOC.destroy(self);
-    }
-};
+        pub fn update(self: *Self, component: *T) void {
+            self.control(component);
+            if (self.next) |n| n.update(component);
+        }
+
+        pub fn add(self: *Self, control: Control) void {
+            if (self.next) |n|
+                n.add(control)
+            else {
+                self.next = api.COMPONENT_ALLOC.create(Self) catch unreachable;
+                self.next.?.control = control;
+                self.next.?.next = null;
+            }
+        }
+
+        fn deinit(self: *Self) void {
+            if (self.next) |n|
+                n.deinit();
+            api.COMPONENT_ALLOC.destroy(self);
+        }
+    };
+}
 
 //////////////////////////////////////////////////////////////////////////
 //// Entity Control
@@ -75,18 +85,18 @@ pub const EControl = struct {
     pub usingnamespace EComponent.Trait(@This(), "EControl");
 
     id: Index = UNDEF_INDEX,
-    controls: ?*ControlNode = null,
+    controls: ?*ControlNode(Entity) = null,
 
     fn update(self: *EControl, id: Index) void {
-        if (self.controls) |c| c.update(id);
+        if (self.controls) |c| c.update(Entity.byId(id));
     }
 
-    pub fn withControl(self: *EControl, control: Control) *EControl {
+    pub fn withControl(self: *EControl, control: ControlNode(Entity).Control) *EControl {
         addControl(self, control);
         return self;
     }
 
-    pub fn withControlAnd(self: *EControl, control: Control) *Entity {
+    pub fn withControlAnd(self: *EControl, control: ControlNode(Entity).Control) *Entity {
         addControl(self, control);
         return Entity.byId(self.id);
     }
@@ -98,14 +108,11 @@ pub const EControl = struct {
         self.controls = null;
     }
 
-    fn addControl(self: *EControl, control: Control) void {
+    fn addControl(self: *EControl, control: ControlNode(Entity).Control) void {
         if (self.controls) |c|
             c.add(control)
-        else {
-            self.controls = api.COMPONENT_ALLOC.create(ControlNode) catch unreachable;
-            self.controls.?.control = control;
-            self.controls.?.next = null;
-        }
+        else
+            self.controls = ControlNode(Entity).new(control);
     }
 };
 

@@ -7,6 +7,8 @@ const api = firefly.api;
 const IWindowAPI = api.IWindowAPI;
 const WindowData = api.WindowData;
 const CInt = utils.CInt;
+const CUInt = utils.CUInt;
+const WindowFlag = api.WindowFlag;
 
 var singleton: ?IWindowAPI() = null;
 pub fn createWindowAPI() !IWindowAPI() {
@@ -33,6 +35,7 @@ const RaylibWindowAPI = struct {
         interface.showFPS = showFPS;
         interface.toggleFullscreen = toggleFullscreen;
         interface.toggleBorderlessWindowed = toggleBorderlessWindowed;
+        interface.setWindowFlags = setWindowFlags;
 
         interface.deinit = deinit;
     }
@@ -44,7 +47,8 @@ const RaylibWindowAPI = struct {
             @panic("Not initialized");
 
         window_data = data;
-        rl.SetWindowState(window_data.flags);
+        if (window_data.flags) |wf|
+            setWindowFlags(wf);
         rl.SetTargetFPS(window_data.fps);
         rl.InitWindow(window_data.width, window_data.height, window_data.title);
     }
@@ -76,5 +80,12 @@ const RaylibWindowAPI = struct {
 
     fn toggleBorderlessWindowed() void {
         rl.ToggleBorderlessWindowed();
+    }
+
+    fn setWindowFlags(flags: []const WindowFlag) void {
+        var flag: CUInt = 0;
+        for (flags) |f|
+            flag |= @intFromEnum(f);
+        rl.SetWindowState(flag);
     }
 };
