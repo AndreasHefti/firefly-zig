@@ -13,6 +13,8 @@ const String = utils.String;
 const Float = utils.Float;
 const UpdateEvent = firefly.api.UpdateEvent;
 const KeyboardKey = firefly.api.KeyboardKey;
+const GamepadAction = firefly.api.GamepadAction;
+const InputDevice = firefly.api.InputDevice;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -42,6 +44,11 @@ fn init() void {
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_DOWN, InputButtonType.DOWN);
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_LEFT, InputButtonType.LEFT);
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_RIGHT, InputButtonType.RIGHT);
+
+    firefly.api.input.setGamepadButtonMapping(InputDevice.GAME_PAD_1, GamepadAction.GAMEPAD_BUTTON_LEFT_FACE_UP, InputButtonType.UP);
+    firefly.api.input.setGamepadButtonMapping(InputDevice.GAME_PAD_1, GamepadAction.GAMEPAD_BUTTON_LEFT_FACE_DOWN, InputButtonType.DOWN);
+    firefly.api.input.setGamepadButtonMapping(InputDevice.GAME_PAD_1, GamepadAction.GAMEPAD_BUTTON_LEFT_FACE_LEFT, InputButtonType.LEFT);
+    firefly.api.input.setGamepadButtonMapping(InputDevice.GAME_PAD_1, GamepadAction.GAMEPAD_BUTTON_LEFT_FACE_RIGHT, InputButtonType.RIGHT);
 
     firefly.api.subscribeUpdate(update);
 }
