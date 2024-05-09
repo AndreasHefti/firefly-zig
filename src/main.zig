@@ -10,7 +10,6 @@ pub fn main() !void {
         .allocator = allocator,
         .entity_allocator = allocator,
         .component_allocator = allocator,
-        .run_on_low_level_api = firefly.api.RUN_ON.RAYLIB,
     };
 
     try @import("examples/HelloFirefly.zig").run(init_context);

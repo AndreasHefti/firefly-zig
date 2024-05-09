@@ -18,6 +18,7 @@ const Index = utils.Index;
 const Float = utils.Float;
 const Vector2f = utils.Vector2f;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
+const String = utils.String;
 
 //////////////////////////////////////////////////////////////
 //// movement init
@@ -85,21 +86,22 @@ pub const MovementAspectGroup = AspectGroup(struct {
 });
 pub const MovementAspect = *const MovementAspectGroup.Aspect;
 pub const MovementKind = MovementAspectGroup.Kind;
+
 pub const BasicMovement = struct {
-    var ON_SLOPE_UP: MovementAspect = undefined;
-    var ON_SLOPE_DOWN: MovementAspect = undefined;
-    var GROUND_TOUCHED: MovementAspect = undefined;
-    var GROUND_LOOSE: MovementAspect = undefined;
-    var SLIP_RIGHT: MovementAspect = undefined;
-    var SLIP_LEFT: MovementAspect = undefined;
-    var JUMP: MovementAspect = undefined;
-    var DOUBLE_JUMP: MovementAspect = undefined;
-    var CLIMB_UP: MovementAspect = undefined;
-    var CLIMB_DOWN: MovementAspect = undefined;
-    var BLOCK_WEST: MovementAspect = undefined;
-    var BLOCK_EAST: MovementAspect = undefined;
-    var BLOCK_NORTH: MovementAspect = undefined;
-    var BLOCK_SOUTH: MovementAspect = undefined;
+    pub var ON_SLOPE_UP: MovementAspect = undefined;
+    pub var ON_SLOPE_DOWN: MovementAspect = undefined;
+    pub var GROUND_TOUCHED: MovementAspect = undefined;
+    pub var GROUND_LOOSE: MovementAspect = undefined;
+    pub var SLIP_RIGHT: MovementAspect = undefined;
+    pub var SLIP_LEFT: MovementAspect = undefined;
+    pub var JUMP: MovementAspect = undefined;
+    pub var DOUBLE_JUMP: MovementAspect = undefined;
+    pub var CLIMB_UP: MovementAspect = undefined;
+    pub var CLIMB_DOWN: MovementAspect = undefined;
+    pub var BLOCK_WEST: MovementAspect = undefined;
+    pub var BLOCK_EAST: MovementAspect = undefined;
+    pub var BLOCK_NORTH: MovementAspect = undefined;
+    pub var BLOCK_SOUTH: MovementAspect = undefined;
 };
 
 pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: Float) bool;

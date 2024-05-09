@@ -78,7 +78,7 @@ pub const ContactTypeAspectGroup = AspectGroup(struct {
 pub const ContactTypeAspect = *const ContactTypeAspectGroup.Aspect;
 pub const ContactTypeKind = ContactTypeAspectGroup.Kind;
 pub const BasicContactTypes = struct {
-    var UNDEFINED: ContactTypeAspect = undefined;
+    pub var UNDEFINED: ContactTypeAspect = undefined;
 };
 
 // Contact Material Aspects
@@ -88,7 +88,7 @@ pub const ContactMaterialAspectGroup = AspectGroup(struct {
 pub const ContactMaterialAspect = *const ContactMaterialAspectGroup.Aspect;
 pub const ContactMaterialKind = ContactMaterialAspectGroup.Kind;
 pub const BasicContactMaterials = struct {
-    var UNDEFINED: ContactMaterialAspect = undefined;
+    pub var UNDEFINED: ContactMaterialAspect = undefined;
 };
 
 pub const ContactBounds = struct {

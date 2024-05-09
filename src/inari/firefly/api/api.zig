@@ -27,17 +27,19 @@ const Vector3f = utils.Vector3f;
 const Vector4f = utils.Vector4f;
 const StringBuffer = utils.StringBuffer;
 
+fn dummyDeinit() void {}
+
 //////////////////////////////////////////////////////////////
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const RUN_ON = enum { RAYLIB };
+pub const RUN_ON = enum { RAYLIB, TEST };
+pub const RUN_ON_SET: RUN_ON = RUN_ON.RAYLIB;
 
 pub const InitContext = struct {
     component_allocator: Allocator,
     entity_allocator: Allocator,
     allocator: Allocator,
-    run_on_low_level_api: RUN_ON = RUN_ON.RAYLIB,
 };
 
 pub var COMPONENT_ALLOC: Allocator = undefined;
@@ -71,6 +73,12 @@ pub const EComponent = entity.EComponent;
 pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
+pub const CCondition = control.CCondition;
+pub const ActionResult = control.ActionResult;
+pub const ActionFunction = control.ActionFunction;
+pub const Task = control.Task;
+pub const TaskFunction = control.TaskFunction;
+pub const TaskCallback = control.TaskCallback;
 pub const EControl = control.EControl;
 pub const ControlNode = control.ControlNode;
 
@@ -104,11 +112,16 @@ pub fn init(context: InitContext) !void {
     RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).new(ALLOC);
     VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(ALLOC);
 
-    if (context.run_on_low_level_api == RUN_ON.RAYLIB) {
+    if (RUN_ON_SET == RUN_ON.RAYLIB) {
         rendering = try @import("raylib/rendering.zig").createRenderAPI();
         window = try @import("raylib/window.zig").createWindowAPI();
         input = try @import("raylib/input.zig").createInputAPI();
         audio = try @import("raylib/audio.zig").createInputAPI();
+    } else {
+        rendering = IRenderAPI().initDummy();
+        window = IWindowAPI().initDummy();
+        input = IInputAPI().initDummy();
+        audio = IAudioAPI().initDummy();
     }
 
     try Component.init();
@@ -156,6 +169,50 @@ pub fn allocFloatArray(array: anytype) []Float {
 pub fn allocVec2FArray(array: anytype) []const Vector2f {
     return firefly.api.ALLOC.dupe(Vector2f, &array) catch unreachable;
 }
+
+pub const Attributes = struct {
+    _attrs: std.StringHashMap(String) = undefined,
+
+    pub fn new() Attributes {
+        return .{
+            ._attrs = std.StringHashMap(String).init(ALLOC),
+        };
+    }
+
+    pub fn deinit(self: *Attributes) void {
+        self._attrs.deinit();
+        self._attrs = undefined;
+    }
+
+    pub fn set(self: *Attributes, name: String, value: String) void {
+        self._attrs.put(name, value) catch unreachable;
+    }
+
+    pub fn setAll(self: *Attributes, others: *const Attributes) void {
+        var it = others._attrs.iterator();
+        while (it.next()) |e| {
+            self._attrs.put(e.key_ptr.*, e.value_ptr.*) catch unreachable;
+        }
+    }
+
+    pub fn get(self: *Attributes, name: String) ?String {
+        return self._attrs.get(name);
+    }
+
+    pub fn format(
+        self: Attributes,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("Attributes[ ", .{});
+        var i = self._attrs.iterator();
+        while (i.next()) |e| {
+            try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
+        }
+        try writer.print("]", .{});
+    }
+};
 
 //////////////////////////////////////////////////////////////
 //// Update Event and Render Event declarations
@@ -471,6 +528,12 @@ pub fn IRenderAPI() type {
             _ = initImpl(&self);
             return self;
         }
+
+        pub fn initDummy() Self {
+            var self = Self{};
+            self.deinit = dummyDeinit;
+            return self;
+        }
     };
 }
 
@@ -520,6 +583,12 @@ pub fn IWindowAPI() type {
         pub fn init(initImpl: *const fn (*IWindowAPI()) void) Self {
             var self = Self{};
             _ = initImpl(&self);
+            return self;
+        }
+
+        pub fn initDummy() Self {
+            var self = Self{};
+            self.deinit = dummyDeinit;
             return self;
         }
     };
@@ -798,6 +867,12 @@ pub fn IInputAPI() type {
             _ = initImpl(&self);
             return self;
         }
+
+        pub fn initDummy() Self {
+            var self = Self{};
+            self.deinit = dummyDeinit;
+            return self;
+        }
     };
 }
 
@@ -849,6 +924,12 @@ pub fn IAudioAPI() type {
         pub fn init(initImpl: *const fn (*IAudioAPI()) void) Self {
             var self = Self{};
             _ = initImpl(&self);
+            return self;
+        }
+
+        pub fn initDummy() Self {
+            var self = Self{};
+            self.deinit = dummyDeinit;
             return self;
         }
     };

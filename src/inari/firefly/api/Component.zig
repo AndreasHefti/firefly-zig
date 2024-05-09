@@ -182,14 +182,14 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
             return false;
         }
         pub fn isActive(self: T) bool {
-            return adapter.pool.active_mapping.isSet(self.id);
+            return adapter.pool.active_mapping.?.isSet(self.id);
         }
         pub fn activeCount() usize {
-            return adapter.pool.active_mapping.count();
+            return adapter.pool.active_mapping.?.count();
         }
 
         pub fn nextActiveId(id: Index) ?Index {
-            return adapter.pool.active_mapping.nextSetBit(id);
+            return adapter.pool.active_mapping.?.nextSetBit(id);
         }
 
         pub fn activate(self: *T) *T {
@@ -205,10 +205,12 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
 fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
     return struct {
         pub fn processActive(f: *const fn (*T) void) void {
-            var i: Index = 0;
-            while (adapter.pool.active_mapping.nextSetBit(i)) |next| {
-                f(adapter.pool.items.get(next).?);
-                i = next + 1;
+            if (adapter.pool.active_mapping) |*am| {
+                var next = am.nextSetBit(0);
+                while (next) |i| {
+                    f(adapter.pool.items.get(i).?);
+                    next = am.nextSetBit(i + 1);
+                }
             }
         }
 
@@ -330,8 +332,9 @@ pub const ComponentEvent = struct {
 pub fn ComponentPool(comptime T: type) type {
 
     // component type constraints and function references
-    const has_aspect: bool = @hasDecl(T, "type_aspect");
+    //const has_aspect: bool = @hasDecl(T, "type_aspect");
     const has_subscribe: bool = @hasDecl(T, "subscribe");
+    const has_active_mapping: bool = @hasDecl(T, "activeCount");
     const has_name_mapping: bool = @hasField(T, "name");
 
     // component type init/deinit functions
@@ -370,7 +373,7 @@ pub fn ComponentPool(comptime T: type) type {
         // internal state
         var items: DynArray(T) = undefined;
         // mappings
-        var active_mapping: BitSet = undefined;
+        var active_mapping: ?BitSet = undefined;
         var name_mapping: ?StringHashMap(Index) = null;
         // events
         var event: ?ComponentEvent = null;
@@ -392,8 +395,10 @@ pub fn ComponentPool(comptime T: type) type {
             }
 
             items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
-            active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
             ComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
+
+            if (has_active_mapping)
+                active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
 
             if (has_subscribe) {
                 event = ComponentEvent{};
@@ -424,7 +429,10 @@ pub fn ComponentPool(comptime T: type) type {
                 T.componentTypeDeinit();
 
             items.deinit();
-            active_mapping.deinit();
+            if (active_mapping) |*am| {
+                am.deinit();
+                active_mapping = null;
+            }
 
             if (eventDispatch) |*ed| {
                 ed.deinit();
@@ -433,16 +441,18 @@ pub fn ComponentPool(comptime T: type) type {
             }
 
             if (name_mapping) |*nm| nm.deinit();
-            if (has_aspect) T.type_aspect = undefined;
+            //if (has_aspect) T.type_aspect = undefined;
             if (has_controls) api.unsubscribeUpdate(update);
         }
 
         fn update(_: UpdateEvent) void {
-            var next = Self.active_mapping.nextSetBit(0);
-            while (next) |i| {
-                if (Self.items.get(i)) |c|
-                    c.update(c.id);
-                next = Self.active_mapping.nextSetBit(i + 1);
+            if (active_mapping) |*am| {
+                var next = am.nextSetBit(0);
+                while (next) |i| {
+                    if (items.get(i)) |c|
+                        c.update(c.id);
+                    next = am.nextSetBit(i + 1);
+                }
             }
         }
 
@@ -468,10 +478,12 @@ pub fn ComponentPool(comptime T: type) type {
         }
 
         fn activate(id: Index, a: bool) void {
-            active_mapping.setValue(id, a);
-            if (has_activation)
-                if (items.get(id)) |v| v.activation(a);
-            notify(if (a) ActionType.ACTIVATED else ActionType.DEACTIVATING, id);
+            if (active_mapping) |*am| {
+                am.setValue(id, a);
+                if (has_activation)
+                    if (items.get(id)) |v| v.activation(a);
+                notify(if (a) ActionType.ACTIVATED else ActionType.DEACTIVATING, id);
+            }
         }
 
         pub fn clearAll() void {
@@ -483,9 +495,11 @@ pub fn ComponentPool(comptime T: type) type {
         }
 
         fn clear(id: Index) void {
-            if (active_mapping.isSet(id))
-                activate(id, false);
-            notify(ActionType.DISPOSING, id);
+            if (active_mapping) |*am| {
+                if (am.isSet(id))
+                    activate(id, false);
+                notify(ActionType.DISPOSING, id);
+            }
 
             if (items.get(id)) |val| {
                 if (has_destruct)
@@ -499,7 +513,8 @@ pub fn ComponentPool(comptime T: type) type {
                 }
 
                 val.id = UNDEF_INDEX;
-                active_mapping.setValue(id, false);
+                if (active_mapping) |*am|
+                    am.setValue(id, false);
                 items.delete(id);
             }
         }
@@ -508,10 +523,11 @@ pub fn ComponentPool(comptime T: type) type {
             string_buffer.print("\n  {s} size: {d}", .{ T.COMPONENT_TYPE_NAME, items.slots.count() });
             var next = items.slots.nextSetBit(0);
             while (next) |i| {
-                string_buffer.print("\n    {s} {any}", .{
-                    if (active_mapping.isSet(i)) "(a)" else "(x)",
-                    items.get(i),
-                });
+                var active = "(x)";
+                if (active_mapping) |*am| {
+                    if (am.isSet(i)) active = "(a)";
+                }
+                string_buffer.print("\n    {s} {any}", .{ active, items.get(i) });
                 next = items.slots.nextSetBit(i + 1);
             }
         }

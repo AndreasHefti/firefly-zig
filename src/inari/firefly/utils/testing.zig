@@ -311,11 +311,11 @@ test "test ensure capacity" {
     try std.testing.expect(bitset2.lengthOfMaskArray() == 16);
 }
 
-const TEST_ASPECT_GROUP = utils.AspectGroup(struct {
-    pub const name = "TestGroup";
-});
-
 test "initialize" {
+    const TEST_ASPECT_GROUP = utils.AspectGroup(struct {
+        pub const name = "TestGroup";
+    });
+
     try std.testing.expectEqualStrings("TestGroup", TEST_ASPECT_GROUP.name());
     try std.testing.expect(TEST_ASPECT_GROUP.size() == 0);
 
@@ -330,7 +330,51 @@ test "initialize" {
     try std.testing.expectEqualStrings("aspect2", aspect2.name);
 }
 
+const GROUP_1 = struct {
+    pub const name = "TestGroup1";
+};
+const GROUP_2 = struct {
+    pub const name = "TestGroup2";
+};
+
+test "Aspect Type/Group difference" {
+    const group1 = utils.AspectGroup(GROUP_1);
+    const group2 = utils.AspectGroup(GROUP_2);
+
+    const a1g1 = group1.getAspect("g1a1");
+    const a2g1 = group1.getAspect("g1a2");
+    const a3g1 = group1.getAspect("g1a3");
+
+    const a1g2 = group2.getAspect("g2a1");
+    const a2g2 = group2.getAspect("g2a2");
+    const a3g2 = group2.getAspect("g2a3");
+    const a4g2 = group2.getAspect("g2a4");
+
+    const kind1 = group1.newKindOf(.{ a1g1, a2g1 });
+    const kind2 = group1.newKindOf(.{ a3g1, a2g1 });
+
+    const kind3 = group2.newKindOf(.{ a1g2, a2g2 });
+    const kind4 = group2.newKindOf(.{ a3g2, a4g2 });
+
+    try std.testing.expect(kind1.hasAnyAspect(kind2));
+    try std.testing.expect(!kind3.hasAnyAspect(kind4));
+
+    //const kind5 = group2.newKindOf(.{ a1g1, a4g2 });
+    //_ = kind5;
+
+    //try std.testing.expect(kind1.hasAnyAspect(kind4));
+
+    // gives expected compile error
+    //const type_a1g1 = @TypeOf(a1g1);
+    //const type_a1g2 = @TypeOf(a1g2);
+    //try std.testing.expect(type_a1g1 != type_a1g2);
+}
+
 test "kind" {
+    const TEST_ASPECT_GROUP = utils.AspectGroup(struct {
+        pub const name = "TestGroup";
+    });
+
     const aspect1 = TEST_ASPECT_GROUP.getAspect("aspect1");
     const aspect2 = TEST_ASPECT_GROUP.getAspect("aspect2");
     const aspect3 = TEST_ASPECT_GROUP.getAspect("aspect3");
@@ -967,4 +1011,19 @@ test "TEMPPerformance2" {
 
 fn testTEMPPerformance(v: Vector2i) bool {
     return v[0] - v[1] > 0;
+}
+
+fn Memo(comptime num: usize) type {
+    return struct {
+        const Self = @This();
+        number: usize = num,
+    };
+}
+test "memo test" {
+    const memo1 = Memo(0);
+    const memo2 = Memo(1);
+    const memoinst1 = memo1{};
+
+    try std.testing.expect(memoinst1.number == 0);
+    try std.testing.expect(memo1 != memo2);
 }

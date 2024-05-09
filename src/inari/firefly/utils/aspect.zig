@@ -15,11 +15,17 @@ const ShiftInt = std.math.Log2Int(MaskInt);
 
 pub fn AspectGroup(comptime T: type) type {
     return struct {
+        pub const Aspect = struct {
+            const _group_ = Group;
+
+            id: u8,
+            name: String,
+        };
+
         const Group = @This();
         const _name: String = if (@hasDecl(T, "name")) T.name else @typeName(T);
-
-        var _aspects: [MaxIndex]Aspect = [_]Aspect{undefined} ** MaxIndex;
         var _aspect_count: u8 = 0;
+        var _aspects: [MaxIndex]Aspect = [_]Aspect{undefined} ** MaxIndex;
 
         pub fn name() String {
             return _name;
@@ -30,37 +36,32 @@ pub fn AspectGroup(comptime T: type) type {
         }
 
         pub fn getAspectById(id: usize) *const Aspect {
-            if (id < _aspect_count) {
+            if (id < _aspect_count)
                 return &_aspects[id];
-            }
+
             @panic("Aspect id overflow");
         }
 
         pub fn getAspect(aspect_name: String) *const Aspect {
             var i: u8 = 0;
-            while (i < Group._aspect_count) {
+            while (i < _aspect_count) {
                 if (utils.stringEquals(Group._aspects[i].name, aspect_name)) {
                     return &Group._aspects[i];
                 }
                 i = i + 1;
             }
             // create new one
-            if (Group._aspect_count >= 128)
+            if (_aspect_count >= 128)
                 @panic("No more space for new aspects in AspectGroup");
 
-            _aspects[Group._aspect_count] = .{ .id = Group._aspect_count, .name = aspect_name };
-            Group._aspect_count = Group._aspect_count + 1;
-            return &_aspects[Group._aspect_count - 1];
+            _aspects[_aspect_count] = .{ .id = _aspect_count, .name = aspect_name };
+            _aspect_count = _aspect_count + 1;
+            return &_aspects[_aspect_count - 1];
         }
 
         pub fn applyAspect(t: anytype, aspect_name: String) void {
             t.aspect = getAspect(aspect_name);
         }
-
-        pub const Aspect = struct {
-            id: u8,
-            name: String,
-        };
 
         pub fn newKind() Kind {
             return Kind{};
@@ -109,7 +110,8 @@ pub fn AspectGroup(comptime T: type) type {
         }
 
         pub fn getAspectFromAnytype(aspect: anytype) ?*const Aspect {
-            const at = @TypeOf(aspect);
+            const at: type = @TypeOf(aspect);
+
             if (at == Aspect) {
                 return &aspect;
             } else if (at == *Aspect or at == *const Aspect) {
@@ -122,8 +124,7 @@ pub fn AspectGroup(comptime T: type) type {
         }
 
         pub const Kind = struct {
-            /// Reference to the aspect group this kind belongs to
-            const group = Group;
+            const _group_ = Group;
             /// The bitmask to store indices of owned aspects of this kind
             _mask: MaskInt = 0,
 
@@ -186,10 +187,7 @@ pub fn AspectGroup(comptime T: type) type {
             }
 
             pub fn hasAnyAspect(self: Kind, other: Kind) bool {
-                if (self.isEquals(other))
-                    return self._mask & other._mask > 0;
-
-                return false;
+                return self._mask & other._mask > 0;
             }
 
             pub fn has(self: Kind, index: u8) bool {

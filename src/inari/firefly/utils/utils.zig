@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const Writer = std.io.Writer;
 const ArrayList = std.ArrayList;
 const aspect = @import("aspect.zig");
+const StringHashMap = std.StringHashMap;
 
 //////////////////////////////////////////////////////////////
 //// inari utils public API
@@ -80,7 +81,7 @@ pub fn Condition(comptime T: type) type {
             };
         }
 
-        pub fn check(self: Self, t: T) bool {
+        pub fn check(self: *Self, t: T) bool {
             return self.f(t);
         }
     };

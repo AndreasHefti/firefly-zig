@@ -3,6 +3,7 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 
+const Attributes = api.Attributes;
 const System = api.System;
 const EComponent = api.EComponent;
 const EComponentAspectGroup = api.EComponentAspectGroup;
@@ -23,6 +24,7 @@ pub fn init() void {
     if (initialized)
         return;
 
+    Component.registerComponent(Task);
     EComponent.registerEntityComponent(EControl);
     System(EntityControlSystem).createSystem(
         firefly.Engine.CoreSystems.EntityControlSystem.name,
@@ -38,6 +40,93 @@ pub fn deinit() void {
 
     System(EntityControlSystem).disposeSystem();
 }
+
+//////////////////////////////////////////////////////////////////////////
+//// Action, Task and Trigger
+//////////////////////////////////////////////////////////////////////////
+
+// A condition that takes a component identifier as input
+pub const CCondition = utils.Condition(Index);
+
+pub const ActionResult = enum {
+    Success,
+    Running,
+    Failed,
+};
+
+pub const ActionFunction = *const fn (Index) ActionResult;
+pub const TaskFunction = *const fn (?Index, ?Attributes) void;
+pub const TaskCallback = *const fn (Index) void;
+
+pub const Task = struct {
+    pub usingnamespace Component.Trait(Task, .{ .name = "Task", .activation = false, .processing = false });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+
+    run_once: bool = false,
+    blocking: bool = true,
+
+    function: TaskFunction,
+    attributes: ?Attributes = null,
+    callback: ?TaskCallback = null,
+
+    pub fn destruct(self: *Task) void {
+        if (self.attributes) |*attr|
+            attr.deinit();
+        self.attributes = null;
+    }
+
+    pub fn run(self: *Task) void {
+        defer {
+            if (self.run_once)
+                Task.disposeById(self.id);
+        }
+
+        if (self.blocking) {
+            self._run(null, null);
+        } else {
+            _ = std.Thread.spawn(.{}, _run, .{ self, null, null }) catch unreachable;
+        }
+    }
+
+    pub fn runWith(self: *Task, id: Index, attributes: ?Attributes) void {
+        defer {
+            if (self.run_once)
+                Task.disposeById(self.id);
+        }
+
+        if (self.blocking) {
+            self._run(id, attributes);
+        } else {
+            _ = std.Thread.spawn(.{}, _run, .{ self, id, attributes }) catch unreachable;
+        }
+    }
+
+    fn _run(self: *Task, id: ?Index, attrs1: ?Attributes) void {
+        var attrs: ?Attributes = null;
+        if (self.attributes) |*a| {
+            attrs = Attributes.new();
+            attrs.?.setAll(a);
+        }
+        if (attrs1) |*a| {
+            if (attrs == null)
+                attrs = Attributes.new();
+            attrs.?.setAll(a);
+        }
+
+        self.function(id, attrs);
+
+        if (self.callback) |c|
+            c(self.id);
+
+        if (attrs) |*a|
+            a.deinit();
+    }
+};
+//////////////////////////////////////////////////////////////////////////
+//// Component and Entity Control
+//////////////////////////////////////////////////////////////////////////
 
 pub fn ControlNode(comptime T: type) type {
     return struct {
