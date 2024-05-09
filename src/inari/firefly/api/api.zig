@@ -34,7 +34,7 @@ fn dummyDeinit() void {}
 //////////////////////////////////////////////////////////////
 
 pub const RUN_ON = enum { RAYLIB, TEST };
-pub const RUN_ON_SET: RUN_ON = RUN_ON.RAYLIB;
+pub const RUN_ON_SET: RUN_ON = RUN_ON.TEST;
 
 pub const InitContext = struct {
     component_allocator: Allocator,
@@ -79,6 +79,7 @@ pub const ActionFunction = control.ActionFunction;
 pub const Task = control.Task;
 pub const TaskFunction = control.TaskFunction;
 pub const TaskCallback = control.TaskCallback;
+pub const Trigger = control.Trigger;
 pub const EControl = control.EControl;
 pub const ControlNode = control.ControlNode;
 

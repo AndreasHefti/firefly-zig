@@ -18,8 +18,8 @@ const Timer = api.Timer;
 const View = firefly.graphics.View;
 const String = utils.String;
 
-var UPDATE_EVENT = UpdateEvent{};
-var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
+const UPDATE_EVENT = UpdateEvent{};
+const RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 
 pub const CoreSystems = struct {
     pub const StateSystem = struct {

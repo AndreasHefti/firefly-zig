@@ -409,9 +409,8 @@ pub fn ComponentPool(comptime T: type) type {
                 name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
 
             if (has_component_type_init) {
-                T.componentTypeInit() catch {
+                T.componentTypeInit() catch
                     std.log.err("Failed to initialize component of type: {any}", .{T});
-                };
             }
 
             if (has_controls)

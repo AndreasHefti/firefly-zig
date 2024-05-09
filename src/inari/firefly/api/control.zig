@@ -25,6 +25,7 @@ pub fn init() void {
         return;
 
     Component.registerComponent(Task);
+    Component.registerComponent(Trigger);
     EComponent.registerEntityComponent(EControl);
     System(EntityControlSystem).createSystem(
         firefly.Engine.CoreSystems.EntityControlSystem.name,
@@ -46,7 +47,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////////////////
 
 // A condition that takes a component identifier as input
-pub const CCondition = utils.Condition(Index);
+pub const CCondition = *const fn (Index, ?Attributes) bool;
 
 pub const ActionResult = enum {
     Success,
@@ -124,6 +125,44 @@ pub const Task = struct {
             a.deinit();
     }
 };
+
+pub const Trigger = struct {
+    pub usingnamespace Component.Trait(Trigger, .{ .name = "Trigger", .processing = false });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+
+    component_ref: Index = UNDEF_INDEX,
+    task_ref: Index = UNDEF_INDEX,
+    condition: CCondition,
+    attributes: ?Attributes = null,
+
+    pub fn componentTypeInit() !void {
+        api.subscribeUpdate(update);
+    }
+
+    pub fn componentTypeDeinit() void {
+        api.unsubscribeUpdate(update);
+    }
+
+    pub fn destruct(self: *Trigger) void {
+        if (self.attributes) |*attr|
+            attr.deinit();
+        self.attributes = null;
+    }
+
+    fn update(_: UpdateEvent) void {
+        var next = Trigger.nextActiveId(0);
+        while (next) |i| {
+            var trigger = Trigger.byId(i);
+            if (trigger.condition(trigger.id, trigger.attributes))
+                Task.byId(trigger.task_ref).runWith(trigger.component_ref, trigger.attributes);
+
+            next = Trigger.nextActiveId(i + 1);
+        }
+    }
+};
+
 //////////////////////////////////////////////////////////////////////////
 //// Component and Entity Control
 //////////////////////////////////////////////////////////////////////////
