@@ -1,15 +1,13 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const Component = api.Component;
-const ComponentEvent = api.ComponentEvent;
-const ActionType = api.Component.ActionType;
-const Entity = api.Entity;
-const String = utils.String;
-const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Component = firefly.api.Component;
+const ComponentEvent = firefly.api.ComponentEvent;
+const ActionType = firefly.api.Component.ActionType;
+const Entity = firefly.api.Entity;
+const String = firefly.utils.String;
+const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 var initialized = false;
 pub fn init() void {
@@ -129,23 +127,23 @@ pub fn System(comptime T: type) type {
                 }
                 if (has_update_event_subscription) {
                     if (has_update_order) {
-                        api.subscribeUpdateAt(T.update_order, T.update);
+                        firefly.api.subscribeUpdateAt(T.update_order, T.update);
                     } else {
-                        api.subscribeUpdate(T.update);
+                        firefly.api.subscribeUpdate(T.update);
                     }
                 }
                 if (has_render_event_subscription) {
                     if (has_render_order) {
-                        api.subscribeRenderAt(T.render_order, T.render);
+                        firefly.api.subscribeRenderAt(T.render_order, T.render);
                     } else {
-                        api.subscribeRender(T.render);
+                        firefly.api.subscribeRender(T.render);
                     }
                 }
                 if (has_view_render_event_subscription) {
                     if (has_view_render_order) {
-                        api.subscribeViewRenderAt(T.view_render_order, T.renderView);
+                        firefly.api.subscribeViewRenderAt(T.view_render_order, T.renderView);
                     } else {
-                        api.subscribeViewRender(T.renderView);
+                        firefly.api.subscribeViewRender(T.renderView);
                     }
                 }
             } else {
@@ -156,13 +154,13 @@ pub fn System(comptime T: type) type {
                     T.component_register_type.unsubscribe(notifyComponentChange);
                 }
                 if (has_update_event_subscription) {
-                    api.unsubscribeUpdate(T.update);
+                    firefly.api.unsubscribeUpdate(T.update);
                 }
                 if (has_render_event_subscription) {
-                    api.unsubscribeRender(T.render);
+                    firefly.api.unsubscribeRender(T.render);
                 }
                 if (has_view_render_event_subscription) {
-                    api.unsubscribeViewRender(T.renderView);
+                    firefly.api.unsubscribeViewRender(T.renderView);
                 }
             }
 

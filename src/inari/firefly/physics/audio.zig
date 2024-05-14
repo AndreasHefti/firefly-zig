@@ -1,15 +1,13 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const Component = api.Component;
-const Index = utils.Index;
-const Float = utils.Float;
-const Asset = api.Asset;
-const String = utils.String;
-const BindingId = api.BindingId;
-const SoundBinding = api.SoundBinding;
+const Component = firefly.api.Component;
+const Index = firefly.utils.Index;
+const Float = firefly.utils.Float;
+const Asset = firefly.api.Asset;
+const String = firefly.utils.String;
+const BindingId = firefly.api.BindingId;
+const SoundBinding = firefly.api.SoundBinding;
 
 //////////////////////////////////////////////////////////////
 //// audio init
@@ -67,10 +65,10 @@ pub const AudioPlayer = struct {
                 }
             }
 
-            if (!override and api.audio.isSoundPlaying(bindingId))
+            if (!override and firefly.api.audio.isSoundPlaying(bindingId))
                 return;
 
-            api.audio.playSound(
+            firefly.api.audio.playSound(
                 bindingId,
                 volume orelse sound.volume,
                 pitch orelse sound.pitch,
@@ -97,10 +95,10 @@ pub const AudioPlayer = struct {
 
     inline fn playMusic(music: *Music, volume: ?Float, pitch: ?Float, pan: ?Float, override: bool) void {
         if (music._binding) |bind| {
-            if (!override and api.audio.isMusicPlaying(bind))
+            if (!override and firefly.api.audio.isMusicPlaying(bind))
                 return;
 
-            api.audio.playMusic(
+            firefly.api.audio.playMusic(
                 bind,
                 volume orelse music.volume,
                 pitch orelse music.pitch,
@@ -130,12 +128,12 @@ pub const Sound = struct {
         if (resource._binding != null)
             return; // already loaded
 
-        resource._binding = api.audio.loadSound(resource.resource, resource.channels);
+        resource._binding = firefly.api.audio.loadSound(resource.resource, resource.channels);
     }
 
     pub fn doUnload(_: *Asset(Sound), resource: *Sound) void {
         if (resource._binding) |b| {
-            api.audio.disposeSound(b);
+            firefly.api.audio.disposeSound(b);
             resource._binding = null;
         }
     }
@@ -160,12 +158,12 @@ pub const Music = struct {
         if (resource._binding != null)
             return; // already loaded
 
-        resource._binding = api.audio.loadMusic(resource.resource);
+        resource._binding = firefly.api.audio.loadMusic(resource.resource);
     }
 
     pub fn doUnload(_: *Asset(Music), resource: *Music) void {
         if (resource._binding) |b| {
-            api.audio.disposeMusic(b);
+            firefly.api.audio.disposeMusic(b);
             resource._binding = null;
         }
     }

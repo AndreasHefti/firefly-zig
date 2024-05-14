@@ -1,37 +1,36 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
-const graphics = firefly.graphics;
 
-const DynArray = utils.DynArray;
-const DynIndexArray = utils.DynIndexArray;
-const Asset = api.Asset;
-const String = utils.String;
-const Component = api.Component;
-const ComponentEvent = api.Component.ComponentEvent;
-const ActionType = api.Component.ActionType;
-const Texture = graphics.Texture;
-const EComponent = api.EComponent;
-const EComponentAspectGroup = api.EComponentAspectGroup;
-const EntityCondition = api.EntityCondition;
-const EView = graphics.EView;
-const EMultiplier = api.EMultiplier;
-const ETransform = graphics.ETransform;
-const ViewLayerMapping = graphics.ViewLayerMapping;
-const ViewRenderEvent = graphics.ViewRenderEvent;
-const System = api.System;
-const BindingId = api.BindingId;
-const NO_NAME = utils.NO_NAME;
-const NO_BINDING = api.NO_BINDING;
-const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
-const Float = utils.Float;
-const RectF = utils.RectF;
-const PosF = utils.PosF;
-const Vector2f = utils.Vector2f;
-const Color = utils.Color;
-const BlendMode = api.BlendMode;
+const AssetTrait = firefly.api.AssetTrait;
+const DynArray = firefly.utils.DynArray;
+const DynIndexArray = firefly.utils.DynIndexArray;
+const Asset = firefly.api.Asset;
+const String = firefly.utils.String;
+const Component = firefly.api.Component;
+const ComponentEvent = firefly.api.Component.ComponentEvent;
+const ActionType = firefly.api.Component.ActionType;
+const Texture = firefly.graphics.Texture;
+const EComponent = firefly.api.EComponent;
+const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
+const EntityCondition = firefly.api.EntityCondition;
+const EView = firefly.graphics.EView;
+const EMultiplier = firefly.api.EMultiplier;
+const ETransform = firefly.graphics.ETransform;
+const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
+const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
+const System = firefly.api.System;
+const BindingId = firefly.api.BindingId;
+const Index = firefly.utils.Index;
+const Float = firefly.utils.Float;
+const RectF = firefly.utils.RectF;
+const PosF = firefly.utils.PosF;
+const Vector2f = firefly.utils.Vector2f;
+const Color = firefly.utils.Color;
+const BlendMode = firefly.api.BlendMode;
+
+const NO_NAME = firefly.utils.NO_NAME;
+const NO_BINDING = firefly.api.NO_BINDING;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// sprite init
@@ -125,7 +124,7 @@ pub const SpriteTemplate = struct {
                 while (next) |id| {
                     var template = SpriteTemplate.byId(id);
                     if (asset.name) |an| {
-                        if (utils.stringEquals(template.texture_name, an)) {
+                        if (firefly.utils.stringEquals(template.texture_name, an)) {
                             template.texture_binding = b.id;
                         }
                     }
@@ -140,7 +139,7 @@ pub const SpriteTemplate = struct {
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
             if (asset.name) |an| {
-                if (utils.stringEquals(template.texture_name, an)) {
+                if (firefly.utils.stringEquals(template.texture_name, an)) {
                     template.texture_binding = NO_BINDING;
                 }
             }
@@ -153,7 +152,7 @@ pub const SpriteTemplate = struct {
         while (next) |id| {
             const template = SpriteTemplate.byId(id);
             if (asset.name) |an| {
-                if (utils.stringEquals(template.texture_name, an)) {
+                if (firefly.utils.stringEquals(template.texture_name, an)) {
                     SpriteTemplate.disposeById(id);
                 }
             }
@@ -244,7 +243,7 @@ pub const SpriteStamp = struct {
 };
 
 pub const SpriteSet = struct {
-    pub usingnamespace api.AssetTrait(SpriteSet, "SpriteSet");
+    pub usingnamespace AssetTrait(SpriteSet, "SpriteSet");
 
     _stamps: DynArray(SpriteStamp) = undefined,
     _loaded_sprite_template_refs: DynIndexArray = undefined,
@@ -255,8 +254,8 @@ pub const SpriteSet = struct {
     set_dimensions: ?Vector2f = null,
 
     pub fn construct(self: SpriteSet) void {
-        self._stamps = DynArray(SpriteStamp).new(api.COMPONENT_ALLOC);
-        self._sprite_template_refs = DynIndexArray.init(api.COMPONENT_ALLOC, 32);
+        self._stamps = DynArray(SpriteStamp).new(firefly.api.COMPONENT_ALLOC);
+        self._sprite_template_refs = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 32);
     }
 
     pub fn deconstruct(self: SpriteSet) void {
@@ -353,9 +352,9 @@ pub const SpriteSet = struct {
         if (name) |n| return n;
 
         if (y) |_y| {
-            return std.fmt.allocPrint(api.ALLOC, "{s}_{d}_{d}", .{ prefix, x, _y }) catch unreachable;
+            return std.fmt.allocPrint(firefly.api.ALLOC, "{s}_{d}_{d}", .{ prefix, x, _y }) catch unreachable;
         } else {
-            return std.fmt.allocPrint(api.ALLOC, "{s}_{d}", .{ prefix, x }) catch unreachable;
+            return std.fmt.allocPrint(firefly.api.ALLOC, "{s}_{d}", .{ prefix, x }) catch unreachable;
         }
     }
 };
@@ -397,7 +396,7 @@ const DefaultSpriteRenderer = struct {
                 const trans = ETransform.byId(id).?;
                 if (es.template_id != NO_BINDING) {
                     const multi = if (EMultiplier.byId(id)) |m| m.positions else null;
-                    api.rendering.renderSprite(
+                    firefly.api.rendering.renderSprite(
                         es._texture_binding,
                         es._texture_bounds,
                         trans.position,

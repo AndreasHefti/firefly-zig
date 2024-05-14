@@ -2,23 +2,20 @@ const std = @import("std");
 const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
 
-const utils = firefly.utils;
-const api = firefly.api;
-
-const IInputAPI = api.IInputAPI;
-const InputDevice = api.InputDevice;
-const InputActionType = api.InputActionType;
-const InputButtonType = api.InputButtonType;
-const GamepadAction = api.GamepadAction;
-const GamepadAxis = api.GamepadAxis;
-const MouseAction = api.MouseAction;
-const DynIndexArray = utils.DynIndexArray;
-const CInt = utils.CInt;
-const Vector2f = utils.Vector2f;
-const PosF = utils.PosF;
-const Float = utils.Float;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
-const String = utils.String;
+const IInputAPI = firefly.api.IInputAPI;
+const InputDevice = firefly.api.InputDevice;
+const InputActionType = firefly.api.InputActionType;
+const InputButtonType = firefly.api.InputButtonType;
+const GamepadAction = firefly.api.GamepadAction;
+const GamepadAxis = firefly.api.GamepadAxis;
+const MouseAction = firefly.api.MouseAction;
+const DynIndexArray = firefly.utils.DynIndexArray;
+const CInt = firefly.utils.CInt;
+const Vector2f = firefly.utils.Vector2f;
+const PosF = firefly.utils.PosF;
+const Float = firefly.utils.Float;
+const String = firefly.utils.String;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 var singleton: ?IInputAPI() = null;
 pub fn createInputAPI() !IInputAPI() {
@@ -49,10 +46,10 @@ const RaylibInputAPI = struct {
         if (initialized)
             return;
 
-        keyboard_code_mapping = DynIndexArray.init(api.ALLOC, 10);
-        gamepad_1_code_mapping = DynIndexArray.init(api.ALLOC, 10);
-        gamepad_2_code_mapping = DynIndexArray.init(api.ALLOC, 10);
-        mouse_code_mapping = DynIndexArray.init(api.ALLOC, 10);
+        keyboard_code_mapping = DynIndexArray.init(firefly.api.ALLOC, 10);
+        gamepad_1_code_mapping = DynIndexArray.init(firefly.api.ALLOC, 10);
+        gamepad_2_code_mapping = DynIndexArray.init(firefly.api.ALLOC, 10);
+        mouse_code_mapping = DynIndexArray.init(firefly.api.ALLOC, 10);
 
         interface.checkButton = checkButton;
         interface.clear_mappings = clear_mappings;

@@ -1,30 +1,23 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const Easing = utils.Easing;
-const Float = utils.Float;
-const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
-const NO_NAME = utils.NO_NAME;
-
-const Timer = api.Timer;
-const Kind = utils.Kind;
-const Entity = api.Entity;
-const EComponent = api.EComponent;
-const EntityEventSubscription = api.EntityEventSubscription;
-const System = api.System;
-const ComponentEvent = api.ComponentEvent;
-const ActionType = api.Component.ActionType;
-const UpdateEvent = api.UpdateEvent;
+const Timer = firefly.api.Timer;
+const Entity = firefly.api.Entity;
+const EComponent = firefly.api.EComponent;
+const System = firefly.api.System;
+const UpdateEvent = firefly.api.UpdateEvent;
 const Engine = firefly.Engine;
-const BitSet = utils.BitSet;
-const StringHashMap = std.StringHashMap;
-const DynArray = utils.DynArray;
-const String = utils.String;
-const SpriteSetAsset = firefly.graphics.SpriteSetAsset;
+const BitSet = firefly.utils.BitSet;
+const DynArray = firefly.utils.DynArray;
+const String = firefly.utils.String;
+const CubicBezierFunction = firefly.utils.CubicBezierFunction;
 const SpriteSet = firefly.graphics.SpriteSet;
+const Asset = firefly.api.Asset;
+const Easing = firefly.utils.Easing;
+const Float = firefly.utils.Float;
+const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const NO_NAME = firefly.utils.NO_NAME;
 
 //////////////////////////////////////////////////////////////
 //// animation init
@@ -112,7 +105,7 @@ pub fn Animation(comptime Integration: type) type {
             if (Self.initialized)
                 @panic("Animation Type already initialized: " ++ @typeName(Integration));
 
-            animations = DynArray(Self).new(api.COMPONENT_ALLOC) catch undefined;
+            animations = DynArray(Self).new(firefly.api.COMPONENT_ALLOC) catch undefined;
             return AnimationTypeReference{
                 ._update_all = Self.updateAll,
                 ._deinit = Self.deinit,
@@ -193,7 +186,7 @@ pub fn Animation(comptime Integration: type) type {
         }
 
         fn update(self: *Self) void {
-            self._t_normalized += 1.0 * utils.usize_f32(Timer.time_elapsed) / utils.usize_f32(self.duration);
+            self._t_normalized += 1.0 * firefly.utils.usize_f32(Timer.time_elapsed) / firefly.utils.usize_f32(self.duration);
             if (self._t_normalized >= 1.0) {
                 self._t_normalized = 0.0;
                 if (self._suspending or !self.looping) {
@@ -276,7 +269,7 @@ pub const EAnimation = struct {
     animations: BitSet = undefined,
 
     pub fn construct(self: *EAnimation) void {
-        self.animations = BitSet.new(api.ENTITY_ALLOC) catch unreachable;
+        self.animations = BitSet.new(firefly.api.ENTITY_ALLOC) catch unreachable;
     }
 
     pub const AnimationTemplate = struct {
@@ -361,11 +354,11 @@ pub const AnimationSystem = struct {
 
     pub fn systemInit() void {
         animation_type_refs = DynArray(AnimationTypeReference).newWithRegisterSize(
-            api.ALLOC,
+            firefly.api.COMPONENT_ALLOC,
             10,
         ) catch unreachable;
 
-        animation_refs = DynArray(IAnimation).new(api.COMPONENT_ALLOC) catch unreachable;
+        animation_refs = DynArray(IAnimation).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
     }
 
     pub fn systemDeinit() void {
@@ -488,7 +481,7 @@ pub const IndexFrame = struct {
     duration: usize = 0,
 
     fn init() void {
-        frames = DynArray(IndexFrame).new(api.COMPONENT_ALLOC) catch unreachable;
+        frames = DynArray(IndexFrame).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
     }
 
     fn deinit() void {
@@ -497,9 +490,9 @@ pub const IndexFrame = struct {
     }
 
     pub fn createFromSpriteSet(name: String, duration: usize) IndexFrameList {
-        const asset: *api.Asset = api.Asset.byName(name);
-        api.Asset.activate(asset.id, true);
-        const sprite_set: SpriteSet = asset.getResource(SpriteSetAsset);
+        const asset: *Asset = Asset.byName(name);
+        Asset.activate(asset.id, true);
+        const sprite_set: SpriteSet = asset.getResource(SpriteSet);
         var result = IndexFrameList.new();
 
         for (sprite_set.sprites_indices.items) |spi| {
@@ -536,7 +529,7 @@ pub const IndexFrameList = struct {
     _duration: usize = UNDEF_INDEX,
 
     fn new() IndexFrameList {
-        return IndexFrameList{ .indices = BitSet.new(api.COMPONENT_ALLOC) catch unreachable };
+        return IndexFrameList{ .indices = BitSet.new(firefly.api.COMPONENT_ALLOC) catch unreachable };
     }
 
     fn deinit(self: *IndexFrameList) void {
@@ -567,7 +560,7 @@ pub const IndexFrameList = struct {
 
     pub fn getIndexAt(self: *IndexFrameList, t_normalized: Float, invert: bool) Index {
         const d: usize = self.duration();
-        const t: usize = utils.f32_usize(t_normalized * utils.usize_f32(d));
+        const t: usize = firefly.utils.f32_usize(t_normalized * firefly.utils.usize_f32(d));
 
         if (invert) {
             var _t: usize = d;
@@ -649,7 +642,7 @@ pub const IndexFrameIntegration = struct {
 pub const BezierCurveIntegration = struct {
     pub const resolver = AnimationResolver(BezierCurveIntegration);
 
-    bezier_function: utils.CubicBezierFunction = undefined,
+    bezier_function: CubicBezierFunction = undefined,
     easing: Easing = Easing.Linear,
     property_ref_x: ?*const fn (Index) *Float,
     property_ref_y: ?*const fn (Index) *Float,

@@ -1,17 +1,15 @@
 const std = @import("std");
 const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
-const utils = firefly.utils;
-const api = firefly.api;
 
-const IAudioAPI = api.IAudioAPI;
-const SoundBinding = api.SoundBinding;
-const DynArray = utils.DynArray;
+const IAudioAPI = firefly.api.IAudioAPI;
+const SoundBinding = firefly.api.SoundBinding;
+const DynArray = firefly.utils.DynArray;
 const Sound = rl.Sound;
 const Music = rl.Music;
-const Float = utils.Float;
-const String = utils.String;
-const BindingId = api.BindingId;
+const Float = firefly.utils.Float;
+const String = firefly.utils.String;
+const BindingId = firefly.api.BindingId;
 
 var singleton: ?IAudioAPI() = null;
 pub fn createInputAPI() !IAudioAPI() {
@@ -32,8 +30,8 @@ const RaylibAudioAPI = struct {
         if (initialized)
             return;
 
-        sounds = DynArray(Sound).new(api.ALLOC) catch unreachable;
-        music = DynArray(Music).new(api.ALLOC) catch unreachable;
+        sounds = DynArray(Sound).new(firefly.api.ALLOC) catch unreachable;
+        music = DynArray(Music).new(firefly.api.ALLOC) catch unreachable;
 
         interface.initAudioDevice = initAudioDevice;
         interface.closeAudioDevice = closeAudioDevice;

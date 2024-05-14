@@ -1,9 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 const state = @import("state.zig");
-const utils = firefly.utils;
 
-const Float = utils.Float;
+const Float = firefly.utils.Float;
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations

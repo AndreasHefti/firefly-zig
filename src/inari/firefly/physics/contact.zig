@@ -1,38 +1,31 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const System = api.System;
+const System = firefly.api.System;
 const TileGrid = firefly.graphics.TileGrid;
 const ETile = firefly.graphics.ETile;
 const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
 const EView = firefly.graphics.EView;
 const MovementEvent = firefly.physics.MovementEvent;
-const Component = api.Component;
-const Entity = api.Entity;
-const EComponent = api.EComponent;
-const EntityCondition = api.EntityCondition;
-const EComponentAspectGroup = api.EComponentAspectGroup;
+const Component = firefly.api.Component;
+const Entity = firefly.api.Entity;
+const EComponent = firefly.api.EComponent;
+const EntityCondition = firefly.api.EntityCondition;
+const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
 const ETransform = firefly.graphics.ETransform;
-const AspectGroup = utils.AspectGroup;
-const DynArray = utils.DynArray;
-const DynIndexArray = utils.DynIndexArray;
-const BitSet = utils.BitSet;
-const BitMask = utils.BitMask;
-const CircleF = utils.CircleF;
-const RectI = utils.RectI;
-const RectF = utils.RectF;
-const PosF = utils.PosF;
-const PosI = utils.PosI;
-const Float = utils.Float;
-const Vector2i = utils.Vector2i;
-const Vector2f = utils.Vector2f;
-const CInt = utils.CInt;
-const Index = utils.Index;
-const String = utils.String;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
-const BitOperation = utils.BitOperation;
+const AspectGroup = firefly.utils.AspectGroup;
+const DynArray = firefly.utils.DynArray;
+const DynIndexArray = firefly.utils.DynIndexArray;
+const BitSet = firefly.utils.BitSet;
+const BitMask = firefly.utils.BitMask;
+const CircleF = firefly.utils.CircleF;
+const RectF = firefly.utils.RectF;
+const Vector2i = firefly.utils.Vector2i;
+const Vector2f = firefly.utils.Vector2f;
+const CInt = firefly.utils.CInt;
+const Index = firefly.utils.Index;
+const String = firefly.utils.String;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// contact init
@@ -129,15 +122,15 @@ fn intersectContactBounds(
     };
     if (bounds_1.circle) |circle1| {
         if (bounds_2.circle) |circle2| {
-            return utils.intersectsCFOffset(circle1, circle2, offset);
+            return firefly.utils.intersectsCFOffset(circle1, circle2, offset);
         } else {
-            return utils.intersectsCRFOffset(circle1, bounds_2.rect, offset);
+            return firefly.utils.intersectsCRFOffset(circle1, bounds_2.rect, offset);
         }
     } else {
         if (bounds_2.circle) |circle2| {
-            return utils.intersectsCRFOffset(circle2, bounds_1.rect, offset);
+            return firefly.utils.intersectsCRFOffset(circle2, bounds_1.rect, offset);
         } else {
-            return utils.intersectsRectFOffset(bounds_1.rect, bounds_2.rect, offset);
+            return firefly.utils.intersectsRectFOffset(bounds_1.rect, bounds_2.rect, offset);
         }
     }
 }
@@ -180,7 +173,7 @@ pub const Contact = struct {
         if (Contact.initialized)
             return;
 
-        pool = DynArray(Contact).new(api.COMPONENT_ALLOC) catch unreachable;
+        pool = DynArray(Contact).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
     }
 
     fn deinit() void {
@@ -232,7 +225,7 @@ pub const Contact = struct {
         for (size..size + grow) |i| {
             _ = pool.set(
                 .{
-                    .mask = BitMask.new(api.ALLOC, 0, 0),
+                    .mask = BitMask.new(firefly.api.COMPONENT_ALLOC, 0, 0),
                 },
                 i,
             );
@@ -336,8 +329,8 @@ pub const ContactConstraint = struct {
                     const contact_id = Contact.getEmpty();
                     var contact = Contact.get(contact_id).?;
                     contact.mask.reset(
-                        utils.f32_usize(self.bounds.rect[2]),
-                        utils.f32_usize(self.bounds.rect[3]),
+                        firefly.utils.f32_usize(self.bounds.rect[2]),
+                        firefly.utils.f32_usize(self.bounds.rect[3]),
                     ) catch unreachable;
                     // offset for contact mask relative to others world position
                     const offset: Vector2f = .{
@@ -351,7 +344,7 @@ pub const ContactConstraint = struct {
                     // stamp, either with the other entities mask or bound rect or circle
                     // if other has a bit-mask we need to apply the bit-mask, otherwise the bounded region
                     if (e_contact.mask) |other_mask| {
-                        contact.mask.setIntersectionF(other_mask, offset, utils.bitOpOR);
+                        contact.mask.setIntersectionF(other_mask, offset, firefly.utils.bitOpOR);
                     } else {
                         if (e_contact.bounds.circle) |circle| {
                             contact.mask.setCircleF(circle, true);
@@ -399,7 +392,7 @@ pub const ContactScan = struct {
             .bounds = bounds,
             .types = ContactTypeAspectGroup.newKind(),
             .materials = ContactMaterialAspectGroup.newKind(),
-            .entities = DynIndexArray.init(api.ALLOC, 10),
+            .entities = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10),
         };
     }
 
@@ -408,10 +401,10 @@ pub const ContactScan = struct {
             .bounds = bounds,
             .types = ContactTypeAspectGroup.newKind(),
             .materials = ContactMaterialAspectGroup.newKind(),
-            .entities = DynIndexArray.init(api.ALLOC, 10),
-            .contacts = DynIndexArray.init(api.ALLOC, 10),
+            .entities = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10),
+            .contacts = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10),
             .mask = BitMask.new(
-                api.ALLOC,
+                firefly.api.COMPONENT_ALLOC,
                 @intFromFloat(bounds.rect[2]),
                 @intFromFloat(bounds.rect[3]),
             ),
@@ -490,14 +483,14 @@ pub const ContactScan = struct {
             return m.isSet(x, y);
 
         return if (self.bounds.circle) |*c|
-            utils.containsCircI(c, x, y)
+            firefly.utils.containsCircI(c, x, y)
         else
-            utils.containsRectI(self.bounds.rect, x, y);
+            firefly.utils.containsRectI(self.bounds.rect, x, y);
     }
 
     fn addContact(self: *ContactScan, contact_id: Index) void {
         if (Contact.get(contact_id)) |contact| {
-            self.mask.?.setIntersection(contact.mask, null, utils.bitOpOR);
+            self.mask.?.setIntersection(contact.mask, null, firefly.utils.bitOpOR);
             self.contacts.?.add(contact_id);
         }
     }
@@ -551,7 +544,7 @@ pub const EContactScan = struct {
     constraints: BitSet = undefined,
 
     pub fn construct(self: *EContactScan) void {
-        self.constraints = BitSet.new(api.ENTITY_ALLOC) catch unreachable;
+        self.constraints = BitSet.new(firefly.api.ENTITY_ALLOC) catch unreachable;
     }
 
     pub fn destruct(self: *EContactScan) void {
@@ -616,7 +609,7 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
             if (Self.initialized)
                 return;
 
-            entity_ids = DynIndexArray.init(api.ALLOC, 50);
+            entity_ids = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 50);
 
             interface.view_id = view_id;
             interface.layer_id = layer_id;
@@ -658,7 +651,7 @@ const ContactSystem = struct {
             .accept_kind = EComponentAspectGroup.newKindOf(.{EContact}),
             .dismiss_kind = EComponentAspectGroup.newKindOf(.{ETile}),
         };
-        contact_maps = DynArray(IContactMap).newWithRegisterSize(api.ALLOC, 5) catch unreachable;
+        contact_maps = DynArray(IContactMap).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5) catch unreachable;
         firefly.physics.subscribe(processMoved);
     }
 

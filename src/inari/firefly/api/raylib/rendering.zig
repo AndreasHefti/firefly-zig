@@ -2,39 +2,35 @@ const std = @import("std");
 const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
 const rlgl = @cImport(@cInclude("rlgl.h"));
-const utils = firefly.utils;
-const api = firefly.api;
-
-const String = utils.String;
-const IRenderAPI = api.IRenderAPI;
-const Vector2f = utils.Vector2f;
-const Vector3f = utils.Vector3f;
-const Vector4f = utils.Vector4f;
-const PosF = utils.PosF;
-const RectF = utils.RectF;
-const Color = utils.Color;
-const ShapeType = api.ShapeType;
-const BlendMode = api.BlendMode;
-const TextureBinding = api.TextureBinding;
-const ShaderBinding = api.ShaderBinding;
-const TextureFilter = api.TextureFilter;
-const TextureWrap = api.TextureWrap;
-const SpriteData = api.SpriteData;
-const RenderTextureBinding = api.RenderTextureBinding;
-const Projection = api.Projection;
-const BindingId = api.BindingId;
-const DynArray = utils.DynArray;
-const StringBuffer = utils.StringBuffer;
-const CUInt = utils.CUInt;
-const CInt = utils.CInt;
-const Float = utils.Float;
-const NO_BINDING = api.NO_BINDING;
-const EMPTY_STRING = utils.EMPTY_STRING;
 
 const Texture2D = rl.Texture2D;
 const Font = rl.Font;
 const RenderTexture2D = rl.RenderTexture2D;
 const Shader = rl.Shader;
+const String = firefly.utils.String;
+const IRenderAPI = firefly.api.IRenderAPI;
+const Vector2f = firefly.utils.Vector2f;
+const Vector3f = firefly.utils.Vector3f;
+const Vector4f = firefly.utils.Vector4f;
+const PosF = firefly.utils.PosF;
+const RectF = firefly.utils.RectF;
+const Color = firefly.utils.Color;
+const ShapeType = firefly.api.ShapeType;
+const BlendMode = firefly.api.BlendMode;
+const TextureBinding = firefly.api.TextureBinding;
+const ShaderBinding = firefly.api.ShaderBinding;
+const TextureFilter = firefly.api.TextureFilter;
+const TextureWrap = firefly.api.TextureWrap;
+const RenderTextureBinding = firefly.api.RenderTextureBinding;
+const Projection = firefly.api.Projection;
+const BindingId = firefly.api.BindingId;
+const DynArray = firefly.utils.DynArray;
+const StringBuffer = firefly.utils.StringBuffer;
+const CInt = firefly.utils.CInt;
+const Float = firefly.utils.Float;
+const WindowHandle = firefly.api.WindowHandle;
+const NO_BINDING = firefly.api.NO_BINDING;
+const EMPTY_STRING = firefly.utils.EMPTY_STRING;
 
 var singleton: ?IRenderAPI() = null;
 pub fn createRenderAPI() !IRenderAPI() {
@@ -75,10 +71,10 @@ const RaylibRenderAPI = struct {
 
         active_clear_color = default_clear_color;
 
-        textures = DynArray(Texture2D).new(api.ALLOC) catch unreachable;
-        render_textures = DynArray(RenderTexture2D).new(api.ALLOC) catch unreachable;
-        shaders = DynArray(Shader).new(api.ALLOC) catch unreachable;
-        fonts = DynArray(Font).new(api.ALLOC) catch unreachable;
+        textures = DynArray(Texture2D).new(firefly.api.ALLOC) catch unreachable;
+        render_textures = DynArray(RenderTexture2D).new(firefly.api.ALLOC) catch unreachable;
+        shaders = DynArray(Shader).new(firefly.api.ALLOC) catch unreachable;
+        fonts = DynArray(Font).new(firefly.api.ALLOC) catch unreachable;
 
         interface.setRenderBatch = setRenderBatch;
 
@@ -155,7 +151,7 @@ const RaylibRenderAPI = struct {
     var default_font_size: CInt = 32;
     var default_char_num: CInt = 95;
 
-    var window_handle: ?api.WindowHandle = null;
+    var window_handle: ?WindowHandle = null;
     var textures: DynArray(Texture2D) = undefined;
     var fonts: DynArray(Font) = undefined;
     var render_textures: DynArray(RenderTexture2D) = undefined;

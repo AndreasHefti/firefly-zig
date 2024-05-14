@@ -1,14 +1,12 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const DynArray = utils.DynArray;
-const Component = api.Component;
-const AspectGroup = utils.AspectGroup;
-const String = utils.String;
-const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const DynArray = firefly.utils.DynArray;
+const Component = firefly.api.Component;
+const AspectGroup = firefly.utils.AspectGroup;
+const String = firefly.utils.String;
+const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 pub const AssetAspectGroup = AspectGroup(struct {
     pub const name = "Asset";
@@ -116,7 +114,7 @@ pub fn Asset(comptime T: type) type {
                 return;
 
             AssetAspectGroup.applyAspect(T, T.ASSET_TYPE_NAME);
-            Self.resources = DynArray(T).new(api.COMPONENT_ALLOC) catch unreachable;
+            Self.resources = DynArray(T).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
             if (has_init)
                 T.assetTypeInit();
         }

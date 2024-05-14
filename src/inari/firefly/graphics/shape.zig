@@ -1,26 +1,23 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
-const graphics = firefly.graphics;
 
-const System = api.System;
-const EComponent = api.EComponent;
-const EntityCondition = api.EntityCondition;
-const EComponentAspectGroup = api.EComponentAspectGroup;
-const ComponentEvent = api.ComponentEvent;
-const ActionType = api.Component.ActionType;
-const EMultiplier = api.EMultiplier;
-const EView = graphics.EView;
-const ViewRenderEvent = graphics.ViewRenderEvent;
-const ViewLayerMapping = graphics.ViewLayerMapping;
-const ETransform = graphics.ETransform;
-const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
-const Float = utils.Float;
-const Color = utils.Color;
-const BlendMode = api.BlendMode;
-const ShapeType = api.ShapeType;
+const System = firefly.api.System;
+const EComponent = firefly.api.EComponent;
+const EntityCondition = firefly.api.EntityCondition;
+const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
+const ComponentEvent = firefly.api.ComponentEvent;
+const ActionType = firefly.api.Component.ActionType;
+const EMultiplier = firefly.api.EMultiplier;
+const EView = firefly.graphics.EView;
+const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
+const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
+const ETransform = firefly.graphics.ETransform;
+const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const Float = firefly.utils.Float;
+const Color = firefly.utils.Color;
+const BlendMode = firefly.api.BlendMode;
+const ShapeType = firefly.api.ShapeType;
 
 //////////////////////////////////////////////////////////////
 //// shape init
@@ -71,7 +68,7 @@ pub const EShape = struct {
 
     pub fn destruct(self: *EShape) void {
         self.shape_type = ShapeType.POINT;
-        api.ALLOC.free(self.vertices);
+        firefly.api.ALLOC.free(self.vertices);
         self.vertices = undefined;
         self.fill = true;
         self.color = undefined;
@@ -118,7 +115,7 @@ const DefaultShapeRenderer = struct {
                 const es = EShape.byId(id).?;
                 const trans = ETransform.byId(id).?;
                 const multi = if (EMultiplier.byId(id)) |m| m.positions else null;
-                api.rendering.renderShape(
+                firefly.api.rendering.renderShape(
                     es.shape_type,
                     es.vertices,
                     es.fill,

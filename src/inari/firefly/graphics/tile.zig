@@ -2,40 +2,29 @@ const std = @import("std");
 const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
-const graphics = firefly.graphics;
 
 const System = api.System;
 const Entity = api.Entity;
 const EComponent = api.EComponent;
-const EntityCondition = api.EntityCondition;
-const EComponentAspectGroup = api.EComponentAspectGroup;
-const ComponentEvent = api.ComponentEvent;
-const ActionType = api.Component.ActionType;
-const EMultiplier = api.EMultiplier;
-const ViewRenderEvent = graphics.ViewRenderEvent;
-const ViewLayerMapping = graphics.ViewLayerMapping;
-const ETransform = graphics.ETransform;
-const SpriteTemplate = graphics.SpriteTemplate;
+const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
+const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
+const ETransform = firefly.graphics.ETransform;
+const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const Component = api.Component;
 const Projection = api.Projection;
-
 const Direction = utils.Direction;
-const Vector2i = utils.Vector2i;
 const Vector4f = utils.Vector4f;
 const PosF = utils.PosF;
-const PosI = utils.PosI;
 const Index = utils.Index;
 const String = utils.String;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
 const Float = utils.Float;
 const Color = utils.Color;
 const BlendMode = api.BlendMode;
 const RectF = utils.RectF;
-const RectI = utils.RectI;
 const CInt = utils.CInt;
-const ClipI = utils.ClipI;
 const BindingId = api.BindingId;
 const NO_BINDING = api.NO_BINDING;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// tile init

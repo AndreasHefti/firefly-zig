@@ -1,25 +1,21 @@
 const std = @import("std");
 const firefly = @import("firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
-const CString = utils.CString;
-const Float = utils.Float;
-const CInt = utils.CInt;
 
-const Allocator = std.mem.Allocator;
-const UpdateEvent = api.UpdateEvent;
-const RenderEvent = api.RenderEvent;
-const RenderEventType = api.RenderEventType;
-const EventDispatch = utils.EventDispatch;
-const UpdateListener = api.UpdateListener;
-const RenderListener = api.RenderListener;
-const WindowData = api.WindowData;
-const Timer = api.Timer;
+const System = firefly.api.System;
+const UpdateEvent = firefly.api.UpdateEvent;
+const RenderEvent = firefly.api.RenderEvent;
+const RenderEventType = firefly.api.RenderEventType;
+const UpdateListener = firefly.api.UpdateListener;
+const RenderListener = firefly.api.RenderListener;
+const WindowData = firefly.api.WindowData;
+const Timer = firefly.api.Timer;
 const View = firefly.graphics.View;
-const String = utils.String;
+const String = firefly.utils.String;
+const CString = firefly.utils.CString;
+const CInt = firefly.utils.CInt;
 
-const UPDATE_EVENT = UpdateEvent{};
-const RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
+var UPDATE_EVENT = UpdateEvent{};
+var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 
 pub const CoreSystems = struct {
     pub const StateSystem = struct {
@@ -102,11 +98,11 @@ pub const CoreSystems = struct {
 };
 
 pub fn isSystemActive(name: String) bool {
-    return api.System.isActiveByName(name);
+    return System.isActiveByName(name);
 }
 
 pub fn activateSystem(name: String, active: bool) void {
-    api.activateSystem(name, active);
+    firefly.api.activateSystem(name, active);
 }
 
 pub const DefaultRenderer = struct {
@@ -124,15 +120,15 @@ pub const DefaultRenderer = struct {
 };
 
 pub fn activateRenderer(name: String, active: bool) void {
-    api.activateSystem(name, active);
+    firefly.api.activateSystem(name, active);
 }
 
 pub fn reorderRenderer(new_order: []const String) void {
     for (new_order) |renderer_name| {
-        api.activateSystem(renderer_name, false);
+        firefly.api.activateSystem(renderer_name, false);
     }
     for (new_order) |renderer_name| {
-        api.activateSystem(renderer_name, true);
+        firefly.api.activateSystem(renderer_name, true);
     }
 }
 
@@ -155,8 +151,8 @@ pub fn startWindow(
 ) void {
     reorderRenderer(&DefaultRenderer.DEFAULT_RENDER_ORDER);
 
-    api.window.openWindow(window);
-    defer api.window.closeWindow();
+    firefly.api.window.openWindow(window);
+    defer firefly.api.window.closeWindow();
 
     View.screen_projection = .{ .plain = .{
         0,
@@ -169,48 +165,48 @@ pub fn startWindow(
     if (init_callback) |ic|
         ic();
 
-    while (!api.window.hasWindowClosed()) {
+    while (!firefly.api.window.hasWindowClosed()) {
         tick();
     }
 }
 
 pub inline fn subscribeUpdate(listener: UpdateListener) void {
-    api.subscribeUpdate(listener);
+    firefly.api.subscribeUpdate(listener);
 }
 
 pub inline fn subscribeUpdateAt(index: usize, listener: UpdateListener) void {
-    api.subscribeUpdateAt(index, listener);
+    firefly.api.subscribeUpdateAt(index, listener);
 }
 
 pub inline fn unsubscribeUpdate(listener: UpdateListener) void {
-    api.unsubscribeUpdate(listener);
+    firefly.api.unsubscribeUpdate(listener);
 }
 
 pub inline fn subscribeRender(listener: RenderListener) void {
-    api.subscribeRender(listener);
+    firefly.api.subscribeRender(listener);
 }
 
 pub inline fn subscribeRenderAt(index: usize, listener: RenderListener) void {
-    api.subscribeRenderAt(index, listener);
+    firefly.api.subscribeRenderAt(index, listener);
 }
 
 pub inline fn unsubscribeRender(listener: RenderListener) void {
-    api.unsubscribeRender.unregister(listener);
+    firefly.api.unsubscribeRender.unregister(listener);
 }
 
 /// Performs a tick.Update the Timer, notify UpdateEvent, notify Pre-Render, Render, Post-Render events
 pub fn tick() void {
     // update
     Timer.tick();
-    api.update(UPDATE_EVENT);
+    firefly.api.update(UPDATE_EVENT);
 
     // rendering
     RENDER_EVENT.type = RenderEventType.PRE_RENDER;
-    api.render(RENDER_EVENT);
+    firefly.api.render(RENDER_EVENT);
 
     RENDER_EVENT.type = RenderEventType.RENDER;
-    api.render(RENDER_EVENT);
+    firefly.api.render(RENDER_EVENT);
 
     RENDER_EVENT.type = RenderEventType.POST_RENDER;
-    api.render(RENDER_EVENT);
+    firefly.api.render(RENDER_EVENT);
 }

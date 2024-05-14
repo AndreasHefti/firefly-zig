@@ -326,6 +326,63 @@ pub const ComponentEvent = struct {
 };
 
 //////////////////////////////////////////////////////////////
+//// Component Reference
+//////////////////////////////////////////////////////////////
+
+pub const ComponentRef = struct {
+    type: ComponentAspect,
+    id: Index,
+    activation: *const fn (Index, bool) void,
+    dispose: *const fn (Index) void,
+};
+
+pub const ComponentRefNode = struct {
+    ref: ComponentRef,
+    next: ?*ComponentRefNode = null,
+
+    // TODO
+    pub fn new(ref: ComponentRef) *ComponentRef {
+        var result = api.COMPONENT_ALLOC.create(ComponentRef) catch unreachable;
+        result.ref = ref;
+        result.next = null;
+        return result;
+    }
+
+    pub fn activate(self: *ComponentRefNode, active: bool) void {
+        self.ref.activation(self.ref.id, active);
+        if (self.next) |n| n.activate(active);
+    }
+
+    pub fn activateReverseOrder(self: *ComponentRefNode, active: bool) void {
+        if (self.next) |n| n.activate(active);
+        self.ref.activation(self.ref.id, active);
+    }
+
+    pub fn dispose(self: *ComponentRefNode) void {
+        if (self.next) |n| n.dispose();
+        self.ref.dispose(self.ref.id);
+        self.next = null;
+        self.deinit();
+    }
+
+    pub fn add(self: *ComponentRefNode, ref: ComponentRef) void {
+        if (self.next) |n|
+            n.add(ref)
+        else {
+            self.next = api.COMPONENT_ALLOC.create(ComponentRef) catch unreachable;
+            self.next.?.ref = ref;
+            self.next.?.next = null;
+        }
+    }
+
+    fn deinit(self: *ComponentRefNode) void {
+        if (self.next) |n|
+            n.deinit();
+        api.COMPONENT_ALLOC.destroy(self);
+    }
+};
+
+//////////////////////////////////////////////////////////////
 //// Component Pooling
 //////////////////////////////////////////////////////////////
 

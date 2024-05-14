@@ -1,14 +1,12 @@
 const std = @import("std");
 const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
-const utils = firefly.utils;
-const api = firefly.api;
 
-const IWindowAPI = api.IWindowAPI;
-const WindowData = api.WindowData;
-const CInt = utils.CInt;
-const CUInt = utils.CUInt;
-const WindowFlag = api.WindowFlag;
+const IWindowAPI = firefly.api.IWindowAPI;
+const WindowData = firefly.api.WindowData;
+const CInt = firefly.utils.CInt;
+const CUInt = firefly.utils.CUInt;
+const WindowFlag = firefly.api.WindowFlag;
 
 var singleton: ?IWindowAPI() = null;
 pub fn createWindowAPI() !IWindowAPI() {

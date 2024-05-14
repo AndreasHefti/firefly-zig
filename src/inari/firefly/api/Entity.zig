@@ -1,22 +1,15 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const Allocator = std.mem.Allocator;
-const StringBuffer = utils.StringBuffer;
-const DynArray = utils.DynArray;
-const ArrayList = std.ArrayList;
-const Component = api.Component;
-const ComponentListener = Component.ComponentListener;
-const ComponentEvent = Component.ComponentEvent;
-const Condition = utils.Condition;
-const AspectGroup = utils.AspectGroup;
-const String = utils.String;
-const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
-const Vector2f = utils.Vector2f;
-const Float = utils.Float;
+const StringBuffer = firefly.utils.StringBuffer;
+const DynArray = firefly.utils.DynArray;
+const Component = firefly.api.Component;
+const Condition = firefly.utils.Condition;
+const AspectGroup = firefly.utils.AspectGroup;
+const String = firefly.utils.String;
+const Index = firefly.utils.Index;
+const Vector2f = firefly.utils.Vector2f;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 pub const Entity = struct {
     pub usingnamespace Component.Trait(Entity, .{ .name = "Entity" });
@@ -143,7 +136,7 @@ pub const EMultiplier = struct {
     positions: []const Vector2f = undefined,
 
     pub fn destruct(self: *EMultiplier) void {
-        api.ALLOC.free(self.positions);
+        firefly.api.ALLOC.free(self.positions);
         self.positions = undefined;
     }
 };
@@ -215,7 +208,7 @@ pub const EComponent = struct {
         if (initialized)
             return;
 
-        INTERFACE_TABLE = try DynArray(EComponentTypeInterface).new(api.ENTITY_ALLOC);
+        INTERFACE_TABLE = try DynArray(EComponentTypeInterface).new(firefly.api.ENTITY_ALLOC);
     }
 
     // module deinit
@@ -289,7 +282,7 @@ pub fn EComponentPool(comptime T: type) type {
             errdefer Self.deinit();
 
             EComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
-            items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
+            items = DynArray(T).new(firefly.api.ENTITY_ALLOC) catch @panic("Init items failed");
             _ = INTERFACE_TABLE.add(EComponentTypeInterface{
                 .activate = Self.activate,
                 .clear = Self.clear,

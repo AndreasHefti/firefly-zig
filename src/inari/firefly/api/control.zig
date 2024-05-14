@@ -1,22 +1,18 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const Attributes = api.Attributes;
-const System = api.System;
-const EComponent = api.EComponent;
-const EComponentAspectGroup = api.EComponentAspectGroup;
-const Entity = api.Entity;
-const EntityCondition = api.EntityCondition;
-const UpdateEvent = api.UpdateEvent;
-const BitSet = utils.BitSet;
-const DynArray = utils.DynArray;
-const Component = api.Component;
-const AspectGroup = utils.AspectGroup;
-const String = utils.String;
-const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Attributes = firefly.api.Attributes;
+const System = firefly.api.System;
+const EComponent = firefly.api.EComponent;
+const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
+const Entity = firefly.api.Entity;
+const EntityCondition = firefly.api.EntityCondition;
+const UpdateEvent = firefly.api.UpdateEvent;
+const BitSet = firefly.utils.BitSet;
+const Component = firefly.api.Component;
+const String = firefly.utils.String;
+const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 var initialized = false;
 pub fn init() void {
@@ -138,11 +134,11 @@ pub const Trigger = struct {
     attributes: ?Attributes = null,
 
     pub fn componentTypeInit() !void {
-        api.subscribeUpdate(update);
+        firefly.api.subscribeUpdate(update);
     }
 
     pub fn componentTypeDeinit() void {
-        api.unsubscribeUpdate(update);
+        firefly.api.unsubscribeUpdate(update);
     }
 
     pub fn destruct(self: *Trigger) void {
@@ -176,7 +172,7 @@ pub fn ControlNode(comptime T: type) type {
         next: ?*ControlNode(T) = null,
 
         pub fn new(control: Control) *Self {
-            var result = api.COMPONENT_ALLOC.create(Self) catch unreachable;
+            var result = firefly.api.COMPONENT_ALLOC.create(Self) catch unreachable;
             result.control = control;
             result.next = null;
             return result;
@@ -191,7 +187,7 @@ pub fn ControlNode(comptime T: type) type {
             if (self.next) |n|
                 n.add(control)
             else {
-                self.next = api.COMPONENT_ALLOC.create(Self) catch unreachable;
+                self.next = firefly.api.COMPONENT_ALLOC.create(Self) catch unreachable;
                 self.next.?.control = control;
                 self.next.?.next = null;
             }
@@ -200,7 +196,7 @@ pub fn ControlNode(comptime T: type) type {
         fn deinit(self: *Self) void {
             if (self.next) |n|
                 n.deinit();
-            api.COMPONENT_ALLOC.destroy(self);
+            firefly.api.COMPONENT_ALLOC.destroy(self);
         }
     };
 }
@@ -253,7 +249,7 @@ const EntityControlSystem = struct {
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EControl}),
         };
-        entities = BitSet.new(api.ALLOC) catch unreachable;
+        entities = BitSet.new(firefly.api.COMPONENT_ALLOC) catch unreachable;
     }
 
     pub fn systemDeinit() void {

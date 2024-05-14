@@ -2,15 +2,10 @@ const std = @import("std");
 const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
-const graphics = firefly.graphics;
 
-const ArrayList = std.ArrayList;
-const EventDispatch = utils.EventDispatch;
+const Shader = firefly.graphics.Shader;
 const BitSet = utils.BitSet;
 const Component = api.Component;
-const ComponentListener = Component.ComponentListener;
-const ComponentEvent = Component.ComponentEvent;
-const Aspect = utils.Aspect;
 const String = utils.String;
 const RenderTextureBinding = api.RenderTextureBinding;
 const Vector2f = utils.Vector2f;
@@ -20,13 +15,11 @@ const BlendMode = api.BlendMode;
 const DynArray = utils.DynArray;
 const ActionType = Component.ActionType;
 const Projection = api.Projection;
-const Entity = api.Entity;
 const EComponent = api.EComponent;
 const ControlNode = api.ControlNode;
 const RenderEvent = api.RenderEvent;
 const System = api.System;
 const ViewRenderEvent = api.ViewRenderEvent;
-const ViewRenderListener = api.ViewRenderListener;
 const Index = utils.Index;
 const Float = utils.Float;
 const BindingId = api.BindingId;
@@ -308,12 +301,12 @@ pub const Layer = struct {
 
     pub fn withShader(self: *Layer, id: Index) void {
         const shader_asset: *api.Asset = api.Asset.byId(id);
-        self.shader_binding = graphics.ShaderAsset.getResource(shader_asset.resource_id).binding;
+        self.shader_binding = Shader.getResource(shader_asset.resource_id).binding;
     }
 
     pub fn withShaderByName(self: *Layer, name: String) void {
         const shader_asset: *api.Asset = api.Asset.byIdName(name);
-        self.shader_binding = graphics.ShaderAsset.getResource(shader_asset.resource_id).binding;
+        self.shader_binding = Shader.getResource(shader_asset.resource_id).binding;
     }
 };
 

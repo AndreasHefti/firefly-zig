@@ -1,20 +1,18 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const System = api.System;
-const UpdateScheduler = api.UpdateScheduler;
-const EComponent = api.EComponent;
-const EntityCondition = api.EntityCondition;
-const EComponentAspectGroup = api.EComponentAspectGroup;
-const UpdateEvent = api.UpdateEvent;
-const BitSet = utils.BitSet;
-const DynArray = utils.DynArray;
-const Component = api.Component;
-const String = utils.String;
-const Index = utils.Index;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const System = firefly.api.System;
+const UpdateScheduler = firefly.api.UpdateScheduler;
+const EComponent = firefly.api.EComponent;
+const EntityCondition = firefly.api.EntityCondition;
+const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
+const UpdateEvent = firefly.api.UpdateEvent;
+const BitSet = firefly.utils.BitSet;
+const DynArray = firefly.utils.DynArray;
+const Component = firefly.api.Component;
+const String = firefly.utils.String;
+const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// state init
@@ -85,7 +83,7 @@ pub const StateEngine = struct {
     update_scheduler: ?*UpdateScheduler = null,
 
     pub fn construct(self: *StateEngine) void {
-        self.states = DynArray(State).newWithRegisterSize(api.ALLOC, 10) catch unreachable;
+        self.states = DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable;
     }
 
     pub fn destruct(self: *StateEngine) void {
@@ -136,7 +134,7 @@ pub const EntityStateEngine = struct {
     states: DynArray(State) = undefined,
 
     pub fn construct(self: *EntityStateEngine) void {
-        self.states = DynArray(State).newWithRegisterSize(api.ALLOC, 10) catch unreachable;
+        self.states = DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable;
     }
 
     pub fn destruct(self: *EntityStateEngine) void {
@@ -198,7 +196,7 @@ const EntityStateSystem = struct {
     var entities: BitSet = undefined;
 
     pub fn systemInit() void {
-        entities = BitSet.new(api.ALLOC) catch undefined;
+        entities = BitSet.new(firefly.api.COMPONENT_ALLOC) catch undefined;
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EState}),
         };

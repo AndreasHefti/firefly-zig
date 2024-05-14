@@ -4,9 +4,7 @@ const animation = @import("animation.zig");
 const movement = @import("movement.zig");
 const audio = @import("audio.zig");
 const contact = @import("contact.zig");
-const utils = firefly.utils;
-const Float = utils.Float;
-const Index = utils.Index;
+const Float = firefly.utils.Float;
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations

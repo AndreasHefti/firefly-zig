@@ -1,24 +1,21 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
-const Timer = api.Timer;
-const UpdateScheduler = api.UpdateScheduler;
-const System = api.System;
-const EComponent = api.EComponent;
-const EComponentAspectGroup = api.EComponentAspectGroup;
-const EventDispatch = utils.EventDispatch;
+const Timer = firefly.api.Timer;
+const UpdateScheduler = firefly.api.UpdateScheduler;
+const System = firefly.api.System;
+const EComponent = firefly.api.EComponent;
+const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
+const EventDispatch = firefly.utils.EventDispatch;
 const ETransform = firefly.graphics.ETransform;
-const EntityCondition = api.EntityCondition;
+const EntityCondition = firefly.api.EntityCondition;
 const UpdateEvent = firefly.api.UpdateEvent;
-const AspectGroup = utils.AspectGroup;
-const BitSet = utils.BitSet;
-const Index = utils.Index;
-const Float = utils.Float;
-const Vector2f = utils.Vector2f;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
-const String = utils.String;
+const AspectGroup = firefly.utils.AspectGroup;
+const BitSet = firefly.utils.BitSet;
+const Index = firefly.utils.Index;
+const Float = firefly.utils.Float;
+const Vector2f = firefly.utils.Vector2f;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// movement init
@@ -273,10 +270,10 @@ const MovementSystem = struct {
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EMovement}),
         };
-        movements = BitSet.new(api.ALLOC) catch unreachable;
-        moved = BitSet.new(api.ALLOC) catch unreachable;
+        movements = BitSet.new(firefly.api.COMPONENT_ALLOC) catch unreachable;
+        moved = BitSet.new(firefly.api.COMPONENT_ALLOC) catch unreachable;
         event.moved = &moved;
-        event_dispatch = EventDispatch(MovementEvent).new(api.ALLOC);
+        event_dispatch = EventDispatch(MovementEvent).new(firefly.api.COMPONENT_ALLOC);
     }
 
     pub fn systemDeinit() void {

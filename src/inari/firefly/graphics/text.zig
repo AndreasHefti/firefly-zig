@@ -1,30 +1,24 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
 const api = firefly.api;
-const graphics = firefly.graphics;
 
 const System = api.System;
-const Entity = api.Entity;
 const EComponentAspectGroup = api.EComponentAspectGroup;
 const EntityCondition = api.EntityCondition;
-const ViewLayerMapping = graphics.ViewLayerMapping;
-const EView = graphics.EView;
-const ViewRenderEvent = graphics.ViewRenderEvent;
+const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
+const EView = firefly.graphics.EView;
+const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
 const Component = api.Component;
-const ComponentEvent = api.ComponentEvent;
-const ActionType = api.Component.ActionType;
 const EComponent = api.EComponent;
 const Asset = api.Asset;
-const Color = utils.Color;
+const Color = firefly.utils.Color;
 const BlendMode = api.BlendMode;
-const ETransform = graphics.ETransform;
-
-const Index = utils.Index;
-const Float = utils.Float;
-const String = utils.String;
-const CInt = utils.CInt;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const ETransform = firefly.graphics.ETransform;
+const Index = firefly.utils.Index;
+const Float = firefly.utils.Float;
+const String = firefly.utils.String;
+const CInt = firefly.utils.CInt;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const BindingId = api.BindingId;
 
 //////////////////////////////////////////////////////////////

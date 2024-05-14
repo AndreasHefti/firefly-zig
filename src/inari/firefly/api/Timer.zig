@@ -1,10 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
 
 const ArrayList = std.ArrayList;
-const Float = utils.Float;
+const Float = firefly.utils.Float;
 
 pub const UpdateScheduler = struct {
     resolution: Float = 60,
@@ -29,8 +27,8 @@ pub fn init() void {
     if (initialized)
         return;
 
-    scheduler = ArrayList(UpdateScheduler).init(api.ALLOC);
-    last_update_time = utils.i64_usize(std.time.milliTimestamp());
+    scheduler = ArrayList(UpdateScheduler).init(firefly.api.ALLOC);
+    last_update_time = firefly.utils.i64_usize(std.time.milliTimestamp());
 }
 
 pub fn deinit() void {
@@ -45,7 +43,7 @@ pub var time: usize = 0;
 pub var time_elapsed: usize = 0;
 
 pub fn tick() void {
-    const current_time: usize = utils.i64_usize(std.time.milliTimestamp());
+    const current_time: usize = firefly.utils.i64_usize(std.time.milliTimestamp());
     time += time_elapsed;
     time_elapsed = current_time - last_update_time;
     last_update_time = current_time;
