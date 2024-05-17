@@ -38,14 +38,16 @@ fn loadWithView() void {
         // Can be seen as the camera of the texture
         .projection = .{
             .clear_color = .{ 30, 30, 30, 255 },
-            .plain = .{ -10, -10, 200, 200 },
+            .position = .{ -10, -10 },
+            .width = 200,
+            .height = 200,
             .pivot = .{ 0, 0 },
             .zoom = 2,
             .rotation = 0,
         },
     })
-        .withControl(view_control)
-        .id;
+        .withControl(view_control, null).id;
+
     View.activateById(viewId, true);
 
     const sprite_id = SpriteTemplate.new(.{
@@ -68,9 +70,10 @@ fn loadWithView() void {
         .activate();
 }
 
-fn view_control(view: *View) void {
-    view.projection.plain[0] += 0.2;
-    view.projection.plain[1] += 0.6;
+fn view_control(view_id: Index) void {
+    var view = View.byId(view_id);
+    view.projection.position[0] += 0.2;
+    view.projection.position[1] += 0.6;
     view.position[0] += 1;
     view.position[1] += 0.6;
 }

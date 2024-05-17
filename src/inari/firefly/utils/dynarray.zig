@@ -373,3 +373,64 @@ pub fn Register(comptime T: type) type {
         }
     };
 }
+
+pub const DynIndexMap = struct {
+    mapping: std.AutoHashMap(Index, DynIndexArray) = undefined,
+    grow_size: usize = 5,
+
+    pub fn new(allocator: Allocator) DynIndexMap {
+        return .{
+            .mapping = std.AutoHashMap(Index, DynIndexArray).init(allocator),
+        };
+    }
+
+    pub fn deinit(self: *DynIndexMap) void {
+        self.clear();
+        self.mapping.deinit();
+        self.mapping = undefined;
+    }
+
+    pub fn map(self: *DynIndexMap, index: Index, id: Index) void {
+        if (!self.mapping.contains(index))
+            self.mapping.put(
+                index,
+                DynIndexArray.init(self.mapping.allocator, self.grow_size),
+            ) catch unreachable;
+
+        if (self.mapping.getEntry(index)) |e| e.value_ptr.add(id);
+    }
+
+    pub fn remove(self: *DynIndexMap, index: Index, id: Index) void {
+        if (self.mapping.getEntry(index)) |e| e.value_ptr.removeFirst(id);
+    }
+
+    pub fn removeAll(self: *DynIndexMap, index: Index) void {
+        if (self.mapping.getEntry(index)) |e| e.value_ptr.deinit();
+        _ = self.mapping.remove(index);
+    }
+
+    pub fn clear(self: *DynIndexMap) void {
+        var i = self.mapping.valueIterator();
+        while (i.next()) |e| e.deinit();
+        self.mapping.clearAndFree();
+    }
+
+    pub fn format(
+        self: DynIndexMap,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("DynIndexMap[", .{});
+        var i = self.mapping.iterator();
+        while (i.next()) |e| {
+            try writer.print(" {d}=", .{e.key_ptr.*});
+            for (0..e.value_ptr.size_pointer) |vi| {
+                try writer.print("{d}", .{e.value_ptr.items[vi]});
+                if (vi < e.value_ptr.size_pointer - 1)
+                    try writer.print(",", .{});
+            }
+        }
+        try writer.print(" ]", .{});
+    }
+};

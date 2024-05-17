@@ -3,7 +3,9 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 
-const ControlNode = api.ControlNode;
+const ComponentControl = api.ComponentControl;
+const ComponentControlType = api.ComponentControlType;
+const DynIndexMap = utils.DynIndexMap;
 const UpdateEvent = api.UpdateEvent;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
@@ -69,6 +71,7 @@ pub const Context = struct {
     name_mapping: bool = true,
     subscription: bool = true,
     processing: bool = true,
+    control: bool = false,
 };
 
 pub fn Trait(comptime T: type, comptime context: Context) type {
@@ -118,7 +121,7 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
         pub usingnamespace if (context.activation) ActivationTrait(T, @This()) else empty_struct;
         pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This()) else empty_struct;
         pub usingnamespace if (context.processing) ProcessingTrait(T, @This()) else empty_struct;
-        pub usingnamespace if (@hasField(T, "controls")) ControlTrait(T, @This()) else empty_struct;
+        pub usingnamespace if (context.control) ControlTrait(T, @This()) else empty_struct;
     };
 }
 
@@ -171,7 +174,8 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
             }
         }
         pub fn isActiveById(index: Index) bool {
-            return adapter.pool.active_mapping.isSet(index);
+            if (adapter.pool.active_mapping) |am| return am.isSet(index);
+            return false;
         }
         pub fn isActiveByName(name: String) bool {
             if (adapter.pool.name_mapping) |*nm| {
@@ -232,15 +236,45 @@ fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
 
 fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
     return struct {
-        fn update(self: *T, id: Index) void {
-            if (self.controls) |c| c.update(adapter.byId(id));
+        pub fn withControl(self: *T, operation: *const fn (Index) void, name: ?String) *T {
+            if (adapter.pool.control_mapping) |*cm| {
+                const control_id = ComponentControl.new(.{
+                    .name = name,
+                    .component_type = T.aspect.*,
+                    .operation = operation,
+                });
+                cm.map(self.id, control_id);
+                ComponentControl.activateById(control_id, true);
+            }
+            return self;
         }
 
-        pub fn withControl(self: *T, control: ControlNode(T).Control) *T {
-            if (self.controls) |c|
-                c.add(control)
-            else
-                self.controls = ControlNode(T).new(control);
+        pub fn withControlOfType(self: *T, control_type: anytype) *T {
+            if (adapter.pool.control_mapping) |*cm| {
+                const control_id = ComponentControlType(@TypeOf(control_type)).new(control_type);
+                cm.map(self.id, control_id);
+                ComponentControl.activateById(control_id);
+            }
+            return self;
+        }
+
+        pub fn withControlById(self: *T, control_id: Index) *T {
+            if (adapter.pool.control_mapping) |*cm| {
+                const c = ComponentControl.byId(control_id);
+                if (c.component_type == T.aspect)
+                    cm.map(self.id, c.id);
+            }
+
+            return self;
+        }
+
+        pub fn withControlByName(self: *T, name: String) *T {
+            if (adapter.pool.control_mapping) |*cm| {
+                if (ComponentControl.byName(name)) |c| {
+                    if (c.component_type == T.aspect)
+                        cm.map(self.id, c.id);
+                }
+            }
             return self;
         }
     };
@@ -389,10 +423,10 @@ pub const ComponentRefNode = struct {
 pub fn ComponentPool(comptime T: type) type {
 
     // component type constraints and function references
-    //const has_aspect: bool = @hasDecl(T, "type_aspect");
     const has_subscribe: bool = @hasDecl(T, "subscribe");
     const has_active_mapping: bool = @hasDecl(T, "activeCount");
     const has_name_mapping: bool = @hasField(T, "name");
+    const has_control_mapping: bool = @hasDecl(T, "withControl");
 
     // component type init/deinit functions
     const has_component_type_init: bool = @hasDecl(T, "componentTypeInit");
@@ -402,9 +436,6 @@ pub fn ComponentPool(comptime T: type) type {
     const has_construct: bool = @hasDecl(T, "construct");
     const has_activation: bool = @hasDecl(T, "activation");
     const has_destruct = @hasDecl(T, "destruct");
-
-    // control
-    const has_controls: bool = @hasField(T, "controls");
 
     comptime {
         if (@typeInfo(T) != .Struct)
@@ -427,11 +458,11 @@ pub fn ComponentPool(comptime T: type) type {
         // ensure type based singleton
         var _type_init = false;
 
-        // internal state
         var items: DynArray(T) = undefined;
         // mappings
-        var active_mapping: ?BitSet = undefined;
+        var active_mapping: ?BitSet = null;
         var name_mapping: ?StringHashMap(Index) = null;
+        var control_mapping: ?DynIndexMap = null;
         // events
         var event: ?ComponentEvent = null;
         var eventDispatch: ?EventDispatch(ComponentEvent) = null;
@@ -470,8 +501,10 @@ pub fn ComponentPool(comptime T: type) type {
                     std.log.err("Failed to initialize component of type: {any}", .{T});
             }
 
-            if (has_controls)
+            if (has_control_mapping) {
+                control_mapping = DynIndexMap.new(api.COMPONENT_ALLOC);
                 api.subscribeUpdate(update);
+            }
         }
 
         /// Release all allocated memory.
@@ -497,17 +530,23 @@ pub fn ComponentPool(comptime T: type) type {
             }
 
             if (name_mapping) |*nm| nm.deinit();
-            //if (has_aspect) T.type_aspect = undefined;
-            if (has_controls) api.unsubscribeUpdate(update);
+            if (has_control_mapping)
+                api.unsubscribeUpdate(update);
+            if (control_mapping) |*cm| cm.deinit();
+            control_mapping = null;
         }
 
         fn update(_: UpdateEvent) void {
-            if (active_mapping) |*am| {
-                var next = am.nextSetBit(0);
-                while (next) |i| {
-                    if (items.get(i)) |c|
-                        c.update(c.id);
-                    next = am.nextSetBit(i + 1);
+            if (control_mapping) |cm| {
+                var iterator = cm.mapping.iterator();
+                while (iterator.next()) |e| {
+                    const c_id = e.key_ptr.*;
+
+                    if (active_mapping) |am|
+                        if (!am.isSet(c_id)) continue;
+
+                    for (0..e.value_ptr.size_pointer) |i|
+                        ComponentControl.update(e.value_ptr.items[i], c_id);
                 }
             }
         }

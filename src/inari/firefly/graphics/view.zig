@@ -156,8 +156,13 @@ pub const ViewLayerMapping = struct {
 //// View Component
 //////////////////////////////////////////////////////////////
 
+// TODO ViewChangeEvent
+
 pub const View = struct {
-    pub usingnamespace Component.Trait(View, .{ .name = "View" });
+    pub usingnamespace Component.Trait(View, .{
+        .name = "View",
+        .control = true,
+    });
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -171,17 +176,27 @@ pub const View = struct {
     rotation: ?Float,
     tint_color: ?Color,
     blend_mode: ?BlendMode,
-    projection: Projection = Projection{},
-
-    controls: ?*ControlNode(View) = null,
+    projection: Projection = .{},
 
     render_texture_binding: ?RenderTextureBinding = null,
     shader_binding: ?BindingId = null,
     ordered_active_layer: ?DynArray(Index) = null,
 
-    pub var screen_projection: Projection = undefined;
+    pub var screen_projection: Projection = .{};
     pub var screen_shader_binding: ?BindingId = null;
     pub var ordered_active_views: DynArray(Index) = undefined;
+
+    pub fn move(self: *View, vec: Vector2f, pixel_perfect: bool) void {
+        self.projection.position += vec;
+        if (pixel_perfect)
+            self.projection.position = @floor(self.projection.position);
+        // TODO ViewChangeEvent
+    }
+
+    pub fn adjustPosition(self: *View, vec: Vector2f) void {
+        self.projection.position = vec;
+        // TODO ViewChangeEvent
+    }
 
     pub fn componentTypeInit() !void {
         ordered_active_views = try DynArray(Index).newWithRegisterSize(

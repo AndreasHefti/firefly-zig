@@ -233,7 +233,15 @@ pub const TileGrid = struct {
     }
 
     pub inline fn getIteratorForProjection(self: *TileGrid, projection: *const Projection) ?Iterator {
-        return getIteratorWorldClipF(self, projection.plain);
+        return getIteratorWorldClipF(
+            self,
+            .{
+                projection.position[0],
+                projection.position[1],
+                projection.width,
+                projection.height,
+            },
+        );
     }
 
     pub fn getIteratorWorldClipF(self: *TileGrid, clip: RectF) ?Iterator {

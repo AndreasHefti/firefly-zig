@@ -59,6 +59,7 @@ pub const ComponentAspect = ComponentAspectGroup.Aspect;
 pub const ComponentEvent = component.ComponentEvent;
 pub const ComponentActionType = component.ActionType;
 pub const ComponentListener = component.ComponentListener;
+
 pub const System = system.System;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
@@ -76,8 +77,8 @@ pub const Task = control.Task;
 pub const TaskFunction = control.TaskFunction;
 pub const TaskCallback = control.TaskCallback;
 pub const Trigger = control.Trigger;
-pub const EControl = control.EControl;
-pub const ControlNode = control.ControlNode;
+pub const ComponentControl = control.ComponentControl;
+pub const ComponentControlType = control.ComponentControlType;
 
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
@@ -355,7 +356,9 @@ pub const ShapeType = enum {
 
 pub const Projection = struct {
     clear_color: ?Color = .{ 0, 0, 0, 255 },
-    plain: RectF = .{ 0, 0, 0, 0 },
+    position: PosF = .{ 0, 0 },
+    width: Float = 0,
+    height: Float = 0,
     pivot: PosF = .{ 0, 0 },
     zoom: Float = 1,
     rotation: Float = 0,
@@ -367,7 +370,7 @@ pub const Projection = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "Projection[ clear_color:{any}, plain:{any}, pivot:{any}, zoom:{d}, rot:{d} ]",
+            "Projection[ clear_color:{any}, position:{any}, w:{any}, h{any}, pivot:{any}, zoom:{d}, rot:{d} ]",
             self,
         );
     }

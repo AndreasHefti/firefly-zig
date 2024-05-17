@@ -1027,3 +1027,43 @@ test "memo test" {
     try std.testing.expect(memoinst1.number == 0);
     try std.testing.expect(memo1 != memo2);
 }
+
+test "DynIndexMap" {
+    var map = utils.DynIndexMap.new(std.testing.allocator);
+    defer map.deinit();
+    var sb = StringBuffer.init(std.testing.allocator);
+    defer sb.deinit();
+
+    map.map(3, 3);
+    map.map(2, 1);
+    map.map(3, 4);
+    map.map(4, 5);
+    map.map(100, 6);
+    map.map(3, 32);
+    map.map(2, 13);
+    map.map(3, 44);
+    map.map(4, 55);
+    map.map(100, 66);
+
+    sb.print("{any}", .{map});
+    try std.testing.expectEqualStrings(
+        "DynIndexMap[ 4=5,55 100=6,66 2=1,13 3=3,4,32,44 ]",
+        sb.toString(),
+    );
+
+    sb.clear();
+    map.remove(3, 4);
+    sb.print("{any}", .{map});
+    try std.testing.expectEqualStrings(
+        "DynIndexMap[ 4=5,55 100=6,66 2=1,13 3=3,32,44 ]",
+        sb.toString(),
+    );
+
+    sb.clear();
+    map.removeAll(2);
+    sb.print("{any}", .{map});
+    try std.testing.expectEqualStrings(
+        "DynIndexMap[ 4=5,55 100=6,66 3=3,32,44 ]",
+        sb.toString(),
+    );
+}

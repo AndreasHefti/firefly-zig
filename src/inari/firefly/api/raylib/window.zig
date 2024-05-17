@@ -45,10 +45,10 @@ const RaylibWindowAPI = struct {
             @panic("Not initialized");
 
         window_data = data;
-        if (window_data.flags) |wf|
-            setWindowFlags(wf);
         rl.SetTargetFPS(window_data.fps);
         rl.InitWindow(window_data.width, window_data.height, window_data.title);
+        if (window_data.flags) |wf|
+            setWindowFlags(wf);
     }
 
     fn hasWindowClosed() bool {

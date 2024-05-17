@@ -98,7 +98,10 @@ pub fn Asset(comptime T: type) type {
     return struct {
         const Self = @This();
 
-        pub usingnamespace Component.Trait(Self, .{ .name = "Asset:" ++ T.ASSET_TYPE_NAME });
+        pub usingnamespace Component.Trait(Self, .{
+            .name = "Asset:" ++ T.ASSET_TYPE_NAME,
+            .processing = false,
+        });
 
         var resources: DynArray(T) = undefined;
 

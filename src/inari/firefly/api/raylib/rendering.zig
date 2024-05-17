@@ -249,14 +249,14 @@ const RaylibRenderAPI = struct {
 
     fn createRenderTexture(projection: *Projection) RenderTextureBinding {
         const tex = rl.LoadRenderTexture(
-            @intFromFloat(projection.plain[2]),
-            @intFromFloat(projection.plain[3]),
+            @intFromFloat(projection.width),
+            @intFromFloat(projection.height),
         );
         const id = render_textures.add(tex);
         return RenderTextureBinding{
             .id = id,
-            .width = @intFromFloat(projection.plain[2]),
-            .height = @intFromFloat(projection.plain[3]),
+            .width = @intFromFloat(projection.width),
+            .height = @intFromFloat(projection.height),
         };
     }
 
@@ -319,8 +319,7 @@ const RaylibRenderAPI = struct {
 
     fn startRendering(binding_id: ?BindingId, projection: *Projection) void {
         active_render_texture = binding_id;
-        active_camera.offset.x = projection.plain[0];
-        active_camera.offset.y = projection.plain[1];
+        active_camera.offset = @bitCast(projection.position);
         active_camera.target = @bitCast(projection.pivot);
         active_camera.rotation = projection.rotation;
         active_camera.zoom = projection.zoom;

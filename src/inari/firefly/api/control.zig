@@ -1,14 +1,10 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const DynArray = firefly.utils.DynArray;
 const Attributes = firefly.api.Attributes;
-const System = firefly.api.System;
-const EComponent = firefly.api.EComponent;
-const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
-const Entity = firefly.api.Entity;
-const EntityCondition = firefly.api.EntityCondition;
+const ComponentAspect = firefly.api.ComponentAspect;
 const UpdateEvent = firefly.api.UpdateEvent;
-const BitSet = firefly.utils.BitSet;
 const Component = firefly.api.Component;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
@@ -22,20 +18,13 @@ pub fn init() void {
 
     Component.registerComponent(Task);
     Component.registerComponent(Trigger);
-    EComponent.registerEntityComponent(EControl);
-    System(EntityControlSystem).createSystem(
-        firefly.Engine.CoreSystems.EntityControlSystem.name,
-        "Processes active entities with EControl for every frame",
-        false,
-    );
+    Component.registerComponent(ComponentControl);
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    System(EntityControlSystem).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -160,115 +149,79 @@ pub const Trigger = struct {
 };
 
 //////////////////////////////////////////////////////////////////////////
-//// Component and Entity Control
+//// Component Control
 //////////////////////////////////////////////////////////////////////////
 
-pub fn ControlNode(comptime T: type) type {
+pub const ComponentControl = struct {
+    pub usingnamespace Component.Trait(ComponentControl, .{
+        .name = "ComponentControl",
+        .processing = false,
+        .subscription = false,
+    });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+
+    component_type: ComponentAspect,
+    operation: *const fn (Index) void,
+
+    dispose: ?*const fn (Index) void = null,
+
+    pub fn update(controlId: Index, c_id: Index) void {
+        const Self = @This();
+        if (Self.isActiveById(controlId))
+            Self.byId(controlId).operation(c_id);
+    }
+
+    pub fn destruct(self: *ComponentControl) void {
+        if (self.dispose) |df| df(self.id);
+    }
+};
+
+pub fn ComponentControlType(comptime T: type) type {
+    comptime {
+        if (@typeInfo(T) != .Struct)
+            @compileError("Expects component control type is a struct.");
+        if (!@hasDecl(T, "update"))
+            @compileError("Expects component control type to have function 'update(Index)'");
+        if (!@hasField(T, "name"))
+            @compileError("Expects component control type to have field 'name: ?String'");
+        if (!@hasDecl(T, "component_type"))
+            @compileError("Expects component control type to have field 'component_type: ComponentAspect'");
+    }
+
     return struct {
-        pub const Control = *const fn (*T) void;
         const Self = @This();
 
-        control: Control,
-        next: ?*ControlNode(T) = null,
+        var register: DynArray(T) = undefined;
 
-        pub fn new(control: Control) *Self {
-            var result = firefly.api.COMPONENT_ALLOC.create(Self) catch unreachable;
-            result.control = control;
-            result.next = null;
-            return result;
+        pub fn init() void {
+            register = DynArray(T).new(firefly.api.COMPONENT_ALLOC);
         }
 
-        pub fn update(self: *Self, component: *T) void {
-            self.control(component);
-            if (self.next) |n| n.update(component);
+        pub fn deinit() void {
+            register.deinit();
         }
 
-        pub fn add(self: *Self, control: Control) void {
-            if (self.next) |n|
-                n.add(control)
-            else {
-                self.next = firefly.api.COMPONENT_ALLOC.create(Self) catch unreachable;
-                self.next.?.control = control;
-                self.next.?.next = null;
-            }
+        pub fn byId(id: Index) ?*T {
+            return register.get(id);
         }
 
-        fn deinit(self: *Self) void {
-            if (self.next) |n|
-                n.deinit();
-            firefly.api.COMPONENT_ALLOC.destroy(self);
+        pub fn new(control_type: T) Index {
+            const control_id = ComponentControl.new(.{
+                .name = control_type.name,
+                .operation = T.update,
+                .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type),
+                .dispose = dispose,
+            });
+
+            register.set(control_type, control_id);
+
+            return control_id;
+        }
+
+        fn dispose(id: Index) void {
+            register.delete(id);
         }
     };
 }
-
-//////////////////////////////////////////////////////////////////////////
-//// Entity Control
-//////////////////////////////////////////////////////////////////////////
-
-pub const EControl = struct {
-    pub usingnamespace EComponent.Trait(@This(), "EControl");
-
-    id: Index = UNDEF_INDEX,
-    controls: ?*ControlNode(Entity) = null,
-
-    fn update(self: *EControl, id: Index) void {
-        if (self.controls) |c| c.update(Entity.byId(id));
-    }
-
-    pub fn withControl(self: *EControl, control: ControlNode(Entity).Control) *EControl {
-        addControl(self, control);
-        return self;
-    }
-
-    pub fn withControlAnd(self: *EControl, control: ControlNode(Entity).Control) *Entity {
-        addControl(self, control);
-        return Entity.byId(self.id);
-    }
-
-    pub fn destruct(self: *EControl) void {
-        if (self.controls) |c|
-            c.deinit();
-
-        self.controls = null;
-    }
-
-    fn addControl(self: *EControl, control: ControlNode(Entity).Control) void {
-        if (self.controls) |c|
-            c.add(control)
-        else
-            self.controls = ControlNode(Entity).new(control);
-    }
-};
-
-const EntityControlSystem = struct {
-    pub var entity_condition: EntityCondition = undefined;
-
-    var entities: BitSet = undefined;
-
-    pub fn systemInit() void {
-        entity_condition = EntityCondition{
-            .accept_kind = EComponentAspectGroup.newKindOf(.{EControl}),
-        };
-        entities = BitSet.new(firefly.api.COMPONENT_ALLOC) catch unreachable;
-    }
-
-    pub fn systemDeinit() void {
-        entity_condition = undefined;
-        entities.deinit();
-        entities = undefined;
-    }
-
-    pub fn entityRegistration(id: Index, register: bool) void {
-        entities.setValue(id, register);
-    }
-
-    pub fn update(_: UpdateEvent) void {
-        var next = entities.nextSetBit(0);
-        while (next) |i| {
-            if (EControl.byId(i)) |ec|
-                ec.update(i);
-
-            next = entities.nextSetBit(i + 1);
-        }
-    }
-};

@@ -12,7 +12,6 @@ const EContactScan = firefly.physics.EContactScan;
 const DebugCollisionResolver = firefly.physics.DebugCollisionResolver;
 const ESprite = firefly.graphics.ESprite;
 const EMovement = firefly.physics.EMovement;
-const EControl = firefly.api.EControl;
 const Allocator = std.mem.Allocator;
 const Float = utils.Float;
 const Vector2f = utils.Vector2f;
@@ -57,14 +56,13 @@ fn init() void {
     var x: Float = 10;
 
     _ = Entity.newAnd(.{})
+        .withControl(control, null)
         .with(ETransform{ .position = .{ x, 0 } })
         .with(ESprite{ .template_id = sprite_id })
         .with(EMovement{ .gravity = .{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.3, .integrator = firefly.physics.EulerIntegrator })
         .withAnd(EContactScan{ .collision_resolver = DebugCollisionResolver })
         .withConstraintAnd(.{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true })
         .with(EShape{ .shape_type = ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }), .color = .{ 0, 0, 255, 255 } })
-        .withAnd(EControl{})
-        .withControlAnd(control)
         .activate();
 
     x += 50;
@@ -94,9 +92,9 @@ fn init() void {
     }
 }
 
-fn control(entity: *Entity) void {
-    if (EContactScan.byId(entity.id)) |scan| {
-        if (EShape.byId(entity.id)) |shape| {
+fn control(entity_id: Index) void {
+    if (EContactScan.byId(entity_id)) |scan| {
+        if (EShape.byId(entity_id)) |shape| {
             if (scan.hasAnyContact()) {
                 shape.color[0] = 255;
                 shape.color[2] = 0;

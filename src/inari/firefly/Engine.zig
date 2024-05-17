@@ -154,13 +154,9 @@ pub fn startWindow(
     firefly.api.window.openWindow(window);
     defer firefly.api.window.closeWindow();
 
-    View.screen_projection = .{ .plain = .{
-        0,
-        0,
-        @floatFromInt(window.width),
-        @floatFromInt(window.height),
-    } };
-    defer View.screen_projection = undefined;
+    View.screen_projection.width = @floatFromInt(window.width);
+    View.screen_projection.height = @floatFromInt(window.height);
+    defer View.screen_projection = .{};
 
     if (init_callback) |ic|
         ic();

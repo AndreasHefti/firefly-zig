@@ -12,7 +12,10 @@ const Vector2f = firefly.utils.Vector2f;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 pub const Entity = struct {
-    pub usingnamespace Component.Trait(Entity, .{ .name = "Entity" });
+    pub usingnamespace Component.Trait(Entity, .{
+        .name = "Entity",
+        .control = true,
+    });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
