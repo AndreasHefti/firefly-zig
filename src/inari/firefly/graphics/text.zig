@@ -1,25 +1,25 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const api = firefly.api;
 
-const System = api.System;
-const EComponentAspectGroup = api.EComponentAspectGroup;
-const EntityCondition = api.EntityCondition;
+const System = firefly.api.System;
+const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
+const EntityCondition = firefly.api.EntityCondition;
 const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
 const EView = firefly.graphics.EView;
 const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
-const Component = api.Component;
-const EComponent = api.EComponent;
-const Asset = api.Asset;
+const Component = firefly.api.Component;
+const EComponent = firefly.api.EComponent;
+const AssetComponent = firefly.api.AssetComponent;
+const Asset = firefly.api.Asset;
 const Color = firefly.utils.Color;
-const BlendMode = api.BlendMode;
+const BlendMode = firefly.api.BlendMode;
 const ETransform = firefly.graphics.ETransform;
 const Index = firefly.utils.Index;
 const Float = firefly.utils.Float;
 const String = firefly.utils.String;
 const CInt = firefly.utils.CInt;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const BindingId = api.BindingId;
+const BindingId = firefly.api.BindingId;
 
 //////////////////////////////////////////////////////////////
 //// text init
@@ -31,8 +31,8 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    // register Assets
-    Component.registerComponent(Asset(Font));
+    // init Asset types
+    Asset(Font).init();
     // init components and entities
     EComponent.registerEntityComponent(EText);
 
@@ -49,6 +49,8 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    // deinit Asset types
+    Asset(Font).deinit();
     // deinit renderer
     System(DefaultTextRenderer).disposeSystem();
 }
@@ -58,7 +60,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const Font = struct {
-    pub usingnamespace api.AssetTrait(Font, "Font");
+    pub usingnamespace firefly.api.AssetTrait(Font, "Font");
 
     name: ?String = null,
     resource: String,
@@ -68,22 +70,26 @@ pub const Font = struct {
 
     _binding: ?BindingId = null,
 
-    pub fn doLoad(_: *Asset(Font), resource: *Font) void {
-        if (resource._binding != null)
-            return; // already loaded
+    pub fn loadResource(component: *AssetComponent) void {
+        if (Font.resourceById(component.resource_id)) |res| {
+            if (res._binding != null)
+                return; // already loaded
 
-        resource._binding = api.rendering.loadFont(
-            resource.resource,
-            resource.size,
-            resource.char_num,
-            resource.code_points,
-        );
+            res._binding = firefly.api.rendering.loadFont(
+                res.resource,
+                res.size,
+                res.char_num,
+                res.code_points,
+            );
+        }
     }
 
-    pub fn doUnload(_: *Asset(Font), resource: *Font) void {
-        if (resource._binding) |b| {
-            api.rendering.disposeFont(b);
-            resource._binding = null;
+    pub fn disposeResource(component: *AssetComponent) void {
+        if (Font.resourceById(component.resource_id)) |res| {
+            if (res._binding) |b| {
+                firefly.api.rendering.disposeFont(b);
+                res._binding = null;
+            }
         }
     }
 };
@@ -148,7 +154,7 @@ const DefaultTextRenderer = struct {
                 // render the sprite
                 if (EText.byId(id)) |text| {
                     const trans = ETransform.byId(id).?;
-                    api.rendering.renderText(
+                    firefly.api.rendering.renderText(
                         text.font_id,
                         text.text,
                         trans.position,

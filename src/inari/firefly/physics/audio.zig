@@ -5,6 +5,7 @@ const Component = firefly.api.Component;
 const Index = firefly.utils.Index;
 const Float = firefly.utils.Float;
 const Asset = firefly.api.Asset;
+const AssetComponent = firefly.api.AssetComponent;
 const String = firefly.utils.String;
 const BindingId = firefly.api.BindingId;
 const SoundBinding = firefly.api.SoundBinding;
@@ -20,14 +21,17 @@ pub fn init() void {
     if (initialized)
         return;
 
-    Component.registerComponent(Asset(Sound));
-    Component.registerComponent(Asset(Music));
+    Asset(Sound).init();
+    Asset(Music).init();
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
+
+    Asset(Sound).deinit();
+    Asset(Music).deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -124,17 +128,21 @@ pub const Sound = struct {
 
     _binding: ?SoundBinding = null,
 
-    pub fn doLoad(_: *Asset(Sound), resource: *Sound) void {
-        if (resource._binding != null)
-            return; // already loaded
+    pub fn loadResource(component: *AssetComponent) void {
+        if (Sound.resourceById(component.resource_id)) |res| {
+            if (res._binding != null)
+                return; // already loaded
 
-        resource._binding = firefly.api.audio.loadSound(resource.resource, resource.channels);
+            res._binding = firefly.api.audio.loadSound(res.resource, res.channels);
+        }
     }
 
-    pub fn doUnload(_: *Asset(Sound), resource: *Sound) void {
-        if (resource._binding) |b| {
-            firefly.api.audio.disposeSound(b);
-            resource._binding = null;
+    pub fn disposeResource(component: *AssetComponent) void {
+        if (Sound.resourceById(component.resource_id)) |res| {
+            if (res._binding) |b| {
+                firefly.api.audio.disposeSound(b);
+                res._binding = null;
+            }
         }
     }
 };
@@ -154,17 +162,21 @@ pub const Music = struct {
 
     _binding: ?BindingId = null,
 
-    pub fn doLoad(_: *Asset(Music), resource: *Music) void {
-        if (resource._binding != null)
-            return; // already loaded
+    pub fn loadResource(component: *AssetComponent) void {
+        if (Music.resourceById(component.resource_id)) |res| {
+            if (res._binding != null)
+                return; // already loaded
 
-        resource._binding = firefly.api.audio.loadMusic(resource.resource);
+            res._binding = firefly.api.audio.loadMusic(res.resource);
+        }
     }
 
-    pub fn doUnload(_: *Asset(Music), resource: *Music) void {
-        if (resource._binding) |b| {
-            firefly.api.audio.disposeMusic(b);
-            resource._binding = null;
+    pub fn disposeResource(component: *AssetComponent) void {
+        if (Music.resourceById(component.resource_id)) |res| {
+            if (res._binding) |b| {
+                firefly.api.audio.disposeMusic(b);
+                res._binding = null;
+            }
         }
     }
 };

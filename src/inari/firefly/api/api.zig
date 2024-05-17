@@ -51,6 +51,7 @@ pub const Asset = asset.Asset;
 pub const AssetAspectGroup = asset.AssetAspectGroup;
 pub const AssetKind = AssetAspectGroup.Kind;
 pub const AssetAspect = AssetAspectGroup.Aspect;
+pub const AssetComponent = asset.AssetComponent;
 pub const AssetTrait = asset.AssetTrait;
 pub const Component = component;
 pub const ComponentAspectGroup = component.ComponentAspectGroup;
@@ -130,6 +131,7 @@ pub fn init(context: InitContext) !void {
     Component.registerComponent(Entity);
     EComponent.registerEntityComponent(EMultiplier);
 
+    asset.init();
     control.init();
 }
 
@@ -138,6 +140,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    asset.deinit();
     control.deinit();
     system.deinit();
     Component.deinit();

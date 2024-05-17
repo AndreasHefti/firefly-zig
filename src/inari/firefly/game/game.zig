@@ -16,12 +16,16 @@ pub fn init() !void {
     defer initialized = true;
     if (initialized)
         return;
+
+    ComponentControlType(SimplePivotCamera).init();
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
+
+    ComponentControlType(SimplePivotCamera).deinit();
 }
 
 //////////////////////////////////////////////////////////////

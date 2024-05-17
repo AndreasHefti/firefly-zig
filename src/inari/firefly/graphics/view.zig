@@ -1,29 +1,31 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
-const api = firefly.api;
+//const utils = firefly.utils;
+//const api = firefly.api;
 
+const AssetComponent = firefly.api.AssetComponent;
+const Asset = firefly.api.Asset;
 const Shader = firefly.graphics.Shader;
-const BitSet = utils.BitSet;
-const Component = api.Component;
-const String = utils.String;
-const RenderTextureBinding = api.RenderTextureBinding;
-const Vector2f = utils.Vector2f;
-const PosF = utils.PosF;
-const Color = utils.Color;
-const BlendMode = api.BlendMode;
-const DynArray = utils.DynArray;
+const BitSet = firefly.utils.BitSet;
+const Component = firefly.api.Component;
+const String = firefly.utils.String;
+const RenderTextureBinding = firefly.api.RenderTextureBinding;
+const Vector2f = firefly.utils.Vector2f;
+const PosF = firefly.utils.PosF;
+const Color = firefly.utils.Color;
+const BlendMode = firefly.api.BlendMode;
+const DynArray = firefly.utils.DynArray;
 const ActionType = Component.ActionType;
-const Projection = api.Projection;
-const EComponent = api.EComponent;
-const ControlNode = api.ControlNode;
-const RenderEvent = api.RenderEvent;
-const System = api.System;
-const ViewRenderEvent = api.ViewRenderEvent;
-const Index = utils.Index;
-const Float = utils.Float;
-const BindingId = api.BindingId;
-const UNDEF_INDEX = utils.UNDEF_INDEX;
+const Projection = firefly.api.Projection;
+const EComponent = firefly.api.EComponent;
+const ControlNode = firefly.api.ControlNode;
+const RenderEvent = firefly.api.RenderEvent;
+const System = firefly.api.System;
+const ViewRenderEvent = firefly.api.ViewRenderEvent;
+const Index = firefly.utils.Index;
+const Float = firefly.utils.Float;
+const BindingId = firefly.api.BindingId;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// global
@@ -76,8 +78,8 @@ pub const ViewLayerMapping = struct {
 
     pub fn new() ViewLayerMapping {
         return ViewLayerMapping{
-            .undef_mapping = BitSet.new(api.ALLOC) catch unreachable,
-            .mapping = DynArray(DynArray(BitSet)).new(api.ALLOC) catch unreachable,
+            .undef_mapping = BitSet.new(firefly.api.ALLOC) catch unreachable,
+            .mapping = DynArray(DynArray(BitSet)).new(firefly.api.ALLOC) catch unreachable,
         };
     }
 
@@ -133,7 +135,7 @@ pub const ViewLayerMapping = struct {
             var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, vid);
             const l_id = layer_id orelse 0;
             if (!layer_mapping.exists(l_id)) {
-                return layer_mapping.set(BitSet.new(api.ALLOC) catch unreachable, l_id);
+                return layer_mapping.set(BitSet.new(firefly.api.ALLOC) catch unreachable, l_id);
             }
             return layer_mapping.get(l_id).?;
         }
@@ -144,7 +146,7 @@ pub const ViewLayerMapping = struct {
     fn getLayerMapping(self: *ViewLayerMapping, view_id: Index) *DynArray(BitSet) {
         if (!self.mapping.exists(view_id)) {
             return self.mapping.set(
-                DynArray(BitSet).new(api.ALLOC) catch unreachable,
+                DynArray(BitSet).new(firefly.api.ALLOC) catch unreachable,
                 view_id,
             );
         }
@@ -200,7 +202,7 @@ pub const View = struct {
 
     pub fn componentTypeInit() !void {
         ordered_active_views = try DynArray(Index).newWithRegisterSize(
-            api.COMPONENT_ALLOC,
+            firefly.api.COMPONENT_ALLOC,
             10,
         );
         Layer.subscribe(onLayerAction);
@@ -227,7 +229,7 @@ pub const View = struct {
                 return; // screen, no render texture load needed
 
             addViewMapping(view);
-            view.render_texture_binding = api.rendering.createRenderTexture(&view.projection);
+            view.render_texture_binding = firefly.api.rendering.createRenderTexture(&view.projection);
         } else {
             // dispose render texture for this view and cancel binding
             if (view.order == 0)
@@ -235,7 +237,7 @@ pub const View = struct {
 
             removeViewMapping(view);
             if (view.render_texture_binding) |b| {
-                api.rendering.disposeRenderTexture(b.id);
+                firefly.api.rendering.disposeRenderTexture(b.id);
                 view.render_texture_binding = null;
             }
         }
@@ -275,7 +277,7 @@ pub const View = struct {
         var view: *View = View.byId(layer.view_id);
         if (view.ordered_active_layer == null) {
             view.ordered_active_layer = DynArray(Index).newWithRegisterSize(
-                api.COMPONENT_ALLOC,
+                firefly.api.COMPONENT_ALLOC,
                 10,
             ) catch unreachable;
         }
@@ -315,13 +317,16 @@ pub const Layer = struct {
     }
 
     pub fn withShader(self: *Layer, id: Index) void {
-        const shader_asset: *api.Asset = api.Asset.byId(id);
-        self.shader_binding = Shader.getResource(shader_asset.resource_id).binding;
+        const shader_asset: *AssetComponent = AssetComponent.byId(id);
+        if (Asset(Shader).resourceById(shader_asset.resource_id)) |res|
+            self.shader_binding = res.binding;
     }
 
     pub fn withShaderByName(self: *Layer, name: String) void {
-        const shader_asset: *api.Asset = api.Asset.byIdName(name);
-        self.shader_binding = Shader.getResource(shader_asset.resource_id).binding;
+        if (AssetComponent.byName(name)) |a| {
+            if (Asset(Shader).resourceById(a.resource_id)) |res|
+                self.shader_binding = res.binding;
+        }
     }
 };
 
@@ -417,20 +422,20 @@ pub const ViewRenderer = struct {
     pub const render_order = 0;
 
     pub fn render(event: RenderEvent) void {
-        if (event.type != api.RenderEventType.RENDER)
+        if (event.type != firefly.api.RenderEventType.RENDER)
             return;
 
         if (View.ordered_active_views.slots.nextSetBit(0) == null) {
             // in this case we have only the screen, no FBO
             if (View.screen_shader_binding) |sb|
-                api.rendering.setActiveShader(sb);
+                firefly.api.rendering.setActiveShader(sb);
 
-            api.rendering.startRendering(null, &View.screen_projection);
+            firefly.api.rendering.startRendering(null, &View.screen_projection);
             VIEW_RENDER_EVENT.view_id = null;
             VIEW_RENDER_EVENT.layer_id = null;
             VIEW_RENDER_EVENT.projection = &View.screen_projection;
-            api.renderView(VIEW_RENDER_EVENT);
-            api.rendering.endRendering();
+            firefly.api.renderView(VIEW_RENDER_EVENT);
+            firefly.api.rendering.endRendering();
         } else {
             // render to all FBO
             var next = View.ordered_active_views.slots.nextSetBit(0);
@@ -442,14 +447,14 @@ pub const ViewRenderer = struct {
             next = View.ordered_active_views.slots.nextSetBit(0);
             // set shader if needed
             if (View.screen_shader_binding) |sb|
-                api.rendering.setActiveShader(sb);
+                firefly.api.rendering.setActiveShader(sb);
             // activate render to screen
-            api.rendering.startRendering(null, &View.screen_projection);
+            firefly.api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
             while (next) |id| {
                 const view: *View = View.byId(id);
                 if (view.render_texture_binding) |b| {
-                    api.rendering.renderTexture(
+                    firefly.api.rendering.renderTexture(
                         b.id,
                         view.position,
                         view.pivot,
@@ -462,7 +467,7 @@ pub const ViewRenderer = struct {
                 next = View.ordered_active_views.slots.nextSetBit(id + 1);
             }
             // end rendering to screen
-            api.rendering.endRendering();
+            firefly.api.rendering.endRendering();
         }
     }
 
@@ -471,9 +476,9 @@ pub const ViewRenderer = struct {
             // start rendering to view (FBO)
             // set shader...
             if (view.shader_binding) |sb|
-                api.rendering.setActiveShader(sb);
+                firefly.api.rendering.setActiveShader(sb);
             // activate FBO
-            api.rendering.startRendering(b.id, &view.projection);
+            firefly.api.rendering.startRendering(b.id, &view.projection);
             // emit render events for all layers of the view in order to render to FBO
             if (view.ordered_active_layer != null) {
                 var it = view.ordered_active_layer.?.slots.nextSetBit(0);
@@ -481,28 +486,28 @@ pub const ViewRenderer = struct {
                     const layer: *const Layer = Layer.byId(layer_id);
                     // apply layer shader to render engine if set
                     if (layer.shader_binding) |sb|
-                        api.rendering.setActiveShader(sb);
+                        firefly.api.rendering.setActiveShader(sb);
                     // add layer offset to render engine
                     if (layer.offset) |o|
-                        api.rendering.addOffset(o);
+                        firefly.api.rendering.addOffset(o);
                     // send layer render event
                     VIEW_RENDER_EVENT.view_id = view.id;
                     VIEW_RENDER_EVENT.layer_id = layer_id;
                     VIEW_RENDER_EVENT.projection = &view.projection;
-                    api.renderView(VIEW_RENDER_EVENT);
+                    firefly.api.renderView(VIEW_RENDER_EVENT);
                     // remove layer offset form render engine
                     if (layer.offset) |o|
-                        api.rendering.addOffset(o * @as(Vector2f, @splat(-1)));
+                        firefly.api.rendering.addOffset(o * @as(Vector2f, @splat(-1)));
                     it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
                 }
             } else {
                 // we have no layer so only one render call for this view
                 VIEW_RENDER_EVENT.view_id = view.id;
                 VIEW_RENDER_EVENT.layer_id = null;
-                api.renderView(VIEW_RENDER_EVENT);
+                firefly.api.renderView(VIEW_RENDER_EVENT);
             }
             // end rendering to FBO
-            api.rendering.endRendering();
+            firefly.api.rendering.endRendering();
         }
     }
 };

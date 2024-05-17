@@ -13,6 +13,7 @@ const String = firefly.utils.String;
 const CubicBezierFunction = firefly.utils.CubicBezierFunction;
 const SpriteSet = firefly.graphics.SpriteSet;
 const Asset = firefly.api.Asset;
+const AssetComponent = firefly.api.AssetComponent;
 const Easing = firefly.utils.Easing;
 const Float = firefly.utils.Float;
 const Index = firefly.utils.Index;
@@ -489,20 +490,22 @@ pub const IndexFrame = struct {
         frames = undefined;
     }
 
-    pub fn createFromSpriteSet(name: String, duration: usize) IndexFrameList {
-        const asset: *Asset = Asset.byName(name);
-        Asset.activate(asset.id, true);
-        const sprite_set: SpriteSet = asset.getResource(SpriteSet);
-        var result = IndexFrameList.new();
+    pub fn createFromSpriteSet(name: String, duration: usize) ?IndexFrameList {
+        AssetComponent.activateByName(name, true);
+        if (Asset(SpriteSet).getResourceByName(name)) |res| {
+            var result = IndexFrameList.new();
 
-        for (sprite_set.sprites_indices.items) |spi| {
-            const index = frames.add(IndexFrame{
-                .index = sprite_set.byListIndex(spi).texture_binding,
-                .duration = duration,
-            });
-            result.indices.set(index);
+            for (res.sprites_indices.items) |spi| {
+                const index = frames.add(IndexFrame{
+                    .index = res.byListIndex(spi).texture_binding,
+                    .duration = duration,
+                });
+                result.indices.set(index);
+            }
+            return result;
         }
-        return result;
+
+        return null;
     }
 
     pub fn createListFromArrayData(data: []usize) IndexFrameList {

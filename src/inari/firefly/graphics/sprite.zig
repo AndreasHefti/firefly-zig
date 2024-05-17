@@ -1,9 +1,9 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
-const AssetTrait = firefly.api.AssetTrait;
 const DynArray = firefly.utils.DynArray;
 const DynIndexArray = firefly.utils.DynIndexArray;
+const AssetComponent = firefly.api.AssetComponent;
 const Asset = firefly.api.Asset;
 const String = firefly.utils.String;
 const Component = firefly.api.Component;
@@ -42,8 +42,8 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    // register Assets
-    Component.registerComponent(Asset(SpriteSet));
+    // init Assets types
+    Asset(SpriteSet).init();
     // init components and entities
     Component.registerComponent(SpriteTemplate);
     EComponent.registerEntityComponent(ESprite);
@@ -60,6 +60,8 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    // deinit asset types
+    Asset(SpriteSet).deinit();
     // deinit renderer
     System(DefaultSpriteRenderer).disposeSystem();
 }
@@ -88,16 +90,16 @@ pub const SpriteTemplate = struct {
     flip_y: bool = false,
 
     pub fn componentTypeInit() !void {
-        Asset(Texture).subscribe(notifyAssetEvent);
+        AssetComponent.subscribe(notifyAssetEvent);
     }
 
     pub fn componentTypeDeinit() void {
-        Asset(Texture).unsubscribe(notifyAssetEvent);
+        AssetComponent.unsubscribe(notifyAssetEvent);
     }
 
     // TODO add construct to automatically bind the texture if it is already loaded
     pub fn construct(self: *SpriteTemplate) void {
-        if (Texture.getResourceByName(self.texture_name)) |tex| {
+        if (Texture.resourceByName(self.texture_name)) |tex| {
             if (tex._binding) |b| {
                 self.texture_binding = b.id;
             }
@@ -105,57 +107,47 @@ pub const SpriteTemplate = struct {
     }
 
     fn notifyAssetEvent(e: ComponentEvent) void {
-        const asset: *Asset(Texture) = Asset(Texture).byId(e.c_id.?);
-        if (asset.name == null)
-            return;
-
-        switch (e.event_type) {
-            ActionType.ACTIVATED => onTextureLoad(asset),
-            ActionType.DEACTIVATING => onTextureUnload(asset),
-            ActionType.DISPOSING => onTextureDispose(asset),
-            else => {},
-        }
-    }
-
-    fn onTextureLoad(asset: *Asset(Texture)) void {
-        if (asset.getResource()) |r| {
-            if (r._binding) |b| {
-                var next = SpriteTemplate.nextId(0);
-                while (next) |id| {
-                    var template = SpriteTemplate.byId(id);
-                    if (asset.name) |an| {
-                        if (firefly.utils.stringEquals(template.texture_name, an)) {
-                            template.texture_binding = b.id;
-                        }
-                    }
-                    next = SpriteTemplate.nextId(id + 1);
-                }
+        if (Texture.resourceByAssetId(e.c_id.?)) |t| {
+            switch (e.event_type) {
+                ActionType.ACTIVATED => onTextureLoad(t),
+                ActionType.DEACTIVATING => onTextureUnload(t),
+                ActionType.DISPOSING => onTextureDispose(t),
+                else => {},
             }
         }
     }
 
-    fn onTextureUnload(asset: *Asset(Texture)) void {
+    fn onTextureLoad(texture: *Texture) void {
+        if (texture._binding) |b| {
+            var next = SpriteTemplate.nextId(0);
+            while (next) |id| {
+                var template = SpriteTemplate.byId(id);
+                if (firefly.utils.stringEquals(template.texture_name, texture.name))
+                    template.texture_binding = b.id;
+
+                next = SpriteTemplate.nextId(id + 1);
+            }
+        }
+    }
+
+    fn onTextureUnload(texture: *Texture) void {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
-            if (asset.name) |an| {
-                if (firefly.utils.stringEquals(template.texture_name, an)) {
-                    template.texture_binding = NO_BINDING;
-                }
-            }
+            if (firefly.utils.stringEquals(template.texture_name, texture.name))
+                template.texture_binding = NO_BINDING;
+
             next = SpriteTemplate.nextId(id + 1);
         }
     }
 
-    fn onTextureDispose(asset: *Asset(Texture)) void {
+    fn onTextureDispose(texture: *Texture) void {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             const template = SpriteTemplate.byId(id);
-            if (asset.name) |an| {
-                if (firefly.utils.stringEquals(template.texture_name, an)) {
-                    SpriteTemplate.disposeById(id);
-                }
-            }
+            if (firefly.utils.stringEquals(template.texture_name, texture.name))
+                SpriteTemplate.disposeById(id);
+
             next = SpriteTemplate.nextId(id + 1);
         }
     }
@@ -243,7 +235,7 @@ pub const SpriteStamp = struct {
 };
 
 pub const SpriteSet = struct {
-    pub usingnamespace AssetTrait(SpriteSet, "SpriteSet");
+    pub usingnamespace firefly.api.AssetTrait(SpriteSet, "SpriteSet");
 
     _stamps: DynArray(SpriteStamp) = undefined,
     _loaded_sprite_template_refs: DynIndexArray = undefined,
@@ -253,12 +245,12 @@ pub const SpriteSet = struct {
     default_stamp: ?SpriteStamp = null,
     set_dimensions: ?Vector2f = null,
 
-    pub fn construct(self: SpriteSet) void {
+    pub fn construct(self: *SpriteSet) void {
         self._stamps = DynArray(SpriteStamp).new(firefly.api.COMPONENT_ALLOC);
         self._sprite_template_refs = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 32);
     }
 
-    pub fn deconstruct(self: SpriteSet) void {
+    pub fn destruct(self: *SpriteSet) void {
         self._stamps.deinit();
         self._stamps = undefined;
         self._sprite_template_refs.deinit();
@@ -277,75 +269,78 @@ pub const SpriteSet = struct {
         }
     }
 
-    pub fn doLoad(_: *Asset(SpriteSet), resource: *SpriteSet) void {
-        if (resource.set_dimensions) |dim| {
-            // in this case we interpret the texture as a grid-map of sprites and use default stamp
-            if (resource.default_stamp == null)
-                @panic("SpriteSet needs default_stamp when loading with set_dimensions");
+    pub fn loadResource(component: *AssetComponent) void {
+        if (SpriteSet.resourceById(component.resource_id)) |res| {
+            if (res.set_dimensions) |dim| {
+                // in this case we interpret the texture as a grid-map of sprites and use default stamp
+                if (res.default_stamp == null)
+                    @panic("SpriteSet needs default_stamp when loading with set_dimensions");
 
-            const default_stamp = resource.default_stamp.?;
-            if (default_stamp.sprite_dim == null)
-                @panic("SpriteSet needs default_stamp with sprite_dim");
+                const default_stamp = res.default_stamp.?;
+                if (default_stamp.sprite_dim == null)
+                    @panic("SpriteSet needs default_stamp with sprite_dim");
 
-            const width: usize = @intFromFloat(dim[0]);
-            const height: usize = @intFromFloat(dim[1]);
-            const default_dim = default_stamp.sprite_dim.?;
-            const default_prefix = if (default_stamp.name) |p| p else resource.name;
+                const width: usize = @intFromFloat(dim[0]);
+                const height: usize = @intFromFloat(dim[1]);
+                const default_dim = default_stamp.sprite_dim.?;
+                const default_prefix = if (default_stamp.name) |p| p else res.name;
 
-            for (0..height) |y| { // 0..height
-                for (0..width) |x| { // 0..width
-                    if (resource._stamps.get(y * width + x)) |stamp| {
-                        // use the stamp merged with default stamp
-                        resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
-                            .name = getMapName(stamp.name, default_prefix, x, y),
-                            .texture_name = resource.texture_name,
-                            .texture_bounds = stamp.sprite_dim.?,
-                            .flip_x = stamp.flip_x,
-                            .flip_y = stamp.flip_y,
-                        }));
-                    } else {
-                        // use the default stamp
-                        resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
-                            .name = getMapName(null, default_prefix, x, y),
-                            .texture_name = resource.texture_name,
-                            .texture_bounds = RectF{
-                                @as(Float, @floatFromInt(x)) * default_dim[2],
-                                @as(Float, @floatFromInt(y)) * default_dim[3],
-                                default_dim[2],
-                                default_dim[3],
-                            },
-                            .flip_x = default_stamp.flip_x,
-                            .flip_y = default_stamp.flip_y,
-                        }));
+                for (0..height) |y| { // 0..height
+                    for (0..width) |x| { // 0..width
+                        if (res._stamps.get(y * width + x)) |stamp| {
+                            // use the stamp merged with default stamp
+                            res._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                                .name = getMapName(stamp.name, default_prefix, x, y),
+                                .texture_name = res.texture_name,
+                                .texture_bounds = stamp.sprite_dim.?,
+                                .flip_x = stamp.flip_x,
+                                .flip_y = stamp.flip_y,
+                            }));
+                        } else {
+                            // use the default stamp
+                            res._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                                .name = getMapName(null, default_prefix, x, y),
+                                .texture_name = res.texture_name,
+                                .texture_bounds = RectF{
+                                    @as(Float, @floatFromInt(x)) * default_dim[2],
+                                    @as(Float, @floatFromInt(y)) * default_dim[3],
+                                    default_dim[2],
+                                    default_dim[3],
+                                },
+                                .flip_x = default_stamp.flip_x,
+                                .flip_y = default_stamp.flip_y,
+                            }));
+                        }
                     }
                 }
-            }
-        } else {
-            // in this case just load the existing stamps that has defined sprite_dim (others are ignored)
-            const default_prefix = if (resource.default_stamp.?.name) |p| p else resource.name;
-            var next = resource._stamps.slots.nextSetBit(0);
-            while (next) |i| {
-                if (resource._stamps.get(i)) |stamp| {
-                    if (stamp.sprite_dim) |s_dim| {
-                        resource._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
-                            .name = getMapName(stamp.name, default_prefix, i, null),
-                            .texture_name = resource.texture_name,
-                            .texture_bounds = s_dim,
-                            .flip_x = stamp.flip_x,
-                            .flip_y = stamp.flip_y,
-                        }));
+            } else {
+                // in this case just load the existing stamps that has defined sprite_dim (others are ignored)
+                const default_prefix = if (res.default_stamp.?.name) |p| p else res.name;
+                var next = res._stamps.slots.nextSetBit(0);
+                while (next) |i| {
+                    if (res._stamps.get(i)) |stamp| {
+                        if (stamp.sprite_dim) |s_dim| {
+                            res._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                                .name = getMapName(stamp.name, default_prefix, i, null),
+                                .texture_name = res.texture_name,
+                                .texture_bounds = s_dim,
+                                .flip_x = stamp.flip_x,
+                                .flip_y = stamp.flip_y,
+                            }));
+                        }
                     }
+                    next = res._stamps.slots.nextSetBit(i + 1);
                 }
-                next = resource._stamps.slots.nextSetBit(i + 1);
             }
         }
     }
 
-    pub fn doUnload(_: *Asset(SpriteSet), resource: *SpriteSet) void {
-        for (resource._loaded_sprite_template_refs.items) |index| {
-            SpriteTemplate.disposeById(index);
+    pub fn disposeResource(component: *AssetComponent) void {
+        if (SpriteSet.resourceById(component.resource_id)) |res| {
+            for (res._loaded_sprite_template_refs.items) |index|
+                SpriteTemplate.disposeById(index);
+            res._loaded_sprite_template_refs.clear();
         }
-        resource._loaded_sprite_template_refs.clear();
     }
 
     fn getMapName(name: ?String, prefix: String, x: usize, y: ?usize) String {

@@ -7,7 +7,9 @@ const view = @import("view.zig");
 const tile = @import("tile.zig");
 const text = @import("text.zig");
 
+const AssetComponent = firefly.api.AssetComponent;
 const Asset = firefly.api.Asset;
+const AssetAspect = firefly.api.AssetAspect;
 const BindingId = firefly.api.BindingId;
 const String = utils.String;
 const TextureBinding = firefly.api.TextureBinding;
@@ -57,9 +59,9 @@ pub fn init(_: firefly.api.InitContext) !void {
     if (initialized)
         return;
 
-    // register Assets
-    Component.registerComponent(Asset(Texture));
-    Component.registerComponent(Asset(Shader));
+    // init Assets types
+    Asset(Texture).init();
+    Asset(Shader).init();
 
     // init sub packages
     try view.init();
@@ -73,6 +75,10 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
+
+    // deinit Assets types
+    Asset(Texture).deinit();
+    Asset(Shader).deinit();
 
     // deinit sub packages
     text.deinit();
@@ -102,15 +108,26 @@ pub const Shader = struct {
 
     _binding: ?ShaderBinding = null,
 
-    pub fn doLoad(_: *Asset(Shader), resource: *Shader) void {
-        if (resource._binding != null)
-            return; // already loaded
+    pub fn loadResource(component: *AssetComponent) void {
+        if (Shader.resourceById(component.resource_id)) |res| {
+            if (res._binding != null)
+                return; // already loaded
 
-        resource._binding = firefly.api.rendering.createShader(
-            resource.vertex_shader_resource,
-            resource.fragment_shader_resource,
-            resource.file_resource,
-        );
+            res._binding = firefly.api.rendering.createShader(
+                res.vertex_shader_resource,
+                res.fragment_shader_resource,
+                res.file_resource,
+            );
+        }
+    }
+
+    pub fn disposeResource(component: *AssetComponent) void {
+        if (Shader.resourceById(component.resource_id)) |res| {
+            if (res._binding) |b| {
+                firefly.api.rendering.disposeShader(b.id);
+                res._binding = null;
+            }
+        }
     }
 
     pub fn setByNameUniformFloat(asset_name: String, name: String, v_ptr: *Float) bool {
@@ -159,13 +176,6 @@ pub const Shader = struct {
     pub fn setUniformTexture(self: *Shader, name: String, tex_binding: BindingId) bool {
         return self._set_uniform_texture(self.binding_id, name, tex_binding);
     }
-
-    pub fn doUnload(_: *Asset(Shader), resource: *Shader) void {
-        if (resource._binding) |b| {
-            firefly.api.rendering.disposeShader(b.id);
-            resource._binding = null;
-        }
-    }
 };
 
 //////////////////////////////////////////////////////////////
@@ -183,22 +193,26 @@ pub const Texture = struct {
 
     _binding: ?TextureBinding = null,
 
-    pub fn doLoad(_: *Asset(Texture), resource: *Texture) void {
-        if (resource._binding != null)
-            return; // already loaded
+    pub fn loadResource(component: *AssetComponent) void {
+        if (Texture.resourceById(component.resource_id)) |res| {
+            if (res._binding != null)
+                return; // already loaded
 
-        resource._binding = firefly.api.rendering.loadTexture(
-            resource.resource,
-            resource.is_mipmap,
-            resource.filter,
-            resource.wrap,
-        );
+            res._binding = firefly.api.rendering.loadTexture(
+                res.resource,
+                res.is_mipmap,
+                res.filter,
+                res.wrap,
+            );
+        }
     }
 
-    pub fn doUnload(_: *Asset(Texture), resource: *Texture) void {
-        if (resource._binding) |b| {
-            firefly.api.rendering.disposeTexture(b.id);
-            resource._binding = null;
+    pub fn disposeResource(component: *AssetComponent) void {
+        if (Texture.resourceById(component.resource_id)) |res| {
+            if (res._binding) |b| {
+                firefly.api.rendering.disposeTexture(b.id);
+                res._binding = null;
+            }
         }
     }
 };
