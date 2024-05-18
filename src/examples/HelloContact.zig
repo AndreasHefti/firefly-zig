@@ -92,7 +92,7 @@ fn init() void {
     }
 }
 
-fn control(entity_id: Index) void {
+fn control(entity_id: Index, _: Index) void {
     if (EContactScan.byId(entity_id)) |scan| {
         if (EShape.byId(entity_id)) |shape| {
             if (scan.hasAnyContact()) {

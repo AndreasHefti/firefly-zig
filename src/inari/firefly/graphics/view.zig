@@ -1,8 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-//const utils = firefly.utils;
-//const api = firefly.api;
 
+const EventDispatch = firefly.utils.EventDispatch;
+const ComponentEvent = firefly.api.ComponentEvent;
 const AssetComponent = firefly.api.AssetComponent;
 const Asset = firefly.api.Asset;
 const Shader = firefly.graphics.Shader;
@@ -12,13 +12,12 @@ const String = firefly.utils.String;
 const RenderTextureBinding = firefly.api.RenderTextureBinding;
 const Vector2f = firefly.utils.Vector2f;
 const PosF = firefly.utils.PosF;
+const RectF = firefly.utils.RectF;
 const Color = firefly.utils.Color;
 const BlendMode = firefly.api.BlendMode;
 const DynArray = firefly.utils.DynArray;
-const ActionType = Component.ActionType;
 const Projection = firefly.api.Projection;
 const EComponent = firefly.api.EComponent;
-const ControlNode = firefly.api.ControlNode;
 const RenderEvent = firefly.api.RenderEvent;
 const System = firefly.api.System;
 const ViewRenderEvent = firefly.api.ViewRenderEvent;
@@ -155,6 +154,23 @@ pub const ViewLayerMapping = struct {
 };
 
 //////////////////////////////////////////////////////////////
+//// View Event Handling
+//////////////////////////////////////////////////////////////
+
+pub const ViewChangeListener = *const fn (ViewChangeEvent) void;
+pub const ViewChangeEvent = struct {
+    pub const Type = enum {
+        NONE,
+        POSITION,
+        PROJECTION,
+        SIZE,
+    };
+
+    event_type: Type = .NONE,
+    view_id: ?Index = null,
+};
+
+//////////////////////////////////////////////////////////////
 //// View Component
 //////////////////////////////////////////////////////////////
 
@@ -188,19 +204,10 @@ pub const View = struct {
     pub var screen_shader_binding: ?BindingId = null;
     pub var ordered_active_views: DynArray(Index) = undefined;
 
-    pub fn move(self: *View, vec: Vector2f, pixel_perfect: bool) void {
-        self.projection.position += vec;
-        if (pixel_perfect)
-            self.projection.position = @floor(self.projection.position);
-        // TODO ViewChangeEvent
-    }
-
-    pub fn adjustPosition(self: *View, vec: Vector2f) void {
-        self.projection.position = vec;
-        // TODO ViewChangeEvent
-    }
+    var eventDispatch: EventDispatch(ViewChangeEvent) = undefined;
 
     pub fn componentTypeInit() !void {
+        eventDispatch = EventDispatch(ViewChangeEvent).new(firefly.api.COMPONENT_ALLOC);
         ordered_active_views = try DynArray(Index).newWithRegisterSize(
             firefly.api.COMPONENT_ALLOC,
             10,
@@ -211,6 +218,61 @@ pub const View = struct {
     pub fn componentTypeDeinit() void {
         Layer.unsubscribe(onLayerAction);
         ordered_active_views.deinit();
+        eventDispatch.deinit();
+        eventDispatch = undefined;
+    }
+
+    pub fn moveProjection(
+        self: *View,
+        vec: Vector2f,
+        pixel_perfect: bool,
+        snap_bounds: ?RectF,
+    ) void {
+        self.projection.position += vec;
+        if (pixel_perfect)
+            self.projection.position = @ceil(self.projection.position);
+        if (snap_bounds) |sb|
+            self.snapToBounds(sb);
+
+        eventDispatch.notify(.{
+            .event_type = ViewChangeEvent.Type.PROJECTION,
+            .view_id = self.id,
+        });
+    }
+
+    pub fn adjustProjection(
+        self: *View,
+        vec: Vector2f,
+        pixel_perfect: bool,
+        snap_bounds: ?RectF,
+    ) void {
+        self.projection.position = vec;
+        if (pixel_perfect)
+            self.projection.position = @ceil(self.projection.position);
+        if (snap_bounds) |sb|
+            self.snapToBounds(sb);
+
+        eventDispatch.notify(.{
+            .event_type = ViewChangeEvent.Type.PROJECTION,
+            .view_id = self.id,
+        });
+    }
+
+    inline fn adjustPixelPerfect(self: *View) void {
+        self.projection.position = @ceil(self.projection.position);
+    }
+
+    inline fn snapToBounds(self: *View, bounds: RectF) void {
+        const _bounds: RectF = .{
+            bounds[0] * self.projection.zoom,
+            bounds[1] * self.projection.zoom,
+            bounds[2] * self.projection.zoom,
+            bounds[3] * self.projection.zoom,
+        };
+        self.projection.position[0] = @max(self.projection.position[0], _bounds[0]);
+        self.projection.position[1] = @max(self.projection.position[1], _bounds[1]);
+        self.projection.position[0] = @min(self.projection.position[0], _bounds[0] + _bounds[2] - self.projection.width);
+        self.projection.position[1] = @min(self.projection.position[1], _bounds[1] + _bounds[3] - self.projection.height);
     }
 
     pub fn withLayer(self: *View, layer: Layer) *View {
@@ -245,8 +307,8 @@ pub const View = struct {
 
     fn onLayerAction(event: Component.ComponentEvent) void {
         switch (event.event_type) {
-            ActionType.ACTIVATED => addLayerMapping(Layer.byId(event.c_id.?)),
-            ActionType.DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id.?)),
+            ComponentEvent.Type.ACTIVATED => addLayerMapping(Layer.byId(event.c_id.?)),
+            ComponentEvent.Type.DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id.?)),
             else => {},
         }
     }

@@ -55,17 +55,13 @@ fn init() void {
 
 fn update(_: UpdateEvent) void {
     if (Entity.byName("TestEntity")) |entity| {
-        if (firefly.api.input.checkButtonPressed(InputButtonType.UP)) {
+        if (firefly.api.input.checkButtonPressed(InputButtonType.UP))
             ETransform.byId(entity.id).?.position[1] -= 1;
-        }
-        if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN)) {
+        if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN))
             ETransform.byId(entity.id).?.position[1] += 1;
-        }
-        if (firefly.api.input.checkButtonPressed(InputButtonType.LEFT)) {
+        if (firefly.api.input.checkButtonPressed(InputButtonType.LEFT))
             ETransform.byId(entity.id).?.position[0] -= 1;
-        }
-        if (firefly.api.input.checkButtonPressed(InputButtonType.RIGHT)) {
+        if (firefly.api.input.checkButtonPressed(InputButtonType.RIGHT))
             ETransform.byId(entity.id).?.position[0] += 1;
-        }
     }
 }

@@ -26,6 +26,7 @@ pub fn main() !void {
     try @import("examples/InputExample1.zig").run(init_context);
     try @import("examples/StateExample2.zig").run(init_context);
     try @import("examples/HelloContact.zig").run(init_context);
+    try @import("examples/HelloCamera.zig").run(init_context);
 }
 
 test "API Tests" {

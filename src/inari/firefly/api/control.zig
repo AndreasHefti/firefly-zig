@@ -163,14 +163,14 @@ pub const ComponentControl = struct {
     name: ?String = null,
 
     component_type: ComponentAspect,
-    operation: *const fn (Index) void,
+    control: *const fn (Index, Index) void,
 
     dispose: ?*const fn (Index) void = null,
 
-    pub fn update(controlId: Index, c_id: Index) void {
+    pub fn update(control_id: Index, c_id: Index) void {
         const Self = @This();
-        if (Self.isActiveById(controlId))
-            Self.byId(controlId).operation(c_id);
+        if (Self.isActiveById(control_id))
+            Self.byId(control_id).control(c_id, control_id);
     }
 
     pub fn destruct(self: *ComponentControl) void {
@@ -185,9 +185,9 @@ pub fn ComponentControlType(comptime T: type) type {
         if (!@hasDecl(T, "update"))
             @compileError("Expects component control type to have function 'update(Index)'");
         if (!@hasField(T, "name"))
-            @compileError("Expects component control type to have field 'name: ?String'");
+            @compileError("Expects component control type to have field 'name: String'");
         if (!@hasDecl(T, "component_type"))
-            @compileError("Expects component control type to have field 'component_type: ComponentAspect'");
+            @compileError("Expects component control type to have var 'component_type: ComponentAspect'");
     }
 
     return struct {
@@ -196,26 +196,26 @@ pub fn ComponentControlType(comptime T: type) type {
         var register: DynArray(T) = undefined;
 
         pub fn init() void {
-            register = DynArray(T).new(firefly.api.COMPONENT_ALLOC);
+            register = DynArray(T).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
         }
 
         pub fn deinit() void {
             register.deinit();
         }
 
-        pub fn byId(id: Index) ?*T {
+        pub fn stateByControlId(id: Index) ?*T {
             return register.get(id);
         }
 
         pub fn new(control_type: T) Index {
             const control_id = ComponentControl.new(.{
                 .name = control_type.name,
-                .operation = T.update,
-                .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type),
+                .control = T.update,
+                .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type).?.*,
                 .dispose = dispose,
             });
 
-            register.set(control_type, control_id);
+            _ = register.set(control_type, control_id);
 
             return control_id;
         }

@@ -39,6 +39,8 @@ pub const EText = text.EText;
 pub const Font = text.Font;
 
 pub const View = view.View;
+pub const ViewChangeListener = view.ViewChangeListener;
+pub const ViewChangeEvent = view.ViewChangeEvent;
 pub const Layer = view.Layer;
 pub const EView = view.EView;
 pub const ViewLayerMapping = view.ViewLayerMapping;

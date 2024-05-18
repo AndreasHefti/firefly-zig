@@ -46,7 +46,8 @@ fn loadWithView() void {
             .rotation = 0,
         },
     })
-        .withControl(view_control, null).id;
+        .withControl(view_control, null)
+        .id;
 
     View.activateById(viewId, true);
 
@@ -70,10 +71,10 @@ fn loadWithView() void {
         .activate();
 }
 
-fn view_control(view_id: Index) void {
+fn view_control(view_id: Index, _: Index) void {
     var view = View.byId(view_id);
-    view.projection.position[0] += 0.2;
-    view.projection.position[1] += 0.6;
+    view.projection.position[0] -= 0.1;
+    view.projection.position[1] -= 0.1;
     view.position[0] += 1;
     view.position[1] += 0.6;
 }

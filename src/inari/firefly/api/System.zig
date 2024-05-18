@@ -3,7 +3,6 @@ const firefly = @import("../firefly.zig");
 
 const Component = firefly.api.Component;
 const ComponentEvent = firefly.api.ComponentEvent;
-const ActionType = firefly.api.Component.ActionType;
 const Entity = firefly.api.Entity;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
@@ -97,8 +96,8 @@ pub fn System(comptime T: type) type {
                     return;
 
                 switch (e.event_type) {
-                    ActionType.ACTIVATED => T.componentRegistration(id, true),
-                    ActionType.DEACTIVATING => T.componentRegistration(id, false),
+                    ComponentEvent.Type.ACTIVATED => T.componentRegistration(id, true),
+                    ComponentEvent.Type.DEACTIVATING => T.componentRegistration(id, false),
                     else => {},
                 }
             }
@@ -110,8 +109,8 @@ pub fn System(comptime T: type) type {
                     return;
 
                 switch (e.event_type) {
-                    ActionType.ACTIVATED => T.entityRegistration(id, true),
-                    ActionType.DEACTIVATING => T.entityRegistration(id, false),
+                    ComponentEvent.Type.ACTIVATED => T.entityRegistration(id, true),
+                    ComponentEvent.Type.DEACTIVATING => T.entityRegistration(id, false),
                     else => {},
                 }
             }

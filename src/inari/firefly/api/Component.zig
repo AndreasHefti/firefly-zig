@@ -74,6 +74,41 @@ pub const Context = struct {
     control: bool = false,
 };
 
+pub fn registerComponent(comptime T: type) void {
+    ComponentPool(T).init();
+}
+
+pub fn deinitComponent(comptime T: type) void {
+    ComponentPool(T).deinit();
+}
+
+//////////////////////////////////////////////////////////////
+//// Component Event Handling
+//////////////////////////////////////////////////////////////
+
+pub const ComponentListener = *const fn (ComponentEvent) void;
+pub const ComponentEvent = struct {
+    pub const Type = enum {
+        /// Empty type used only for initialization
+        NONE,
+        /// Indicates that a certain component has been created
+        CREATED,
+        /// Indicates that a certain component has been activated
+        ACTIVATED,
+        /// Indicates that a certain component is going to be deactivated
+        DEACTIVATING,
+        /// Indicates that a certain component is going to be  disposed/deleted
+        DISPOSING,
+    };
+
+    event_type: Type = .NONE,
+    c_id: ?Index = null,
+};
+
+//////////////////////////////////////////////////////////////
+//// Component Traits
+//////////////////////////////////////////////////////////////
+
 pub fn Trait(comptime T: type, comptime context: Context) type {
     return struct {
 
@@ -236,12 +271,12 @@ fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
 
 fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
     return struct {
-        pub fn withControl(self: *T, operation: *const fn (Index) void, name: ?String) *T {
+        pub fn withControl(self: *T, control: *const fn (Index, Index) void, name: ?String) *T {
             if (adapter.pool.control_mapping) |*cm| {
                 const control_id = ComponentControl.new(.{
                     .name = name,
                     .component_type = T.aspect.*,
-                    .operation = operation,
+                    .control = control,
                 });
                 cm.map(self.id, control_id);
                 ComponentControl.activateById(control_id, true);
@@ -251,9 +286,14 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
 
         pub fn withControlOfType(self: *T, control_type: anytype) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                const control_id = ComponentControlType(@TypeOf(control_type)).new(control_type);
+                const ct = @TypeOf(control_type);
+                const control_id = ComponentControlType(ct).new(control_type);
                 cm.map(self.id, control_id);
-                ComponentControl.activateById(control_id);
+
+                if (@hasDecl(ct, "initForComponent"))
+                    control_type.initForComponent(self.id);
+
+                ComponentControl.activateById(control_id, true);
             }
             return self;
         }
@@ -279,85 +319,6 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
         }
     };
 }
-
-pub fn registerComponent(comptime T: type) void {
-    ComponentPool(T).init();
-}
-
-pub fn deinitComponent(comptime T: type) void {
-    ComponentPool(T).deinit();
-}
-
-pub inline fn checkValidity(any_component: anytype) void {
-    if (!checkComponentValidity(any_component))
-        @panic("Invalid component type");
-}
-
-pub fn checkComponentValidity(any_component: anytype) bool {
-    const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
-    const c_type = switch (info) {
-        .Pointer => @TypeOf(any_component.*),
-        .Struct => @TypeOf(any_component),
-        else => {
-            std.log.err("Invalid type component: {any}", .{any_component});
-            return false;
-        },
-    };
-
-    if (!@hasField(c_type, "id")) {
-        std.log.warn("Invalid component. No id field: {any}", .{any_component});
-        return false;
-    }
-
-    if (any_component.id == utils.UNDEF_INDEX) {
-        std.log.warn("Invalid component. Undefined id: {any}", .{any_component});
-        return false;
-    }
-
-    return true;
-}
-
-//////////////////////////////////////////////////////////////
-//// Component Event Handling
-//////////////////////////////////////////////////////////////
-
-pub const ComponentListener = *const fn (ComponentEvent) void;
-pub const ActionType = enum {
-    NONE,
-    CREATED,
-    ACTIVATED,
-    DEACTIVATING,
-    DISPOSING,
-
-    pub fn format(
-        self: ActionType,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.writeAll(switch (self) {
-            .NONE => "NONE",
-            .CREATED => "CREATED",
-            .ACTIVATED => "ACTIVATED",
-            .DEACTIVATING => "DEACTIVATING",
-            .DISPOSING => "DISPOSING",
-        });
-    }
-};
-
-pub const ComponentEvent = struct {
-    event_type: ActionType = .NONE,
-    c_id: ?Index = null,
-
-    pub fn format(
-        self: ComponentEvent,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print("Event[ type: {any}, id: {?d}]", .{ self.event_type, self.c_id });
-    }
-};
 
 //////////////////////////////////////////////////////////////
 //// Component Reference
@@ -444,12 +405,6 @@ pub fn ComponentPool(comptime T: type) type {
             @compileError("Expects component type to have field: COMPONENT_TYPE_NAME: String, that defines a unique name of the component type.");
         if (!@hasField(T, "id"))
             @compileError("Expects component type to have field: id: Index, that holds the index-id of the component");
-
-        // const typeInfo = @typeInfo(T);
-        // @compileLog(.{typeInfo.Struct.fields});
-        // if (has_name_mapping and @TypeOf(@field(T, "name")) != std.builtin.Type.Optional) {
-        //     @compileError("Expects component type to have optional field: name: ?String, that holds the name of the component");
-        // }
     }
 
     return struct {
@@ -464,7 +419,6 @@ pub fn ComponentPool(comptime T: type) type {
         var name_mapping: ?StringHashMap(Index) = null;
         var control_mapping: ?DynIndexMap = null;
         // events
-        var event: ?ComponentEvent = null;
         var eventDispatch: ?EventDispatch(ComponentEvent) = null;
 
         pub fn init() void {
@@ -488,10 +442,8 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_active_mapping)
                 active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
 
-            if (has_subscribe) {
-                event = ComponentEvent{};
+            if (has_subscribe)
                 eventDispatch = EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
-            }
 
             if (has_name_mapping)
                 name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
@@ -526,13 +478,13 @@ pub fn ComponentPool(comptime T: type) type {
             if (eventDispatch) |*ed| {
                 ed.deinit();
                 eventDispatch = null;
-                event = null;
             }
 
             if (name_mapping) |*nm| nm.deinit();
             if (has_control_mapping)
                 api.unsubscribeUpdate(update);
-            if (control_mapping) |*cm| cm.deinit();
+            if (control_mapping) |*cm|
+                cm.deinit();
             control_mapping = null;
         }
 
@@ -567,7 +519,7 @@ pub fn ComponentPool(comptime T: type) type {
                 if (has_construct)
                     result.construct();
 
-                notify(ActionType.CREATED, id);
+                notify(ComponentEvent.Type.CREATED, id);
                 return result;
             } else unreachable;
         }
@@ -577,7 +529,7 @@ pub fn ComponentPool(comptime T: type) type {
                 am.setValue(id, a);
                 if (has_activation)
                     if (items.get(id)) |v| v.activation(a);
-                notify(if (a) ActionType.ACTIVATED else ActionType.DEACTIVATING, id);
+                notify(if (a) ComponentEvent.Type.ACTIVATED else ComponentEvent.Type.DEACTIVATING, id);
             }
         }
 
@@ -593,7 +545,7 @@ pub fn ComponentPool(comptime T: type) type {
             if (active_mapping) |*am| {
                 if (am.isSet(id))
                     activate(id, false);
-                notify(ActionType.DISPOSING, id);
+                notify(ComponentEvent.Type.DISPOSING, id);
             }
 
             if (items.get(id)) |val| {
@@ -627,12 +579,9 @@ pub fn ComponentPool(comptime T: type) type {
             }
         }
 
-        fn notify(event_type: ActionType, id: Index) void {
-            if (event) |*e| {
-                e.event_type = event_type;
-                e.c_id = id;
-                eventDispatch.?.notify(e.*);
-            }
+        fn notify(event_type: ComponentEvent.Type, id: Index) void {
+            if (eventDispatch) |*ed|
+                ed.notify(.{ .event_type = event_type, .c_id = id });
         }
     };
 }

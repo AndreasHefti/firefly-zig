@@ -188,6 +188,7 @@ pub const Contact = struct {
         pool.clear();
         pool.deinit();
         pool = undefined;
+        size = 0;
     }
 
     pub fn getEmpty() Index {

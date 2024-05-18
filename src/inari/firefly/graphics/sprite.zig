@@ -8,7 +8,6 @@ const Asset = firefly.api.Asset;
 const String = firefly.utils.String;
 const Component = firefly.api.Component;
 const ComponentEvent = firefly.api.Component.ComponentEvent;
-const ActionType = firefly.api.Component.ActionType;
 const Texture = firefly.graphics.Texture;
 const EComponent = firefly.api.EComponent;
 const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
@@ -109,9 +108,9 @@ pub const SpriteTemplate = struct {
     fn notifyAssetEvent(e: ComponentEvent) void {
         if (Texture.resourceByAssetId(e.c_id.?)) |t| {
             switch (e.event_type) {
-                ActionType.ACTIVATED => onTextureLoad(t),
-                ActionType.DEACTIVATING => onTextureUnload(t),
-                ActionType.DISPOSING => onTextureDispose(t),
+                ComponentEvent.Type.ACTIVATED => onTextureLoad(t),
+                ComponentEvent.Type.DEACTIVATING => onTextureUnload(t),
+                ComponentEvent.Type.DISPOSING => onTextureDispose(t),
                 else => {},
             }
         }

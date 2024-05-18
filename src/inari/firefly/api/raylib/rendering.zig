@@ -319,7 +319,7 @@ const RaylibRenderAPI = struct {
 
     fn startRendering(binding_id: ?BindingId, projection: *Projection) void {
         active_render_texture = binding_id;
-        active_camera.offset = @bitCast(projection.position);
+        active_camera.offset = @bitCast(-projection.position);
         active_camera.target = @bitCast(projection.pivot);
         active_camera.rotation = projection.rotation;
         active_camera.zoom = projection.zoom;

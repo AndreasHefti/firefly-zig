@@ -21,7 +21,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn loadWithView() void {
-    firefly.api.rendering.setRenderBatch(1, 81920);
+    //firefly.api.rendering.setRenderBatch(1, 81920);
 
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",

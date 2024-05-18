@@ -12,6 +12,7 @@ pub fn init(init_c: api.InitContext) !void {
     try workflow.init(init_c);
     try graphics.init(init_c);
     try physics.init(init_c);
+    try game.init();
 }
 
 pub fn deinit() void {
@@ -19,6 +20,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    game.deinit();
     physics.deinit();
     graphics.deinit();
     workflow.deinit();

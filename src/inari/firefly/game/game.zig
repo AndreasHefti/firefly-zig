@@ -33,45 +33,49 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const SimplePivotCamera = struct {
-    pub var component_type = View;
+    pub const component_type = View;
 
-    name: ?String,
+    name: String,
     pixel_perfect: bool = false,
     snap_to_bounds: ?RectF,
-    velocity: Float,
-    pivot: *PosF,
+    pivot: *PosF = undefined,
+    offset: Vector2f = .{ 0, 0 },
+    velocity_relative_to_pivot: Vector2f = .{ 1, 1 },
 
-    pub fn update(view_id: Index) void {
-        if (ComponentControlType(SimplePivotCamera).byId(view_id)) |self| {
+    pub fn setPivot(self: *SimplePivotCamera, view_id: Index, pivot: *PosF) void {
+        self.pivot = pivot;
+        self.adjust(view_id);
+    }
+
+    pub fn adjust(self: *SimplePivotCamera, view_id: Index) void {
+        var view = View.byId(view_id);
+        const move = getMove(self, view);
+        view.adjustProjection(
+            @floor(view.projection.position + move),
+            false,
+            self.snap_to_bounds,
+        );
+    }
+
+    pub fn update(view_id: Index, control_id: Index) void {
+        if (ComponentControlType(SimplePivotCamera).stateByControlId(control_id)) |self| {
             var view = View.byId(view_id);
-            if (getMove(self, view)) |move|
-                view.move(.{ move[0] * self.velocity, move[1] * self.velocity }, self.pixel_perfect);
+            const move = getMove(self, view);
+            if (@abs(move[0] + move[1]) > 0.1) {
+                view.moveProjection(
+                    move * self.velocity_relative_to_pivot,
+                    self.pixel_perfect,
+                    self.snap_to_bounds,
+                );
+            }
         }
     }
 
-    fn getMove(self: *SimplePivotCamera, view: *View) ?Vector2f {
-        const _zoom: Float = 1 / view.projection.zoom;
-        const view_h: Float = view.projection.width / _zoom;
-        const view_hh = view_h / 2;
-        const view_v = view.projection.height / _zoom;
-        const view_vh = view_v / 2;
-        const x_max = self.snap_to_bounds[2] - view_h;
-        const y_max = self.snap_to_bounds[3] - view_v;
-
-        var pos: Vector2f = .{
-            self.pivot[0] + _zoom - view_hh,
-            self.pivot[1] + _zoom - view_vh,
+    inline fn getMove(self: *SimplePivotCamera, view: *View) Vector2f {
+        const cam_world_pivot: Vector2f = .{
+            (view.projection.position[0] + view.projection.width / 2) / view.projection.zoom,
+            (view.projection.position[1] + view.projection.height / 2) / view.projection.zoom,
         };
-
-        if (pos[0] < self.snap_to_bounds[0])
-            pos[0] = self.snap_to_bounds[0];
-        if (pos[1] < self.snap_to_bounds[1])
-            pos[1] = self.snap_to_bounds[1];
-
-        pos[0] = @min(pos[0], x_max);
-        pos[1] = @min(pos[1], y_max);
-        pos = @ceil(pos - view.projection.position);
-
-        return if (pos[0] != 0 or pos[1] != 0) pos else null;
+        return self.pivot.* + self.offset - cam_world_pivot;
     }
 };
