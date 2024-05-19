@@ -190,15 +190,15 @@ pub fn DynArray(comptime T: type) type {
         }
 
         pub fn remove(self: *Self, t: *T) void {
-            var i: usize = 0;
-            while (self.slots.nextSetBit(i)) |next| {
-                if (self.get(next)) |e| {
+            var next = self.slots.nextSetBit(0);
+            while (next) |i| {
+                if (self.get(i)) |e| {
                     if (std.meta.eql(t, e)) {
                         delete(self, i);
                         return;
                     }
                 }
-                i = next + 1;
+                next = self.slots.nextSetBit(i + 1);
             }
         }
 

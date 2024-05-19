@@ -16,6 +16,7 @@ const RectF = firefly.utils.RectF;
 const Color = firefly.utils.Color;
 const BlendMode = firefly.api.BlendMode;
 const DynArray = firefly.utils.DynArray;
+const DynIndexArray = firefly.utils.DynIndexArray;
 const Projection = firefly.api.Projection;
 const EComponent = firefly.api.EComponent;
 const RenderEvent = firefly.api.RenderEvent;
@@ -185,8 +186,7 @@ pub const View = struct {
     // struct fields
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    /// Rendering order. 0 means screen, every above means render texture that is rendered in ascending order
-    order: u8 = undefined,
+    //order: u8 = undefined,
 
     position: PosF,
     pivot: ?PosF,
@@ -199,27 +199,41 @@ pub const View = struct {
     render_texture_binding: ?RenderTextureBinding = null,
     shader_binding: ?BindingId = null,
     ordered_active_layer: ?DynArray(Index) = null,
+    /// If not null, this view is rendered to another view instead of the screen
+    target_view_id: ?Index = null,
 
     pub var screen_projection: Projection = .{};
     pub var screen_shader_binding: ?BindingId = null;
-    pub var ordered_active_views: DynArray(Index) = undefined;
 
+    var active_views_to_fbo: DynIndexArray = undefined;
+    var active_views_to_screen: DynIndexArray = undefined;
     var eventDispatch: EventDispatch(ViewChangeEvent) = undefined;
 
     pub fn componentTypeInit() !void {
         eventDispatch = EventDispatch(ViewChangeEvent).new(firefly.api.COMPONENT_ALLOC);
-        ordered_active_views = try DynArray(Index).newWithRegisterSize(
-            firefly.api.COMPONENT_ALLOC,
-            10,
-        );
+        active_views_to_fbo = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10);
+        active_views_to_screen = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10);
         Layer.subscribe(onLayerAction);
     }
 
     pub fn componentTypeDeinit() void {
         Layer.unsubscribe(onLayerAction);
-        ordered_active_views.deinit();
+        active_views_to_fbo.deinit();
+        active_views_to_fbo = undefined;
+        active_views_to_screen.deinit();
+        active_views_to_screen = undefined;
         eventDispatch.deinit();
         eventDispatch = undefined;
+    }
+
+    pub fn setFullscreen() void {
+        firefly.api.window.toggleFullscreen();
+        // adapt view to full screen
+        //const window = firefly.api.window.getWindowData();
+        std.debug.print("screen: {d} {d} \n", .{
+            firefly.api.window.getMonitorWidth(1),
+            firefly.api.window.getMonitorHeight(1),
+        });
     }
 
     pub fn moveProjection(
@@ -287,16 +301,9 @@ pub const View = struct {
 
     pub fn activation(view: *View, active: bool) void {
         if (active) {
-            if (view.order == 0)
-                return; // screen, no render texture load needed
-
             addViewMapping(view);
             view.render_texture_binding = firefly.api.rendering.createRenderTexture(&view.projection);
         } else {
-            // dispose render texture for this view and cancel binding
-            if (view.order == 0)
-                return; // screen, no render texture dispose needed
-
             removeViewMapping(view);
             if (view.render_texture_binding) |b| {
                 firefly.api.rendering.disposeRenderTexture(b.id);
@@ -314,25 +321,23 @@ pub const View = struct {
     }
 
     fn addViewMapping(view: *View) void {
-        if (ordered_active_views.slots.isSet(view.order)) {
-            std.log.err("Order of view already in use: {any}", .{view});
-            @panic("View order mismatch");
+        if (view.target_view_id) |_| {
+            _ = active_views_to_fbo.add(view.id);
+        } else {
+            _ = active_views_to_screen.add(view.id);
         }
 
-        _ = ordered_active_views.set(view.order, view.id);
+        // Note: For now none screen target mapping is flat and if a view
+        //       that has a target view itself ist a target of another view
+        //       that might not be rendered correctly, depending on the order
+        //       of active_views_to_fbo
+        // TODO sort active_views_to_fbo in the manner that views that are targets
+        //      itself are later in the list and first are the once that are no targets.
     }
 
     fn removeViewMapping(view: *View) void {
-        if (!ordered_active_views.slots.isSet(view.order))
-            return;
-
-        // clear layer mapping
-        if (view.ordered_active_layer) |*l| {
-            l.clear();
-        }
-
-        // clear view mapping
-        ordered_active_views.delete(view.order);
+        active_views_to_fbo.removeFirst(view.id);
+        active_views_to_screen.removeFirst(view.id);
     }
 
     fn addLayerMapping(layer: *const Layer) void {
@@ -487,7 +492,7 @@ pub const ViewRenderer = struct {
         if (event.type != firefly.api.RenderEventType.RENDER)
             return;
 
-        if (View.ordered_active_views.slots.nextSetBit(0) == null) {
+        if (View.active_views_to_screen.items.len == 0) {
             // in this case we have only the screen, no FBO
             if (View.screen_shader_binding) |sb|
                 firefly.api.rendering.setActiveShader(sb);
@@ -499,21 +504,42 @@ pub const ViewRenderer = struct {
             firefly.api.renderView(VIEW_RENDER_EVENT);
             firefly.api.rendering.endRendering();
         } else {
-            // render to all FBO
-            var next = View.ordered_active_views.slots.nextSetBit(0);
+            // 1. render objects to all FBOs
+            var next = View.nextActiveId(0);
             while (next) |id| {
-                renderView(View.byId(id));
-                next = View.ordered_active_views.slots.nextSetBit(id + 1);
+                renderToFBO(View.byId(id));
+                next = View.nextActiveId(id + 1);
             }
-            // rendering all FBO to screen
-            next = View.ordered_active_views.slots.nextSetBit(0);
+
+            // 2. render all FBO that has not screen as target but other FBO
+            for (0..View.active_views_to_fbo.size_pointer) |id| {
+                const source_view: *View = View.byId(id);
+                if (source_view.target_view_id) |tid| {
+                    const target_view: *View = View.byId(tid);
+                    if (target_view.render_texture_binding) |b| {
+                        firefly.api.rendering.startRendering(b.id, &target_view.projection);
+                        firefly.api.rendering.renderTexture(
+                            source_view.render_texture_binding.?.id,
+                            source_view.position,
+                            source_view.pivot,
+                            source_view.scale,
+                            source_view.rotation,
+                            source_view.tint_color,
+                            source_view.blend_mode,
+                        );
+                        firefly.api.rendering.endRendering();
+                    }
+                }
+            }
+
+            // 3. render all FBO to screen that has screen as target
             // set shader if needed
             if (View.screen_shader_binding) |sb|
                 firefly.api.rendering.setActiveShader(sb);
             // activate render to screen
             firefly.api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
-            while (next) |id| {
+            for (0..View.active_views_to_screen.size_pointer) |id| {
                 const view: *View = View.byId(id);
                 if (view.render_texture_binding) |b| {
                     firefly.api.rendering.renderTexture(
@@ -526,14 +552,13 @@ pub const ViewRenderer = struct {
                         view.blend_mode,
                     );
                 }
-                next = View.ordered_active_views.slots.nextSetBit(id + 1);
             }
             // end rendering to screen
             firefly.api.rendering.endRendering();
         }
     }
 
-    fn renderView(view: *View) void {
+    fn renderToFBO(view: *View) void {
         if (view.render_texture_binding) |b| {
             // start rendering to view (FBO)
             // set shader...

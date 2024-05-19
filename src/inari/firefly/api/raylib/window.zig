@@ -25,6 +25,10 @@ const RaylibWindowAPI = struct {
         if (initialized)
             return;
 
+        interface.getCurrentMonitor = getCurrentMonitor;
+        interface.getMonitorWidth = getMonitorWidth;
+        interface.getMonitorHeight = getMonitorHeight;
+
         interface.openWindow = openWindow;
         interface.hasWindowClosed = hasWindowClosed;
         interface.getWindowData = getWindowData;
@@ -39,6 +43,18 @@ const RaylibWindowAPI = struct {
     }
 
     fn deinit() void {}
+
+    fn getCurrentMonitor() CInt {
+        return rl.GetCurrentMonitor();
+    }
+
+    fn getMonitorWidth(m: CInt) CInt {
+        return rl.GetMonitorWidth(m);
+    }
+
+    fn getMonitorHeight(m: CInt) CInt {
+        return rl.GetMonitorHeight(m);
+    }
 
     fn openWindow(data: WindowData) void {
         if (!initialized)

@@ -571,6 +571,10 @@ pub fn IWindowAPI() type {
     return struct {
         const Self = @This();
 
+        getCurrentMonitor: *const fn () CInt = undefined,
+        getMonitorWidth: *const fn (CInt) CInt = undefined,
+        getMonitorHeight: *const fn (CInt) CInt = undefined,
+
         openWindow: *const fn (WindowData) void = undefined,
         hasWindowClosed: *const fn () bool = undefined,
         getWindowData: *const fn () *WindowData = undefined,

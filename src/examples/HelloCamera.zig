@@ -25,16 +25,24 @@ const View = firefly.graphics.View;
 const BlendMode = firefly.api.BlendMode;
 const Vector2f = firefly.utils.Vector2f;
 const Index = utils.Index;
+const WindowFlag = firefly.api.WindowFlag;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
-    firefly.Engine.start(600, 400, 60, "Hello Camera", init);
+    firefly.Engine.startWindow(.{
+        .width = 640,
+        .height = 480,
+        .fps = 60,
+        .title = "Hello Contact",
+        .flags = &[_]WindowFlag{ WindowFlag.FLAG_WINDOW_RESIZABLE, WindowFlag.FLAG_VSYNC_HINT },
+    }, init);
 }
 
 fn init() void {
     //firefly.api.window.toggleFullscreen();
+    View.setFullscreen();
     Texture.newAnd(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
@@ -48,8 +56,7 @@ fn init() void {
 
     const view = View.newAnd(.{
         .name = "TestView",
-        .order = 1,
-        .position = .{ 50, 50 },
+        .position = .{ 20, 40 },
         .pivot = .{ 0, 0 },
         .scale = .{ 1, 1 },
         .rotation = 0,
@@ -58,10 +65,10 @@ fn init() void {
         .projection = .{
             .clear_color = .{ 30, 30, 30, 255 },
             .position = .{ 0, 0 },
-            .width = 500,
-            .height = 300,
+            .width = 600,
+            .height = 400,
             .pivot = .{ 0, 0 },
-            .zoom = 2,
+            .zoom = 1,
             .rotation = 0,
         },
     });

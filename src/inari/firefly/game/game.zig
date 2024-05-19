@@ -61,7 +61,7 @@ pub const SimplePivotCamera = struct {
         if (ComponentControlType(SimplePivotCamera).stateByControlId(control_id)) |self| {
             var view = View.byId(view_id);
             const move = getMove(self, view);
-            if (@abs(move[0] + move[1]) > 0.1) {
+            if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
                 view.moveProjection(
                     move * self.velocity_relative_to_pivot,
                     self.pixel_perfect,
@@ -79,3 +79,7 @@ pub const SimplePivotCamera = struct {
         return self.pivot.* + self.offset - cam_world_pivot;
     }
 };
+
+// pub fn ScreenSizeAdapter(view_id: Index, control_id: Index) void {
+
+// }
