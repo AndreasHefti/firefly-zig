@@ -53,12 +53,12 @@ pub const AssetKind = AssetAspectGroup.Kind;
 pub const AssetAspect = AssetAspectGroup.Aspect;
 pub const AssetComponent = asset.AssetComponent;
 pub const AssetTrait = asset.AssetTrait;
+
 pub const Component = component;
 pub const ComponentAspectGroup = component.ComponentAspectGroup;
 pub const ComponentKind = ComponentAspectGroup.Kind;
 pub const ComponentAspect = ComponentAspectGroup.Aspect;
 pub const ComponentEvent = component.ComponentEvent;
-pub const ComponentActionType = component.ActionType;
 pub const ComponentListener = component.ComponentListener;
 
 pub const System = system.System;

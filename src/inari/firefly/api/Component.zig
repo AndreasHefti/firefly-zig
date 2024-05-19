@@ -3,6 +3,7 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 
+const Attributes = api.Attributes;
 const ComponentControl = api.ComponentControl;
 const ComponentControlType = api.ComponentControlType;
 const DynIndexMap = utils.DynIndexMap;
@@ -28,6 +29,7 @@ pub fn init() !void {
         return;
 
     COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).new(api.COMPONENT_ALLOC);
+    registerComponent(Composite);
 }
 
 pub fn deinit() void {
@@ -80,6 +82,15 @@ pub fn registerComponent(comptime T: type) void {
 
 pub fn deinitComponent(comptime T: type) void {
     ComponentPool(T).deinit();
+}
+
+pub fn print(string_buffer: *StringBuffer) void {
+    string_buffer.print("\nComponents:", .{});
+    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    while (next) |i| {
+        if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| interface.to_string(string_buffer);
+        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+    }
 }
 
 //////////////////////////////////////////////////////////////
@@ -321,63 +332,6 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
 }
 
 //////////////////////////////////////////////////////////////
-//// Component Reference
-//////////////////////////////////////////////////////////////
-
-pub const ComponentRef = struct {
-    type: ComponentAspect,
-    id: Index,
-    activation: *const fn (Index, bool) void,
-    dispose: *const fn (Index) void,
-};
-
-pub const ComponentRefNode = struct {
-    ref: ComponentRef,
-    next: ?*ComponentRefNode = null,
-
-    // TODO
-    pub fn new(ref: ComponentRef) *ComponentRef {
-        var result = api.COMPONENT_ALLOC.create(ComponentRef) catch unreachable;
-        result.ref = ref;
-        result.next = null;
-        return result;
-    }
-
-    pub fn activate(self: *ComponentRefNode, active: bool) void {
-        self.ref.activation(self.ref.id, active);
-        if (self.next) |n| n.activate(active);
-    }
-
-    pub fn activateReverseOrder(self: *ComponentRefNode, active: bool) void {
-        if (self.next) |n| n.activate(active);
-        self.ref.activation(self.ref.id, active);
-    }
-
-    pub fn dispose(self: *ComponentRefNode) void {
-        if (self.next) |n| n.dispose();
-        self.ref.dispose(self.ref.id);
-        self.next = null;
-        self.deinit();
-    }
-
-    pub fn add(self: *ComponentRefNode, ref: ComponentRef) void {
-        if (self.next) |n|
-            n.add(ref)
-        else {
-            self.next = api.COMPONENT_ALLOC.create(ComponentRef) catch unreachable;
-            self.next.?.ref = ref;
-            self.next.?.next = null;
-        }
-    }
-
-    fn deinit(self: *ComponentRefNode) void {
-        if (self.next) |n|
-            n.deinit();
-        api.COMPONENT_ALLOC.destroy(self);
-    }
-};
-
-//////////////////////////////////////////////////////////////
 //// Component Pooling
 //////////////////////////////////////////////////////////////
 
@@ -586,11 +540,122 @@ pub fn ComponentPool(comptime T: type) type {
     };
 }
 
-pub fn print(string_buffer: *StringBuffer) void {
-    string_buffer.print("\nComponents:", .{});
-    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
-    while (next) |i| {
-        if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| interface.to_string(string_buffer);
-        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+//////////////////////////////////////////////////////////////////////////
+//// Composite Component
+//////////////////////////////////////////////////////////////////////////
+
+pub const CompositeLifeCycle = enum {
+    LOAD,
+    ACTIVATE,
+    DEACTIVATE,
+    DISPOSE,
+};
+
+pub const ComponentRef = struct {
+    type: ComponentAspect,
+    id: Index,
+    activation: ?*const fn (Index, bool) void,
+    dispose: *const fn (Index) void,
+};
+
+pub const LifeCycleTaskRef = struct {
+    life_cycle: CompositeLifeCycle,
+    task_id: Index,
+    attributes: ?Attributes,
+};
+
+pub const Composite = struct {
+    pub usingnamespace Trait(Composite, .{
+        .name = "Composite",
+        .processing = false,
+    });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+    loaded: bool = false,
+    active: bool = false,
+
+    tasks: DynArray(LifeCycleTaskRef) = undefined,
+    _loaded_components: DynArray(ComponentRef) = undefined,
+
+    pub fn construct(self: *Composite) void {
+        self.tasks = DynArray(LifeCycleTaskRef).newWithRegisterSize(
+            api.COMPONENT_ALLOC,
+            3,
+        );
+        self._loaded_components = DynArray(ComponentRef).newWithRegisterSize(
+            api.COMPONENT_ALLOC,
+            3,
+        );
     }
-}
+
+    pub fn destruct(self: *Composite) void {
+        self.tasks.deinit();
+        self.tasks = undefined;
+        self._loaded_components.deinit();
+        self._loaded_components = undefined;
+    }
+
+    pub fn withTaskById(self: *Composite, task_id: Index, life_cycle: CompositeLifeCycle) void {
+        self.tasks.add(.{ .life_cycle = life_cycle, .task_id = task_id });
+    }
+
+    pub fn withTaskByName(self: *Composite, name: String, life_cycle: CompositeLifeCycle) void {
+        if (firefly.api.Task.byName(name)) |t|
+            self.tasks.add(.{ .life_cycle = life_cycle, .task_id = t.id });
+    }
+
+    pub fn applyLifeCycleById(composite_id: String, life_cycle: CompositeLifeCycle) void {
+        Composite.byId(composite_id).runTasks(life_cycle);
+    }
+
+    pub fn applyLifeCycleByName(composite_name: String, life_cycle: CompositeLifeCycle) void {
+        if (Composite.byName(composite_name)) |c|
+            c.runTasks(life_cycle);
+    }
+
+    pub fn load(self: *Composite) void {
+        self.runTasks(.LOAD);
+    }
+
+    pub fn dispose(self: *Composite) void {
+        self.runTasks(.DISPOSE);
+        // dispose all references that still available
+        var next = self._loaded_components.slots.nextSetBit(0);
+        while (next) |i| {
+            if (self._loaded_components.get(i)) |ref|
+                ref.dispose(ref.id);
+            next = self._loaded_components.slots.nextSetBit(i + 1);
+        }
+        self._loaded_components.clear();
+    }
+
+    pub fn activation(self: *Composite, active: bool) void {
+        self.runTasks(if (active) .ACTIVATE else .DEACTIVATE);
+        // activate all references
+        var next = self._loaded_components.slots.nextSetBit(0);
+        while (next) |i| {
+            if (self._loaded_components.get(i)) |ref| {
+                if (ref.activation) |a|
+                    a(ref.id, active);
+            }
+
+            next = self._loaded_components.slots.nextSetBit(i + 1);
+        }
+    }
+
+    fn runTasks(self: *Composite, life_cycle: CompositeLifeCycle) void {
+        var next = self.tasks.slots.nextSetBit(0);
+        while (next) |i| {
+            if (self.tasks.get(i)) |tr| {
+                if (tr.life_cycle == life_cycle)
+                    firefly.api.Task.runTaskById(
+                        tr.task_id,
+                        self.id,
+                        tr.attributes,
+                    );
+            }
+            next = self.tasks.slots.nextSetBit(i + 1);
+        }
+    }
+};

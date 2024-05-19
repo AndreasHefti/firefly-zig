@@ -76,7 +76,7 @@ pub const Task = struct {
         }
     }
 
-    pub fn runWith(self: *Task, id: Index, attributes: ?Attributes) void {
+    pub fn runWith(self: *Task, id: ?Index, attributes: ?Attributes) void {
         defer {
             if (self.run_once)
                 Task.disposeById(self.id);
@@ -87,6 +87,14 @@ pub const Task = struct {
         } else {
             _ = std.Thread.spawn(.{}, _run, .{ self, id, attributes }) catch unreachable;
         }
+    }
+
+    pub fn runTaskById(task_id: Index, component_id: ?Index, attributes: ?Attributes) void {
+        Task.byId(task_id).runWith(component_id, attributes);
+    }
+
+    pub fn runTaskByName(task_name: String, component_id: ?Index, attributes: ?Attributes) void {
+        if (Task.byName(task_name)) |t| t.runWith(component_id, attributes);
     }
 
     fn _run(self: *Task, id: ?Index, attrs1: ?Attributes) void {
