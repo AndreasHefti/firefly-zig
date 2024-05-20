@@ -1,6 +1,11 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const UpdateEvent = firefly.api.UpdateEvent;
+const UpdateScheduler = firefly.api.UpdateScheduler;
+const Composite = firefly.api.Composite;
+const ActionFunction = firefly.api.ActionFunction;
+const ActionCallback = firefly.api.ActionCallback;
 const EventDispatch = firefly.utils.EventDispatch;
 const ComponentEvent = firefly.api.ComponentEvent;
 const AssetComponent = firefly.api.AssetComponent;
@@ -39,6 +44,7 @@ pub fn init() !void {
 
     Component.registerComponent(Layer);
     Component.registerComponent(View);
+    Component.registerComponent(Scene);
     EComponent.registerEntityComponent(EView);
     EComponent.registerEntityComponent(ETransform);
     System(ViewRenderer).createSystem(
@@ -226,6 +232,16 @@ pub const View = struct {
         eventDispatch = undefined;
     }
 
+    pub fn withLayer(self: *View, layer: *Layer) *View {
+        layer.view_id = self.id;
+        return self;
+    }
+
+    pub fn withLayerByName(self: *View, name: String) *View {
+        if (Layer.byName(name)) |l| l.view_id = self.id;
+        return self;
+    }
+
     pub fn setFullscreen() void {
         firefly.api.window.toggleFullscreen();
         // adapt view to full screen
@@ -287,16 +303,6 @@ pub const View = struct {
         self.projection.position[1] = @max(self.projection.position[1], _bounds[1]);
         self.projection.position[0] = @min(self.projection.position[0], _bounds[0] + _bounds[2] - self.projection.width);
         self.projection.position[1] = @min(self.projection.position[1], _bounds[1] + _bounds[3] - self.projection.height);
-    }
-
-    pub fn withLayer(self: *View, layer: Layer) *View {
-        Layer.newAnd(layer).view_ref = self.id;
-        return self;
-    }
-
-    pub fn withLayerByName(self: *View, name: String) *View {
-        if (Layer.byName(name)) |l| l.view_ref = self.id;
-        return self;
     }
 
     pub fn activation(view: *View, active: bool) void {
@@ -371,7 +377,6 @@ pub const View = struct {
 pub const Layer = struct {
     pub usingnamespace Component.Trait(Layer, .{ .name = "Layer" });
 
-    // struct fields
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     offset: ?Vector2f = null,
@@ -478,6 +483,113 @@ pub const ETransform = struct {
             return ETransform.byId(id).?.getRotation();
         }
     };
+};
+
+//////////////////////////////////////////////////////////////
+//// Scene Component
+//////////////////////////////////////////////////////////////
+
+pub const Scene = struct {
+    pub usingnamespace Component.Trait(Scene, .{ .name = "Scene" });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+    delete_after_run: bool = false,
+
+    scheduler: ?UpdateScheduler = null,
+    callback: ?ActionCallback = null,
+    composite: ?Index,
+
+    init_action: ?ActionFunction = null,
+    update_action: ActionFunction,
+
+    _loaded: bool = false,
+
+    pub fn componentTypeInit() !void {
+        firefly.api.subscribeUpdate(update);
+    }
+
+    pub fn componentTypeDeinit() void {
+        firefly.api.unsubscribeUpdate(update);
+    }
+
+    pub fn withComposite(self: *Scene, composite: Composite) *Scene {
+        self.composite = Composite.new(composite);
+        return self;
+    }
+
+    pub fn withInitAction(self: *Scene, action: ActionFunction) *Scene {
+        self.init_action = action;
+        return self;
+    }
+
+    pub fn withUpdateAction(self: *Scene, action: ActionFunction) *Scene {
+        self.update_action = action;
+        return self;
+    }
+
+    pub fn withScheduler(self: *Scene, scheduler: UpdateScheduler) *Scene {
+        self.scheduler = scheduler;
+        return self;
+    }
+
+    pub fn withCallback(self: *Scene, callback: ActionCallback) *Scene {
+        self.callback = callback;
+        return self;
+    }
+
+    pub fn load(self: *Scene) void {
+        defer self._loaded = true;
+        if (self._loaded)
+            return;
+
+        if (self.composite) |cid|
+            Composite.byId(cid).load();
+    }
+
+    pub fn dispose(self: *Scene) void {
+        defer self._loaded = false;
+        if (!self._loaded)
+            return;
+
+        if (self.composite) |cid|
+            Composite.byId(cid).dispose();
+    }
+
+    pub fn run(self: *Scene) void {
+        Scene.activateById(self.id, true);
+    }
+
+    pub fn stop(self: *Scene) void {
+        Scene.activateById(self.id, false);
+    }
+
+    pub fn activation(self: *Scene, active: bool) void {
+        if (active) {
+            if (self.init_action) |a|
+                _ = a(self.id);
+        }
+    }
+
+    fn update(_: UpdateEvent) void {
+        var next = Scene.nextActiveId(0);
+        while (next) |i| {
+            var scene = Scene.byId(i);
+            if (scene.scheduler) |s|
+                if (!s.needs_update)
+                    continue;
+
+            const result = scene.update_action(scene.id);
+            if (result == .Running)
+                continue;
+
+            scene.stop();
+            if (scene.callback) |call|
+                call(scene.id, result);
+
+            next = Scene.nextActiveId(i + 1);
+        }
+    }
 };
 
 //////////////////////////////////////////////////////////////

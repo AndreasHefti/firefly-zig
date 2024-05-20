@@ -20,7 +20,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn _Example_One_Entity_No_Views() void {
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -29,21 +29,35 @@ fn _Example_One_Entity_No_Views() void {
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+    }).id;
 
-    _ = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 })
-        .with(ESprite{ .template_id = sprite_id })
-        .withAnd(EAnimation{})
+    _ = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{
+        .position = .{ 64, 164 },
+        .scale = .{ 4, 4 },
+        .pivot = .{ 16, 16 },
+        .rotation = 180,
+    })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EAnimation{})
         .withAnimation(
         .{ .duration = 1000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
-        EasedValueIntegration{ .start_value = 164.0, .end_value = 264.0, .easing = Easing.Linear, .property_ref = ETransform.Property.XPos },
+        EasedValueIntegration{
+            .start_value = 164.0,
+            .end_value = 264.0,
+            .easing = Easing.Linear,
+            .property_ref = ETransform.Property.XPos,
+        },
     )
-        .withAnimationAnd(
+        .withAnimation(
         .{ .duration = 2000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
-        EasedValueIntegration{ .start_value = 0.0, .end_value = 180.0, .easing = Easing.Linear, .property_ref = ETransform.Property.Rotation },
-    )
-        .activate();
+        EasedValueIntegration{
+            .start_value = 0.0,
+            .end_value = 180.0,
+            .easing = Easing.Linear,
+            .property_ref = ETransform.Property.Rotation,
+        },
+    ).entity().activate();
 
     AnimationSystem.setLoopCallbackById(1, loopCallback1);
 }

@@ -553,14 +553,14 @@ pub const EContactScan = struct {
     }
 
     pub fn withConstraint(self: *EContactScan, constraint: ContactConstraint) *EContactScan {
-        self.constraints.set(ContactConstraint.new(constraint));
+        self.constraints.set(ContactConstraint.new(constraint).id);
         return self;
     }
 
-    pub fn withConstraintAnd(self: *EContactScan, constraint: ContactConstraint) *Entity {
-        self.constraints.set(ContactConstraint.new(constraint));
-        return Entity.byId(self.id);
-    }
+    // pub fn withConstraintAnd(self: *EContactScan, constraint: ContactConstraint) *Entity {
+    //     self.constraints.set(ContactConstraint.new(constraint));
+    //     return Entity.byId(self.id);
+    // }
 
     pub fn hasAnyContact(self: *EContactScan) bool {
         var next = self.constraints.nextSetBit(0);

@@ -21,7 +21,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 fn init() void {
     firefly.api.rendering.setRenderBatch(1, 81920);
 
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -30,7 +30,7 @@ fn init() void {
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+    }).id;
 
     var pos = firefly.api.ALLOC.alloc(Vector2f, 100000) catch unreachable;
     var rndx = std.rand.DefaultPrng.init(32);
@@ -40,9 +40,9 @@ fn init() void {
         pos[i][1] = rx.float(Float) * 400;
     }
 
-    _ = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{ .position = .{ 0, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMultiplier{ .positions = pos })
+    _ = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{ .position = .{ 0, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMultiplier{ .positions = pos })
         .activate();
 }

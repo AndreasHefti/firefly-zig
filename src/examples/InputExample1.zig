@@ -24,7 +24,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -33,11 +33,11 @@ fn init() void {
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+    }).id;
 
-    _ = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{ .position = .{ 100, 100 } })
-        .with(ESprite{ .template_id = sprite_id })
+    _ = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{ .position = .{ 100, 100 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
         .activate();
 
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_UP, InputButtonType.UP);

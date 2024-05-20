@@ -43,18 +43,18 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 fn init() void {
     //firefly.api.window.toggleFullscreen();
     //View.setFullscreen();
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
     }).load();
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    const view = View.newAnd(.{
+    const view = View.new(.{
         .name = "TestView",
         .position = .{ 20, 40 },
         .pivot = .{ 0, 0 },
@@ -73,18 +73,18 @@ fn init() void {
         },
     });
 
-    const entity_id = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(EView{ .view_id = view.id })
-        .with(ETransform{ .position = .{ 100, 100 } })
-        .with(ESprite{ .template_id = sprite_id })
+    const entity = Entity.new(.{ .name = "TestEntity" })
         .withControl(entity_control, "PlayerControl")
-        .activate().id;
+        .withComponent(EView{ .view_id = view.id })
+        .withComponent(ETransform{ .position = .{ 100, 100 } })
+        .withComponent(ESprite{ .template_id = sprite.id })
+        .activate();
 
     _ = view.withControlOfType(SimplePivotCamera{
         .name = "Camera1",
         .pixel_perfect = false,
         .snap_to_bounds = .{ -100, -100, 800, 800 },
-        .pivot = &ETransform.byId(entity_id).?.position,
+        .pivot = &ETransform.byId(entity.id).?.position,
         .offset = .{ 16, 16 },
         .velocity_relative_to_pivot = .{ 0.1, 0.1 },
     });
@@ -96,11 +96,11 @@ fn init() void {
 
     View.activateById(view.id, true);
 
-    _ = Entity.newAnd(.{ .name = "RefEntity" })
-        .with(EView{ .view_id = view.id })
-        .with(ETransform{ .position = .{ 100, 100 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
+    _ = Entity.new(.{ .name = "RefEntity" })
+        .withComponent(EView{ .view_id = view.id })
+        .withComponent(ETransform{ .position = .{ 100, 100 } })
+        .withComponent(ESprite{ .template_id = sprite.id })
+        .withComponent(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
         .{ 50, 50 },
         .{ 200, 50 },
         .{ 50, 150 },
@@ -113,19 +113,13 @@ fn init() void {
         .{ 400, 250 },
         .{ 500, 150 },
     }) })
-        .activate().id;
+        .activate();
 
-    _ = Entity.newAnd(.{ .name = "Border" })
-        .with(EView{ .view_id = view.id })
-        .with(ETransform{ .position = .{ 0, 0 } })
-        .with(EShape{
-        .shape_type = ShapeType.RECTANGLE,
-        .vertices = firefly.api.allocFloatArray([_]Float{ -100, -100, 800, 800 }),
-        .fill = false,
-        .thickness = 2,
-        .color = .{ 150, 0, 0, 255 },
-    })
-        .activate().id;
+    _ = Entity.new(.{ .name = "Border" })
+        .withComponent(EView{ .view_id = view.id })
+        .withComponent(ETransform{ .position = .{ 0, 0 } })
+        .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .vertices = firefly.api.allocFloatArray([_]Float{ -100, -100, 800, 800 }), .fill = false, .thickness = 2, .color = .{ 150, 0, 0, 255 } })
+        .activate();
 }
 
 const speed = 2;

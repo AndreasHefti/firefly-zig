@@ -302,24 +302,24 @@ pub const EAnimation = struct {
         return self;
     }
 
-    pub fn withAnimationAnd(
-        self: *EAnimation,
-        animation: AnimationTemplate,
-        integration: anytype,
-    ) *Entity {
-        var i = integration;
-        i.init(self.id);
-        self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
-            animation.duration,
-            animation.looping,
-            animation.inverse_on_loop,
-            animation.reset_on_finish,
-            animation.loop_callback,
-            animation.finish_callback,
-            i,
-        )));
-        return Entity.byId(self.id);
-    }
+    // pub fn withAnimationAnd(
+    //     self: *EAnimation,
+    //     animation: AnimationTemplate,
+    //     integration: anytype,
+    // ) *Entity {
+    //     var i = integration;
+    //     i.init(self.id);
+    //     self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
+    //         animation.duration,
+    //         animation.looping,
+    //         animation.inverse_on_loop,
+    //         animation.reset_on_finish,
+    //         animation.loop_callback,
+    //         animation.finish_callback,
+    //         i,
+    //     )));
+    //     return Entity.byId(self.id);
+    // }
 
     pub fn activation(self: *EAnimation, active: bool) void {
         var next = self.animations.nextSetBit(0);

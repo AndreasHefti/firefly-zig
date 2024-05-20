@@ -27,7 +27,7 @@ fn init() void {
     // Since the StateEngineSystem is not activated by default, we need to active it first
     firefly.api.activateSystem("StateEngineSystem", true);
 
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -38,14 +38,14 @@ fn init() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    entity_id = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{ .position = .{ 100, 100 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .velocity = .{ 2, 0 } })
+    entity_id = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{ .position = .{ 100, 100 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .velocity = .{ 2, 0 } })
         .activate()
         .id;
 
-    _ = StateEngine.newAnd(.{ .name = "TestStateEngine", .update_scheduler = firefly.api.Timer.getScheduler(20) })
+    _ = StateEngine.new(.{ .name = "TestStateEngine", .update_scheduler = firefly.api.Timer.getScheduler(20) })
         .withState(.{ .name = "go right", .condition = goRightCondition, .init = goRightInit })
         .withState(.{ .name = "go left", .condition = goLeftCondition, .init = goLeftInit })
         .activate();

@@ -20,9 +20,8 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn loadWithView() void {
-    const viewId = View.newAnd(.{
+    const viewId = View.new(.{
         .name = "TestView",
-        .order = 1,
 
         // transform is used when rendering the texture to the screen (or another texture)
         .position = .{ 10, 10 },
@@ -56,18 +55,18 @@ fn loadWithView() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
         .flip_x = true,
         .flip_y = true,
-    });
+    }).id;
 
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
     }).load();
 
-    _ = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{})
-        .with(EView{ .view_id = viewId })
-        .with(ESprite{ .template_id = sprite_id })
+    _ = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{})
+        .withComponent(EView{ .view_id = viewId })
+        .withComponent(ESprite{ .template_id = sprite_id })
         .activate();
 }
 

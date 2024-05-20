@@ -19,7 +19,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -28,14 +28,14 @@ fn init() void {
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+    }).id;
 
     var x: Float = 10;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .mass = 1 })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .mass = 1 })
         .activate();
 
     x += 50;
@@ -49,73 +49,73 @@ fn init() void {
 
     // x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .mass = 1, .integrator = firefly.physics.EulerIntegrator })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .mass = 1, .integrator = firefly.physics.EulerIntegrator })
         .activate();
 
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .mass = 1, .mass_factor = 0.2 })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .mass = 1, .mass_factor = 0.2 })
         .activate();
 
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .mass = 1, .mass_factor = 0.2, .integrator = firefly.physics.EulerIntegrator })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .mass = 1, .mass_factor = 0.2, .integrator = firefly.physics.EulerIntegrator })
         .activate();
 
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .mass = 1, .mass_factor = 0.2, .max_velocity_south = 50 })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .mass = 1, .mass_factor = 0.2, .max_velocity_south = 50 })
         .activate();
 
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .mass = 1, .mass_factor = 0.2, .max_velocity_south = 50, .integrator = firefly.physics.EulerIntegrator })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .mass = 1, .mass_factor = 0.2, .max_velocity_south = 50, .integrator = firefly.physics.EulerIntegrator })
         .activate();
 
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .mass = 1, .mass_factor = 0.2, .max_velocity_south = 100 })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .mass = 1, .mass_factor = 0.2, .max_velocity_south = 100 })
         .activate();
 
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .mass = 1, .mass_factor = 0.2, .max_velocity_south = 100, .integrator = firefly.physics.EulerIntegrator })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .mass = 1, .mass_factor = 0.2, .max_velocity_south = 100, .integrator = firefly.physics.EulerIntegrator })
         .activate();
 
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .gravity = Vector2f{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.2, .integrator = firefly.physics.EulerIntegrator })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .gravity = Vector2f{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.2, .integrator = firefly.physics.EulerIntegrator })
         .activate();
 
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-    //  .with(EMovement{ .gravity = Vector2f{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.2, .integrator = firefly.physics.EulerIntegrator })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+    //  .withComponent(EMovement{ .gravity = Vector2f{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.2, .integrator = firefly.physics.EulerIntegrator })
         .activate();
 }

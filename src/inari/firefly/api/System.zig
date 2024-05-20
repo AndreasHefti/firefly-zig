@@ -60,7 +60,7 @@ pub fn System(comptime T: type) type {
             if (type_init)
                 return;
 
-            component_ref = SystemComponent.newAnd(.{
+            component_ref = SystemComponent.new(.{
                 .name = name,
                 .info = info,
                 .onActivation = activation,

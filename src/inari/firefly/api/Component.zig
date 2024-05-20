@@ -3,6 +3,7 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 
+const Task = api.Task;
 const Attributes = api.Attributes;
 const ComponentControl = api.ComponentControl;
 const ComponentControlType = api.ComponentControlType;
@@ -136,11 +137,7 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
             return pool.items.slots.count();
         }
 
-        pub fn new(t: T) Index {
-            return pool.register(t).id;
-        }
-
-        pub fn newAnd(t: T) *T {
+        pub fn new(t: T) *T {
             return pool.register(t);
         }
 
@@ -284,13 +281,13 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
     return struct {
         pub fn withControl(self: *T, control: *const fn (Index, Index) void, name: ?String) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                const control_id = ComponentControl.new(.{
+                const c = ComponentControl.new(.{
                     .name = name,
                     .component_type = T.aspect.*,
                     .control = control,
                 });
-                cm.map(self.id, control_id);
-                ComponentControl.activateById(control_id, true);
+                cm.map(self.id, c.id);
+                ComponentControl.activateById(c.id, true);
             }
             return self;
         }
@@ -298,13 +295,13 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
         pub fn withControlOfType(self: *T, control_type: anytype) *T {
             if (adapter.pool.control_mapping) |*cm| {
                 const ct = @TypeOf(control_type);
-                const control_id = ComponentControlType(ct).new(control_type);
-                cm.map(self.id, control_id);
+                const control = ComponentControlType(ct).new(control_type);
+                cm.map(self.id, control.id);
 
                 if (@hasDecl(ct, "initForComponent"))
                     control_type.initForComponent(self.id);
 
-                ComponentControl.activateById(control_id, true);
+                ComponentControl.activateById(control.id, true);
             }
             return self;
         }
@@ -594,6 +591,11 @@ pub const Composite = struct {
         self.tasks = undefined;
         self._loaded_components.deinit();
         self._loaded_components = undefined;
+    }
+
+    pub fn withTask(self: *Composite, task: Task) *Composite {
+        _ = self.tasks.add(Task.new(task));
+        return self;
     }
 
     pub fn withTaskById(self: *Composite, task_id: Index, life_cycle: CompositeLifeCycle) void {

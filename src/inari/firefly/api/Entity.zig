@@ -57,20 +57,12 @@ pub const Entity = struct {
         return Entity.byId(entity_id).hasComponent(entity_component_type);
     }
 
-    pub fn with(self: *Entity, c: anytype) *Entity {
+    pub fn withComponent(self: *Entity, c: anytype) *@TypeOf(c) {
         EComponent.checkValid(c);
 
         const T = @TypeOf(c);
-        const comp = @as(T, c);
-        _ = EComponentPool(T).register(comp, self.id);
         self.kind = self.kind.withAspect(T);
-        return self;
-    }
-
-    pub fn withAnd(self: *Entity, c: anytype) *@TypeOf(c) {
-        _ = self.with(c);
-        const T = @TypeOf(c);
-        return EComponentPool(T).items.get(self.id).?;
+        return EComponentPool(T).register(@as(T, c), self.id);
     }
 
     pub fn activation(self: *Entity, active: bool) void {
@@ -171,12 +163,25 @@ pub const EComponent = struct {
             pub const pool = EComponentPool(T);
             // component type pool function references
             pub var aspect: EComponentAspect = undefined;
+
             pub fn byId(id: Index) ?*T {
                 return pool.items.get(id);
             }
 
             pub fn count() usize {
                 return pool.items.slots.count();
+            }
+
+            pub fn entity(self: *T) *Entity {
+                return Entity.byId(self.id);
+            }
+
+            pub fn withComponent(self: *T, c: anytype) *@TypeOf(c) {
+                return self.entity().withComponent(c);
+            }
+
+            pub fn activate(self: *T) *Entity {
+                return self.entity().activate();
             }
         };
     }

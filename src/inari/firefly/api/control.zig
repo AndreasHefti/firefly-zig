@@ -41,11 +41,16 @@ pub const ActionResult = enum {
 };
 
 pub const ActionFunction = *const fn (Index) ActionResult;
+pub const ActionCallback = *const fn (Index, ActionResult) void;
 pub const TaskFunction = *const fn (?Index, ?Attributes) void;
 pub const TaskCallback = *const fn (Index) void;
 
 pub const Task = struct {
-    pub usingnamespace Component.Trait(Task, .{ .name = "Task", .activation = false, .processing = false });
+    pub usingnamespace Component.Trait(Task, .{
+        .name = "Task",
+        .activation = false,
+        .processing = false,
+    });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -215,17 +220,17 @@ pub fn ComponentControlType(comptime T: type) type {
             return register.get(id);
         }
 
-        pub fn new(control_type: T) Index {
-            const control_id = ComponentControl.new(.{
+        pub fn new(control_type: T) *ComponentControl {
+            const control = ComponentControl.new(.{
                 .name = control_type.name,
                 .control = T.update,
                 .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type).?.*,
                 .dispose = dispose,
             });
 
-            _ = register.set(control_type, control_id);
+            _ = register.set(control_type, control.id);
 
-            return control_id;
+            return control;
         }
 
         fn dispose(id: Index) void {

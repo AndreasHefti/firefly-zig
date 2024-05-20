@@ -30,18 +30,23 @@ fn example() void {
     // change rendering order
     Engine.reorderRenderer(&[2]String{ Engine.DefaultRenderer.SHAPE, Engine.DefaultRenderer.SPRITE });
 
-    _ = Entity.newAnd(.{ .name = "TestEntity4" })
-        .with(ETransform{ .position = .{ 100, 100 } })
-        .with(EShape{
+    _ = Entity.new(.{ .name = "TestEntity4" })
+        .withComponent(ETransform{ .position = .{ 100, 100 } })
+        .withComponent(EShape{
         .shape_type = ShapeType.CIRCLE,
         .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 50 }),
         .color = .{ 150, 150, 150, 100 },
     })
         .activate();
 
-    _ = Entity.newAnd(.{ .name = "TestEntity1" })
-        .with(ETransform{ .position = .{ 0, 0 }, .pivot = .{ 100, 100 }, .scale = .{ 0.5, 0.5 }, .rotation = 45 })
-        .with(EShape{
+    _ = Entity.new(.{ .name = "TestEntity1" })
+        .withComponent(ETransform{
+        .position = .{ 0, 0 },
+        .pivot = .{ 100, 100 },
+        .scale = .{ 0.5, 0.5 },
+        .rotation = 45,
+    })
+        .withComponent(EShape{
         .shape_type = ShapeType.RECTANGLE,
         .fill = false,
         .thickness = 5,
@@ -50,18 +55,28 @@ fn example() void {
     })
         .activate();
 
-    _ = Entity.newAnd(.{ .name = "TestEntity2" })
-        .with(ETransform{ .position = .{ 0, 0 }, .pivot = .{ 100, 100 }, .scale = .{ 0.25, 0.25 }, .rotation = 45 })
-        .with(EShape{
+    _ = Entity.new(.{ .name = "TestEntity2" })
+        .withComponent(ETransform{
+        .position = .{ 0, 0 },
+        .pivot = .{ 100, 100 },
+        .scale = .{ 0.25, 0.25 },
+        .rotation = 45,
+    })
+        .withComponent(EShape{
         .shape_type = ShapeType.RECTANGLE,
         .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
         .color = .{ 255, 0, 0, 100 },
     })
         .activate();
 
-    _ = Entity.newAnd(.{ .name = "TestEntity3" })
-        .with(ETransform{ .position = .{ 0, 0 }, .pivot = .{ 100, 100 }, .scale = .{ 0.1, 0.1 }, .rotation = 45 })
-        .with(EShape{
+    _ = Entity.new(.{ .name = "TestEntity3" })
+        .withComponent(ETransform{
+        .position = .{ 0, 0 },
+        .pivot = .{ 100, 100 },
+        .scale = .{ 0.1, 0.1 },
+        .rotation = 45,
+    })
+        .withComponent(EShape{
         .shape_type = ShapeType.RECTANGLE,
         .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
         .color = .{ 255, 0, 0, 255 },
@@ -71,9 +86,9 @@ fn example() void {
     })
         .activate();
 
-    _ = Entity.newAnd(.{ .name = "TestEntity5" })
-        .with(ETransform{ .position = .{ 0, 0 } })
-        .with(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
+    _ = Entity.new(.{ .name = "TestEntity5" })
+        .withComponent(ETransform{ .position = .{ 0, 0 } })
+        .withComponent(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
         .{ 400, 310 },
         .{ 410, 310 },
         .{ 420, 310 },
@@ -81,14 +96,14 @@ fn example() void {
         .{ 400, 315 },
         .{ 415, 310 },
     }) })
-        .with(EShape{
+        .withComponent(EShape{
         .shape_type = ShapeType.CIRCLE,
         .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 10 }),
         .color = .{ 150, 150, 150, 100 },
     })
         .activate();
 
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -97,10 +112,15 @@ fn example() void {
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+    }).id;
 
-    _ = Entity.newAnd(.{ .name = "TestEntitySprite" })
-        .with(ETransform{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 })
-        .with(ESprite{ .template_id = sprite_id })
+    _ = Entity.new(.{ .name = "TestEntitySprite" })
+        .withComponent(ETransform{
+        .position = .{ 64, 164 },
+        .scale = .{ 4, 4 },
+        .pivot = .{ 16, 16 },
+        .rotation = 180,
+    })
+        .withComponent(ESprite{ .template_id = sprite_id })
         .activate();
 }

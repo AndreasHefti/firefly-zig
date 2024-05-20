@@ -74,12 +74,17 @@ pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const CCondition = control.CCondition;
 pub const ActionResult = control.ActionResult;
 pub const ActionFunction = control.ActionFunction;
+pub const ActionCallback = control.ActionCallback;
 pub const Task = control.Task;
 pub const TaskFunction = control.TaskFunction;
 pub const TaskCallback = control.TaskCallback;
 pub const Trigger = control.Trigger;
 pub const ComponentControl = control.ComponentControl;
 pub const ComponentControlType = control.ComponentControlType;
+pub const Composite = component.Composite;
+pub const CompositeLifeCycle = component.CompositeLifeCycle;
+pub const ComponentRef = component.ComponentRef;
+pub const LifeCycleTaskRef = component.LifeCycleTaskRef;
 
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);

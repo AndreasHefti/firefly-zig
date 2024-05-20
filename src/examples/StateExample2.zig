@@ -33,7 +33,7 @@ var rndx = std.rand.DefaultPrng.init(32);
 const random = rndx.random();
 
 fn init() void {
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -42,9 +42,9 @@ fn init() void {
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+    }).id;
 
-    const state_engine = EntityStateEngine.newAnd(.{ .name = "MoveX" })
+    const state_engine = EntityStateEngine.new(.{ .name = "MoveX" })
         .withState(.{ .id = 1, .name = "right down", .condition = rightDown })
         .withState(.{ .id = 2, .name = "right up", .condition = rightUp })
         .withState(.{ .id = 3, .name = "left down", .condition = leftDown })
@@ -59,11 +59,11 @@ fn init() void {
 fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
     const vx = random.float(Float) * 200 + 1;
     const vy = random.float(Float) * 200 + 1;
-    const entity_id = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ 0, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .velocity = .{ vx, vy } })
-        .with(EState{ .state_engine = state_engine })
+    const entity_id = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ 0, 0 } })
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .withComponent(EMovement{ .velocity = .{ vx, vy } })
+        .withComponent(EState{ .state_engine = state_engine })
         .activate().id;
 
     EState.byId(entity_id).?.current_state =

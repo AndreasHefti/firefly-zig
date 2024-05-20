@@ -25,7 +25,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 var ypos: Float = 30;
 
 fn init() void {
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -65,19 +65,19 @@ fn init() void {
 }
 
 fn create(name: String, easing: Easing) void {
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ 10, ypos } })
-        .with(EText{ .text = name, .size = 20, .char_spacing = 2 })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ 10, ypos } })
+        .withComponent(EText{ .text = name, .size = 20, .char_spacing = 2 })
         .activate();
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ 200, ypos } })
-        .with(ESprite{ .template_id = SpriteTemplate.byName("Sprite").?.id })
-        .withAnd(EAnimation{})
-        .withAnimationAnd(
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ 200, ypos } })
+        .withComponent(ESprite{ .template_id = SpriteTemplate.byName("Sprite").?.id })
+        .withComponent(EAnimation{})
+        .withAnimation(
         .{ .duration = 5000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
         EasedValueIntegration{ .start_value = 200, .end_value = 500, .easing = easing, .property_ref = ETransform.Property.XPos },
-    ).activate();
+    ).entity().activate();
 
     ypos += 35;
 }

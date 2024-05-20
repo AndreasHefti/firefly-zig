@@ -40,47 +40,43 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    firefly.api.window.toggleFullscreen();
-
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
     }).load();
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
     var x: Float = 10;
-
-    _ = Entity.newAnd(.{})
+    _ = Entity.new(.{})
         .withControl(control, null)
-        .with(ETransform{ .position = .{ x, 0 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EMovement{ .gravity = .{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.3, .integrator = firefly.physics.EulerIntegrator })
-        .withAnd(EContactScan{ .collision_resolver = DebugCollisionResolver })
-        .withConstraintAnd(.{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true })
-        .with(EShape{ .shape_type = ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }), .color = .{ 0, 0, 255, 255 } })
+        .withComponent(ETransform{ .position = .{ x, 0 } })
+        .withComponent(ESprite{ .template_id = sprite.id })
+        .withComponent(EMovement{ .gravity = .{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.3, .integrator = firefly.physics.EulerIntegrator })
+        .withComponent(EContactScan{ .collision_resolver = DebugCollisionResolver })
+        .withConstraint(.{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true })
+        .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }), .color = .{ 0, 0, 255, 255 } })
         .activate();
-
     x += 50;
 
-    _ = Entity.newAnd(.{})
-        .with(ETransform{ .position = .{ x, 200 } })
-        .with(ESprite{ .template_id = sprite_id })
-        .with(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
+    _ = Entity.new(.{})
+        .withComponent(ETransform{ .position = .{ x, 200 } })
+        .withComponent(ESprite{ .template_id = sprite.id })
+        .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
         .activate();
 
     // tile grid
-    const tile = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{})
-        .with(ETile{ .sprite_template_id = sprite_id })
-        .with(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
+    const tile = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{})
+        .withComponent(ETile{ .sprite_template_id = sprite.id })
+        .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
         .activate();
 
-    var tile_grid: *TileGrid = TileGrid.newAnd(.{
+    var tile_grid: *TileGrid = TileGrid.new(.{
         .name = "TileGrid1",
         .world_position = PosF{ 50, 300 },
         .dimensions = .{ 10, 3, 32, 32 },

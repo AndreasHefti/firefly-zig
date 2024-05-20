@@ -26,20 +26,20 @@ fn loadWithView() void {
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+    }).id;
 
-    Texture.newAnd(.{
+    Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
     }).load();
 
-    const tile = Entity.newAnd(.{ .name = "TestEntity" })
-        .with(ETransform{})
-        .with(ETile{ .sprite_template_id = sprite_id })
+    const tile = Entity.new(.{ .name = "TestEntity" })
+        .withComponent(ETransform{})
+        .withComponent(ETile{ .sprite_template_id = sprite_id })
         .activate();
 
-    var tile_grid: *TileGrid = TileGrid.newAnd(.{
+    var tile_grid: *TileGrid = TileGrid.new(.{
         .name = "TileGrid1",
         .world_position = PosF{ 0, 0 },
         .dimensions = .{ 10, 10, 32, 32 },

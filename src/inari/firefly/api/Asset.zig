@@ -128,7 +128,7 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
             return firefly.utils.stringEquals(asset.asset_type.name, ASSET_TYPE_NAME);
         }
 
-        pub fn newAnd(asset_type: T) *T {
+        pub fn new(asset_type: T) *T {
             return Asset(T).resource.get(Asset(T).new(asset_type)).?;
         }
 
