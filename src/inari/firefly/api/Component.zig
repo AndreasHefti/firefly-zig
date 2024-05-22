@@ -185,27 +185,41 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
 fn GroupingTrait(comptime T: type, comptime adapter: anytype) type {
     comptime {
         if (!@hasField(T, "groups"))
-            @compileError("Expects component type to have field: groups: GroupKind");
+            @compileError("Expects component type to have field: groups: ?GroupKind");
     }
     return struct {
+        pub fn getGroups(id: Index) ?GroupKind {
+            if (adapter.pool.items.get(id)) |c|
+                return c.groups;
+            return null;
+        }
+
         pub fn addToGroup(self: *T, group: GroupAspect) void {
-            self.groups.addAspect(group);
+            if (self.groups == null) {
+                self.groups = GroupAspectGroup.newKind(group);
+            } else {
+                self.groups.addAspect(group);
+            }
         }
 
         pub fn removeFromGroup(self: *T, group: GroupAspect) void {
-            self.groups.removeAspect(group);
+            if (self.groups) |g|
+                g.removeAspect(group);
         }
 
         pub fn isInGroup(self: *T, group: GroupAspect) bool {
-            return self.groups.hasAspect(group);
+            if (self.groups) |g|
+                return g.hasAspect(group);
+            return false;
         }
 
         fn processGroup(group: GroupAspect, f: *const fn (*T) void) void {
             var next = adapter.pool.items.slots.nextSetBit(0);
             while (next) |i| {
                 if (adapter.pool.items.get(i)) |c| {
-                    if (c.groups.hasAspect(group))
-                        f(c);
+                    if (c.groups) |g|
+                        if (g.hasAspect(group))
+                            f(c);
                 }
                 next = adapter.pool.items.slots.nextSetBit(i + 1);
             }

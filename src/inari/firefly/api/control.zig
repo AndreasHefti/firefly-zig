@@ -1,6 +1,7 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const GroupAspect = firefly.api.GroupAspect;
 const GroupKind = firefly.api.GroupKind;
 const GroupAspectGroup = firefly.api.GroupAspectGroup;
 const DynArray = firefly.utils.DynArray;
@@ -177,25 +178,21 @@ pub const ComponentControl = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    groups: GroupKind = undefined,
+    groups: ?GroupKind = null,
 
     component_type: ComponentAspect,
     control: *const fn (Index, Index) void,
 
     dispose: ?*const fn (Index) void = null,
 
-    pub fn construct(self: *ComponentControl) void {
-        self.groups = GroupAspectGroup.newKind();
-    }
-
     pub fn destruct(self: *ComponentControl) void {
         if (self.dispose) |df| df(self.id);
-        self.groups = undefined;
+        self.groups = null;
     }
 
     pub fn update(control_id: Index, c_id: Index) void {
         const Self = @This();
-        if (Self.isActiveById(control_id))
+        if (Self.isActiveById(control_id) and !Pausing.isPaused(Self.getGroups(control_id)))
             Self.byId(control_id).control(c_id, control_id);
     }
 };
@@ -247,3 +244,38 @@ pub fn ComponentControlType(comptime T: type) type {
         }
     };
 }
+
+//////////////////////////////////////////////////////////////////////////
+//// Pausing
+//////////////////////////////////////////////////////////////////////////
+
+pub const Pausing = struct {
+    var all_paused = false;
+    var paused_groups: GroupKind = undefined;
+
+    pub fn pauseAll() void {
+        all_paused = true;
+    }
+
+    pub fn unpauseAll() void {
+        all_paused = false;
+        paused_groups.clear();
+    }
+
+    pub fn pauseGroup(group: GroupAspect) void {
+        paused_groups.addAspect(group);
+    }
+
+    pub fn unpauseGroup(group: GroupAspect) void {
+        paused_groups.removeAspect(group);
+    }
+
+    pub fn isPaused(groups: ?GroupKind) bool {
+        if (all_paused)
+            return true;
+        if (groups) |g|
+            return paused_groups.hasAnyAspect(g);
+
+        return false;
+    }
+};
