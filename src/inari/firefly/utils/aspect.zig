@@ -171,6 +171,16 @@ pub fn AspectGroup(comptime T: type) type {
                 };
             }
 
+            pub fn removeAspect(self: *Kind, aspect: Aspect) void {
+                self.without(aspect.id);
+                return self;
+            }
+
+            pub fn addAspect(self: *Kind, aspect: Aspect) void {
+                self.with(aspect.id);
+                return self;
+            }
+
             pub fn withAspect(self: Kind, aspect: anytype) Kind {
                 var k = self;
                 if (getAspectFromAnytype(aspect)) |a|
@@ -196,6 +206,10 @@ pub fn AspectGroup(comptime T: type) type {
 
             fn with(self: *Kind, index: u8) void {
                 self._mask |= maskBit(index);
+            }
+
+            fn without(self: *Kind, index: u8) void {
+                self._mask &= ~index;
             }
 
             fn maskBit(index: u8) MaskInt {

@@ -1,6 +1,5 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-const utils = firefly.utils;
 const sprite = @import("sprite.zig");
 const shape = @import("shape.zig");
 const view = @import("view.zig");
@@ -11,16 +10,16 @@ const AssetComponent = firefly.api.AssetComponent;
 const Asset = firefly.api.Asset;
 const AssetAspect = firefly.api.AssetAspect;
 const BindingId = firefly.api.BindingId;
-const String = utils.String;
+const String = firefly.utils.String;
 const TextureBinding = firefly.api.TextureBinding;
 const TextureFilter = firefly.api.TextureFilter;
 const TextureWrap = firefly.api.TextureWrap;
 const ShaderBinding = firefly.api.ShaderBinding;
 const Component = firefly.api.Component;
-const Float = utils.Float;
-const Vector2f = utils.Vector2f;
-const Vector3f = utils.Vector3f;
-const Vector4f = utils.Vector4f;
+const Float = firefly.utils.Float;
+const Vector2f = firefly.utils.Vector2f;
+const Vector3f = firefly.utils.Vector3f;
+const Vector4f = firefly.utils.Vector4f;
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
@@ -32,6 +31,10 @@ pub const SpriteSet = sprite.SpriteSet;
 
 pub const ETile = tile.ETile;
 pub const TileGrid = tile.TileGrid;
+pub const TileTypeAspect = tile.TileTypeAspect;
+pub const TileTypeAspectGroup = tile.TileTypeAspectGroup;
+pub const TileTypeKind = tile.TileTypeKind;
+pub const BasicTileTypes = tile.BasicTileTypes;
 
 pub const EShape = shape.EShape;
 

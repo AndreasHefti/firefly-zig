@@ -17,6 +17,10 @@ pub const IAnimation = animation.IAnimation;
 pub const Animation = animation.Animation;
 pub const EAnimation = animation.EAnimation;
 pub const AnimationSystem = animation.AnimationSystem;
+pub const IndexFrame = animation.IndexFrame;
+pub const IndexFrameList = animation.IndexFrameList;
+pub const IndexFrameIntegration = animation.IndexFrameIntegration;
+pub const BezierCurveIntegration = animation.BezierCurveIntegration;
 
 pub const EMovement = movement.EMovement;
 pub const MovementEvent = movement.MovementEvent;

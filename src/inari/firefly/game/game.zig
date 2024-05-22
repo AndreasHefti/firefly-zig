@@ -1,5 +1,6 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const tile = @import("tile.zig");
 
 const View = firefly.graphics.View;
 const ComponentControlType = firefly.api.ComponentControlType;
@@ -10,6 +11,10 @@ const Float = firefly.utils.Float;
 const Index = firefly.utils.Index;
 const String = firefly.utils.String;
 
+//////////////////////////////////////////////////////////////
+//// general game package init
+//////////////////////////////////////////////////////////////
+
 var initialized = false;
 
 pub fn init() !void {
@@ -18,12 +23,18 @@ pub fn init() !void {
         return;
 
     ComponentControlType(SimplePivotCamera).init();
+
+    // init sub packages
+    try tile.init();
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
+
+    // deinit sub packages
+    tile.deinit();
 
     ComponentControlType(SimplePivotCamera).deinit();
 }

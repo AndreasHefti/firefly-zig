@@ -75,7 +75,6 @@ pub const SpriteTemplate = struct {
         .{
             .name = "SpriteTemplate",
             .activation = false,
-            .processing = false,
             .subscription = false,
         },
     );
@@ -85,8 +84,21 @@ pub const SpriteTemplate = struct {
     texture_name: String,
     texture_bounds: RectF,
     texture_binding: BindingId = NO_BINDING,
-    flip_x: bool = false,
-    flip_y: bool = false,
+
+    _flippedX: bool = false,
+    _flippedY: bool = false,
+
+    pub fn flipX(self: *SpriteTemplate) *SpriteTemplate {
+        self.texture_bounds[2] = -self.texture_bounds[2];
+        self._flippedX = !self._flippedX;
+        return self;
+    }
+
+    pub fn flipY(self: *SpriteTemplate) *SpriteTemplate {
+        self.texture_bounds[3] = -self.texture_bounds[3];
+        self._flippedY = !self._flippedY;
+        return self;
+    }
 
     pub fn componentTypeInit() !void {
         AssetComponent.subscribe(notifyAssetEvent);
@@ -96,7 +108,6 @@ pub const SpriteTemplate = struct {
         AssetComponent.unsubscribe(notifyAssetEvent);
     }
 
-    // TODO add construct to automatically bind the texture if it is already loaded
     pub fn construct(self: *SpriteTemplate) void {
         if (Texture.resourceByName(self.texture_name)) |tex| {
             if (tex._binding) |b| {
@@ -176,41 +187,15 @@ pub const ESprite = struct {
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
 
-    _texture_bounds: RectF = undefined,
-    _texture_binding: BindingId = NO_BINDING,
-
-    pub fn activation(self: *ESprite, active: bool) void {
-        if (active) {
-            if (self.template_id == UNDEF_INDEX)
-                @panic("Missing template_id");
-
-            const template = SpriteTemplate.byId(self.template_id);
-            self._texture_bounds = template.texture_bounds;
-            self._texture_binding = template.texture_binding;
-
-            if (template.flip_x) {
-                self._texture_bounds[2] = -self._texture_bounds[2];
-            }
-            if (template.flip_y) {
-                self._texture_bounds[3] = -self._texture_bounds[3];
-            }
-        } else {
-            self._texture_bounds = undefined;
-            self._texture_binding = UNDEF_INDEX;
-        }
-    }
-
     pub fn destruct(self: *ESprite) void {
         self.template_id = UNDEF_INDEX;
-        self._texture_bounds = undefined;
-        self._texture_binding = NO_BINDING;
         self.tint_color = null;
         self.blend_mode = null;
     }
 
     pub const Property = struct {
         pub fn FrameId(id: Index) *Index {
-            return &ESprite.byId(id).?.id;
+            return &ESprite.byId(id).?.template_id;
         }
         pub fn TintColor(id: Index) *Color {
             var sprite = ESprite.byId(id).?;
@@ -386,13 +371,14 @@ const DefaultSpriteRenderer = struct {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the sprite
-                const es = ESprite.byId(id).?;
-                const trans = ETransform.byId(id).?;
+                const es: *ESprite = ESprite.byId(id).?;
+                const trans: *ETransform = ETransform.byId(id).?;
                 if (es.template_id != NO_BINDING) {
+                    const sprite_template: *SpriteTemplate = SpriteTemplate.byId(es.template_id);
                     const multi = if (EMultiplier.byId(id)) |m| m.positions else null;
                     firefly.api.rendering.renderSprite(
-                        es._texture_binding,
-                        es._texture_bounds,
+                        sprite_template.texture_binding,
+                        sprite_template.texture_bounds,
                         trans.position,
                         trans.pivot,
                         trans.scale,

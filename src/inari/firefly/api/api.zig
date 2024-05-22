@@ -60,6 +60,9 @@ pub const ComponentKind = ComponentAspectGroup.Kind;
 pub const ComponentAspect = ComponentAspectGroup.Aspect;
 pub const ComponentEvent = component.ComponentEvent;
 pub const ComponentListener = component.ComponentListener;
+pub const GroupAspect = component.GroupAspect;
+pub const GroupKind = component.GroupKind;
+pub const GroupAspectGroup = component.GroupAspectGroup;
 
 pub const System = system.System;
 pub const Timer = timer;

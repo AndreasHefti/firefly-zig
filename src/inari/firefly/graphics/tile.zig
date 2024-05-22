@@ -3,6 +3,7 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 
+const AspectGroup = firefly.utils.AspectGroup;
 const System = api.System;
 const Entity = api.Entity;
 const EComponent = api.EComponent;
@@ -36,6 +37,7 @@ pub fn init() !void {
     if (initialized)
         return;
 
+    BasicTileTypes.UNDEFINED = TileTypeAspectGroup.getAspect("UNDEFINED");
     Component.registerComponent(TileGrid);
     EComponent.registerEntityComponent(ETile);
     // init renderer
@@ -56,6 +58,20 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////
+//// Tile API
+//////////////////////////////////////////////////////////////
+
+// Tile Type Aspects
+pub const TileTypeAspectGroup = AspectGroup(struct {
+    pub const name = "TileType";
+});
+pub const TileTypeAspect = *const TileTypeAspectGroup.Aspect;
+pub const TileTypeKind = TileTypeAspectGroup.Kind;
+pub const BasicTileTypes = struct {
+    pub var UNDEFINED: TileTypeAspect = undefined;
+};
+
+//////////////////////////////////////////////////////////////
 //// ETile Tile Entity Component
 //////////////////////////////////////////////////////////////
 
@@ -67,34 +83,8 @@ pub const ETile = struct {
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
 
-    _texture_bounds: RectF = undefined,
-    _texture_binding: BindingId = NO_BINDING,
-
-    pub fn activation(self: *ETile, active: bool) void {
-        if (active) {
-            if (self.sprite_template_id == UNDEF_INDEX)
-                @panic("Missing sprite_template_id");
-
-            const template = SpriteTemplate.byId(self.sprite_template_id);
-            self._texture_bounds = template.texture_bounds;
-            self._texture_binding = template.texture_binding;
-
-            if (template.flip_x) {
-                self._texture_bounds[2] = -self._texture_bounds[2];
-            }
-            if (template.flip_y) {
-                self._texture_bounds[3] = -self._texture_bounds[3];
-            }
-        } else {
-            self._texture_bounds = undefined;
-            self._texture_binding = UNDEF_INDEX;
-        }
-    }
-
     pub fn destruct(self: *ETile) void {
         self.sprite_template_id = UNDEF_INDEX;
-        self._texture_bounds = undefined;
-        self._texture_binding = NO_BINDING;
         self.tint_color = null;
         self.blend_mode = null;
     }
@@ -388,9 +378,10 @@ const DefaultTileGridRenderer = struct {
                         const tile = ETile.byId(entity_id).?;
                         const trans = ETransform.byId(entity_id).?;
                         if (tile.sprite_template_id != NO_BINDING) {
+                            const sprite_template: *SpriteTemplate = SpriteTemplate.byId(tile.sprite_template_id);
                             api.rendering.renderSprite(
-                                tile._texture_binding,
-                                tile._texture_bounds,
+                                sprite_template.texture_binding,
+                                sprite_template.texture_bounds,
                                 itr.rel_position + trans.position,
                                 trans.pivot,
                                 trans.scale,

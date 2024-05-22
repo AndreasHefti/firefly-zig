@@ -45,6 +45,7 @@ pub const Entity = struct {
             if (INTERFACE_TABLE.get(i)) |ref| ref.clear(self.id);
             next = INTERFACE_TABLE.slots.nextSetBit(i + 1);
         }
+        self.kind = undefined;
     }
 
     pub fn hasComponent(self: *Entity, entity_component_type: anytype) bool {

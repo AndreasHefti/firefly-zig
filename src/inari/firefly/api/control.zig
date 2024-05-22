@@ -1,6 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const GroupKind = firefly.api.GroupKind;
+const GroupAspectGroup = firefly.api.GroupAspectGroup;
 const DynArray = firefly.utils.DynArray;
 const Attributes = firefly.api.Attributes;
 const ComponentAspect = firefly.api.ComponentAspect;
@@ -49,7 +51,6 @@ pub const Task = struct {
     pub usingnamespace Component.Trait(Task, .{
         .name = "Task",
         .activation = false,
-        .processing = false,
     });
 
     id: Index = UNDEF_INDEX,
@@ -125,7 +126,9 @@ pub const Task = struct {
 };
 
 pub const Trigger = struct {
-    pub usingnamespace Component.Trait(Trigger, .{ .name = "Trigger", .processing = false });
+    pub usingnamespace Component.Trait(Trigger, .{
+        .name = "Trigger",
+    });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -168,26 +171,32 @@ pub const Trigger = struct {
 pub const ComponentControl = struct {
     pub usingnamespace Component.Trait(ComponentControl, .{
         .name = "ComponentControl",
-        .processing = false,
+        .grouping = true,
         .subscription = false,
     });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
+    groups: GroupKind = undefined,
 
     component_type: ComponentAspect,
     control: *const fn (Index, Index) void,
 
     dispose: ?*const fn (Index) void = null,
 
-    pub fn update(control_id: Index, c_id: Index) void {
-        const Self = @This();
-        if (Self.isActiveById(control_id))
-            Self.byId(control_id).control(c_id, control_id);
+    pub fn construct(self: *ComponentControl) void {
+        self.groups = GroupAspectGroup.newKind();
     }
 
     pub fn destruct(self: *ComponentControl) void {
         if (self.dispose) |df| df(self.id);
+        self.groups = undefined;
+    }
+
+    pub fn update(control_id: Index, c_id: Index) void {
+        const Self = @This();
+        if (Self.isActiveById(control_id))
+            Self.byId(control_id).control(c_id, control_id);
     }
 };
 

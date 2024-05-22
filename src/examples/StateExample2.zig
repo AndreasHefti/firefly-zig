@@ -33,6 +33,8 @@ var rndx = std.rand.DefaultPrng.init(32);
 const random = rndx.random();
 
 fn init() void {
+    //firefly.api.window.toggleFullscreen();
+
     Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

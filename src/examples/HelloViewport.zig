@@ -53,9 +53,10 @@ fn loadWithView() void {
     const sprite_id = SpriteTemplate.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-        .flip_x = true,
-        .flip_y = true,
-    }).id;
+    })
+        .flipX()
+        .flipY()
+        .id;
 
     Texture.new(.{
         .name = "TestTexture",

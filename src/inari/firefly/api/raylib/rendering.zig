@@ -159,7 +159,6 @@ const RaylibRenderAPI = struct {
 
     var active_shader: ?BindingId = null;
     var active_render_texture: ?BindingId = null;
-    //var active_tint_color: rl.Color = undefined;
     var active_clear_color: ?rl.Color = undefined;
 
     var active_camera = rl.Camera2D{

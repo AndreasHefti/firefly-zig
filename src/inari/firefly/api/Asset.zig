@@ -36,7 +36,6 @@ pub const AssetAspect = AssetAspectGroup.Aspect;
 pub const AssetComponent = struct {
     pub usingnamespace Component.Trait(AssetComponent, .{
         .name = "AssetComponent",
-        .processing = false,
     });
 
     id: Index = UNDEF_INDEX,

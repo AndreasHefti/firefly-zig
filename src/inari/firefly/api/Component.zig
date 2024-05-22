@@ -55,10 +55,16 @@ pub fn deinit() void {
 //// Component API
 //////////////////////////////////////////////////////////////
 pub const ComponentAspectGroup = AspectGroup(struct {
-    pub const name = "Component";
+    pub const name = "ComponentType";
 });
 pub const ComponentKind = ComponentAspectGroup.Kind;
 pub const ComponentAspect = *const ComponentAspectGroup.Aspect;
+
+pub const GroupAspectGroup = AspectGroup(struct {
+    pub const name = "ComponentGroup";
+});
+pub const GroupKind = GroupAspectGroup.Kind;
+pub const GroupAspect = *const GroupAspectGroup.Aspect;
 
 const ComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
@@ -73,8 +79,8 @@ pub const Context = struct {
     activation: bool = true,
     name_mapping: bool = true,
     subscription: bool = true,
-    processing: bool = true,
     control: bool = false,
+    grouping: bool = false,
 };
 
 pub fn registerComponent(comptime T: type) void {
@@ -158,13 +164,52 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
             pool.clear(id);
         }
 
+        pub fn processBitSet(indices: *BitSet, f: *const fn (*T) void) void {
+            var next = indices.nextSetBit(0);
+            while (next) |i| {
+                if (pool.items.get(i)) |c| f(c);
+                next = indices.nextSetBit(i + 1);
+            }
+        }
+
         // optional component type features
         const empty_struct = struct {};
         pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This()) else empty_struct;
         pub usingnamespace if (context.activation) ActivationTrait(T, @This()) else empty_struct;
         pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This()) else empty_struct;
-        pub usingnamespace if (context.processing) ProcessingTrait(T, @This()) else empty_struct;
         pub usingnamespace if (context.control) ControlTrait(T, @This()) else empty_struct;
+        pub usingnamespace if (context.grouping) GroupingTrait(T, @This()) else empty_struct;
+    };
+}
+
+fn GroupingTrait(comptime T: type, comptime adapter: anytype) type {
+    comptime {
+        if (!@hasField(T, "groups"))
+            @compileError("Expects component type to have field: groups: GroupKind");
+    }
+    return struct {
+        pub fn addToGroup(self: *T, group: GroupAspect) void {
+            self.groups.addAspect(group);
+        }
+
+        pub fn removeFromGroup(self: *T, group: GroupAspect) void {
+            self.groups.removeAspect(group);
+        }
+
+        pub fn isInGroup(self: *T, group: GroupAspect) bool {
+            return self.groups.hasAspect(group);
+        }
+
+        fn processGroup(group: GroupAspect, f: *const fn (*T) void) void {
+            var next = adapter.pool.items.slots.nextSetBit(0);
+            while (next) |i| {
+                if (adapter.pool.items.get(i)) |c| {
+                    if (c.groups.hasAspect(group))
+                        f(c);
+                }
+                next = adapter.pool.items.slots.nextSetBit(i + 1);
+            }
+        }
     };
 }
 
@@ -181,6 +226,11 @@ fn SubscriptionTrait(comptime _: type, comptime adapter: anytype) type {
 }
 
 fn NameMappingTrait(comptime T: type, comptime adapter: anytype) type {
+    comptime {
+        if (!@hasField(T, "name"))
+            @compileError("Expects component type to have field: name: ?String");
+    }
+
     return struct {
         pub fn existsName(name: String) bool {
             if (adapter.pool.name_mapping) |*nm| {
@@ -246,32 +296,14 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
             activateById(self.id, true);
             return self;
         }
-    };
-}
 
-fn ProcessingTrait(comptime T: type, comptime adapter: anytype) type {
-    return struct {
         pub fn processActive(f: *const fn (*T) void) void {
             if (adapter.pool.active_mapping) |*am| {
                 var next = am.nextSetBit(0);
                 while (next) |i| {
-                    f(adapter.pool.items.get(i).?);
+                    if (adapter.pool.items.get(i)) |c| f(c);
                     next = am.nextSetBit(i + 1);
                 }
-            }
-        }
-
-        pub fn processBitSet(indices: *BitSet, f: *const fn (*T) void) void {
-            var i: Index = 0;
-            while (indices.nextSetBit(i)) |next| {
-                f(adapter.pool.items.get(next));
-                i = next + 1;
-            }
-        }
-
-        fn processIndexed(indices: []Index, f: *const fn (*T) void) void {
-            for (indices) |i| {
-                f(adapter.pool.items.get(i));
             }
         }
     };
@@ -564,7 +596,6 @@ pub const LifeCycleTaskRef = struct {
 pub const Composite = struct {
     pub usingnamespace Trait(Composite, .{
         .name = "Composite",
-        .processing = false,
     });
 
     id: Index = UNDEF_INDEX,

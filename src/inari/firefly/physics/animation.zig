@@ -31,7 +31,6 @@ pub fn init() void {
     if (initialized)
         return;
 
-    IndexFrame.init();
     System(AnimationSystem).createSystem(
         firefly.Engine.CoreSystems.AnimationSystem.name,
         "Updates all active animations",
@@ -47,7 +46,6 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    IndexFrame.deinit();
     System(AnimationSystem).disposeSystem();
 }
 
@@ -302,25 +300,6 @@ pub const EAnimation = struct {
         return self;
     }
 
-    // pub fn withAnimationAnd(
-    //     self: *EAnimation,
-    //     animation: AnimationTemplate,
-    //     integration: anytype,
-    // ) *Entity {
-    //     var i = integration;
-    //     i.init(self.id);
-    //     self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
-    //         animation.duration,
-    //         animation.looping,
-    //         animation.inverse_on_loop,
-    //         animation.reset_on_finish,
-    //         animation.loop_callback,
-    //         animation.finish_callback,
-    //         i,
-    //     )));
-    //     return Entity.byId(self.id);
-    // }
-
     pub fn activation(self: *EAnimation, active: bool) void {
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
@@ -476,29 +455,37 @@ pub const EasedValueIntegration = struct {
 //////////////////////////////////////////////////////////////
 
 pub const IndexFrame = struct {
-    var frames: DynArray(IndexFrame) = undefined;
-
-    index: Index = UNDEF_INDEX,
+    sprite_index: Index = UNDEF_INDEX,
     duration: usize = 0,
+};
 
-    fn init() void {
-        frames = DynArray(IndexFrame).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
+pub const IndexFrameList = struct {
+    frames: DynArray(IndexFrame) = undefined,
+    _state_pointer: Index = 0,
+    _duration: usize = UNDEF_INDEX,
+
+    pub fn new() IndexFrameList {
+        return IndexFrameList{
+            .frames = DynArray(IndexFrame).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable,
+        };
     }
 
-    fn deinit() void {
-        frames.deinit();
-        frames = undefined;
+    pub fn deinit(self: *IndexFrameList) void {
+        self.frames.deinit();
+        self.frames = undefined;
+        self._state_pointer = 0;
+        self._duration = UNDEF_INDEX;
     }
 
-    pub fn createFromSpriteSet(name: String, duration: usize) ?IndexFrameList {
+    pub fn createFromSpriteSet(name: String, frame_duration: usize) ?IndexFrameList {
         AssetComponent.activateByName(name, true);
         if (Asset(SpriteSet).getResourceByName(name)) |res| {
             var result = IndexFrameList.new();
 
             for (res.sprites_indices.items) |spi| {
-                const index = frames.add(IndexFrame{
-                    .index = res.byListIndex(spi).texture_binding,
-                    .duration = duration,
+                const index = result.frames.add(IndexFrame{
+                    .sprite_index = res.byListIndex(spi).id,
+                    .duration = frame_duration,
                 });
                 result.indices.set(index);
             }
@@ -515,8 +502,8 @@ pub const IndexFrame = struct {
         var result = IndexFrameList.new();
         var i: usize = 0;
         while (i < data.len) {
-            const index = frames.add(IndexFrame{
-                .index = data[i],
+            const index = result.frames.add(IndexFrame{
+                .sprite_index = data[i],
                 .duration = data[i + 1],
             });
             result.indices.set(index);
@@ -524,38 +511,17 @@ pub const IndexFrame = struct {
         }
         return result;
     }
-};
-
-pub const IndexFrameList = struct {
-    indices: BitSet = undefined,
-    _state_pointer: Index = 0,
-    _duration: usize = UNDEF_INDEX,
-
-    fn new() IndexFrameList {
-        return IndexFrameList{ .indices = BitSet.new(firefly.api.COMPONENT_ALLOC) catch unreachable };
-    }
-
-    fn deinit(self: *IndexFrameList) void {
-        var _next = self.indices.nextSetBit(0);
-        while (_next) |i| {
-            IndexFrame.frames.delete(i);
-            _next = self.indices.nextSetBit(i + 1);
-        }
-
-        self.indices.deinit();
-        self.indices = undefined;
-    }
 
     pub fn duration(self: *IndexFrameList) usize {
         if (self._duration != UNDEF_INDEX)
             return self._duration;
 
         var d: usize = 0;
-        var _next = self.indices.nextSetBit(0);
+        var _next = self.frames.slots.nextSetBit(0);
         while (_next) |i| {
-            if (IndexFrame.frames.get(i)) |f|
+            if (self.frames.get(i)) |f|
                 d += f.duration;
-            _next = self.indices.nextSetBit(i + 1);
+            _next = self.frames.slots.nextSetBit(i + 1);
         }
         self._duration = d;
         return d;
@@ -567,25 +533,25 @@ pub const IndexFrameList = struct {
 
         if (invert) {
             var _t: usize = d;
-            var _next = self.indices.prevSetBit(self.indices.capacity());
+            var _next = self.frames.slots.prevSetBit(self.frames.capacity());
             while (_next) |i| {
-                if (IndexFrame.frames.get(i)) |f| {
+                if (self.frames.get(i)) |f| {
                     _t -= f.duration;
                 }
                 if (_t <= t)
                     return i;
-                _next = self.indices.prevSetBit(i - 1);
+                _next = self.frames.slots.prevSetBit(i - 1);
             }
         } else {
             var _t: usize = 0;
-            var _next = self.indices.nextSetBit(0);
+            var _next = self.frames.slots.nextSetBit(0);
             while (_next) |i| {
-                if (IndexFrame.frames.get(i)) |f| {
+                if (self.frames.get(i)) |f| {
                     _t += f.duration;
                 }
                 if (_t >= t)
                     return i;
-                _next = self.indices.nextSetBit(i + 1);
+                _next = self.frames.slots.nextSetBit(i + 1);
             }
         }
 
@@ -598,19 +564,19 @@ pub const IndexFrameList = struct {
     }
 
     pub fn next(self: *IndexFrameList) ?*IndexFrame {
-        const _next = self.indices.nextSetBit(self._state_pointer + 1);
+        const _next = self.frames.slots.nextSetBit(self._state_pointer + 1);
         if (_next) |n| {
             self._state_pointer = n;
-            return IndexFrame.frames.get(n);
+            return self.frames.get(n);
         }
         return null;
     }
 
     pub fn prev(self: *IndexFrameList) ?*IndexFrame {
-        const _next = self.indices.prevSetBit(self._state_pointer - 1);
+        const _next = self.frames.slots.prevSetBit(self._state_pointer - 1);
         if (_next) |n| {
             self._state_pointer = n;
-            return IndexFrame.frames.get(n);
+            return self.frames.get(n);
         }
         return null;
     }
