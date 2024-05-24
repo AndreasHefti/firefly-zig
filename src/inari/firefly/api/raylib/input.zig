@@ -46,10 +46,10 @@ const RaylibInputAPI = struct {
         if (initialized)
             return;
 
-        keyboard_code_mapping = DynIndexArray.init(firefly.api.ALLOC, 10);
-        gamepad_1_code_mapping = DynIndexArray.init(firefly.api.ALLOC, 10);
-        gamepad_2_code_mapping = DynIndexArray.init(firefly.api.ALLOC, 10);
-        mouse_code_mapping = DynIndexArray.init(firefly.api.ALLOC, 10);
+        keyboard_code_mapping = DynIndexArray.new(firefly.api.ALLOC, 10);
+        gamepad_1_code_mapping = DynIndexArray.new(firefly.api.ALLOC, 10);
+        gamepad_2_code_mapping = DynIndexArray.new(firefly.api.ALLOC, 10);
+        mouse_code_mapping = DynIndexArray.new(firefly.api.ALLOC, 10);
 
         interface.checkButton = checkButton;
         interface.clear_mappings = clear_mappings;

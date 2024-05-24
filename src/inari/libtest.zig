@@ -116,7 +116,7 @@ const Object1 = struct {
     var objects1: DynArray(Object1) = undefined;
 
     fn init() void {
-        objects1 = DynArray(Object1).new(std.testing.allocator) catch unreachable;
+        objects1 = DynArray(Object1).new(std.testing.allocator);
     }
     fn deinit() void {
         objects1.deinit();
@@ -124,7 +124,7 @@ const Object1 = struct {
 
     pub fn new(object1: Object1) *Object1 {
         var result: *Object1 = objects1.addAndGet(object1).ref;
-        result.list = firefly.utils.DynIndexArray.init(std.testing.allocator, 5);
+        result.list = firefly.utils.DynIndexArray.new(std.testing.allocator, 5);
         return result;
     }
 
@@ -156,7 +156,7 @@ const Object2 = struct {
     var objects2: DynArray(Object2) = undefined;
 
     fn init() void {
-        objects2 = DynArray(Object2).new(std.testing.allocator) catch unreachable;
+        objects2 = DynArray(Object2).new(std.testing.allocator);
     }
     fn deinit() void {
         objects2.deinit();

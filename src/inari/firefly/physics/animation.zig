@@ -104,7 +104,7 @@ pub fn Animation(comptime Integration: type) type {
             if (Self.initialized)
                 @panic("Animation Type already initialized: " ++ @typeName(Integration));
 
-            animations = DynArray(Self).new(firefly.api.COMPONENT_ALLOC) catch undefined;
+            animations = DynArray(Self).new(firefly.api.COMPONENT_ALLOC);
             return AnimationTypeReference{
                 ._update_all = Self.updateAll,
                 ._deinit = Self.deinit,
@@ -268,7 +268,7 @@ pub const EAnimation = struct {
     animations: BitSet = undefined,
 
     pub fn construct(self: *EAnimation) void {
-        self.animations = BitSet.new(firefly.api.ENTITY_ALLOC) catch unreachable;
+        self.animations = BitSet.new(firefly.api.ENTITY_ALLOC);
     }
 
     pub const AnimationTemplate = struct {
@@ -336,9 +336,9 @@ pub const AnimationSystem = struct {
         animation_type_refs = DynArray(AnimationTypeReference).newWithRegisterSize(
             firefly.api.COMPONENT_ALLOC,
             10,
-        ) catch unreachable;
+        );
 
-        animation_refs = DynArray(IAnimation).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
+        animation_refs = DynArray(IAnimation).new(firefly.api.COMPONENT_ALLOC);
     }
 
     pub fn systemDeinit() void {
@@ -466,7 +466,7 @@ pub const IndexFrameList = struct {
 
     pub fn new() IndexFrameList {
         return IndexFrameList{
-            .frames = DynArray(IndexFrame).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable,
+            .frames = DynArray(IndexFrame).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10),
         };
     }
 

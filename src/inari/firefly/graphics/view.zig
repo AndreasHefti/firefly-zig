@@ -84,8 +84,8 @@ pub const ViewLayerMapping = struct {
 
     pub fn new() ViewLayerMapping {
         return ViewLayerMapping{
-            .undef_mapping = BitSet.new(firefly.api.ALLOC) catch unreachable,
-            .mapping = DynArray(DynArray(BitSet)).new(firefly.api.ALLOC) catch unreachable,
+            .undef_mapping = BitSet.new(firefly.api.ALLOC),
+            .mapping = DynArray(DynArray(BitSet)).new(firefly.api.ALLOC),
         };
     }
 
@@ -141,7 +141,7 @@ pub const ViewLayerMapping = struct {
             var layer_mapping: *DynArray(BitSet) = getLayerMapping(self, vid);
             const l_id = layer_id orelse 0;
             if (!layer_mapping.exists(l_id)) {
-                return layer_mapping.set(BitSet.new(firefly.api.ALLOC) catch unreachable, l_id);
+                return layer_mapping.set(BitSet.new(firefly.api.ALLOC), l_id);
             }
             return layer_mapping.get(l_id).?;
         }
@@ -152,7 +152,7 @@ pub const ViewLayerMapping = struct {
     fn getLayerMapping(self: *ViewLayerMapping, view_id: Index) *DynArray(BitSet) {
         if (!self.mapping.exists(view_id)) {
             return self.mapping.set(
-                DynArray(BitSet).new(firefly.api.ALLOC) catch unreachable,
+                DynArray(BitSet).new(firefly.api.ALLOC),
                 view_id,
             );
         }
@@ -217,8 +217,8 @@ pub const View = struct {
 
     pub fn componentTypeInit() !void {
         eventDispatch = EventDispatch(ViewChangeEvent).new(firefly.api.COMPONENT_ALLOC);
-        active_views_to_fbo = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10);
-        active_views_to_screen = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10);
+        active_views_to_fbo = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
+        active_views_to_screen = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
         Layer.subscribe(onLayerAction);
     }
 
@@ -352,7 +352,7 @@ pub const View = struct {
             view.ordered_active_layer = DynArray(Index).newWithRegisterSize(
                 firefly.api.COMPONENT_ALLOC,
                 10,
-            ) catch unreachable;
+            );
         }
         if (view.ordered_active_layer.?.slots.isSet(layer.order)) {
             std.log.err("Order of Layer already in use: {any}", .{layer});

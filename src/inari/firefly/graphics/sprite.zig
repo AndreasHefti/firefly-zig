@@ -231,7 +231,7 @@ pub const SpriteSet = struct {
 
     pub fn construct(self: *SpriteSet) void {
         self._stamps = DynArray(SpriteStamp).new(firefly.api.COMPONENT_ALLOC);
-        self._sprite_template_refs = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 32);
+        self._sprite_template_refs = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 32);
     }
 
     pub fn destruct(self: *SpriteSet) void {

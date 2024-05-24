@@ -28,7 +28,7 @@ pub const DynIndexArray = struct {
         try writer.print(" ]", .{});
     }
 
-    pub fn init(allocator: Allocator, grow_size: usize) DynIndexArray {
+    pub fn new(allocator: Allocator, grow_size: usize) DynIndexArray {
         return DynIndexArray{
             .items = &[_]Index{},
             .size_pointer = 0,
@@ -137,17 +137,17 @@ pub fn DynArray(comptime T: type) type {
         register: Register(T) = undefined,
         slots: BitSet = undefined,
 
-        pub fn new(allocator: Allocator) !Self {
+        pub fn new(allocator: Allocator) Self {
             return Self{
                 .register = Register(T).new(allocator),
-                .slots = try BitSet.newEmpty(allocator, 128),
+                .slots = BitSet.newEmpty(allocator, 128),
             };
         }
 
-        pub fn newWithRegisterSize(allocator: Allocator, register_size: usize) !Self {
+        pub fn newWithRegisterSize(allocator: Allocator, register_size: usize) Self {
             return Self{
                 .register = Register(T).newWithRegisterSize(allocator, register_size),
-                .slots = try BitSet.newEmpty(allocator, register_size),
+                .slots = BitSet.newEmpty(allocator, register_size),
             };
         }
 
@@ -394,7 +394,7 @@ pub const DynIndexMap = struct {
         if (!self.mapping.contains(index))
             self.mapping.put(
                 index,
-                DynIndexArray.init(self.mapping.allocator, self.grow_size),
+                DynIndexArray.new(self.mapping.allocator, self.grow_size),
             ) catch unreachable;
 
         if (self.mapping.getEntry(index)) |e| e.value_ptr.add(id);

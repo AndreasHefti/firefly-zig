@@ -1,6 +1,7 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const GroupKind = firefly.api.GroupKind;
 const StringBuffer = firefly.utils.StringBuffer;
 const DynArray = firefly.utils.DynArray;
 const Component = firefly.api.Component;
@@ -15,11 +16,13 @@ pub const Entity = struct {
     pub usingnamespace Component.Trait(Entity, .{
         .name = "Entity",
         .control = true,
+        .grouping = true,
     });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     kind: EComponentKind = undefined,
+    groups: ?GroupKind = null,
 
     pub fn componentTypeInit() !void {
         if (@This().isInitialized())
@@ -217,7 +220,7 @@ pub const EComponent = struct {
         if (initialized)
             return;
 
-        INTERFACE_TABLE = try DynArray(EComponentTypeInterface).new(firefly.api.ENTITY_ALLOC);
+        INTERFACE_TABLE = DynArray(EComponentTypeInterface).new(firefly.api.ENTITY_ALLOC);
     }
 
     // module deinit
@@ -291,7 +294,7 @@ pub fn EComponentPool(comptime T: type) type {
             errdefer Self.deinit();
 
             EComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
-            items = DynArray(T).new(firefly.api.ENTITY_ALLOC) catch @panic("Init items failed");
+            items = DynArray(T).new(firefly.api.ENTITY_ALLOC);
             _ = INTERFACE_TABLE.add(EComponentTypeInterface{
                 .activate = Self.activate,
                 .clear = Self.clear,

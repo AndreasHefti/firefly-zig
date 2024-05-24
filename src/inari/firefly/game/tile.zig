@@ -10,13 +10,15 @@ const IndexFrameList = firefly.physics.IndexFrameList;
 const ContactTypeAspect = firefly.physics.ContactTypeAspect;
 const Asset = firefly.api.Asset;
 const Texture = firefly.graphics.Texture;
+const SpriteTemplate = firefly.graphics.SpriteTemplate;
 
-const DynIndexArray = firefly.utils.DynIndexArray;
+const DynArray = firefly.utils.DynArray;
 const BlendMode = firefly.api.BlendMode;
 const Color = firefly.utils.Color;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
 const RectF = firefly.utils.RectF;
+const BindingId = firefly.api.BindingId;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
@@ -64,19 +66,50 @@ pub const TileContactMaterialTypes = struct {
     pub var INTERACTIVE: ContactMaterialAspect = undefined;
 };
 
+//////////////////////////////////////////////////////////////
+//// TileSet
+//////////////////////////////////////////////////////////////
+
+pub const SpriteData = struct {
+    texture_bounds: RectF,
+    flip_x: bool = false,
+    flip_y: bool = false,
+};
+
+pub const TileAnimationFrame = struct {
+    sprite_data: SpriteData,
+    duration: usize = 0,
+    _sprite_template_id: ?Index = null,
+};
+
 pub const TileTemplate = struct {
     name: ?String = null,
     groups: ?String = null,
     tile_kind: ?TileTypeKind = null,
-    tint_color: ?Color = null,
-    blend_mode: ?BlendMode = null,
+
+    sprite_data: SpriteData,
+    animation: ?DynArray(TileAnimationFrame) = null,
 
     contact_material_type: ?ContactMaterialAspect = null,
     contact_type: ?ContactTypeAspect = null,
-    contact_mask: ?BitMask = null,
+    contact_mask_id: ?String = null,
 
-    sprite_template_id: Index = UNDEF_INDEX,
-    sprite_animation: ?IndexFrameList = null,
+    _sprite_template_id: ?Index = null,
+
+    pub fn withAnimationFrame(self: *TileTemplate, frame: TileAnimationFrame) *TileTemplate {
+        if (self.animation == null)
+            self.animation = DynArray(TileAnimationFrame).new(firefly.api.COMPONENT_ALLOC);
+
+        if (self.animation) |a|
+            _ = a.add(frame);
+
+        return self;
+    }
+
+    pub fn deinit(self: *TileTemplate) void {
+        if (self.animation) |a|
+            a.deinit();
+    }
 };
 
 pub const TileSet = struct {
@@ -95,13 +128,19 @@ pub const TileSet = struct {
     tile_map_start_index: Index = UNDEF_INDEX,
     texture_name: String,
 
-    tile_templates: DynIndexArray = undefined,
+    tile_templates: DynArray(TileTemplate) = undefined,
 
     pub fn construct(self: *TileSet) void {
-        self.tile_templates = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 50);
+        self.tile_templates = DynArray(TileTemplate).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 50);
     }
 
     pub fn destruct(self: *TileSet) void {
+        var next = self.tile_templates.slots.nextSetBit(0);
+        while (next) |i| {
+            if (self.tile_templates.get(i)) |tt| tt.deinit();
+            next = self.tile_templates.slots.nextSetBit(i + 1);
+        }
+
         self.tile_templates.deinit();
         self.tile_templates = undefined;
     }
@@ -111,71 +150,90 @@ pub const TileSet = struct {
         return self;
     }
 
-    // pub fn activation(self: *TileSet, active: bool) void {
-    //     if (active) {
-    //         self.activate();
-    //     } else {
-    //         self.deactivate();
-    //     }
+    pub fn activation(self: *TileSet, active: bool) void {
+        if (active) {
+            self.activate();
+        } else {
+            self.deactivate();
+        }
+    }
 
-    // }
+    fn activate(self: *TileSet) void {
+        // create sprite templates out of the tile templates
+        var next = self.tile_templates.slots.nextSetBit(0);
+        while (next) |i| {
+            if (self.tile_templates.get(i)) |tt| {
+                var st: *SpriteTemplate = SpriteTemplate.new(.{
+                    .name = tt.name,
+                    .texture_name = self.texture_name,
+                    .texture_bounds = tt.sprite_data.texture_bounds,
+                });
+                if (tt.sprite_data.flip_x)
+                    st.flipX();
+                if (tt.sprite_data.flip_y)
+                    st.flipY();
+                tt._sprite_template_id = st.id;
 
-    // fn activate(self: *TileSet) void {
-    //     // make sure texture for sprite set is defined and loaded
-    //     if (Texture.resourceByName(self.texture_name)) |texture| {
-    //         // create all sprite templates
+                // animation if defined...
+                if (tt.animation) |animations| {
+                    var next_a = animations.slots.nextSetBit(0);
+                    while (next_a) |ii| {
+                        if (animations.get(ii)) |frame| {
+                            var ast: *SpriteTemplate = SpriteTemplate.new(.{
+                                .texture_name = self.texture_name,
+                                .texture_bounds = frame.sprite_data.texture_bounds,
+                            });
+                            if (frame.sprite_data.flip_x)
+                                ast.flipX();
+                            if (frame.sprite_data.flip_y)
+                                ast.flipY();
+                            frame._sprite_template_id = ast.id;
+                        }
+                        next_a = animations.slots.nextSetBit(ii + 1);
+                    }
+                }
+            }
+            next = self.tile_templates.slots.nextSetBit(i + 1);
+        }
+        // load texture asset for sprites
+        Texture.loadByName(self.texture_name);
+    }
 
-    //     }
+    fn deactivate(self: *TileSet) void {
+        // delete all sprite templates of the tile map
+        var next = self.tile_templates.slots.nextSetBit(0);
+        while (next) |i| {
+            if (self.tile_templates.get(i)) |tt| {
+                SpriteTemplate.disposeById(tt._sprite_template_id.?);
+                tt._sprite_template_id = null;
+                // cleanup animation if defined
+                if (tt.animation) |animations| {
+                    var next_a = animations.slots.nextSetBit(0);
+                    while (next_a) |ii| {
+                        if (animations.get(ii)) |frame| {
+                            SpriteTemplate.disposeById(frame._sprite_template_id.?);
+                            frame._sprite_template_id = null;
+                        }
+                        next_a = animations.slots.nextSetBit(ii + 1);
+                    }
+                }
+            }
+            next = self.tile_templates.slots.nextSetBit(i + 1);
+        }
+    }
+};
 
-    // }
+//////////////////////////////////////////////////////////////
+//// TileMapping
+//////////////////////////////////////////////////////////////
 
-    // fn dactivate(self: *TileSet) void {
-
-    // }
-
-    // override fun activate() {
-    //     super.activate()
-
-    //     // make sure texture for sprite set is defined and loaded
-    //     if (!textureRef.exists)
-    //         throw IllegalStateException("textureRef missing")
-    //     val texture = Texture[textureRef.targetKey]
-    //     if (!texture.loaded)
-    //         Texture.load(textureRef.targetKey)
-
-    //     // load all sprites on low level
-    //     val textureIndex = texture.assetIndex
-    //     val iter = tileTemplates.iterator()
-    //     while (iter.hasNext()) {
-    //         val tileTemplate = iter.next()
-    //         val spriteTemplate = tileTemplate.spriteTemplate
-    //         spriteTemplate.textureIndex = textureIndex
-    //         spriteTemplate.spriteIndex = Engine.graphics.createSprite(spriteTemplate.spriteData)
-    //         if (tileTemplate.animationData != null) {
-    //             val iter = tileTemplate.animationData!!.sprites.values.iterator()
-    //             while (iter.hasNext()) {
-    //                 val aSpriteTemplate = iter.next()
-    //                 aSpriteTemplate.textureIndex = textureIndex
-    //                 aSpriteTemplate.spriteIndex = Engine.graphics.createSprite(aSpriteTemplate.spriteData)
-    //             }
-    //         }
-    //     }
-    // }
-
-    // override fun deactivate() {
-    //     for (i in 0 until tileTemplates.capacity) {
-    //         val tileTemplate = tileTemplates[i] ?: continue
-    //         Engine.graphics.disposeSprite(tileTemplate.spriteTemplate.spriteIndex)
-    //         tileTemplate.spriteTemplate.spriteIndex = NULL_COMPONENT_INDEX
-    //         if (tileTemplate.animationData != null) {
-    //             val iter = tileTemplate.animationData!!.sprites.values.iterator()
-    //             while (iter.hasNext()) {
-    //                 val aSpriteTemplate = iter.next()
-    //                 Engine.graphics.disposeSprite(aSpriteTemplate.spriteIndex)
-    //                 aSpriteTemplate.spriteIndex = NULL_COMPONENT_INDEX
-    //             }
-    //         }
-    //     }
-    //     super.dispose()
-    // }
+pub const TileMapping = struct {
+    pub usingnamespace Component.Trait(
+        @This(),
+        .{
+            .name = "TileSet",
+            .processing = false,
+            .subscription = false,
+        },
+    );
 };

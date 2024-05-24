@@ -30,8 +30,8 @@ const RaylibAudioAPI = struct {
         if (initialized)
             return;
 
-        sounds = DynArray(Sound).new(firefly.api.ALLOC) catch unreachable;
-        music = DynArray(Music).new(firefly.api.ALLOC) catch unreachable;
+        sounds = DynArray(Sound).new(firefly.api.ALLOC);
+        music = DynArray(Music).new(firefly.api.ALLOC);
 
         interface.initAudioDevice = initAudioDevice;
         interface.closeAudioDevice = closeAudioDevice;

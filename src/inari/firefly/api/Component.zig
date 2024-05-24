@@ -29,7 +29,7 @@ pub fn init() !void {
     if (INIT)
         return;
 
-    COMPONENT_INTERFACE_TABLE = try DynArray(ComponentTypeInterface).new(api.COMPONENT_ALLOC);
+    COMPONENT_INTERFACE_TABLE = DynArray(ComponentTypeInterface).new(api.COMPONENT_ALLOC);
     registerComponent(Composite);
 }
 
@@ -433,11 +433,11 @@ pub fn ComponentPool(comptime T: type) type {
                 _type_init = true;
             }
 
-            items = DynArray(T).new(api.COMPONENT_ALLOC) catch @panic("Init items failed");
+            items = DynArray(T).new(api.COMPONENT_ALLOC);
             ComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
 
             if (has_active_mapping)
-                active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64) catch @panic("Init active mapping failed");
+                active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64);
 
             if (has_subscribe)
                 eventDispatch = EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);

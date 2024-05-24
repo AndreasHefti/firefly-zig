@@ -134,7 +134,7 @@ pub const EntityStateEngine = struct {
     states: DynArray(State) = undefined,
 
     pub fn construct(self: *EntityStateEngine) void {
-        self.states = DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable;
+        self.states = DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
     }
 
     pub fn destruct(self: *EntityStateEngine) void {
@@ -196,7 +196,7 @@ const EntityStateSystem = struct {
     var entities: BitSet = undefined;
 
     pub fn systemInit() void {
-        entities = BitSet.new(firefly.api.COMPONENT_ALLOC) catch undefined;
+        entities = BitSet.new(firefly.api.COMPONENT_ALLOC);
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EState}),
         };

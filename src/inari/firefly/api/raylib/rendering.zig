@@ -71,10 +71,10 @@ const RaylibRenderAPI = struct {
 
         active_clear_color = default_clear_color;
 
-        textures = DynArray(Texture2D).new(firefly.api.ALLOC) catch unreachable;
-        render_textures = DynArray(RenderTexture2D).new(firefly.api.ALLOC) catch unreachable;
-        shaders = DynArray(Shader).new(firefly.api.ALLOC) catch unreachable;
-        fonts = DynArray(Font).new(firefly.api.ALLOC) catch unreachable;
+        textures = DynArray(Texture2D).new(firefly.api.ALLOC);
+        render_textures = DynArray(RenderTexture2D).new(firefly.api.ALLOC);
+        shaders = DynArray(Shader).new(firefly.api.ALLOC);
+        fonts = DynArray(Font).new(firefly.api.ALLOC);
 
         interface.setRenderBatch = setRenderBatch;
 

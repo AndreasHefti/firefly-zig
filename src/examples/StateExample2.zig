@@ -68,6 +68,7 @@ fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
         .withComponent(EState{ .state_engine = state_engine })
         .activate().id;
 
+    // just the initial state
     EState.byId(entity_id).?.current_state =
         if (vx > 0 and vy > 0) state_engine.states.get(0).? else if (vx > 0 and vy < 0) state_engine.states.get(1).? else if (vx < 0 and vy > 0) state_engine.states.get(2).? else state_engine.states.get(3).?;
 

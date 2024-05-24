@@ -173,7 +173,7 @@ pub const Contact = struct {
         if (Contact.initialized)
             return;
 
-        pool = DynArray(Contact).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
+        pool = DynArray(Contact).new(firefly.api.COMPONENT_ALLOC);
     }
 
     fn deinit() void {
@@ -332,7 +332,7 @@ pub const ContactConstraint = struct {
                     contact.mask.reset(
                         firefly.utils.f32_usize(self.bounds.rect[2]),
                         firefly.utils.f32_usize(self.bounds.rect[3]),
-                    ) catch unreachable;
+                    );
                     // offset for contact mask relative to others world position
                     const offset: Vector2f = .{
                         t2_pos[0] + e_contact.bounds.rect[0] - (t1.position[0] + self.scan.bounds.rect[0]),
@@ -393,7 +393,7 @@ pub const ContactScan = struct {
             .bounds = bounds,
             .types = ContactTypeAspectGroup.newKind(),
             .materials = ContactMaterialAspectGroup.newKind(),
-            .entities = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10),
+            .entities = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
         };
     }
 
@@ -402,8 +402,8 @@ pub const ContactScan = struct {
             .bounds = bounds,
             .types = ContactTypeAspectGroup.newKind(),
             .materials = ContactMaterialAspectGroup.newKind(),
-            .entities = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10),
-            .contacts = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 10),
+            .entities = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
+            .contacts = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
             .mask = BitMask.new(
                 firefly.api.COMPONENT_ALLOC,
                 @intFromFloat(bounds.rect[2]),
@@ -545,7 +545,7 @@ pub const EContactScan = struct {
     constraints: BitSet = undefined,
 
     pub fn construct(self: *EContactScan) void {
-        self.constraints = BitSet.new(firefly.api.ENTITY_ALLOC) catch unreachable;
+        self.constraints = BitSet.new(firefly.api.ENTITY_ALLOC);
     }
 
     pub fn destruct(self: *EContactScan) void {
@@ -556,11 +556,6 @@ pub const EContactScan = struct {
         self.constraints.set(ContactConstraint.new(constraint).id);
         return self;
     }
-
-    // pub fn withConstraintAnd(self: *EContactScan, constraint: ContactConstraint) *Entity {
-    //     self.constraints.set(ContactConstraint.new(constraint));
-    //     return Entity.byId(self.id);
-    // }
 
     pub fn hasAnyContact(self: *EContactScan) bool {
         var next = self.constraints.nextSetBit(0);
@@ -610,7 +605,7 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
             if (Self.initialized)
                 return;
 
-            entity_ids = DynIndexArray.init(firefly.api.COMPONENT_ALLOC, 50);
+            entity_ids = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 50);
 
             interface.view_id = view_id;
             interface.layer_id = layer_id;
@@ -652,7 +647,7 @@ const ContactSystem = struct {
             .accept_kind = EComponentAspectGroup.newKindOf(.{EContact}),
             .dismiss_kind = EComponentAspectGroup.newKindOf(.{ETile}),
         };
-        contact_maps = DynArray(IContactMap).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5) catch unreachable;
+        contact_maps = DynArray(IContactMap).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5);
         firefly.physics.subscribe(processMoved);
     }
 

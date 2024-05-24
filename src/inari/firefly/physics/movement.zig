@@ -1,6 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const Entity = firefly.api.Entity;
+const Pausing = firefly.api.Pausing;
 const Timer = firefly.api.Timer;
 const UpdateScheduler = firefly.api.UpdateScheduler;
 const System = firefly.api.System;
@@ -270,8 +272,8 @@ const MovementSystem = struct {
         entity_condition = EntityCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EMovement}),
         };
-        movements = BitSet.new(firefly.api.COMPONENT_ALLOC) catch unreachable;
-        moved = BitSet.new(firefly.api.COMPONENT_ALLOC) catch unreachable;
+        movements = BitSet.new(firefly.api.COMPONENT_ALLOC);
+        moved = BitSet.new(firefly.api.COMPONENT_ALLOC);
         event.moved = &moved;
         event_dispatch = EventDispatch(MovementEvent).new(firefly.api.COMPONENT_ALLOC);
     }
@@ -300,14 +302,16 @@ const MovementSystem = struct {
         var next = movements.nextSetBit(0);
         while (next) |i| {
             if (EMovement.byId(i)) |m| {
-                if (m.update_scheduler) |scheduler| {
-                    if (scheduler.needs_update) {
-                        if (m.integrator(m, dt * (60 / @min(60, scheduler.resolution))))
+                if (m.active) {
+                    if (m.update_scheduler) |scheduler| {
+                        if (scheduler.needs_update) {
+                            if (m.integrator(m, dt * (60 / @min(60, scheduler.resolution))))
+                                moved.set(i);
+                        }
+                    } else {
+                        if (m.integrator(m, dt))
                             moved.set(i);
                     }
-                } else {
-                    if (m.integrator(m, dt))
-                        moved.set(i);
                 }
             }
             next = movements.nextSetBit(i + 1);

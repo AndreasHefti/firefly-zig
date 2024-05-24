@@ -21,30 +21,30 @@ pub const BitSet = struct {
     /// The number of valid items in this bit set
     unmanaged: DynamicBitSetUnmanaged = .{},
 
-    pub fn new(allocator: Allocator) !Self {
-        return try newEmpty(allocator, 64);
+    pub fn new(allocator: Allocator) Self {
+        return newEmpty(allocator, 64);
     }
 
     /// Creates a bit set with no elements present.
-    pub fn newEmpty(allocator: Allocator, bit_length: usize) !Self {
+    pub fn newEmpty(allocator: Allocator, bit_length: usize) Self {
         return Self{
-            .unmanaged = try DynamicBitSetUnmanaged.initEmpty(allocator, bit_length),
+            .unmanaged = DynamicBitSetUnmanaged.initEmpty(allocator, bit_length) catch unreachable,
             .allocator = allocator,
         };
     }
 
     /// Creates a bit set with all elements present.
-    pub fn newFull(allocator: Allocator, bit_length: usize) !Self {
+    pub fn newFull(allocator: Allocator, bit_length: usize) Self {
         return Self{
-            .unmanaged = try DynamicBitSetUnmanaged.initFull(allocator, bit_length),
+            .unmanaged = DynamicBitSetUnmanaged.initFull(allocator, bit_length) catch unreachable,
             .allocator = allocator,
         };
     }
 
     /// Resizes to a new length.  If the new length is larger
     /// than the old length, fills any added bits with `fill`.
-    pub fn resize(self: *@This(), new_len: usize, value: bool) !void {
-        try self.unmanaged.resize(self.allocator, new_len, value);
+    pub fn resize(self: *@This(), new_len: usize, value: bool) void {
+        self.unmanaged.resize(self.allocator, new_len, value) catch unreachable;
     }
 
     /// deinitialize the array and releases its memory.

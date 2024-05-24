@@ -911,7 +911,7 @@ pub const BitMask = struct {
         return BitMask{
             .width = width,
             .height = height,
-            .bits = BitSet.newEmpty(allocator, width * height) catch unreachable,
+            .bits = BitSet.newEmpty(allocator, width * height),
         };
     }
 
@@ -928,11 +928,11 @@ pub const BitMask = struct {
         self.bits.fill();
     }
 
-    pub fn reset(self: *BitMask, width: usize, height: usize) !void {
+    pub fn reset(self: *BitMask, width: usize, height: usize) void {
         self.width = width;
         self.height = height;
         self.bits.clear();
-        try self.bits.resize(width * height, false);
+        self.bits.resize(width * height, false);
     }
 
     pub fn clear(self: *BitMask) void {

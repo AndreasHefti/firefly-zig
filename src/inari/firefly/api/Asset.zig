@@ -79,7 +79,7 @@ pub fn Asset(comptime T: type) type {
         var resource: DynArray(T) = undefined;
 
         pub fn init() void {
-            resource = DynArray(T).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
+            resource = DynArray(T).new(firefly.api.COMPONENT_ALLOC);
         }
 
         pub fn deinit() void {
@@ -132,28 +132,35 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
         }
 
         pub fn load(self: *T) void {
-            loadResourceByName(self.name);
+            loadByName(self.name);
         }
 
-        pub fn resourceLoadByName(name: String) bool {
+        pub fn isLoadedById(id: Index) bool {
+            if (!AssetComponent.exists(id))
+                return false;
+
+            return AssetComponent.byId(id).isActive();
+        }
+
+        pub fn isLoadedByName(name: String) bool {
             if (AssetComponent.byName(name)) |a|
                 return a.isActive();
             return false;
         }
 
-        pub fn loadResourceByName(name: String) void {
+        pub fn loadByName(name: String) void {
             AssetComponent.activateByName(name, true);
         }
 
-        pub fn loadResourceById(id: Index) void {
+        pub fn loadById(id: Index) void {
             AssetComponent.activateById(id, true);
         }
 
-        pub fn disposeResourceByName(name: String) void {
+        pub fn disposeByName(name: String) void {
             AssetComponent.activateByName(name, false);
         }
 
-        pub fn disposeResourceById(id: Index) void {
+        pub fn disposeById(id: Index) void {
             AssetComponent.activateById(id, false);
         }
 
@@ -163,7 +170,7 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
                 return null;
 
             if (!asset.isActive())
-                loadResourceById(id);
+                loadById(id);
 
             return resourceById(asset.resource_id);
         }
@@ -179,123 +186,3 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
         }
     };
 }
-
-// pub fn Asset(comptime T: type) type {
-//     const has_init = @hasDecl(T, "assetTypeInit");
-//     const has_deinit = @hasDecl(T, "assetTypeDeinit");
-
-//     comptime {
-//         if (@typeInfo(T) != .Struct)
-//             @compileError("Expects asset type is a struct.");
-//         if (!@hasDecl(T, "ASSET_TYPE_NAME"))
-//             @compileError("Expects asset type to have field ASSET_TYPE_NAME: String that defines a unique name of the asset type.");
-//         if (!@hasDecl(T, "aspect"))
-//             @compileError("Expects asset type to have field aspect: *const ASPECT_GROUP_TYPE.Aspect, that defines the asset type aspect");
-//         if (!@hasDecl(T, "doLoad"))
-//             @compileError("Expects asset type to have fn doLoad(asset: *Asset(T)) void, that loads the asset");
-//         if (!@hasDecl(T, "doUnload"))
-//             @compileError("Expects asset type to have fn doUnload(asset: *Asset(T)) void, that unloads the asset");
-//     }
-
-//     return struct {
-//         const Self = @This();
-
-//         pub usingnamespace Component.Trait(Self, .{
-//             .name = "Asset:" ++ T.ASSET_TYPE_NAME,
-//             .processing = false,
-//         });
-
-//         var resources: DynArray(T) = undefined;
-
-//         // struct fields
-//         id: Index = UNDEF_INDEX,
-//         name: ?String = null,
-
-//         resource_id: Index = UNDEF_INDEX,
-//         parent_asset_id: ?Index = null,
-
-//         pub fn componentTypeInit() !void {
-//             if (Self.isInitialized())
-//                 return;
-
-//             AssetAspectGroup.applyAspect(T, T.ASSET_TYPE_NAME);
-//             Self.resources = DynArray(T).new(firefly.api.COMPONENT_ALLOC) catch unreachable;
-//             if (has_init)
-//                 T.assetTypeInit();
-//         }
-
-//         pub fn componentTypeDeinit() void {
-//             if (!Self.isInitialized())
-//                 return;
-
-//             if (has_deinit)
-//                 T.assetTypeDeinit();
-
-//             Self.resources.deinit();
-//             T.aspect = undefined;
-//         }
-
-//         pub fn getAssetType(_: *Self) *const AssetAspect {
-//             return T.aspect;
-//         }
-
-//         pub fn activation(self: *Self, active: bool) void {
-//             if (self.getResource()) |r| {
-//                 if (active) {
-//                     T.doLoad(self, r);
-//                 } else {
-//                     T.doUnload(self, r);
-//                 }
-//             }
-//         }
-
-//         pub fn loadByName(name: String) void {
-//             if (Self.byName(name)) |self| self.load();
-//         }
-
-//         pub fn loadById(id: Index) void {
-//             Self.byId(id).load();
-//         }
-
-//         pub fn unloadByName(name: String) void {
-//             if (Self.byName(name)) |self| self.unload();
-//         }
-
-//         pub fn unloadById(id: Index) void {
-//             Self.byId(id).unload();
-//         }
-
-//         pub fn load(self: *Self) void {
-//             if (self.isActive())
-//                 return;
-
-//             Self.activateById(self.id, true);
-//         }
-
-//         pub fn unload(self: *Self) void {
-//             if (!self.isActive())
-//                 return;
-
-//             Self.activateById(self.id, false);
-//         }
-
-//         pub fn getResource(self: *Self) ?*T {
-//             return T.getResourceById(self.resource_id);
-//         }
-
-//         pub fn format(
-//             self: Self,
-//             comptime _: []const u8,
-//             _: std.fmt.FormatOptions,
-//             writer: anytype,
-//         ) !void {
-//             try writer.print("Asset({s})[{d}|{?s}| resource_id={d}, parent_asset_id={?d} ]", .{
-//                 T.ASSET_TYPE_NAME,
-//                 self.id,
-//                 self.name,
-//                 self.resource_id,
-//                 self.parent_asset_id,
-//             });
-//         }
-//     };
-// }

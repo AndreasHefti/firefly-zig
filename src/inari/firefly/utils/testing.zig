@@ -107,7 +107,7 @@ test "DynIndexArray initialize" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var array = DynIndexArray.init(allocator, 10);
+    var array = DynIndexArray.new(allocator, 10);
     defer array.deinit();
 
     try testing.expect(array.items.len == 0);
@@ -119,7 +119,7 @@ test "DynIndexArray grow one" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var array = DynIndexArray.init(allocator, 10);
+    var array = DynIndexArray.new(allocator, 10);
     defer array.deinit();
 
     array.add(1);
@@ -167,7 +167,7 @@ test "DynIndexArray remove" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var array = DynIndexArray.init(allocator, 10);
+    var array = DynIndexArray.new(allocator, 10);
     defer array.deinit();
 
     array.add(1);
@@ -202,7 +202,7 @@ test "DynIndexArray grow" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var array = DynIndexArray.init(allocator, 2);
+    var array = DynIndexArray.new(allocator, 2);
     defer array.deinit();
 
     array.add(1);
