@@ -7,6 +7,7 @@ const Texture2D = rl.Texture2D;
 const Font = rl.Font;
 const RenderTexture2D = rl.RenderTexture2D;
 const Shader = rl.Shader;
+const Image = rl.Image;
 const String = firefly.utils.String;
 const IRenderAPI = firefly.api.IRenderAPI;
 const Vector2f = firefly.utils.Vector2f;
@@ -14,6 +15,7 @@ const Vector3f = firefly.utils.Vector3f;
 const Vector4f = firefly.utils.Vector4f;
 const PosF = firefly.utils.PosF;
 const RectF = firefly.utils.RectF;
+const ImageBinding = firefly.api.ImageBinding;
 const Color = firefly.utils.Color;
 const ShapeType = firefly.api.ShapeType;
 const BlendMode = firefly.api.BlendMode;
@@ -71,10 +73,11 @@ const RaylibRenderAPI = struct {
 
         active_clear_color = default_clear_color;
 
-        textures = DynArray(Texture2D).new(firefly.api.ALLOC);
-        render_textures = DynArray(RenderTexture2D).new(firefly.api.ALLOC);
-        shaders = DynArray(Shader).new(firefly.api.ALLOC);
-        fonts = DynArray(Font).new(firefly.api.ALLOC);
+        textures = DynArray(Texture2D).newWithRegisterSize(firefly.api.ALLOC, 10);
+        images = DynArray(Image).newWithRegisterSize(firefly.api.ALLOC, 10);
+        render_textures = DynArray(RenderTexture2D).newWithRegisterSize(firefly.api.ALLOC, 10);
+        shaders = DynArray(Shader).newWithRegisterSize(firefly.api.ALLOC, 10);
+        fonts = DynArray(Font).newWithRegisterSize(firefly.api.ALLOC, 10);
 
         interface.setRenderBatch = setRenderBatch;
 
@@ -83,6 +86,11 @@ const RaylibRenderAPI = struct {
 
         interface.loadTexture = loadTexture;
         interface.disposeTexture = disposeTexture;
+
+        interface.getImageFromTexture = getImageFromTexture;
+        interface.getImageFromFile = getImageFromFile;
+        interface.disposeImage = disposeImage;
+
         interface.loadFont = loadFont;
         interface.disposeFont = disposeFont;
         interface.createRenderTexture = createRenderTexture;
@@ -114,6 +122,14 @@ const RaylibRenderAPI = struct {
         }
         textures.clear();
         textures.deinit();
+
+        next = images.slots.nextSetBit(0);
+        while (next) |i| {
+            disposeImage(i);
+            next = images.slots.nextSetBit(i + 1);
+        }
+        images.clear();
+        images.deinit();
 
         next = render_textures.slots.nextSetBit(0);
         while (next) |i| {
@@ -153,6 +169,7 @@ const RaylibRenderAPI = struct {
 
     var window_handle: ?WindowHandle = null;
     var textures: DynArray(Texture2D) = undefined;
+    var images: DynArray(Image) = undefined;
     var fonts: DynArray(Font) = undefined;
     var render_textures: DynArray(RenderTexture2D) = undefined;
     var shaders: DynArray(Shader) = undefined;
@@ -185,13 +202,11 @@ const RaylibRenderAPI = struct {
     }
 
     fn addOffset(offset: Vector2f) void {
-        //rlgl.rlTranslatef(offset[0], offset[1], 0);
         active_camera.offset = @bitCast(@as(Vector2f, @bitCast(active_camera.offset)) + offset);
         rl.BeginMode2D(active_camera);
     }
 
     fn minusOffset(offset: Vector2f) void {
-        //rlgl.rlTranslatef(-offset[0], -offset[1], 0);
         active_camera.offset = @bitCast(@as(Vector2f, @bitCast(active_camera.offset)) - offset);
         rl.BeginMode2D(active_camera);
     }
@@ -224,6 +239,57 @@ const RaylibRenderAPI = struct {
         if (textures.get(binding)) |tex| {
             rl.UnloadTexture(tex.*);
             textures.delete(binding);
+        }
+    }
+
+    fn getImageFromTexture(texture_id: BindingId) ImageBinding {
+        const texture: *Texture2D = textures.get(texture_id).?;
+        const img: Image = rl.LoadImageFromTexture(texture.*);
+        const img_id = images.add(img);
+        return ImageBinding{
+            .id = img_id,
+            .data = img.data,
+            .width = img.width,
+            .height = img.height,
+            .mipmaps = img.mipmaps,
+            .format = img.format,
+            .get_color_at = getImageColorAt,
+            .set_color_at = setImageColorAt,
+        };
+    }
+
+    fn getImageFromFile(resource: String) ImageBinding {
+        const img: Image = rl.LoadImage(@ptrCast(resource));
+        const img_id = images.add(img);
+        return ImageBinding{
+            .id = img_id,
+            .data = img.data,
+            .width = img.width,
+            .height = img.height,
+            .mipmaps = img.mipmaps,
+            .format = img.format,
+            .get_color_at = getImageColorAt,
+            .set_color_at = setImageColorAt,
+        };
+    }
+
+    fn disposeImage(image_id: BindingId) void {
+        if (images.get(image_id)) |img| {
+            rl.UnloadImage(img.*);
+            images.delete(image_id);
+        }
+    }
+
+    fn getImageColorAt(image_id: BindingId, x: CInt, y: CInt) ?Color {
+        if (images.get(image_id)) |img| {
+            return @bitCast(rl.GetImageColor(img.*, x, y));
+        }
+        return null;
+    }
+
+    fn setImageColorAt(image_id: BindingId, x: CInt, y: CInt, color: Color) void {
+        if (images.get(image_id)) |img| {
+            rl.ImageDrawPixel(img, x, y, @bitCast(color));
         }
     }
 

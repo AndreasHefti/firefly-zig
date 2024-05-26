@@ -128,6 +128,17 @@ pub fn AspectGroup(comptime T: type) type {
             /// The bitmask to store indices of owned aspects of this kind
             _mask: MaskInt = 0,
 
+            pub fn fromStringList(aspect_names: ?String) ?Kind {
+                if (aspect_names) |a_string| {
+                    var result: Kind = Kind{};
+                    var it = std.mem.split(u8, a_string, ",");
+                    while (it.next()) |aspect_name|
+                        result.addAspect(Group.getAspect(aspect_name).*);
+                    return result;
+                }
+                return null;
+            }
+
             pub fn clear(self: *Kind) void {
                 self._mask = 0;
             }
@@ -173,12 +184,10 @@ pub fn AspectGroup(comptime T: type) type {
 
             pub fn removeAspect(self: *Kind, aspect: Aspect) void {
                 self.without(aspect.id);
-                return self;
             }
 
             pub fn addAspect(self: *Kind, aspect: Aspect) void {
                 self.with(aspect.id);
-                return self;
             }
 
             pub fn withAspect(self: Kind, aspect: anytype) Kind {

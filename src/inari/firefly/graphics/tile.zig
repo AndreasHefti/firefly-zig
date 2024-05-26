@@ -88,6 +88,19 @@ pub const ETile = struct {
         self.tint_color = null;
         self.blend_mode = null;
     }
+
+    pub const Property = struct {
+        pub fn FrameId(id: Index) *Index {
+            return &ETile.byId(id).?.sprite_template_id;
+        }
+        pub fn TintColor(id: Index) *Color {
+            var tile = ETile.byId(id).?;
+            if (tile.tint_color == null) {
+                tile.tint_color = Color{};
+            }
+            return &tile.tint_color.?;
+        }
+    };
 };
 
 //////////////////////////////////////////////////////////////

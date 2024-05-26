@@ -433,6 +433,18 @@ pub const ShaderBinding = struct {
     _set_uniform_texture: *const fn (BindingId, String, BindingId) bool,
 };
 
+pub const ImageBinding = struct {
+    id: BindingId = NO_BINDING,
+    data: ?*anyopaque,
+    width: CInt,
+    height: CInt,
+    mipmaps: CInt,
+    format: CInt,
+
+    get_color_at: *const fn (BindingId, CInt, CInt) ?Color,
+    set_color_at: *const fn (BindingId, CInt, CInt, Color) void,
+};
+
 pub fn IRenderAPI() type {
     return struct {
         const Self = @This();
@@ -453,6 +465,10 @@ pub fn IRenderAPI() type {
         /// Disposes the texture with given texture binding id from GPU memory
         /// @param textureId binding identifier of the texture to dispose.
         disposeTexture: *const fn (BindingId) void = undefined,
+
+        getImageFromTexture: *const fn (BindingId) ImageBinding = undefined,
+        getImageFromFile: *const fn (String) ImageBinding = undefined,
+        disposeImage: *const fn (BindingId) void = undefined,
 
         loadFont: *const fn (resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) BindingId = undefined,
         disposeFont: *const fn (BindingId) void = undefined,

@@ -119,7 +119,6 @@ pub fn Animation(comptime Integration: type) type {
             var next = animations.slots.nextSetBit(0);
             while (next) |i| {
                 dispose(i);
-                animations.delete(i);
                 next = animations.slots.nextSetBit(i + 1);
             }
             animations.clear();
@@ -231,6 +230,8 @@ pub fn Animation(comptime Integration: type) type {
         }
 
         pub fn dispose(index: Index) void {
+            if (@hasDecl(Integration, "dispose"))
+                animations.get(index).?.integration.dispose();
             animations.delete(index);
         }
     };
@@ -455,14 +456,14 @@ pub const EasedValueIntegration = struct {
 //////////////////////////////////////////////////////////////
 
 pub const IndexFrame = struct {
-    sprite_index: Index = UNDEF_INDEX,
+    sprite_id: Index = UNDEF_INDEX,
     duration: usize = 0,
 };
 
 pub const IndexFrameList = struct {
     frames: DynArray(IndexFrame) = undefined,
     _state_pointer: Index = 0,
-    _duration: usize = UNDEF_INDEX,
+    _duration: usize = 0,
 
     pub fn new() IndexFrameList {
         return IndexFrameList{
@@ -474,72 +475,44 @@ pub const IndexFrameList = struct {
         self.frames.deinit();
         self.frames = undefined;
         self._state_pointer = 0;
-        self._duration = UNDEF_INDEX;
+        self._duration = 0;
     }
 
-    pub fn createFromSpriteSet(name: String, frame_duration: usize) ?IndexFrameList {
-        AssetComponent.activateByName(name, true);
-        if (Asset(SpriteSet).getResourceByName(name)) |res| {
-            var result = IndexFrameList.new();
-
-            for (res.sprites_indices.items) |spi| {
-                const index = result.frames.add(IndexFrame{
-                    .sprite_index = res.byListIndex(spi).id,
-                    .duration = frame_duration,
-                });
-                result.indices.set(index);
-            }
-            return result;
-        }
-
-        return null;
+    pub fn withFrame(self: *IndexFrameList, sprite_id: Index, frame_duration: usize) *IndexFrameList {
+        _ = self.frames.add(.{ .sprite_id = sprite_id, .duration = frame_duration });
+        self._duration += frame_duration;
+        return self;
     }
 
-    pub fn createListFromArrayData(data: []usize) IndexFrameList {
-        if (@mod(data.len, 2) != 0)
-            @panic("data must have even length");
+    // pub fn createFromSpriteSet(name: String, frame_duration: usize) ?IndexFrameList {
+    //     AssetComponent.activateByName(name, true);
+    //     if (Asset(SpriteSet).getResourceByName(name)) |res| {
+    //         var result = IndexFrameList.new();
 
-        var result = IndexFrameList.new();
-        var i: usize = 0;
-        while (i < data.len) {
-            const index = result.frames.add(IndexFrame{
-                .sprite_index = data[i],
-                .duration = data[i + 1],
-            });
-            result.indices.set(index);
-            i = i + 2;
-        }
-        return result;
-    }
+    //         for (res.sprites_indices.items) |spi| {
+    //             const index = result.frames.add(IndexFrame{
+    //                 .sprite_id = res.byListIndex(spi).id,
+    //                 .duration = frame_duration,
+    //             });
+    //             result.indices.set(index);
+    //         }
+    //         return result;
+    //     }
 
-    pub fn duration(self: *IndexFrameList) usize {
-        if (self._duration != UNDEF_INDEX)
-            return self._duration;
+    //     return null;
+    // }
 
-        var d: usize = 0;
-        var _next = self.frames.slots.nextSetBit(0);
-        while (_next) |i| {
-            if (self.frames.get(i)) |f|
-                d += f.duration;
-            _next = self.frames.slots.nextSetBit(i + 1);
-        }
-        self._duration = d;
-        return d;
-    }
-
-    pub fn getIndexAt(self: *IndexFrameList, t_normalized: Float, invert: bool) Index {
-        const d: usize = self.duration();
-        const t: usize = firefly.utils.f32_usize(t_normalized * firefly.utils.usize_f32(d));
-
+    pub fn getAt(self: *IndexFrameList, t_normalized: Float, invert: bool) Index {
+        const t: usize = firefly.utils.f32_usize(t_normalized * firefly.utils.usize_f32(self._duration));
         if (invert) {
-            var _t: usize = d;
+            var _t: usize = self._duration;
             var _next = self.frames.slots.prevSetBit(self.frames.capacity());
             while (_next) |i| {
                 if (self.frames.get(i)) |f| {
                     _t -= f.duration;
                 }
                 if (_t <= t)
-                    return i;
+                    return self.frames.get(i).?.sprite_id;
                 _next = self.frames.slots.prevSetBit(i - 1);
             }
         } else {
@@ -550,7 +523,7 @@ pub const IndexFrameList = struct {
                     _t += f.duration;
                 }
                 if (_t >= t)
-                    return i;
+                    return self.frames.get(i).?.sprite_id;
                 _next = self.frames.slots.nextSetBit(i + 1);
             }
         }
@@ -560,7 +533,7 @@ pub const IndexFrameList = struct {
 
     pub fn reset(self: *IndexFrameList) void {
         self._state_pointer = 0;
-        self._duration = UNDEF_INDEX;
+        self._duration = 0;
     }
 
     pub fn next(self: *IndexFrameList) ?*IndexFrame {
@@ -597,10 +570,14 @@ pub const IndexFrameIntegration = struct {
     }
 
     pub fn integrate(a: *Animation(IndexFrameIntegration)) void {
-        a.integration._property.* = a.integration.timeline.getIndexAt(
+        a.integration._property.* = a.integration.timeline.getAt(
             a._t_normalized,
             a._inverted,
         );
+    }
+
+    pub fn dispose(self: *IndexFrameIntegration) void {
+        self.timeline.deinit();
     }
 };
 
