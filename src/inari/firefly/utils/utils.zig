@@ -68,6 +68,10 @@ pub inline fn usize_cint(v: usize) c_int {
     return @as(c_int, @intCast(v));
 }
 
+pub inline fn f32_cint(v: f32) c_int {
+    return @as(c_int, @intCast(f32_usize(v)));
+}
+
 pub const AspectGroup = aspect.AspectGroup;
 
 pub fn Condition(comptime T: type) type {

@@ -466,8 +466,8 @@ pub fn IRenderAPI() type {
         /// @param textureId binding identifier of the texture to dispose.
         disposeTexture: *const fn (BindingId) void = undefined,
 
-        getImageFromTexture: *const fn (BindingId) ImageBinding = undefined,
-        getImageFromFile: *const fn (String) ImageBinding = undefined,
+        loadImageFromTexture: *const fn (BindingId) ImageBinding = undefined,
+        loadImageFromFile: *const fn (String) ImageBinding = undefined,
         disposeImage: *const fn (BindingId) void = undefined,
 
         loadFont: *const fn (resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) BindingId = undefined,

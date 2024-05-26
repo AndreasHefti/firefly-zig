@@ -20,6 +20,7 @@ const EView = firefly.graphics.EView;
 const EAnimation = firefly.physics.EAnimation;
 const EContact = firefly.physics.EContact;
 const IndexFrameIntegration = firefly.physics.IndexFrameIntegration;
+const ImageBinding = firefly.api.ImageBinding;
 
 const StringHashMap = std.StringHashMap;
 const DynIndexArray = firefly.utils.DynIndexArray;
@@ -29,6 +30,8 @@ const Color = firefly.utils.Color;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
 const RectF = firefly.utils.RectF;
+const ClipI = firefly.utils.ClipI;
+const CInt = firefly.utils.CInt;
 const BindingId = firefly.api.BindingId;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
@@ -106,12 +109,12 @@ pub const TileTemplate = struct {
 
     contact_material_type: ?ContactMaterialAspect = null,
     contact_type: ?ContactTypeAspect = null,
-    contact_mask_id: ?String = null,
+    contact_mask_name: ?String = null,
 
     _sprite_template_id: ?Index = null,
 
     pub fn hasContact(self: *TileTemplate) bool {
-        return self.contact_material_type != null and self.contact_type != null and self.contact_mask_id != null;
+        return self.contact_material_type != null and self.contact_type != null and self.contact_mask_name != null;
     }
 
     pub fn withAnimationFrame(self: *TileTemplate, frame: TileAnimationFrame) *TileTemplate {
@@ -278,6 +281,7 @@ pub const TileMapping = struct {
 
     pub fn componentTypeInit() !void {
         contact_mask_cache = StringHashMap(BitMask).init(firefly.api.ALLOC);
+        return;
     }
 
     pub fn componentTypeDeinit() void {
@@ -400,7 +404,7 @@ pub const TileMapping = struct {
                                 }).entity();
 
                                 // add contact if needed
-                                addContactData(entity, tile_template);
+                                addContactData(entity, tile_set, tile_template);
                                 // add animation if needed
                                 addAnimationData(entity, tile_template);
                                 // set code -> entity id mapping for layer
@@ -417,7 +421,7 @@ pub const TileMapping = struct {
         }
     }
 
-    fn addContactData(entity: *Entity, tile_template: *TileTemplate) void {
+    fn addContactData(entity: *Entity, tile_set: *TileSet, tile_template: *TileTemplate) void {
         if (tile_template.hasContact()) {
             _ = entity.withComponent(EContact{
                 .bounds = .{
@@ -430,7 +434,7 @@ pub const TileMapping = struct {
                 },
                 .c_type = tile_template.contact_type,
                 .c_material = tile_template.contact_material_type,
-                .mask = getContactMask(tile_template),
+                .mask = getContactMask(tile_set, tile_template),
             });
         }
     }
@@ -456,9 +460,41 @@ pub const TileMapping = struct {
         }
     }
 
-    fn getContactMask(_: *TileTemplate) ?BitMask {
-        // TODO
-        return null;
+    fn getContactMask(tile_set: *TileSet, tile_template: *TileTemplate) ?BitMask {
+        if (tile_template.contact_mask_name == null)
+            return null;
+
+        if (contact_mask_cache.get(tile_template.contact_mask_name.?)) |cm|
+            return cm;
+
+        // create contact mask from image data and cache it
+        // make sure involved texture is loaded into GPU
+        Texture.loadByName(tile_set.texture_name);
+        if (Texture.resourceByName(tile_set.texture_name)) |tex| {
+            // load image of texture to CPU
+            var image: ImageBinding = firefly.api.rendering.loadImageFromTexture(tex._binding.?.id);
+            defer firefly.api.rendering.disposeImage(image.id);
+
+            // set bits on mask for colored pixels on image
+            const bounds: ClipI = .{
+                firefly.utils.f32_usize(tile_template.sprite_data.texture_bounds[0]),
+                firefly.utils.f32_usize(tile_template.sprite_data.texture_bounds[1]),
+                firefly.utils.f32_usize(tile_template.sprite_data.texture_bounds[2]),
+                firefly.utils.f32_usize(tile_template.sprite_data.texture_bounds[3]),
+            };
+            var result: BitMask = BitMask.new(firefly.api.ALLOC, bounds[2], bounds[3]);
+            for (0..bounds[3]) |y| {
+                for (0..bounds[2]) |x| {
+                    const _x: CInt = firefly.utils.usize_cint(x + bounds[0]);
+                    const _y: CInt = firefly.utils.usize_cint(y + bounds[1]);
+                    if (firefly.utils.hasColor(image.get_color_at(image.id, _x, _y)))
+                        result.setBitAt(x, y);
+                }
+            }
+            contact_mask_cache.put(tile_template.contact_mask_name.?, result) catch unreachable;
+        }
+
+        return contact_mask_cache.get(tile_template.contact_mask_name.?);
     }
 
     fn _deactivate(self: *TileMapping) void {

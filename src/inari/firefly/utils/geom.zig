@@ -284,6 +284,12 @@ pub fn isRegionRectF(r1: RectF) bool {
 /// Color as Vector4u8
 pub const Color = @Vector(4, Byte);
 
+pub inline fn hasColor(color: ?Color) bool {
+    if (color) |c|
+        return c[0] != 0 or c[1] != 0 or c[2] != 0;
+    return false;
+}
+
 pub const Orientation = enum { NONE, NORTH, EAST, SOUTH, WEST };
 
 pub const Direction = struct {

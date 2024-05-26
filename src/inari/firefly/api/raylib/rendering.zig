@@ -87,8 +87,8 @@ const RaylibRenderAPI = struct {
         interface.loadTexture = loadTexture;
         interface.disposeTexture = disposeTexture;
 
-        interface.getImageFromTexture = getImageFromTexture;
-        interface.getImageFromFile = getImageFromFile;
+        interface.loadImageFromTexture = loadImageFromTexture;
+        interface.loadImageFromFile = loadImageFromFile;
         interface.disposeImage = disposeImage;
 
         interface.loadFont = loadFont;
@@ -242,7 +242,7 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn getImageFromTexture(texture_id: BindingId) ImageBinding {
+    fn loadImageFromTexture(texture_id: BindingId) ImageBinding {
         const texture: *Texture2D = textures.get(texture_id).?;
         const img: Image = rl.LoadImageFromTexture(texture.*);
         const img_id = images.add(img);
@@ -258,7 +258,7 @@ const RaylibRenderAPI = struct {
         };
     }
 
-    fn getImageFromFile(resource: String) ImageBinding {
+    fn loadImageFromFile(resource: String) ImageBinding {
         const img: Image = rl.LoadImage(@ptrCast(resource));
         const img_id = images.add(img);
         return ImageBinding{
