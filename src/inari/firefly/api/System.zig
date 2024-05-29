@@ -105,11 +105,12 @@ pub fn System(comptime T: type) type {
 
         fn notifyEntityChange(e: ComponentEvent) void {
             if (e.c_id) |id| {
-                if (has_entity_condition and !T.entity_condition.check(id))
-                    return;
-
                 switch (e.event_type) {
-                    ComponentEvent.Type.ACTIVATED => T.entityRegistration(id, true),
+                    ComponentEvent.Type.ACTIVATED => {
+                        if (has_entity_condition and !T.entity_condition.check(id))
+                            return;
+                        T.entityRegistration(id, true);
+                    },
                     ComponentEvent.Type.DEACTIVATING => T.entityRegistration(id, false),
                     else => {},
                 }

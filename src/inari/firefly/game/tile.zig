@@ -45,13 +45,13 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    TileContactMaterialTypes.NONE = ContactMaterialAspectGroup.getAspect("NONE");
-    TileContactMaterialTypes.TERRAIN = ContactMaterialAspectGroup.getAspect("TERRAIN");
-    TileContactMaterialTypes.PROJECTILE = ContactMaterialAspectGroup.getAspect("PROJECTILE");
-    TileContactMaterialTypes.WATER = ContactMaterialAspectGroup.getAspect("WATER");
-    TileContactMaterialTypes.LADDER = ContactMaterialAspectGroup.getAspect("LADDER");
-    TileContactMaterialTypes.ROPE = ContactMaterialAspectGroup.getAspect("ROPE");
-    TileContactMaterialTypes.INTERACTIVE = ContactMaterialAspectGroup.getAspect("INTERACTIVE");
+    TileContactMaterialType.NONE = ContactMaterialAspectGroup.getAspect("NONE");
+    TileContactMaterialType.TERRAIN = ContactMaterialAspectGroup.getAspect("TERRAIN");
+    TileContactMaterialType.PROJECTILE = ContactMaterialAspectGroup.getAspect("PROJECTILE");
+    TileContactMaterialType.WATER = ContactMaterialAspectGroup.getAspect("WATER");
+    TileContactMaterialType.LADDER = ContactMaterialAspectGroup.getAspect("LADDER");
+    TileContactMaterialType.ROPE = ContactMaterialAspectGroup.getAspect("ROPE");
+    TileContactMaterialType.INTERACTIVE = ContactMaterialAspectGroup.getAspect("INTERACTIVE");
 
     Component.registerComponent(TileSet);
     Component.registerComponent(TileMapping);
@@ -73,7 +73,7 @@ pub const TileDimensionType = enum {
     THIRTY_TWO,
 };
 
-pub const TileContactMaterialTypes = struct {
+pub const TileContactMaterialType = struct {
     pub var NONE: ContactMaterialAspect = undefined;
     pub var TERRAIN: ContactMaterialAspect = undefined;
     pub var PROJECTILE: ContactMaterialAspect = undefined;
@@ -108,23 +108,23 @@ pub const TileTemplate = struct {
     animation: ?DynArray(TileAnimationFrame) = null,
 
     contact_material_type: ?ContactMaterialAspect = null,
-    contact_type: ?ContactTypeAspect = null,
     contact_mask_name: ?String = null,
 
     _sprite_template_id: ?Index = null,
 
     pub fn hasContact(self: *TileTemplate) bool {
-        return self.contact_material_type != null and self.contact_type != null and self.contact_mask_name != null;
+        return self.contact_material_type != null and self.contact_mask_name != null;
     }
 
-    pub fn withAnimationFrame(self: *TileTemplate, frame: TileAnimationFrame) *TileTemplate {
-        if (self.animation == null)
-            self.animation = DynArray(TileAnimationFrame).new(firefly.api.COMPONENT_ALLOC);
+    pub fn withAnimationFrame(self: TileTemplate, frame: TileAnimationFrame) TileTemplate {
+        var _self = self;
+        if (_self.animation == null)
+            _self.animation = DynArray(TileAnimationFrame).new(firefly.api.COMPONENT_ALLOC);
 
-        if (self.animation) |a|
+        if (_self.animation) |*a|
             _ = a.add(frame);
 
-        return self;
+        return _self;
     }
 
     pub fn deinit(self: *TileTemplate) void {
@@ -142,10 +142,24 @@ pub const TileSet = struct {
         },
     );
 
+    var contact_mask_cache: StringHashMap(BitMask) = undefined;
+
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     texture_name: String,
     tile_templates: DynArray(TileTemplate) = undefined,
+
+    pub fn componentTypeInit() !void {
+        contact_mask_cache = StringHashMap(BitMask).init(firefly.api.ALLOC);
+        return;
+    }
+
+    pub fn componentTypeDeinit() void {
+        var i = contact_mask_cache.valueIterator();
+        while (i.next()) |bit_mask|
+            bit_mask.deinit();
+        contact_mask_cache.deinit();
+    }
 
     pub fn construct(self: *TileSet) void {
         self.tile_templates = DynArray(TileTemplate).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 50);
@@ -163,7 +177,7 @@ pub const TileSet = struct {
     }
 
     pub fn withTileTemplate(self: *TileSet, template: TileTemplate) *TileSet {
-        self.tile_templates.add(TileTemplate.new(template).id);
+        _ = self.tile_templates.add(template);
         return self;
     }
 
@@ -173,6 +187,48 @@ pub const TileSet = struct {
         } else {
             self._deactivate();
         }
+    }
+
+    pub fn createContactMaskFromImage(self: *TileSet, tile_template: *TileTemplate) ?BitMask {
+        if (tile_template.contact_mask_name == null)
+            return null;
+
+        if (contact_mask_cache.get(tile_template.contact_mask_name.?)) |cm|
+            return cm;
+
+        // create contact mask from image data and cache it
+        // make sure involved texture is loaded into GPU
+        Texture.loadByName(self.texture_name);
+        if (Texture.resourceByName(self.texture_name)) |tex| {
+            // load image of texture to CPU
+            const st = SpriteTemplate.byId(tile_template._sprite_template_id.?);
+            var image: ImageBinding = firefly.api.rendering.loadImageRegionFromTexture(
+                tex._binding.?.id,
+                st.texture_bounds,
+            );
+            defer firefly.api.rendering.disposeImage(image.id);
+
+            const width: usize = firefly.utils.f32_usize(@abs(st.texture_bounds[2]));
+            const height: usize = firefly.utils.f32_usize(@abs(st.texture_bounds[3]));
+            var result: BitMask = BitMask.new(
+                firefly.api.ALLOC,
+                width,
+                height,
+            );
+            for (0..height) |y| {
+                for (0..width) |x| {
+                    if (firefly.utils.hasColor(image.get_color_at(
+                        image.id,
+                        firefly.utils.usize_cint(x),
+                        firefly.utils.usize_cint(y),
+                    )))
+                        result.setBitAt(x, y);
+                }
+            }
+            contact_mask_cache.put(tile_template.contact_mask_name.?, result) catch unreachable;
+        }
+
+        return contact_mask_cache.get(tile_template.contact_mask_name.?);
     }
 
     fn _activate(self: *TileSet) void {
@@ -212,6 +268,7 @@ pub const TileSet = struct {
             }
             next = self.tile_templates.slots.nextSetBit(i + 1);
         }
+
         // load texture asset for sprites
         Texture.loadByName(self.texture_name);
     }
@@ -268,8 +325,6 @@ pub const TileMapping = struct {
         },
     );
 
-    var contact_mask_cache: StringHashMap(BitMask) = undefined;
-
     id: Index = UNDEF_INDEX,
     name: ?String = null,
 
@@ -278,18 +333,6 @@ pub const TileMapping = struct {
     tile_sets: DynArray(MappedTileSet) = undefined,
     tile_sets_per_layer: DynArray(TileSetLayerMapping) = undefined,
     _layer_entity_mapping: DynArray(DynIndexArray) = undefined,
-
-    pub fn componentTypeInit() !void {
-        contact_mask_cache = StringHashMap(BitMask).init(firefly.api.ALLOC);
-        return;
-    }
-
-    pub fn componentTypeDeinit() void {
-        var i = contact_mask_cache.valueIterator();
-        while (i.next()) |bit_mask|
-            bit_mask.deinit();
-        contact_mask_cache.deinit();
-    }
 
     pub fn construct(self: *TileMapping) void {
         self.tile_sets = DynArray(MappedTileSet).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
@@ -306,7 +349,7 @@ pub const TileMapping = struct {
         self._layer_entity_mapping = undefined;
     }
 
-    pub fn withMappedTile(self: *TileMapping, mapping: MappedTileSet) *TileMapping {
+    pub fn withMappedTileSet(self: *TileMapping, mapping: MappedTileSet) *TileMapping {
         var _mapping: MappedTileSet = mapping;
         var ts: *TileSet = TileSet.byId(mapping.tile_set_id);
         const size = self.tile_sets.nextFreeSlot();
@@ -319,11 +362,15 @@ pub const TileMapping = struct {
         }
         _mapping._tile_set_size = ts.tile_templates.size();
         _ = self.tile_sets.add(_mapping);
+        return self;
     }
 
     pub fn withMappedTileSetByName(self: *TileMapping, tile_set_name: String) *TileMapping {
         if (TileSet.byName(tile_set_name)) |ts| {
-            return withMappedTile(ts.id);
+            return self.withMappedTileSet(MappedTileSet{
+                .name = tile_set_name,
+                .tile_set_id = ts.id,
+            });
         }
         return self;
     }
@@ -432,9 +479,8 @@ pub const TileMapping = struct {
                         tile_template.sprite_data.texture_bounds[3],
                     },
                 },
-                .c_type = tile_template.contact_type,
                 .c_material = tile_template.contact_material_type,
-                .mask = getContactMask(tile_set, tile_template),
+                .mask = tile_set.createContactMaskFromImage(tile_template),
             });
         }
     }
@@ -458,43 +504,6 @@ pub const TileMapping = struct {
                 },
             );
         }
-    }
-
-    fn getContactMask(tile_set: *TileSet, tile_template: *TileTemplate) ?BitMask {
-        if (tile_template.contact_mask_name == null)
-            return null;
-
-        if (contact_mask_cache.get(tile_template.contact_mask_name.?)) |cm|
-            return cm;
-
-        // create contact mask from image data and cache it
-        // make sure involved texture is loaded into GPU
-        Texture.loadByName(tile_set.texture_name);
-        if (Texture.resourceByName(tile_set.texture_name)) |tex| {
-            // load image of texture to CPU
-            var image: ImageBinding = firefly.api.rendering.loadImageFromTexture(tex._binding.?.id);
-            defer firefly.api.rendering.disposeImage(image.id);
-
-            // set bits on mask for colored pixels on image
-            const bounds: ClipI = .{
-                firefly.utils.f32_usize(tile_template.sprite_data.texture_bounds[0]),
-                firefly.utils.f32_usize(tile_template.sprite_data.texture_bounds[1]),
-                firefly.utils.f32_usize(tile_template.sprite_data.texture_bounds[2]),
-                firefly.utils.f32_usize(tile_template.sprite_data.texture_bounds[3]),
-            };
-            var result: BitMask = BitMask.new(firefly.api.ALLOC, bounds[2], bounds[3]);
-            for (0..bounds[3]) |y| {
-                for (0..bounds[2]) |x| {
-                    const _x: CInt = firefly.utils.usize_cint(x + bounds[0]);
-                    const _y: CInt = firefly.utils.usize_cint(y + bounds[1]);
-                    if (firefly.utils.hasColor(image.get_color_at(image.id, _x, _y)))
-                        result.setBitAt(x, y);
-                }
-            }
-            contact_mask_cache.put(tile_template.contact_mask_name.?, result) catch unreachable;
-        }
-
-        return contact_mask_cache.get(tile_template.contact_mask_name.?);
     }
 
     fn _deactivate(self: *TileMapping) void {

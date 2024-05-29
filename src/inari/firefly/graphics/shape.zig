@@ -114,7 +114,6 @@ const DefaultShapeRenderer = struct {
                 // render the shape
                 const es = EShape.byId(id).?;
                 const trans = ETransform.byId(id).?;
-                const multi = if (EMultiplier.byId(id)) |m| m.positions else null;
                 firefly.api.rendering.renderShape(
                     es.shape_type,
                     es.vertices,
@@ -129,7 +128,6 @@ const DefaultShapeRenderer = struct {
                     es.color1,
                     es.color2,
                     es.color3,
-                    multi,
                 );
 
                 i = all.nextSetBit(id + 1);

@@ -109,7 +109,7 @@ pub const EntityCondition = struct {
         const e_kind = Entity.byId(id).kind;
         if (self.accept_kind) |*ak| {
             if (self.accept_full_only) {
-                if (!ak.isPartOf(e_kind))
+                if (!ak.*.isPartOf(e_kind))
                     return false;
             } else {
                 if (!e_kind.hasAnyAspect(ak.*))

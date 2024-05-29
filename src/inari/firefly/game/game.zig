@@ -43,6 +43,20 @@ pub fn deinit() void {
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
+pub const TileDimensionType = tile.TileDimensionType;
+pub const TileContactMaterialType = tile.TileContactMaterialType;
+pub const TileAnimationFrame = tile.TileAnimationFrame;
+pub const TileSet = tile.TileSet;
+pub const SpriteData = tile.SpriteData;
+pub const TileTemplate = tile.TileTemplate;
+pub const TileMapping = tile.TileMapping;
+pub const MappedTileSet = tile.MappedTileSet;
+pub const TileSetLayerMapping = tile.TileSetLayerMapping;
+
+//////////////////////////////////////////////////////////////
+//// Simple pivot camera
+//////////////////////////////////////////////////////////////
+
 pub const SimplePivotCamera = struct {
     pub const component_type = View;
 

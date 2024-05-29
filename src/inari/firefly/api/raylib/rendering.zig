@@ -88,6 +88,7 @@ const RaylibRenderAPI = struct {
         interface.disposeTexture = disposeTexture;
 
         interface.loadImageFromTexture = loadImageFromTexture;
+        interface.loadImageRegionFromTexture = loadImageRegionFromTexture;
         interface.loadImageFromFile = loadImageFromFile;
         interface.disposeImage = disposeImage;
 
@@ -253,6 +254,35 @@ const RaylibRenderAPI = struct {
             .height = img.height,
             .mipmaps = img.mipmaps,
             .format = img.format,
+            .get_color_at = getImageColorAt,
+            .set_color_at = setImageColorAt,
+        };
+    }
+
+    fn loadImageRegionFromTexture(texture_id: BindingId, region: RectF) ImageBinding {
+        const texture: *Texture2D = textures.get(texture_id).?;
+        const img: Image = rl.LoadImageFromTexture(texture.*);
+        var img_region = rl.ImageFromImage(
+            img,
+            .{
+                .x = region[0],
+                .y = region[1],
+                .width = @abs(region[2]),
+                .height = @abs(region[3]),
+            },
+        );
+        if (region[2] < 0)
+            rl.ImageFlipHorizontal(&img_region);
+        if (region[3] < 0)
+            rl.ImageFlipVertical(&img_region);
+        const img_id = images.add(img_region);
+        return ImageBinding{
+            .id = img_id,
+            .data = img_region.data,
+            .width = img_region.width,
+            .height = img_region.height,
+            .mipmaps = img_region.mipmaps,
+            .format = img_region.format,
             .get_color_at = getImageColorAt,
             .set_color_at = setImageColorAt,
         };
@@ -533,22 +563,7 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn renderShape(
-        shape_type: ShapeType,
-        vertices: []Float,
-        fill: bool,
-        thickness: ?Float,
-        offset: PosF,
-        color: Color,
-        blend_mode: ?BlendMode,
-        pivot: ?PosF,
-        scale: ?PosF,
-        rotation: ?Float,
-        color1: ?Color,
-        color2: ?Color,
-        color3: ?Color,
-        multiplier: ?[]const PosF,
-    ) void {
+    fn renderShape(shape_type: ShapeType, vertices: []Float, fill: bool, thickness: ?Float, offset: PosF, color: Color, blend_mode: ?BlendMode, pivot: ?PosF, scale: ?PosF, rotation: ?Float, color1: ?Color, color2: ?Color, color3: ?Color) void {
 
         // set blend mode
         if (blend_mode) |bm| {
@@ -567,13 +582,13 @@ const RaylibRenderAPI = struct {
         }
 
         switch (shape_type) {
-            ShapeType.POINT => renderPoint(vertices, color, multiplier),
-            ShapeType.LINE => renderLine(vertices, color, multiplier),
-            ShapeType.RECTANGLE => renderRect(vertices, color, multiplier, color1, color2, color3, fill, thickness),
-            ShapeType.TRIANGLE => renderTriangles(vertices, color, multiplier, fill),
-            ShapeType.CIRCLE => renderCircle(vertices, color, color1, multiplier, fill),
-            ShapeType.ARC => renderArc(vertices, color, multiplier, fill),
-            ShapeType.ELLIPSE => renderEllipse(vertices, color, multiplier, fill),
+            ShapeType.POINT => renderPoint(vertices, color),
+            ShapeType.LINE => renderLine(vertices, color),
+            ShapeType.RECTANGLE => renderRect(vertices, color, color1, color2, color3, fill, thickness),
+            ShapeType.TRIANGLE => renderTriangles(vertices, color, fill),
+            ShapeType.CIRCLE => renderCircle(vertices, color, color1, fill),
+            ShapeType.ARC => renderArc(vertices, color, fill),
+            ShapeType.ELLIPSE => renderEllipse(vertices, color, fill),
         }
 
         // dispose translation functions if needed
@@ -667,139 +682,98 @@ const RaylibRenderAPI = struct {
     inline fn renderPoint(
         vertices: []Float,
         color: Color,
-        multiplier: ?[]const PosF,
     ) void {
-        if (multiplier) |m| {
-            for (0..m.len) |i| {
-                rl.DrawPixel(
-                    @intFromFloat(vertices[0] + m[i][0]),
-                    @intFromFloat(vertices[1] + m[i][1]),
-                    @bitCast(color),
-                );
-            }
-        } else {
+        var i: usize = 0;
+        while (i < vertices.len) {
             rl.DrawPixel(
-                @intFromFloat(vertices[0]),
-                @intFromFloat(vertices[1]),
+                @intFromFloat(vertices[i]),
+                @intFromFloat(vertices[i + 1]),
                 @bitCast(color),
             );
+            i += 2;
         }
     }
 
     inline fn renderLine(
         vertices: []Float,
         color: Color,
-        multiplier: ?[]const PosF,
     ) void {
-        if (multiplier) |m| {
-            for (0..m.len) |i| {
-                rl.DrawLine(
-                    @intFromFloat(vertices[0] + m[i][0]),
-                    @intFromFloat(vertices[1] + m[i][1]),
-                    @intFromFloat(vertices[2] + m[i][0]),
-                    @intFromFloat(vertices[3] + m[i][1]),
-                    @bitCast(color),
-                );
-            }
-        } else {
+        var i: usize = 0;
+        while (i < vertices.len) {
             rl.DrawLine(
-                @intFromFloat(vertices[0]),
-                @intFromFloat(vertices[1]),
-                @intFromFloat(vertices[2]),
-                @intFromFloat(vertices[3]),
+                @intFromFloat(vertices[i]),
+                @intFromFloat(vertices[i + 1]),
+                @intFromFloat(vertices[i + 2]),
+                @intFromFloat(vertices[i + 3]),
                 @bitCast(color),
             );
+            i += 4;
         }
     }
 
     inline fn renderRect(
         vertices: []Float,
         color: Color,
-        multiplier: ?[]const PosF,
         color1: ?Color,
         color2: ?Color,
         color3: ?Color,
         fill: bool,
         thickness: ?Float,
     ) void {
-        var rect = rl.Rectangle{
-            .x = vertices[0],
-            .y = vertices[1],
-            .width = vertices[2],
-            .height = vertices[3],
-        };
-
-        if (multiplier) |m| {
-            for (0..m.len) |i| {
-                rect.x = vertices[0] + rect.x + m[i][0];
-                rect.y = vertices[1] + rect.y + m[i][1];
-                if (fill) {
-                    rl.DrawRectangleGradientEx(
-                        rect,
-                        @bitCast(color),
-                        @bitCast(color1 orelse color),
-                        @bitCast(color2 orelse color),
-                        @bitCast(color3 orelse color),
-                    );
-                } else {
-                    rl.DrawRectangleLinesEx(rect, thickness orelse 1.0, @bitCast(color));
-                }
-            }
-        } else {
+        var i: usize = 0;
+        while (i < vertices.len) {
             if (fill) {
                 rl.DrawRectangleGradientEx(
-                    rect,
+                    .{
+                        .x = vertices[i],
+                        .y = vertices[i + 1],
+                        .width = vertices[i + 2],
+                        .height = vertices[i + 3],
+                    },
                     @bitCast(color),
                     @bitCast(color1 orelse color),
                     @bitCast(color2 orelse color),
                     @bitCast(color3 orelse color),
                 );
             } else {
-                rl.DrawRectangleLinesEx(rect, thickness orelse 1.0, @bitCast(color));
+                rl.DrawRectangleLinesEx(
+                    .{
+                        .x = vertices[i],
+                        .y = vertices[i + 1],
+                        .width = vertices[i + 2],
+                        .height = vertices[i + 3],
+                    },
+                    thickness orelse 1.0,
+                    @bitCast(color),
+                );
             }
+            i += 4;
         }
     }
 
     inline fn renderTriangles(
         vertices: []Float,
         color: Color,
-        multiplier: ?[]const PosF,
         fill: bool,
     ) void {
-        if (multiplier) |m| {
-            for (0..m.len) |i| {
-                if (fill) {
-                    rl.DrawTriangle(
-                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
-                        .{ .x = vertices[2] + m[i][0], .y = vertices[3] + m[i][1] },
-                        .{ .x = vertices[4] + m[i][0], .y = vertices[5] + m[i][1] },
-                        @bitCast(color),
-                    );
-                } else {
-                    rl.DrawTriangleLines(
-                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
-                        .{ .x = vertices[2] + m[i][0], .y = vertices[3] + m[i][1] },
-                        .{ .x = vertices[4] + m[i][0], .y = vertices[5] + m[i][1] },
-                        @bitCast(color),
-                    );
-                }
-            }
-        } else {
+        var i: usize = 0;
+        while (i < vertices.len) {
             if (fill) {
                 rl.DrawTriangle(
-                    .{ .x = vertices[0], .y = vertices[1] },
-                    .{ .x = vertices[2], .y = vertices[3] },
-                    .{ .x = vertices[4], .y = vertices[5] },
+                    .{ .x = vertices[i], .y = vertices[i + 1] },
+                    .{ .x = vertices[i + 2], .y = vertices[i + 3] },
+                    .{ .x = vertices[i + 4], .y = vertices[i + 5] },
                     @bitCast(color),
                 );
             } else {
                 rl.DrawTriangleLines(
-                    .{ .x = vertices[0], .y = vertices[1] },
-                    .{ .x = vertices[2], .y = vertices[3] },
-                    .{ .x = vertices[4], .y = vertices[5] },
+                    .{ .x = vertices[i], .y = vertices[i + 1] },
+                    .{ .x = vertices[i + 2], .y = vertices[i + 3] },
+                    .{ .x = vertices[i + 4], .y = vertices[i + 5] },
                     @bitCast(color),
                 );
             }
+            i += 5;
         }
     }
 
@@ -807,157 +781,92 @@ const RaylibRenderAPI = struct {
         vertices: []Float,
         color: Color,
         color1: ?Color,
-        multiplier: ?[]const PosF,
         fill: bool,
     ) void {
-        if (multiplier) |m| {
-            for (0..m.len) |i| {
-                if (fill) {
-                    if (color1) |gc| {
-                        rl.DrawCircleGradient(
-                            @intFromFloat(vertices[0] + m[i][0]),
-                            @intFromFloat(vertices[1] + m[i][1]),
-                            vertices[2],
-                            @bitCast(color),
-                            @bitCast(gc),
-                        );
-                    } else {
-                        rl.DrawCircleV(
-                            .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
-                            vertices[2],
-                            @bitCast(color),
-                        );
-                    }
-                } else {
-                    rl.DrawCircleLinesV(
-                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
-                        vertices[2],
-                        @bitCast(color),
-                    );
-                }
-            }
-        } else {
+        var i: usize = 0;
+        while (i < vertices.len) {
             if (fill) {
                 if (color1) |gc| {
                     rl.DrawCircleGradient(
-                        @intFromFloat(vertices[0]),
-                        @intFromFloat(vertices[1]),
-                        vertices[2],
+                        @intFromFloat(vertices[i]),
+                        @intFromFloat(vertices[i + 1]),
+                        vertices[i + 2],
                         @bitCast(color),
                         @bitCast(gc),
                     );
                 } else {
                     rl.DrawCircleV(
-                        .{ .x = vertices[0], .y = vertices[1] },
+                        .{ .x = vertices[i], .y = vertices[i + 1] },
                         vertices[2],
                         @bitCast(color),
                     );
                 }
             } else {
                 rl.DrawCircleLinesV(
-                    .{ .x = vertices[0], .y = vertices[1] },
-                    vertices[2],
+                    .{ .x = vertices[i], .y = vertices[i + 1] },
+                    vertices[i + 2],
                     @bitCast(color),
                 );
             }
+            i += 3;
         }
     }
 
     inline fn renderArc(
         vertices: []Float,
         color: Color,
-        multiplier: ?[]const PosF,
         fill: bool,
     ) void {
-        if (multiplier) |m| {
-            for (0..m.len) |i| {
-                if (fill) {
-                    rl.DrawCircleSector(
-                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
-                        vertices[2],
-                        vertices[3],
-                        vertices[4],
-                        @intFromFloat(vertices[5]),
-                        @bitCast(color),
-                    );
-                } else {
-                    rl.DrawCircleSectorLines(
-                        .{ .x = vertices[0] + m[i][0], .y = vertices[1] + m[i][1] },
-                        vertices[2],
-                        vertices[3],
-                        vertices[4],
-                        @intFromFloat(vertices[5]),
-                        @bitCast(color),
-                    );
-                }
-            }
-        } else {
+        var i: usize = 0;
+        while (i < vertices.len) {
             if (fill) {
                 rl.DrawCircleSector(
-                    .{ .x = vertices[0], .y = vertices[1] },
-                    vertices[2],
-                    vertices[3],
-                    vertices[4],
-                    @intFromFloat(vertices[5]),
+                    .{ .x = vertices[i], .y = vertices[i + 1] },
+                    vertices[i + 2],
+                    vertices[i + 3],
+                    vertices[i + 4],
+                    @intFromFloat(vertices[i + 5]),
                     @bitCast(color),
                 );
             } else {
                 rl.DrawCircleSectorLines(
-                    .{ .x = vertices[0], .y = vertices[1] },
-                    vertices[2],
-                    vertices[3],
-                    vertices[4],
-                    @intFromFloat(vertices[5]),
+                    .{ .x = vertices[i], .y = vertices[i + 1] },
+                    vertices[i + 2],
+                    vertices[i + 3],
+                    vertices[i + 4],
+                    @intFromFloat(vertices[i + 5]),
                     @bitCast(color),
                 );
             }
+            i += 5;
         }
     }
 
     inline fn renderEllipse(
         vertices: []Float,
         color: Color,
-        multiplier: ?[]const PosF,
         fill: bool,
     ) void {
-        if (multiplier) |m| {
-            for (0..m.len) |i| {
-                if (fill) {
-                    rl.DrawEllipse(
-                        @intFromFloat(vertices[0] + m[i][0]),
-                        @intFromFloat(vertices[1] + m[i][1]),
-                        vertices[2],
-                        vertices[3],
-                        @bitCast(color),
-                    );
-                } else {
-                    rl.DrawEllipseLines(
-                        @intFromFloat(vertices[0] + m[i][0]),
-                        @intFromFloat(vertices[1] + m[i][1]),
-                        vertices[2],
-                        vertices[3],
-                        @bitCast(color),
-                    );
-                }
-            }
-        } else {
+        var i: usize = 0;
+        while (i < vertices.len) {
             if (fill) {
                 rl.DrawEllipse(
-                    @intFromFloat(vertices[0]),
-                    @intFromFloat(vertices[1]),
-                    vertices[2],
-                    vertices[3],
+                    @intFromFloat(vertices[i]),
+                    @intFromFloat(vertices[i + 1]),
+                    vertices[i + 2],
+                    vertices[i + 3],
                     @bitCast(color),
                 );
             } else {
                 rl.DrawEllipseLines(
-                    @intFromFloat(vertices[0]),
-                    @intFromFloat(vertices[1]),
-                    vertices[2],
-                    vertices[3],
+                    @intFromFloat(vertices[i]),
+                    @intFromFloat(vertices[i + 1]),
+                    vertices[i + 2],
+                    vertices[i + 3],
                     @bitCast(color),
                 );
             }
+            i += 4;
         }
     }
 

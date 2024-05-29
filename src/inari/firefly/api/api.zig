@@ -467,6 +467,7 @@ pub fn IRenderAPI() type {
         disposeTexture: *const fn (BindingId) void = undefined,
 
         loadImageFromTexture: *const fn (BindingId) ImageBinding = undefined,
+        loadImageRegionFromTexture: *const fn (BindingId, RectF) ImageBinding = undefined,
         loadImageFromFile: *const fn (String) ImageBinding = undefined,
         disposeImage: *const fn (BindingId) void = undefined,
 
@@ -526,7 +527,6 @@ pub fn IRenderAPI() type {
             color1: ?Color,
             color2: ?Color,
             color3: ?Color,
-            multiplier: ?[]const PosF,
         ) void = undefined,
 
         renderText: *const fn (

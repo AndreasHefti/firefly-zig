@@ -195,11 +195,11 @@ pub const View = struct {
     //order: u8 = undefined,
 
     position: PosF,
-    pivot: ?PosF,
-    scale: ?PosF,
-    rotation: ?Float,
-    tint_color: ?Color,
-    blend_mode: ?BlendMode,
+    pivot: ?PosF = .{ 0, 0 },
+    scale: ?PosF = .{ 1, 1 },
+    rotation: ?Float = 0,
+    tint_color: ?Color = .{ 255, 255, 255, 255 },
+    blend_mode: ?BlendMode = BlendMode.ALPHA,
     projection: Projection = .{},
 
     render_texture_binding: ?RenderTextureBinding = null,

@@ -38,8 +38,6 @@ pub fn init() void {
     if (initialized)
         return;
 
-    BasicContactTypes.UNDEFINED = ContactTypeAspectGroup.getAspect("UNDEFINED");
-    BasicContactMaterials.UNDEFINED = ContactMaterialAspectGroup.getAspect("UNDEFINED");
     Contact.init();
     Component.registerComponent(ContactConstraint);
     EComponent.registerEntityComponent(EContact);
@@ -70,9 +68,6 @@ pub const ContactTypeAspectGroup = AspectGroup(struct {
 });
 pub const ContactTypeAspect = *const ContactTypeAspectGroup.Aspect;
 pub const ContactTypeKind = ContactTypeAspectGroup.Kind;
-pub const BasicContactTypes = struct {
-    pub var UNDEFINED: ContactTypeAspect = undefined;
-};
 
 // Contact Material Aspects
 pub const ContactMaterialAspectGroup = AspectGroup(struct {
@@ -80,9 +75,6 @@ pub const ContactMaterialAspectGroup = AspectGroup(struct {
 });
 pub const ContactMaterialAspect = *const ContactMaterialAspectGroup.Aspect;
 pub const ContactMaterialKind = ContactMaterialAspectGroup.Kind;
-pub const BasicContactMaterials = struct {
-    pub var UNDEFINED: ContactMaterialAspect = undefined;
-};
 
 pub const ContactBounds = struct {
     rect: RectF,
