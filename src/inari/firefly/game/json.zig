@@ -26,7 +26,7 @@ const parseUsize = firefly.utils.parseUsize;
 //////////////////////////////////////////////////////////////
 
 var initialized = false;
-pub fn init() !void {
+pub fn init() void {
     defer initialized = true;
     if (initialized)
         return;

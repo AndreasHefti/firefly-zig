@@ -40,7 +40,7 @@ const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 //////////////////////////////////////////////////////////////
 
 var initialized = false;
-pub fn init() !void {
+pub fn init() void {
     defer initialized = true;
     if (initialized)
         return;

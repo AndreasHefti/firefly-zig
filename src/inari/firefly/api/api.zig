@@ -31,7 +31,7 @@ fn dummyDeinit() void {}
 //////////////////////////////////////////////////////////////
 
 pub const RUN_ON = enum { RAYLIB, TEST };
-pub const RUN_ON_SET: RUN_ON = RUN_ON.RAYLIB;
+pub const RUN_ON_SET: RUN_ON = RUN_ON.TEST;
 
 pub const InitContext = struct {
     component_allocator: Allocator,
@@ -76,6 +76,8 @@ pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const CCondition = control.CCondition;
+pub const ConditionCombine = control.ConditionCombine;
+pub const ConditionFunction = control.ConditionFunction;
 pub const ActionResult = control.ActionResult;
 pub const ActionFunction = control.ActionFunction;
 pub const ActionCallback = control.ActionCallback;
@@ -87,7 +89,7 @@ pub const ComponentControl = control.ComponentControl;
 pub const ComponentControlType = control.ComponentControlType;
 pub const Composite = component.Composite;
 pub const CompositeLifeCycle = component.CompositeLifeCycle;
-pub const CReference = component.CReference;
+pub const ComponentRef = component.ComponentRef;
 pub const LifeCycleTaskRef = component.LifeCycleTaskRef;
 
 pub const BindingId = usize;

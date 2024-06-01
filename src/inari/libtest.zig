@@ -75,6 +75,36 @@ fn callback1(id: Index) void {
     std.debug.print("\nTask {} executed\n", .{id});
 }
 
+test "CCondition" {
+    try firefly.init(init_context);
+    defer firefly.deinit();
+
+    _ = firefly.api.CCondition.new(.{
+        .name = "Condition1",
+        .condition = .{ .f = condition1 },
+    });
+
+    _ = firefly.api.CCondition.new(.{
+        .name = "Condition2",
+        .condition = .{ .f = condition2 },
+    });
+
+    _ = firefly.api.CCondition.newANDByName("Condition1 AND Condition2", "Condition1", "Condition2");
+    _ = firefly.api.CCondition.newORByName("Condition1 OR Condition2", "Condition1", "Condition2");
+
+    try std.testing.expect(firefly.api.CCondition.checkByName("Condition1", null, null));
+    try std.testing.expect(!firefly.api.CCondition.checkByName("Condition2", null, null));
+    try std.testing.expect(!firefly.api.CCondition.checkByName("Condition1 AND Condition2", null, null));
+    try std.testing.expect(firefly.api.CCondition.checkByName("Condition1 OR Condition2", null, null));
+}
+
+fn condition1(_: ?Index, _: ?firefly.api.Attributes) bool {
+    return true;
+}
+fn condition2(_: ?Index, _: ?firefly.api.Attributes) bool {
+    return false;
+}
+
 test "Trigger" {
     try firefly.init(init_context);
     defer firefly.deinit();
@@ -88,9 +118,14 @@ test "Trigger" {
         .function = task1,
     }).id;
 
+    const c_id = firefly.api.CCondition.new(.{
+        .name = "TestCondition",
+        .condition = .{ .f = triggerCondition },
+    }).id;
+
     _ = firefly.api.Trigger.new(.{
         .name = "testTrigger",
-        .condition = triggerCondition,
+        .condition_ref = c_id,
         .attributes = attrs1,
         .task_ref = task_id,
         .component_ref = 100,
@@ -102,7 +137,7 @@ test "Trigger" {
     firefly.api.update(UPDATE_EVENT);
 }
 
-fn triggerCondition(_: Index, _: ?firefly.api.Attributes) bool {
+fn triggerCondition(_: ?Index, _: ?firefly.api.Attributes) bool {
     const count = struct {
         var c: usize = 0;
     };

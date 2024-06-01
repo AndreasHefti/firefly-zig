@@ -271,6 +271,12 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime contex
             return false;
         }
 
+        pub fn idByName(name: String) ?Index {
+            if (adapter.pool.name_mapping) |*nm|
+                return nm.get(name);
+            return null;
+        }
+
         pub fn byName(name: String) ?*T {
             if (adapter.pool.name_mapping) |*nm| {
                 if (nm.get(name)) |id|

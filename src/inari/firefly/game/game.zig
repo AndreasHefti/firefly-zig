@@ -2,6 +2,7 @@ const std = @import("std");
 const firefly = @import("../firefly.zig");
 const tile = @import("tile.zig");
 const json = @import("json.zig");
+const world = @import("world.zig");
 
 const View = firefly.graphics.View;
 const ComponentControlType = firefly.api.ComponentControlType;
@@ -26,8 +27,9 @@ pub fn init() !void {
     ComponentControlType(SimplePivotCamera).init();
 
     // init sub packages
-    try tile.init();
-    try json.init();
+    tile.init();
+    world.init();
+    json.init();
 }
 
 pub fn deinit() void {
@@ -37,6 +39,7 @@ pub fn deinit() void {
 
     // deinit sub packages
     json.deinit();
+    world.deinit();
     tile.deinit();
 
     ComponentControlType(SimplePivotCamera).deinit();

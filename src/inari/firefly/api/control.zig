@@ -19,6 +19,7 @@ pub fn init() void {
     if (initialized)
         return;
 
+    Component.registerComponent(CCondition);
     Component.registerComponent(Task);
     Component.registerComponent(Trigger);
     Component.registerComponent(ComponentControl);
@@ -31,11 +32,111 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////////////////
-//// Action, Task and Trigger
+//// Condition Component
 //////////////////////////////////////////////////////////////////////////
 
-// A condition that takes a component identifier as input
-pub const CCondition = *const fn (Index, ?Attributes) bool;
+pub const ConditionFunction = *const fn (?Index, ?Attributes) bool;
+pub const ConditionType = enum { f, f_and, f_or, f_not };
+pub const Condition = union(ConditionType) {
+    f: ConditionFunction,
+    f_and: CRef2,
+    f_or: CRef2,
+    f_not: CRef1,
+
+    fn check(self: Condition, component_id: ?Index, attributes: ?Attributes) bool {
+        return switch (self) {
+            .f => self.f(component_id, attributes),
+            .f_and => CCondition.byId(self.f_and.left_ref).condition.check(component_id, attributes) and
+                CCondition.byId(self.f_and.right_ref).condition.check(component_id, attributes),
+            .f_or => CCondition.byId(self.f_or.left_ref).condition.check(component_id, attributes) or
+                CCondition.byId(self.f_or.right_ref).condition.check(component_id, attributes),
+            .f_not => !CCondition.byId(self.f_not.f_ref).condition.check(component_id, attributes),
+        };
+    }
+};
+
+pub const CRef2 = struct {
+    left_ref: Index,
+    right_ref: Index,
+};
+
+pub const CRef1 = struct {
+    f_ref: Index,
+};
+
+pub const CCondition = struct {
+    pub usingnamespace Component.Trait(
+        @This(),
+        .{
+            .name = "CCondition",
+            .subscription = false,
+            .activation = false,
+        },
+    );
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+
+    condition: Condition,
+
+    pub fn check(self: *CCondition, component_id: ?Index, attributes: ?Attributes) bool {
+        return self.condition.check(component_id, attributes);
+    }
+
+    pub fn newANDById(name: String, c1_id: Index, c2_id: Index) *CCondition {
+        return CCondition.new(.{
+            .name = name,
+            .condition = .{ .f_and = .{
+                .left_ref = c1_id,
+                .right_ref = c2_id,
+            } },
+        });
+    }
+
+    pub fn newANDByName(name: String, c1_name: String, c2_name: String) *CCondition {
+        return CCondition.new(.{
+            .name = name,
+            .condition = .{ .f_and = .{
+                .left_ref = CCondition.idByName(c1_name).?,
+                .right_ref = CCondition.idByName(c2_name).?,
+            } },
+        });
+    }
+
+    pub fn newORById(name: String, c1_id: Index, c2_id: Index) *CCondition {
+        return CCondition.new(.{
+            .name = name,
+            .condition = .{ .f_or = .{
+                .left_ref = c1_id,
+                .right_ref = c2_id,
+            } },
+        });
+    }
+
+    pub fn newORByName(name: String, c1_name: String, c2_name: String) *CCondition {
+        return CCondition.new(.{
+            .name = name,
+            .condition = .{ .f_or = .{
+                .left_ref = CCondition.idByName(c1_name).?,
+                .right_ref = CCondition.idByName(c2_name).?,
+            } },
+        });
+    }
+
+    pub fn checkById(c_id: Index, component_id: ?Index, attributes: ?Attributes) bool {
+        return CCondition.byId(c_id).check(component_id, attributes);
+    }
+
+    pub fn checkByName(c_name: String, component_id: ?Index, attributes: ?Attributes) bool {
+        if (CCondition.byName(c_name)) |cc|
+            return cc.check(component_id, attributes);
+        return false;
+    }
+};
+
+//////////////////////////////////////////////////////////////////////////
+//// Action, Task and Trigger
+//////////////////////////////////////////////////////////////////////////
 
 pub const ActionResult = enum {
     Success,
@@ -134,9 +235,9 @@ pub const Trigger = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
 
-    component_ref: Index = UNDEF_INDEX,
-    task_ref: Index = UNDEF_INDEX,
-    condition: CCondition,
+    component_ref: ?Index,
+    task_ref: Index,
+    condition_ref: Index,
     attributes: ?Attributes = null,
 
     pub fn componentTypeInit() !void {
@@ -156,8 +257,8 @@ pub const Trigger = struct {
     fn update(_: UpdateEvent) void {
         var next = Trigger.nextActiveId(0);
         while (next) |i| {
-            var trigger = Trigger.byId(i);
-            if (trigger.condition(trigger.id, trigger.attributes))
+            const trigger = Trigger.byId(i);
+            if (CCondition.byId(trigger.condition_ref).check(trigger.component_ref, trigger.attributes))
                 Task.byId(trigger.task_ref).runWith(trigger.component_ref, trigger.attributes);
 
             next = Trigger.nextActiveId(i + 1);
