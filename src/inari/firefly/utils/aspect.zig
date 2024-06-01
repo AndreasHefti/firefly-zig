@@ -42,6 +42,17 @@ pub fn AspectGroup(comptime T: type) type {
             @panic("Aspect id overflow");
         }
 
+        pub fn getAspectIfExists(aspect_name: String) ?*const Aspect {
+            var i: u8 = 0;
+            while (i < _aspect_count) {
+                if (utils.stringEquals(Group._aspects[i].name, aspect_name)) {
+                    return &Group._aspects[i];
+                }
+                i = i + 1;
+            }
+            return null;
+        }
+
         pub fn getAspect(aspect_name: String) *const Aspect {
             var i: u8 = 0;
             while (i < _aspect_count) {

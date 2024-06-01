@@ -1,6 +1,7 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const BufSet = std.BufSet;
 const Allocator = std.mem.Allocator;
 const asset = @import("asset.zig");
 const component = @import("Component.zig");
@@ -86,7 +87,7 @@ pub const ComponentControl = control.ComponentControl;
 pub const ComponentControlType = control.ComponentControlType;
 pub const Composite = component.Composite;
 pub const CompositeLifeCycle = component.CompositeLifeCycle;
-pub const ComponentRef = component.ComponentRef;
+pub const CReference = component.CReference;
 pub const LifeCycleTaskRef = component.LifeCycleTaskRef;
 
 pub const BindingId = usize;
@@ -131,7 +132,8 @@ pub fn init(context: InitContext) !void {
         audio = IAudioAPI().initDummy();
     }
 
-    try Component.init();
+    NamePool.init();
+    Component.init();
     Timer.init();
     system.init();
 
@@ -161,6 +163,7 @@ pub fn deinit() void {
     audio.deinit();
     audio = undefined;
     Timer.deinit();
+    NamePool.deinit();
 
     UPDATE_EVENT_DISPATCHER.deinit();
     RENDER_EVENT_DISPATCHER.deinit();
@@ -168,8 +171,76 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////
+//// Name Pool used for none constant Strings not living
+//// in zigs data mem. These can be de-allocated by call
+//// or will be freed all on package deinit
+//////////////////////////////////////////////////////////////
+
+pub const NamePool = struct {
+    var names: BufSet = undefined;
+
+    fn init() void {
+        names = BufSet.init(ALLOC);
+    }
+
+    fn deinit() void {
+        names.deinit();
+    }
+
+    pub fn alloc(name: ?String) ?String {
+        if (name) |n| {
+            names.insert(n) catch unreachable;
+            return names.hash_map.getKey(n);
+        }
+        return null;
+    }
+
+    pub fn free(name: String) void {
+        names.remove(name);
+    }
+};
+
+//////////////////////////////////////////////////////////////
 //// Convenient Functions
 //////////////////////////////////////////////////////////////
+
+pub fn loadFromFile(file_name: String) String {
+    return std.fs.cwd().readFileAlloc(ALLOC, file_name, 1000000) catch unreachable;
+}
+
+pub fn writeToFile(file_name: String, text: String) void {
+    const file: std.fs.File = try std.fs.cwd().createFile(
+        file_name,
+        .{ .read = true },
+    ) catch unreachable;
+    defer file.close();
+
+    file.writeAll(text.*) catch unreachable;
+}
+
+pub fn loadFromJSONFile(file_name: String, comptime T: type) std.json.Parsed(T) {
+    const json_text = loadFromFile(file_name);
+    const parsed = std.json.parseFromSlice(
+        T,
+        ALLOC,
+        json_text,
+        .{ .ignore_unknown_fields = true },
+    ) catch unreachable;
+    return parsed;
+}
+
+pub fn writeToJSONFile(file_name: String, value: anytype) void {
+    const json: String = std.json.stringifyAlloc(ALLOC, value, .{});
+    defer ALLOC.free(json);
+    writeToFile(file_name, json);
+}
+
+// pub fn encrypt(cipher: String, password: String) String {
+//     //TODO
+//     var ctx: std.crypto.core.aesAesEncryptCtx(std.crypto.core.aesAes256) = std.crypto.core.aes.Aes256.initEnc(password);
+//     ctx.encrypt(dst: *[16]u8, src: *const [16]u8)
+//     ctx.encryptWide(comptime count: usize, dst: *[16*count]u8, src: *const [16*count]u8)
+// }
 
 pub fn allocFloatArray(array: anytype) []Float {
     return firefly.api.ALLOC.dupe(Float, &array) catch unreachable;
@@ -179,6 +250,9 @@ pub fn allocVec2FArray(array: anytype) []const Vector2f {
     return firefly.api.ALLOC.dupe(Vector2f, &array) catch unreachable;
 }
 
+/// A String dictionary that self owns its memory.
+/// Every key and value is allocated on the heap by the Attributes map
+/// and also released/freed when deleted or the while dict is cleared or deinitialize
 pub const Attributes = struct {
     _attrs: std.StringHashMap(String) = undefined,
 
@@ -189,23 +263,51 @@ pub const Attributes = struct {
     }
 
     pub fn deinit(self: *Attributes) void {
+        self.clear();
         self._attrs.deinit();
         self._attrs = undefined;
     }
 
+    pub fn clear(self: *Attributes) void {
+        var it = self._attrs.iterator();
+        while (it.next()) |e| {
+            ALLOC.free(e.key_ptr.*);
+            ALLOC.free(e.value_ptr.*);
+        }
+
+        self._attrs.clearAndFree();
+    }
+
+    pub fn size(self: *Attributes) usize {
+        return self._attrs.unmanaged.size;
+    }
+
     pub fn set(self: *Attributes, name: String, value: String) void {
-        self._attrs.put(name, value) catch unreachable;
+        // if existing, delete old first
+        if (self._attrs.contains(name))
+            self.delete(name);
+        // add new with allocated key and value
+        self._attrs.put(
+            ALLOC.dupe(u8, name) catch unreachable,
+            ALLOC.dupe(u8, value) catch unreachable,
+        ) catch unreachable;
     }
 
     pub fn setAll(self: *Attributes, others: *const Attributes) void {
         var it = others._attrs.iterator();
-        while (it.next()) |e| {
-            self._attrs.put(e.key_ptr.*, e.value_ptr.*) catch unreachable;
-        }
+        while (it.next()) |e|
+            self.set(e.key_ptr.*, e.value_ptr.*);
     }
 
     pub fn get(self: *Attributes, name: String) ?String {
         return self._attrs.get(name);
+    }
+
+    pub fn delete(self: *Attributes, name: String) void {
+        if (self._attrs.fetchRemove(name)) |kv| {
+            ALLOC.free(kv.key);
+            ALLOC.free(kv.value);
+        }
     }
 
     pub fn format(

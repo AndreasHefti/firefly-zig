@@ -24,7 +24,7 @@ const String = utils.String;
 //// Component global
 //////////////////////////////////////////////////////////////
 var INIT = false;
-pub fn init() !void {
+pub fn init() void {
     defer INIT = true;
     if (INIT)
         return;
@@ -91,6 +91,13 @@ pub fn deinitComponent(comptime T: type) void {
     ComponentPool(T).deinit();
 }
 
+pub const CReference = struct {
+    type: ComponentAspect,
+    id: Index,
+    activation: ?*const fn (Index, bool) void,
+    dispose: ?*const fn (Index) void,
+};
+
 pub fn print(string_buffer: *StringBuffer) void {
     string_buffer.print("\nComponents:", .{});
     var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
@@ -151,9 +158,20 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
             return pool.items.exists(id);
         }
 
-        // TODO make it optional?
         pub fn byId(id: Index) *T {
             return pool.items.get(id).?;
+        }
+
+        pub fn referenceById(id: Index, owned: bool) ?CReference {
+            if (pool.items.get(id)) |_| {
+                return .{
+                    .type = aspect,
+                    .id = id,
+                    .activation = if (context.activation) T.activateById else null,
+                    .dispose = if (owned) disposeById else null,
+                };
+            }
+            return null;
         }
 
         pub fn nextId(id: Index) ?Index {
@@ -174,15 +192,15 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
 
         // optional component type features
         const empty_struct = struct {};
-        pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This()) else empty_struct;
-        pub usingnamespace if (context.activation) ActivationTrait(T, @This()) else empty_struct;
-        pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This()) else empty_struct;
-        pub usingnamespace if (context.control) ControlTrait(T, @This()) else empty_struct;
-        pub usingnamespace if (context.grouping) GroupingTrait(T, @This()) else empty_struct;
+        pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.activation) ActivationTrait(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.control) ControlTrait(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.grouping) GroupingTrait(T, @This(), context) else empty_struct;
     };
 }
 
-fn GroupingTrait(comptime T: type, comptime adapter: anytype) type {
+fn GroupingTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     comptime {
         if (!@hasField(T, "groups"))
             @compileError("Expects component type to have field: groups: ?GroupKind");
@@ -227,7 +245,7 @@ fn GroupingTrait(comptime T: type, comptime adapter: anytype) type {
     };
 }
 
-fn SubscriptionTrait(comptime _: type, comptime adapter: anytype) type {
+fn SubscriptionTrait(comptime _: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
         pub fn subscribe(listener: ComponentListener) void {
             if (adapter.pool.eventDispatch) |*ed| ed.register(listener);
@@ -239,7 +257,7 @@ fn SubscriptionTrait(comptime _: type, comptime adapter: anytype) type {
     };
 }
 
-fn NameMappingTrait(comptime T: type, comptime adapter: anytype) type {
+fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime context: Context) type {
     comptime {
         if (!@hasField(T, "name"))
             @compileError("Expects component type to have field: name: ?String");
@@ -260,6 +278,19 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype) type {
             }
             return null;
         }
+        pub fn referenceByName(name: String, owned: bool) ?CReference {
+            if (adapter.pool.name_mapping) |*nm| {
+                if (nm.get(name)) |id| {
+                    return .{
+                        .type = T.aspect,
+                        .id = id,
+                        .activation = if (context.activation) T.activateById else null,
+                        .dispose = if (owned) T.disposeById else null,
+                    };
+                }
+            }
+            return null;
+        }
         pub fn disposeByName(name: String) void {
             if (adapter.pool.name_mapping) |*nm| {
                 if (nm.get(name)) |id| adapter.pool.clear(id);
@@ -268,7 +299,7 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype) type {
     };
 }
 
-fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
+fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
         pub fn activateById(id: Index, active: bool) void {
             adapter.pool.activate(id, active);
@@ -323,7 +354,7 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype) type {
     };
 }
 
-fn ControlTrait(comptime T: type, comptime adapter: anytype) type {
+fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
         pub fn withControl(self: *T, control: *const fn (Index, Index) void, name: ?String) *T {
             if (adapter.pool.control_mapping) |*cm| {
@@ -594,13 +625,6 @@ pub const CompositeLifeCycle = enum {
     DISPOSE,
 };
 
-pub const ComponentRef = struct {
-    type: ComponentAspect,
-    id: Index,
-    activation: ?*const fn (Index, bool) void,
-    dispose: *const fn (Index) void,
-};
-
 pub const LifeCycleTaskRef = struct {
     life_cycle: CompositeLifeCycle,
     task_id: Index,
@@ -618,14 +642,14 @@ pub const Composite = struct {
     active: bool = false,
 
     tasks: DynArray(LifeCycleTaskRef) = undefined,
-    _loaded_components: DynArray(ComponentRef) = undefined,
+    _loaded_components: DynArray(CReference) = undefined,
 
     pub fn construct(self: *Composite) void {
         self.tasks = DynArray(LifeCycleTaskRef).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             3,
         );
-        self._loaded_components = DynArray(ComponentRef).newWithRegisterSize(
+        self._loaded_components = DynArray(CReference).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             3,
         );
@@ -665,13 +689,20 @@ pub const Composite = struct {
         self.runTasks(.LOAD);
     }
 
+    pub fn addCReference(self: *Composite, ref: ?CReference) void {
+        if (ref) |r| _ = self._loaded_components.add(r);
+    }
+
     pub fn dispose(self: *Composite) void {
+        // first deactivate if still active
+        Composite.activateById(self.id, false);
+        // run dispose tasks if defined
         self.runTasks(.DISPOSE);
-        // dispose all references that still available
+        // dispose all owned references that still available
         var next = self._loaded_components.slots.nextSetBit(0);
         while (next) |i| {
             if (self._loaded_components.get(i)) |ref|
-                ref.dispose(ref.id);
+                if (ref.dispose) |d| d(ref.id);
             next = self._loaded_components.slots.nextSetBit(i + 1);
         }
         self._loaded_components.clear();

@@ -4,6 +4,7 @@ const CInt = utils.CInt;
 const Float = utils.Float;
 const Byte = utils.Byte;
 const BitSet = utils.BitSet;
+const String = utils.String;
 
 pub const HALF_PI: Float = std.math.pi / 2.0;
 pub const TAU: Float = 2 * std.math.pi;
@@ -53,6 +54,53 @@ pub const NEG_VEC4I = Vector4i{ -1, -1, -1, -1 };
 pub const NEG_VEC2F = Vector2f{ -1, -1 };
 pub const NEG_VEC3F = Vector3f{ -1, -1, -1 };
 pub const NEG_VEC4F = Vector4f{ -1, -1, -1, -1 };
+
+pub inline fn posF_usize_RectF(posF: ?PosF, w: usize, h: usize) ?RectF {
+    if (posF) |pf| {
+        return .{ pf[0], pf[1], utils.usize_f32(w), utils.usize_f32(h) };
+    }
+    return null;
+}
+
+pub inline fn parseUsize(value: ?String) usize {
+    if (value) |v|
+        return std.fmt.parseInt(usize, v, 10) catch 0;
+    return 0;
+}
+
+pub inline fn parsePosF(value: ?String) ?PosF {
+    if (value) |v| {
+        if (v.len == 0) return null;
+        var it = std.mem.split(u8, v, ",");
+        return .{
+            if (it.next()) |n| std.fmt.parseFloat(Float, n) catch return null else return null,
+            if (it.next()) |n| std.fmt.parseFloat(Float, n) catch return null else return null,
+        };
+    }
+    return null;
+}
+
+pub inline fn parsePosFSep(x: ?String, y: ?String) ?PosF {
+    if (x == null and y == null) return null;
+    return .{
+        std.fmt.parseFloat(Float, x.?) catch 0,
+        std.fmt.parseFloat(Float, y.?) catch 0,
+    };
+}
+
+pub inline fn parseRectF(value: ?String) ?RectF {
+    if (value) |v| {
+        if (v.len == 0) return null;
+        var it = std.mem.split(u8, v, ",");
+        return .{
+            if (it.next()) |n| std.fmt.parseFloat(Float, n) catch return null else return null,
+            if (it.next()) |n| std.fmt.parseFloat(Float, n) catch return null else return null,
+            if (it.next()) |n| std.fmt.parseFloat(Float, n) catch return null else return null,
+            if (it.next()) |n| std.fmt.parseFloat(Float, n) catch return null else return null,
+        };
+    }
+    return null;
+}
 
 pub inline fn rectIFromRectF(rect: RectF) RectI {
     return .{

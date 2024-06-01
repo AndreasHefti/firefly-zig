@@ -27,6 +27,66 @@ const IndexFrameList = firefly.physics.IndexFrameList;
 const EAnimation = firefly.physics.EAnimation;
 const IndexFrameIntegration = firefly.physics.IndexFrameIntegration;
 
+const JSON_TILE_SET: String =
+    \\  {
+    \\      "type": "tileset",
+    \\      "name": "TestTileSet",
+    \\      "atlas_texture_name": "Atlas",
+    \\      "tile_width": 16,
+    \\      "tile_height": 16,
+    \\      "tiles": [
+    \\          { "name": "full", "props": "0,0|0|0|TERRAIN|0|-" },
+    \\          { "name": "slope_1_1", "props": "1,0|0|0|TERRAIN|1|-" },
+    \\          { "name": "slope_1_2", "props": "1,0|1|0|TERRAIN|1|-" },
+    \\          { "name": "slope_1_3", "props": "1,0|1|1|TERRAIN|1|-" },
+    \\          { "name": "slope_1_4", "props": "1,0|0|1|TERRAIN|1|-" },
+    \\          { "name": "slope_2_1", "props": "2,0|0|0|TERRAIN|1|-" },
+    \\          { "name": "slope_2_2", "props": "2,0|1|0|TERRAIN|1|-" },
+    \\          { "name": "slope_2_3", "props": "2,0|1|1|TERRAIN|1|-" },
+    \\          { "name": "slope_2_4", "props": "2,0|0|1|TERRAIN|1|-" },
+    \\          { "name": "slope_3_1", "props": "3,0|0|0|TERRAIN|1|-" },
+    \\          { "name": "slope_3_2", "props": "3,0|1|0|TERRAIN|1|-" },
+    \\          { "name": "slope_3_3", "props": "3,0|1|1|TERRAIN|1|-" },
+    \\          { "name": "slope_3_4", "props": "3,0|0|1|TERRAIN|1|-" },
+    \\          { "name": "slope_4_1", "props": "4,0|0|0|TERRAIN|1|-" },
+    \\          { "name": "slope_4_2", "props": "4,0|1|0|TERRAIN|1|-" },
+    \\          { "name": "slope_4_3", "props": "4,0|1|1|TERRAIN|1|-" },
+    \\          { "name": "slope_4_4", "props": "4,0|0|1|TERRAIN|1|-" },
+    \\          { "name": "slope_5_1", "props": "5,0|0|0|TERRAIN|1|-" },
+    \\          { "name": "slope_5_2", "props": "5,0|1|0|TERRAIN|1|-" },
+    \\          { "name": "slope_5_3", "props": "5,0|1|1|TERRAIN|1|-" },
+    \\          { "name": "slope_5_4", "props": "5,0|0|1|TERRAIN|1|-" },
+    \\          { "name": "rect_half_1", "props": "6,0|0|0|TERRAIN|1|-" },
+    \\          { "name": "rect_half_2", "props": "6,0|0|1|TERRAIN|1|-" },
+    \\          { "name": "rect_half_3", "props": "7,0|0|0|TERRAIN|1|-" },
+    \\          { "name": "rect_half_4", "props": "7,0|1|0|TERRAIN|1|-" },
+    \\
+    \\          { "name": "circle", "props": "0,1|0|0|TERRAIN|1|-" },
+    \\          { "name": "route", "props": "1,1|0|0|TERRAIN|1|-" },
+    \\
+    \\          { "name": "spike_up", "props": "2,1|0|0|TERRAIN|1|-" },
+    \\          { "name": "spike_down", "props": "2,1|0|1|TERRAIN|1|-" },
+    \\          { "name": "spike_right", "props": "3,1|0|0|TERRAIN|1|-" },
+    \\          { "name": "spike_left", "props": "3,1|1|0|TERRAIN|1|-" },
+    \\
+    \\          { "name": "spiky_up", "props": "4,1|0|0|TERRAIN|1|-" },
+    \\          { "name": "spiky_down", "props": "4,1|0|1|TERRAIN|1|-" },
+    \\          { "name": "spiky_right", "props": "5,1|0|0|TERRAIN|1|-" },
+    \\          { "name": "spiky_left", "props": "5,1|1|0|TERRAIN|1|-" },
+    \\
+    \\          { "name": "rect_mini_1", "props": "6,1|0|0|TERRAIN|1|-" },
+    \\          { "name": "rect_mini_2", "props": "6,1|1|0|TERRAIN|1|-" },
+    \\          { "name": "rect_mini_3", "props": "6,1|1|1|TERRAIN|1|-" },
+    \\          { "name": "rect_mini_4", "props": "6,1|0|1|TERRAIN|1|-" },
+    \\
+    \\          { "name": "tileTemplate", "props": "1,0|0|0|-|0|-", "animation": "1000,1,0,0,0|1000,1,0,1,0|1000,1,0,1,1|1000,1,0,0,1" }
+    \\      ]
+    \\  }
+;
+
+/// This loads a tile set from given JSON data and makes an Entity for each defined
+/// tile in the set with contact and animation if defined and draws all to the screen.
+/// If there is a contact mask, the mask is displayed together with the tile in red shape.
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
@@ -39,8 +99,6 @@ fn init() void {
         .name = "TestView",
         .position = .{ 0, 0 },
         .projection = .{
-            //.clear_color = .{ 0, 0, 0, 255 },
-            //.position = .{ 0, 0 },
             .width = 600,
             .height = 400,
         },
@@ -54,73 +112,20 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    var tile_set = TileSet.new(.{
-        .name = "TileSet",
-        .texture_name = "Atlas",
-    })
-        .withTileTemplate(tileTemplate("full", 0, 0, false, false, false))
-        .withTileTemplate(tileTemplate("slope_1_1", 1, 0, false, false, true))
-        .withTileTemplate(tileTemplate("slope_1_2", 1, 0, true, false, true))
-        .withTileTemplate(tileTemplate("slope_1_3", 1, 0, true, true, true))
-        .withTileTemplate(tileTemplate("slope_1_4", 1, 0, false, true, true))
-        .withTileTemplate(tileTemplate("slope_2_1", 2, 0, false, false, true))
-        .withTileTemplate(tileTemplate("slope_2_2", 2, 0, true, false, true))
-        .withTileTemplate(tileTemplate("slope_2_3", 2, 0, true, true, true))
-        .withTileTemplate(tileTemplate("slope_2_4", 2, 0, false, true, true))
-        .withTileTemplate(tileTemplate("slope_3_1", 3, 0, false, false, true))
-        .withTileTemplate(tileTemplate("slope_3_2", 3, 0, true, false, true))
-        .withTileTemplate(tileTemplate("slope_3_3", 3, 0, true, true, true))
-        .withTileTemplate(tileTemplate("slope_3_4", 3, 0, false, true, true))
-        .withTileTemplate(tileTemplate("slope_4_1", 4, 0, false, false, true))
-        .withTileTemplate(tileTemplate("slope_4_2", 4, 0, true, false, true))
-        .withTileTemplate(tileTemplate("slope_4_3", 4, 0, true, true, true))
-        .withTileTemplate(tileTemplate("slope_4_4", 4, 0, false, true, true))
-        .withTileTemplate(tileTemplate("slope_5_1", 5, 0, false, false, true))
-        .withTileTemplate(tileTemplate("slope_5_2", 5, 0, true, false, true))
-        .withTileTemplate(tileTemplate("slope_5_3", 5, 0, true, true, true))
-        .withTileTemplate(tileTemplate("slope_5_4", 5, 0, false, true, true))
-        .withTileTemplate(tileTemplate("slope_6_1", 6, 0, false, false, true))
-        .withTileTemplate(tileTemplate("slope_6_2", 6, 0, true, false, true))
-        .withTileTemplate(tileTemplate("slope_6_3", 6, 0, true, true, true))
-        .withTileTemplate(tileTemplate("slope_6_4", 6, 0, false, true, true))
-        .withTileTemplate(tileTemplate("slope_7_1", 7, 0, false, false, true))
-        .withTileTemplate(tileTemplate("slope_7_2", 7, 0, true, false, true))
-        .withTileTemplate(tileTemplate("slope_7_3", 7, 0, true, true, true))
-        .withTileTemplate(tileTemplate("slope_7_4", 7, 0, false, true, true))
-    //
-        .withTileTemplate(tileTemplate("_slope_0_1", 0, 1, false, false, true))
-        .withTileTemplate(tileTemplate("_slope_1_1", 1, 1, false, false, true))
-    //
-        .withTileTemplate(tileTemplate("_slope_2_1", 2, 1, false, false, true))
-        .withTileTemplate(tileTemplate("_slope_2_2", 2, 1, false, true, true))
-    //
-        .withTileTemplate(tileTemplate("_slope_3_1", 3, 1, false, false, true))
-        .withTileTemplate(tileTemplate("_slope_3_2", 3, 1, true, false, true))
-    //
-        .withTileTemplate(tileTemplate("_slope_4_1", 4, 1, false, false, true))
-        .withTileTemplate(tileTemplate("_slope_4_2", 4, 1, false, true, true))
-    //
-        .withTileTemplate(tileTemplate("_slope_5_1", 5, 1, false, false, true))
-        .withTileTemplate(tileTemplate("_slope_5_2", 5, 1, true, false, true))
-    //
-        .withTileTemplate(tileTemplate("_slope_6_1", 6, 1, false, false, true))
-        .withTileTemplate(tileTemplate("_slope_6_2", 6, 1, true, false, true))
-        .withTileTemplate(tileTemplate("_slope_6_3", 6, 1, true, true, true))
-        .withTileTemplate(tileTemplate("_slope_6_4", 6, 1, false, true, true))
-    //
-        .withTileTemplate(tileTemplate("animation", 1, 0, false, false, false)
-        .withAnimationFrame(TileAnimationFrame{ .duration = 1000, .sprite_data = .{ .texture_bounds = .{ 16, 0, 16, 16 } } })
-        .withAnimationFrame(TileAnimationFrame{ .duration = 1000, .sprite_data = .{ .texture_bounds = .{ 16, 0, 16, 16 }, .flip_x = true } })
-        .withAnimationFrame(TileAnimationFrame{ .duration = 1000, .sprite_data = .{ .texture_bounds = .{ 16, 0, 16, 16 }, .flip_x = true, .flip_y = true } })
-        .withAnimationFrame(TileAnimationFrame{ .duration = 1000, .sprite_data = .{ .texture_bounds = .{ 16, 0, 16, 16 }, .flip_y = true } }))
-        .activate();
+    var attributes = firefly.api.Attributes.new();
+    defer attributes.deinit();
+    attributes.set(firefly.game.GameTaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
+
+    firefly.api.Task.runTaskByName(firefly.game.JSONTasks.LOAD_TILE_SET_TASK, null, attributes);
+    var tile_set: *TileSet = TileSet.byName("TestTileSet").?;
+    TileSet.activateByName("TestTileSet", true);
 
     var next = tile_set.tile_templates.slots.nextSetBit(0);
     var x: usize = 50;
     var y: usize = 50;
     while (next) |i| {
         if (tile_set.tile_templates.get(i)) |tile_template| {
-            createTileProspect(
+            createTile(
                 tile_set,
                 tile_template,
                 firefly.utils.usize_f32(x),
@@ -137,7 +142,7 @@ fn init() void {
     }
 }
 
-fn createTileProspect(
+fn createTile(
     tile_set: *TileSet,
     tile_template: *TileTemplate,
     x: Float,
@@ -189,22 +194,4 @@ fn createTileProspect(
     }
 
     _ = entity.activate();
-}
-
-fn tileTemplate(name: String, x: usize, y: usize, flip_x: bool, flip_y: bool, mask: bool) TileTemplate {
-    return .{
-        .name = name,
-        .sprite_data = .{
-            .texture_bounds = .{
-                utils.usize_f32(x * 16),
-                utils.usize_f32(y * 16),
-                16,
-                16,
-            },
-            .flip_x = flip_x,
-            .flip_y = flip_y,
-        },
-        .contact_material_type = TileContactMaterialType.TERRAIN,
-        .contact_mask_name = if (mask) name else null,
-    };
 }

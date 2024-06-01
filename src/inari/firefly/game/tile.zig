@@ -102,7 +102,6 @@ pub const TileAnimationFrame = struct {
 pub const TileTemplate = struct {
     name: ?String = null,
     groups: ?String = null,
-    tile_kind: ?TileTypeKind = null,
 
     sprite_data: SpriteData,
     animation: ?DynArray(TileAnimationFrame) = null,

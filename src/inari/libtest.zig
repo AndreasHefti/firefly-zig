@@ -1,6 +1,7 @@
 const std = @import("std");
 const firefly = @import("firefly/firefly.zig");
 
+const String = firefly.utils.String;
 const Index = firefly.utils.Index;
 const StringBuffer = firefly.utils.StringBuffer;
 const DynArray = firefly.utils.DynArray;
@@ -9,24 +10,37 @@ test {
     std.testing.refAllDecls(@import("firefly/utils/testing.zig"));
 }
 
-test "init firefly" {
-    const init_context = firefly.api.InitContext{
-        .allocator = std.testing.allocator,
-        .entity_allocator = std.testing.allocator,
-        .component_allocator = std.testing.allocator,
-    };
+const init_context = firefly.api.InitContext{
+    .allocator = std.testing.allocator,
+    .entity_allocator = std.testing.allocator,
+    .component_allocator = std.testing.allocator,
+};
 
+test "init firefly" {
     try firefly.init(init_context);
     defer firefly.deinit();
 }
 
-test "Tasks" {
-    const init_context = firefly.api.InitContext{
-        .allocator = std.testing.allocator,
-        .entity_allocator = std.testing.allocator,
-        .component_allocator = std.testing.allocator,
-    };
+test "Attributes" {
+    try firefly.init(init_context);
+    defer firefly.deinit();
 
+    var attrs1 = firefly.api.Attributes.new();
+    defer attrs1.deinit();
+
+    attrs1.set("param1", "value1");
+    attrs1.set("param2", "value2");
+    attrs1.set("param3", "value3");
+    attrs1.set("param4", "value4");
+
+    try std.testing.expectEqualStrings("value2", attrs1.get("param2").?);
+    try std.testing.expect(attrs1.size() == 4);
+
+    attrs1.delete("param1");
+    try std.testing.expect(attrs1.size() == 3);
+}
+
+test "Tasks" {
     try firefly.init(init_context);
     defer firefly.deinit();
 
@@ -39,7 +53,7 @@ test "Tasks" {
     attrs2.set("attr2", "Override");
     defer attrs2.deinit();
 
-    var task: *firefly.api.Task = firefly.api.Task.newAnd(.{
+    var task: *firefly.api.Task = firefly.api.Task.new(.{
         .name = "Task1",
         .function = task1,
         .callback = callback1,
@@ -52,7 +66,7 @@ test "Tasks" {
     std.time.sleep(2 * std.time.ns_per_s);
 }
 
-fn task1(id: ?Index, attrs: ?firefly.api.Attributes) void {
+fn task1(id: ?Index, attrs: ?*firefly.api.Attributes) void {
     std.debug.print("\nTask 1 running: id: {?d}, attrs: {?any}\n", .{ id, attrs });
     std.time.sleep(1 * std.time.ns_per_s);
 }
@@ -62,12 +76,6 @@ fn callback1(id: Index) void {
 }
 
 test "Trigger" {
-    const init_context = firefly.api.InitContext{
-        .allocator = std.testing.allocator,
-        .entity_allocator = std.testing.allocator,
-        .component_allocator = std.testing.allocator,
-    };
-
     try firefly.init(init_context);
     defer firefly.deinit();
 
@@ -78,9 +86,9 @@ test "Trigger" {
     const task_id = firefly.api.Task.new(.{
         .name = "Task1",
         .function = task1,
-    });
+    }).id;
 
-    _ = firefly.api.Trigger.newAnd(.{
+    _ = firefly.api.Trigger.new(.{
         .name = "testTrigger",
         .condition = triggerCondition,
         .attributes = attrs1,
@@ -201,4 +209,30 @@ test "builder pattern" {
         "DynIndexArray[ 1,2, ]",
         sb.toString(),
     );
+}
+
+//////////////////////////////////////////////////////////////////////////
+////Repl tests
+//////////////////////////////////////////////////////////////////////////
+
+test "zim mem String vs heap Strings" {
+    const zigMemString: String = getNoneHeapString();
+    const heapString: String = std.testing.allocator.dupe(u8, "This is a String on heap mem and has therefore to be freed right?") catch unreachable;
+    defer std.testing.allocator.free(heapString);
+
+    try std.testing.expectEqualStrings(
+        "This is a String on none heap mem and has not to be freed right?",
+        zigMemString,
+    );
+
+    try std.testing.expectEqualStrings(
+        "This is a String on heap mem and has therefore to be freed right?",
+        heapString,
+    );
+
+    // But how can we check later on if String lives on heap and has to be freed or not?
+}
+
+fn getNoneHeapString() String {
+    return "This is a String on none heap mem and has not to be freed right?";
 }

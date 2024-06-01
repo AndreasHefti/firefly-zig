@@ -34,6 +34,54 @@ test "rectIFromRectF" {
     );
 }
 
+test "parseFromString" {
+    try std.testing.expect(utils.parseBoolean("1"));
+    try std.testing.expect(utils.parseBoolean("2"));
+    try std.testing.expect(utils.parseBoolean("-"));
+    try std.testing.expect(utils.parseBoolean("1s"));
+    try std.testing.expect(utils.parseBoolean("0") == false);
+    try std.testing.expect(utils.parseBoolean(null) == false);
+
+    try std.testing.expect(utils.parseName("1s") != null);
+    try std.testing.expect(utils.parseName(null) == null);
+    try std.testing.expect(utils.parseName("-") == null);
+    try std.testing.expectEqualStrings("some name", utils.parseName("some name").?);
+
+    try std.testing.expect(utils.parsePosF(null) == null);
+    try std.testing.expect(utils.parsePosF("null") == null);
+    try std.testing.expect(utils.parsePosF("dvwdrf") == null);
+    try std.testing.expect(utils.parsePosF("1f,3") == null);
+    try std.testing.expect(utils.parsePosF("1,3") != null);
+    try std.testing.expect(utils.parsePosF("1,3").?[0] == 1);
+    try std.testing.expect(utils.parsePosF("1,3").?[1] == 3);
+    try std.testing.expect(utils.parsePosF("1.5,3.78").?[0] == 1.5);
+    try std.testing.expect(utils.parsePosF("1.5,3.78").?[1] == 3.78);
+
+    try std.testing.expect(utils.parseRectF(null) == null);
+    try std.testing.expect(utils.parseRectF("null") == null);
+    try std.testing.expect(utils.parseRectF("dvwdrf") == null);
+    try std.testing.expect(utils.parseRectF("1f,3") == null);
+    try std.testing.expect(utils.parseRectF("1,3,5,7") != null);
+    try std.testing.expect(utils.parseRectF("1,3,5,7").?[0] == 1);
+    try std.testing.expect(utils.parseRectF("1,3,5,7").?[1] == 3);
+    try std.testing.expect(utils.parseRectF("1,3,5,7").?[2] == 5);
+    try std.testing.expect(utils.parseRectF("1,3,5,7").?[3] == 7);
+    try std.testing.expect(utils.parseRectF("1.5,3.78,1.1,45").?[0] == 1.5);
+    try std.testing.expect(utils.parseRectF("1.5,3.78,1.1,45").?[1] == 3.78);
+    try std.testing.expect(utils.parseRectF("1.5,3.78,1.1,45").?[2] == 1.1);
+    try std.testing.expect(utils.parseRectF("1.5,3.78,1.1,45").?[3] == 45);
+
+    try std.testing.expect(utils.parseUsize(null) == 0);
+    try std.testing.expect(utils.parseUsize("null") == 0);
+    try std.testing.expect(utils.parseUsize("dvwdrf") == 0);
+    try std.testing.expect(utils.parseUsize("-1") == 0);
+    try std.testing.expect(utils.parseUsize("1") == 1);
+    try std.testing.expect(utils.parseUsize("11") == 11);
+    try std.testing.expect(utils.parseUsize("112") == 112);
+    try std.testing.expect(utils.parseUsize("1234") == 1234);
+    try std.testing.expect(utils.parseUsize("1234.4634") == 0);
+}
+
 test "StringBuffer" {
     var sb = StringBuffer.init(std.testing.allocator);
     defer sb.deinit();
@@ -226,7 +274,7 @@ test "DynArray initialize" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = try DynArray(i32).new(allocator);
+    var dyn_array = DynArray(i32).new(allocator);
     defer dyn_array.deinit();
     try testing.expect(dyn_array.capacity() == 0);
     _ = dyn_array.set(1, 0);
@@ -240,7 +288,7 @@ test "DynArray scale up" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = try DynArray(i32).new(allocator);
+    var dyn_array = DynArray(i32).new(allocator);
     defer dyn_array.deinit();
 
     _ = dyn_array.set(100, 0);
@@ -258,7 +306,7 @@ test "DynArray delete" {
     const allocator = std.testing.allocator;
     const testing = std.testing;
 
-    var dyn_array = try DynArray(i32).new(allocator);
+    var dyn_array = DynArray(i32).new(allocator);
     defer dyn_array.deinit();
 
     _ = dyn_array.set(100, 0);
@@ -268,7 +316,7 @@ test "DynArray delete" {
 }
 
 test "DynArray consistency checks" {
-    var dyn_array = try DynArray(i32).new(std.testing.allocator);
+    var dyn_array = DynArray(i32).new(std.testing.allocator);
     defer dyn_array.deinit();
 
     _ = dyn_array.set(100, 0);
@@ -280,7 +328,7 @@ test "DynArray consistency checks" {
 }
 
 test "DynArray use u16 as index" {
-    var dyn_array = try DynArray(i32).new(std.testing.allocator);
+    var dyn_array = DynArray(i32).new(std.testing.allocator);
     defer dyn_array.deinit();
 
     const index1: u16 = 0;
@@ -289,7 +337,7 @@ test "DynArray use u16 as index" {
 }
 
 test "test ensure capacity" {
-    var bitset2 = try BitSet.newEmpty(std.testing.allocator, 8);
+    var bitset2 = BitSet.newEmpty(std.testing.allocator, 8);
     defer bitset2.deinit();
 
     bitset2.set(2);
@@ -527,10 +575,10 @@ test "BitMask Fill/Reset" {
     mask.fill();
     sb.print("{any}", .{mask});
 
-    try mask.reset(5, 5);
+    mask.reset(5, 5);
     sb.print("{any}", .{mask});
 
-    try mask.reset(15, 15);
+    mask.reset(15, 15);
     mask.fill();
     sb.print("{any}", .{mask});
 
@@ -893,7 +941,7 @@ test "BitMask Intersection 1" {
 }
 
 test "Strings in DynArray" {
-    var listOfStrings: DynArray(String) = DynArray(String).new(std.testing.allocator) catch unreachable;
+    var listOfStrings: DynArray(String) = DynArray(String).new(std.testing.allocator);
     defer listOfStrings.deinit();
 
     _ = listOfStrings.add("one");
@@ -920,7 +968,7 @@ test "Slices in DynArray" {
 }
 
 fn testSliceFromList() !DynArray([]SomeType) {
-    var listOfSlices: DynArray([]SomeType) = DynArray([]SomeType).new(std.testing.allocator) catch unreachable;
+    var listOfSlices: DynArray([]SomeType) = DynArray([]SomeType).new(std.testing.allocator);
 
     var sl = [_]SomeType{ .{ .id = 0 }, .{ .id = 1 } };
 
@@ -934,8 +982,8 @@ fn testSliceFromList() !DynArray([]SomeType) {
     return listOfSlices;
 }
 
-test "DynArray copy of struct toKampanie  heap" {
-    var list: DynArray(SomeType) = DynArray(SomeType).new(std.testing.allocator) catch unreachable;
+test "DynArray copy of struct to heap" {
+    var list: DynArray(SomeType) = DynArray(SomeType).new(std.testing.allocator);
     defer list.deinit();
 
     const s1 = SomeType{ .id = 1 };

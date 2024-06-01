@@ -45,7 +45,7 @@ pub const ActionResult = enum {
 
 pub const ActionFunction = *const fn (Index) ActionResult;
 pub const ActionCallback = *const fn (Index, ActionResult) void;
-pub const TaskFunction = *const fn (?Index, ?Attributes) void;
+pub const TaskFunction = *const fn (?Index, ?*Attributes) void;
 pub const TaskCallback = *const fn (Index) void;
 
 pub const Task = struct {
@@ -116,7 +116,7 @@ pub const Task = struct {
             attrs.?.setAll(a);
         }
 
-        self.function(id, attrs);
+        self.function(id, if (attrs) |*a| a else null);
 
         if (self.callback) |c|
             c(self.id);

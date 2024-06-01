@@ -656,7 +656,7 @@ const RaylibRenderAPI = struct {
     }
     fn setShaderValueVec3(shader_id: BindingId, name: String, val: *Vector3f) bool {
         return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC3);
-    }
+    } 
     fn setShaderValueVec4(shader_id: BindingId, name: String, val: *Vector4f) bool {
         return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC4);
     }

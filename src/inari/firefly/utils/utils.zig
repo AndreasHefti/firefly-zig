@@ -72,6 +72,31 @@ pub inline fn f32_cint(v: f32) c_int {
     return @as(c_int, @intCast(f32_usize(v)));
 }
 
+pub inline fn parseBoolean(value: ?String) bool {
+    if (value) |v| {
+        if (v.len == 0) return false;
+        return v[0] != '0';
+    }
+    return false;
+}
+
+pub inline fn parseFloat(value: ?String) Float {
+    if (value) |v| {
+        if (v.len == 0) return 0;
+        return std.fmt.parseFloat(Float, v) catch 0;
+    }
+    return 0;
+}
+
+pub inline fn parseName(value: ?String) ?String {
+    if (value) |v| {
+        if (v.len == 0) return null;
+        if (std.mem.eql(u8, v, "-")) return null;
+        return v;
+    }
+    return null;
+}
+
 pub const AspectGroup = aspect.AspectGroup;
 
 pub fn Condition(comptime T: type) type {

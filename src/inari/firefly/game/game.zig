@@ -1,6 +1,7 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 const tile = @import("tile.zig");
+const json = @import("json.zig");
 
 const View = firefly.graphics.View;
 const ComponentControlType = firefly.api.ComponentControlType;
@@ -26,6 +27,7 @@ pub fn init() !void {
 
     // init sub packages
     try tile.init();
+    try json.init();
 }
 
 pub fn deinit() void {
@@ -34,6 +36,7 @@ pub fn deinit() void {
         return;
 
     // deinit sub packages
+    json.deinit();
     tile.deinit();
 
     ComponentControlType(SimplePivotCamera).deinit();
@@ -42,6 +45,12 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 //// Public API declarations
 //////////////////////////////////////////////////////////////
+
+pub const GameTaskAttributes = struct {
+    pub const OWNER_COMPOSITE = "owner_composite";
+    pub const LOAD_FILE_NAME = "file_name";
+    pub const JSON_RESOURCE = "json_resource";
+};
 
 pub const TileDimensionType = tile.TileDimensionType;
 pub const TileContactMaterialType = tile.TileContactMaterialType;
@@ -52,6 +61,8 @@ pub const TileTemplate = tile.TileTemplate;
 pub const TileMapping = tile.TileMapping;
 pub const MappedTileSet = tile.MappedTileSet;
 pub const TileSetLayerMapping = tile.TileSetLayerMapping;
+
+pub const JSONTasks = json.JSONTasks;
 
 //////////////////////////////////////////////////////////////
 //// Simple pivot camera
