@@ -1,11 +1,12 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const api = firefly.api;
+
 const GroupAspect = firefly.api.GroupAspect;
 const GroupKind = firefly.api.GroupKind;
 const GroupAspectGroup = firefly.api.GroupAspectGroup;
 const DynArray = firefly.utils.DynArray;
-const Attributes = firefly.api.Attributes;
 const ComponentAspect = firefly.api.ComponentAspect;
 const UpdateEvent = firefly.api.UpdateEvent;
 const Component = firefly.api.Component;
@@ -32,10 +33,117 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////////////////
+//// Properties and CallAttributes
+//////////////////////////////////////////////////////////////////////////
+
+pub const Properties = std.StringHashMap(String);
+
+pub const CallAttributes = struct {
+    caller_id: ?Index = null,
+    caller_name: ?String = null,
+    c1_id: ?Index = null,
+    c2_id: ?Index = null,
+    c3_id: ?Index = null,
+    properties: ?Properties = undefined,
+
+    pub fn deinit(self: *CallAttributes) void {
+        self.clearProperties();
+        if (self.properties) |*p|
+            p.deinit();
+        self.properties = undefined;
+    }
+
+    pub fn clearProperties(self: *CallAttributes) void {
+        if (self.properties) |*p| {
+            var it = p.iterator();
+            while (it.next()) |e| {
+                api.ALLOC.free(e.key_ptr.*);
+                api.ALLOC.free(e.value_ptr.*);
+            }
+
+            p.clearAndFree();
+        }
+    }
+
+    pub fn setProperty(self: *CallAttributes, name: String, value: String) void {
+        if (self.properties == null)
+            self.properties = std.StringHashMap(String).init(api.ALLOC);
+        // if existing, delete old first
+        if (self.properties) |*p| {
+            if (p.contains(name))
+                self.deleteProperty(name);
+            // add new with allocated key and value
+            p.put(
+                api.ALLOC.dupe(u8, name) catch unreachable,
+                api.ALLOC.dupe(u8, value) catch unreachable,
+            ) catch unreachable;
+        }
+    }
+
+    pub fn setAllProperties(self: *CallAttributes, properties: Properties) void {
+        var it = properties.iterator();
+        while (it.next()) |e|
+            self.setProperty(e.key_ptr.*, e.value_ptr.*);
+    }
+
+    pub fn getProperty(self: *CallAttributes, name: String) ?String {
+        if (self.properties) |p| return p.get(name);
+        return null;
+    }
+
+    pub fn deleteProperty(self: *CallAttributes, name: String) void {
+        if (self.properties) |*p| {
+            if (p.fetchRemove(name)) |kv| {
+                api.ALLOC.free(kv.key);
+                api.ALLOC.free(kv.value);
+            }
+        }
+    }
+
+    pub fn copyMerge(self: *CallAttributes, other: *const CallAttributes) CallAttributes {
+        var copy = CallAttributes{
+            .caller_id = self.caller_id,
+            .caller_name = self.caller_name,
+            .c1_id = other.c1_id,
+            .c2_id = other.c2_id,
+            .c3_id = other.c3_id,
+        };
+
+        if (self.properties) |p|
+            copy.setAllProperties(p);
+        if (other.properties) |p|
+            copy.setAllProperties(p);
+
+        return copy;
+    }
+
+    pub fn format(
+        self: CallAttributes,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("CallAttributes[", .{});
+        if (self.caller_id) |ci| try writer.print(" caller_id:{d}", .{ci});
+        if (self.caller_name) |cn| try writer.print(" caller_name:{s}", .{cn});
+        if (self.c1_id) |ci| try writer.print(" c1_id:{d}", .{ci});
+        if (self.c2_id) |ci| try writer.print(" c2_id:{d}", .{ci});
+        if (self.c3_id) |ci| try writer.print(" c3_id:{d}", .{ci});
+        if (self.properties) |p| {
+            try writer.print(" properties: ", .{});
+            var i = p.iterator();
+            while (i.next()) |e|
+                try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
+        }
+        try writer.print(" ]", .{});
+    }
+};
+
+//////////////////////////////////////////////////////////////////////////
 //// Condition Component
 //////////////////////////////////////////////////////////////////////////
 
-pub const ConditionFunction = *const fn (?Index, ?Attributes) bool;
+pub const ConditionFunction = *const fn (?*CallAttributes) bool;
 pub const ConditionType = enum { f, f_and, f_or, f_not };
 pub const Condition = union(ConditionType) {
     f: ConditionFunction,
@@ -43,14 +151,14 @@ pub const Condition = union(ConditionType) {
     f_or: CRef2,
     f_not: CRef1,
 
-    fn check(self: Condition, component_id: ?Index, attributes: ?Attributes) bool {
+    fn check(self: Condition, attributes: ?*CallAttributes) bool {
         return switch (self) {
-            .f => self.f(component_id, attributes),
-            .f_and => CCondition.byId(self.f_and.left_ref).condition.check(component_id, attributes) and
-                CCondition.byId(self.f_and.right_ref).condition.check(component_id, attributes),
-            .f_or => CCondition.byId(self.f_or.left_ref).condition.check(component_id, attributes) or
-                CCondition.byId(self.f_or.right_ref).condition.check(component_id, attributes),
-            .f_not => !CCondition.byId(self.f_not.f_ref).condition.check(component_id, attributes),
+            .f => self.f(attributes),
+            .f_and => CCondition.byId(self.f_and.left_ref).condition.check(attributes) and
+                CCondition.byId(self.f_and.right_ref).condition.check(attributes),
+            .f_or => CCondition.byId(self.f_or.left_ref).condition.check(attributes) or
+                CCondition.byId(self.f_or.right_ref).condition.check(attributes),
+            .f_not => !CCondition.byId(self.f_not.f_ref).condition.check(attributes),
         };
     }
 };
@@ -79,8 +187,8 @@ pub const CCondition = struct {
 
     condition: Condition,
 
-    pub fn check(self: *CCondition, component_id: ?Index, attributes: ?Attributes) bool {
-        return self.condition.check(component_id, attributes);
+    pub fn check(self: *CCondition, attributes: ?*CallAttributes) bool {
+        return self.condition.check(attributes);
     }
 
     pub fn newANDById(name: String, c1_id: Index, c2_id: Index) *CCondition {
@@ -123,13 +231,13 @@ pub const CCondition = struct {
         });
     }
 
-    pub fn checkById(c_id: Index, component_id: ?Index, attributes: ?Attributes) bool {
-        return CCondition.byId(c_id).check(component_id, attributes);
+    pub fn checkById(c_id: Index, attributes: ?*CallAttributes) bool {
+        return CCondition.byId(c_id).check(attributes);
     }
 
-    pub fn checkByName(c_name: String, component_id: ?Index, attributes: ?Attributes) bool {
+    pub fn checkByName(c_name: String, attributes: ?*CallAttributes) bool {
         if (CCondition.byName(c_name)) |cc|
-            return cc.check(component_id, attributes);
+            return cc.check(attributes);
         return false;
     }
 };
@@ -139,20 +247,33 @@ pub const CCondition = struct {
 //////////////////////////////////////////////////////////////////////////
 
 pub const ActionResult = enum {
-    Success,
     Running,
+    Success,
     Failed,
 };
 
-pub const ActionFunction = *const fn (Index) ActionResult;
-pub const ActionCallback = *const fn (Index, ActionResult) void;
-pub const TaskFunction = *const fn (?Index, ?*Attributes) void;
-pub const TaskCallback = *const fn (Index) void;
+pub const UpdateActionFunction = *const fn (Index) ActionResult;
+pub const UpdateActionCallback = *const fn (Index, ActionResult) void;
+pub const TaskFunction = *const fn (*CallAttributes) void;
+pub const TaskCallback = *const fn (*CallAttributes) void;
+
+pub const GlobalTaskAttributes = struct {
+    pub const CALLER_ID = "CALLER_ID";
+    pub const CALLER_NAME = "CALLER_Name";
+
+    pub const COMPONENT1_ID = "COMPONENT1_ID";
+    pub const COMPONENT1_NAME = "COMPONENT1_NAME";
+    pub const COMPONENT2_ID = "COMPONENT2_ID";
+    pub const COMPONENT2_NAME = "COMPONENT2_NAME";
+    pub const COMPONENT3_ID = "COMPONENT3_ID";
+    pub const COMPONENT3_NAME = "COMPONENT3_NAME";
+};
 
 pub const Task = struct {
     pub usingnamespace Component.Trait(Task, .{
         .name = "Task",
         .activation = false,
+        .subscription = false,
     });
 
     id: Index = UNDEF_INDEX,
@@ -162,13 +283,20 @@ pub const Task = struct {
     blocking: bool = true,
 
     function: TaskFunction,
-    attributes: ?Attributes = null,
     callback: ?TaskCallback = null,
 
+    attributes: CallAttributes = undefined,
+
+    pub fn construct(self: *Task) void {
+        self.attributes = CallAttributes{
+            .caller_id = self.id,
+            .caller_name = self.name,
+        };
+    }
+
     pub fn destruct(self: *Task) void {
-        if (self.attributes) |*attr|
-            attr.deinit();
-        self.attributes = null;
+        self.attributes.deinit();
+        self.attributes = undefined;
     }
 
     pub fn run(self: *Task) void {
@@ -184,46 +312,51 @@ pub const Task = struct {
         }
     }
 
-    pub fn runWith(self: *Task, id: ?Index, attributes: ?Attributes) void {
+    pub fn runWith(self: *Task, attributes: ?*CallAttributes) void {
         defer {
             if (self.run_once)
                 Task.disposeById(self.id);
         }
 
         if (self.blocking) {
-            self._run(id, attributes);
+            self._run(attributes);
         } else {
-            _ = std.Thread.spawn(.{}, _run, .{ self, id, attributes }) catch unreachable;
+            _ = std.Thread.spawn(.{}, _run, .{ self, attributes }) catch unreachable;
         }
     }
 
-    pub fn runTaskById(task_id: Index, component_id: ?Index, attributes: ?Attributes) void {
-        Task.byId(task_id).runWith(component_id, attributes);
+    pub fn runTaskById(task_id: Index, attributes: ?*CallAttributes) void {
+        Task.byId(task_id).runWith(attributes);
     }
 
-    pub fn runTaskByName(task_name: String, component_id: ?Index, attributes: ?Attributes) void {
-        if (Task.byName(task_name)) |t| t.runWith(component_id, attributes);
+    pub fn runTaskByName(task_name: String, attributes: ?*CallAttributes) void {
+        if (Task.byName(task_name)) |t| t.runWith(attributes);
     }
 
-    fn _run(self: *Task, id: ?Index, attrs1: ?Attributes) void {
-        var attrs: ?Attributes = null;
-        if (self.attributes) |*a| {
-            attrs = Attributes.new();
-            attrs.?.setAll(a);
+    fn _run(self: *Task, additional_attributes: ?*CallAttributes) void {
+        if (additional_attributes) |aa| {
+            var attrs = self.attributes.copyMerge(aa);
+            defer attrs.deinit();
+            self.function(&attrs);
+            if (self.callback) |c|
+                c(&attrs);
+        } else {
+            self.function(&self.attributes);
+            if (self.callback) |c|
+                c(&self.attributes);
         }
-        if (attrs1) |*a| {
-            if (attrs == null)
-                attrs = Attributes.new();
-            attrs.?.setAll(a);
-        }
+    }
 
-        self.function(id, if (attrs) |*a| a else null);
-
-        if (self.callback) |c|
-            c(self.id);
-
-        if (attrs) |*a|
-            a.deinit();
+    pub fn format(
+        self: Task,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "Task[ id:{d} name:{?s} run_once:{} blocking:{} callback:{} {?any} ], ",
+            .{ self.id, self.name, self.run_once, self.blocking, self.callback != null, self.attributes },
+        );
     }
 };
 
@@ -235,10 +368,9 @@ pub const Trigger = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
 
-    component_ref: ?Index,
     task_ref: Index,
     condition_ref: Index,
-    attributes: ?Attributes = null,
+    attributes: CallAttributes = undefined,
 
     pub fn componentTypeInit() !void {
         firefly.api.subscribeUpdate(update);
@@ -248,18 +380,37 @@ pub const Trigger = struct {
         firefly.api.unsubscribeUpdate(update);
     }
 
+    pub fn construct(self: *Trigger) void {
+        self.attributes = CallAttributes{
+            .caller_id = self.id,
+            .caller_name = self.name,
+        };
+    }
+
+    pub fn withComponentRef1(self: *Trigger, id: Index) *Trigger {
+        self.attributes.c1_id = id;
+        return self;
+    }
+    pub fn withComponentRef2(self: *Trigger, id: Index) *Trigger {
+        self.attributes.c2_id = id;
+        return self;
+    }
+    pub fn withComponentRef3(self: *Trigger, id: Index) *Trigger {
+        self.attributes.c3_id = id;
+        return self;
+    }
+
     pub fn destruct(self: *Trigger) void {
-        if (self.attributes) |*attr|
-            attr.deinit();
-        self.attributes = null;
+        self.attributes.deinit();
+        self.attributes = undefined;
     }
 
     fn update(_: UpdateEvent) void {
         var next = Trigger.nextActiveId(0);
         while (next) |i| {
             const trigger = Trigger.byId(i);
-            if (CCondition.byId(trigger.condition_ref).check(trigger.component_ref, trigger.attributes))
-                Task.byId(trigger.task_ref).runWith(trigger.component_ref, trigger.attributes);
+            if (CCondition.byId(trigger.condition_ref).check(&trigger.attributes))
+                Task.byId(trigger.task_ref).runWith(&trigger.attributes);
 
             next = Trigger.nextActiveId(i + 1);
         }

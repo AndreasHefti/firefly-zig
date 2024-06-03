@@ -31,7 +31,7 @@ fn dummyDeinit() void {}
 //////////////////////////////////////////////////////////////
 
 pub const RUN_ON = enum { RAYLIB, TEST };
-pub const RUN_ON_SET: RUN_ON = RUN_ON.TEST;
+pub const RUN_ON_SET: RUN_ON = RUN_ON.RAYLIB;
 
 pub const InitContext = struct {
     component_allocator: Allocator,
@@ -76,11 +76,11 @@ pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const CCondition = control.CCondition;
-pub const ConditionCombine = control.ConditionCombine;
 pub const ConditionFunction = control.ConditionFunction;
+pub const CallAttributes = control.CallAttributes;
 pub const ActionResult = control.ActionResult;
-pub const ActionFunction = control.ActionFunction;
-pub const ActionCallback = control.ActionCallback;
+pub const UpdateActionFunction = control.UpdateActionFunction;
+pub const UpdateActionCallback = control.UpdateActionCallback;
 pub const Task = control.Task;
 pub const TaskFunction = control.TaskFunction;
 pub const TaskCallback = control.TaskCallback;
@@ -197,6 +197,16 @@ pub const NamePool = struct {
         return null;
     }
 
+    pub fn indexToString(index: ?Index) ?String {
+        if (index) |i| {
+            const str = std.fmt.allocPrint(ALLOC, "{d}", i) catch return null;
+            defer ALLOC.free(str);
+            names.insert(str) catch unreachable;
+            return names.hash_map.getKey(str);
+        }
+        return null;
+    }
+
     pub fn free(name: String) void {
         names.remove(name);
     }
@@ -251,81 +261,6 @@ pub fn allocFloatArray(array: anytype) []Float {
 pub fn allocVec2FArray(array: anytype) []const Vector2f {
     return firefly.api.ALLOC.dupe(Vector2f, &array) catch unreachable;
 }
-
-/// A String dictionary that self owns its memory.
-/// Every key and value is allocated on the heap by the Attributes map
-/// and also released/freed when deleted or the while dict is cleared or deinitialize
-pub const Attributes = struct {
-    _attrs: std.StringHashMap(String) = undefined,
-
-    pub fn new() Attributes {
-        return .{
-            ._attrs = std.StringHashMap(String).init(ALLOC),
-        };
-    }
-
-    pub fn deinit(self: *Attributes) void {
-        self.clear();
-        self._attrs.deinit();
-        self._attrs = undefined;
-    }
-
-    pub fn clear(self: *Attributes) void {
-        var it = self._attrs.iterator();
-        while (it.next()) |e| {
-            ALLOC.free(e.key_ptr.*);
-            ALLOC.free(e.value_ptr.*);
-        }
-
-        self._attrs.clearAndFree();
-    }
-
-    pub fn size(self: *Attributes) usize {
-        return self._attrs.unmanaged.size;
-    }
-
-    pub fn set(self: *Attributes, name: String, value: String) void {
-        // if existing, delete old first
-        if (self._attrs.contains(name))
-            self.delete(name);
-        // add new with allocated key and value
-        self._attrs.put(
-            ALLOC.dupe(u8, name) catch unreachable,
-            ALLOC.dupe(u8, value) catch unreachable,
-        ) catch unreachable;
-    }
-
-    pub fn setAll(self: *Attributes, others: *const Attributes) void {
-        var it = others._attrs.iterator();
-        while (it.next()) |e|
-            self.set(e.key_ptr.*, e.value_ptr.*);
-    }
-
-    pub fn get(self: *Attributes, name: String) ?String {
-        return self._attrs.get(name);
-    }
-
-    pub fn delete(self: *Attributes, name: String) void {
-        if (self._attrs.fetchRemove(name)) |kv| {
-            ALLOC.free(kv.key);
-            ALLOC.free(kv.value);
-        }
-    }
-
-    pub fn format(
-        self: Attributes,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print("Attributes[ ", .{});
-        var i = self._attrs.iterator();
-        while (i.next()) |e| {
-            try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
-        }
-        try writer.print("]", .{});
-    }
-};
 
 //////////////////////////////////////////////////////////////
 //// Update Event and Render Event declarations

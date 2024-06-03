@@ -4,7 +4,7 @@ const utils = firefly.utils;
 const api = firefly.api;
 
 const Task = api.Task;
-const Attributes = api.Attributes;
+const CallAttributes = api.CallAttributes;
 const ComponentControl = api.ComponentControl;
 const ComponentControlType = api.ComponentControlType;
 const DynIndexMap = utils.DynIndexMap;
@@ -634,7 +634,7 @@ pub const CompositeLifeCycle = enum {
 pub const LifeCycleTaskRef = struct {
     life_cycle: CompositeLifeCycle,
     task_id: Index,
-    attributes: ?Attributes,
+    attributes: CallAttributes,
 };
 
 pub const Composite = struct {
@@ -735,8 +735,7 @@ pub const Composite = struct {
                 if (tr.life_cycle == life_cycle)
                     firefly.api.Task.runTaskById(
                         tr.task_id,
-                        self.id,
-                        tr.attributes,
+                        &tr.attributes,
                     );
             }
             next = self.tasks.slots.nextSetBit(i + 1);

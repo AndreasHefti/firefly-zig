@@ -24,6 +24,9 @@ pub fn init() void {
     defer initialized = true;
     if (initialized)
         return;
+
+    Component.registerComponent(Room);
+    Component.registerComponent(Area);
 }
 
 pub fn deinit() void {
@@ -47,8 +50,33 @@ pub const Area = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
+
+    _composite_id: ?Index = null,
 };
 
 //////////////////////////////////////////////////////////////
 //// Room
 //////////////////////////////////////////////////////////////
+
+pub const RoomLayer = struct {
+    name: String,
+
+    _layer_id: ?Index = null,
+};
+
+pub const Room = struct {
+    pub usingnamespace Component.Trait(
+        @This(),
+        .{
+            .name = "Room",
+            .subscription = false,
+        },
+    );
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+
+    view_id: Index,
+
+    _composite_id: ?Index = null,
+};

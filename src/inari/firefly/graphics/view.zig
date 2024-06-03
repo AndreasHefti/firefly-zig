@@ -4,8 +4,8 @@ const firefly = @import("../firefly.zig");
 const UpdateEvent = firefly.api.UpdateEvent;
 const UpdateScheduler = firefly.api.UpdateScheduler;
 const Composite = firefly.api.Composite;
-const ActionFunction = firefly.api.ActionFunction;
-const ActionCallback = firefly.api.ActionCallback;
+const UpdateActionFunction = firefly.api.UpdateActionFunction;
+const UpdateActionCallback = firefly.api.UpdateActionCallback;
 const EventDispatch = firefly.utils.EventDispatch;
 const ComponentEvent = firefly.api.ComponentEvent;
 const AssetComponent = firefly.api.AssetComponent;
@@ -497,11 +497,10 @@ pub const Scene = struct {
     delete_after_run: bool = false,
 
     scheduler: ?UpdateScheduler = null,
-    callback: ?ActionCallback = null,
-    composite: ?Index,
 
-    init_action: ?ActionFunction = null,
-    update_action: ActionFunction,
+    init_task_ref: ?Index,
+    update_action: UpdateActionFunction,
+    callback: ?UpdateActionCallback = null,
 
     _loaded: bool = false,
 
@@ -513,28 +512,28 @@ pub const Scene = struct {
         firefly.api.unsubscribeUpdate(update);
     }
 
-    pub fn withComposite(self: *Scene, composite: Composite) *Scene {
-        self.composite = Composite.new(composite);
+    pub fn withInitTask(self: *Scene, task_id: Index) *Scene {
+        self.init_task_ref = task_id;
         return self;
     }
 
-    pub fn withInitAction(self: *Scene, action: ActionFunction) *Scene {
-        self.init_action = action;
+    pub fn withInitTaskByName(self: *Scene, task_name: String) *Scene {
+        self.init_task_ref = firefly.api.Task.idByName(task_name);
         return self;
     }
 
-    pub fn withUpdateAction(self: *Scene, action: ActionFunction) *Scene {
+    pub fn withUpdateAction(self: *Scene, action: UpdateActionFunction) *Scene {
         self.update_action = action;
+        return self;
+    }
+
+    pub fn withCallback(self: *Scene, callback: UpdateActionCallback) *Scene {
+        self.callback = callback;
         return self;
     }
 
     pub fn withScheduler(self: *Scene, scheduler: UpdateScheduler) *Scene {
         self.scheduler = scheduler;
-        return self;
-    }
-
-    pub fn withCallback(self: *Scene, callback: ActionCallback) *Scene {
-        self.callback = callback;
         return self;
     }
 
@@ -566,8 +565,8 @@ pub const Scene = struct {
 
     pub fn activation(self: *Scene, active: bool) void {
         if (active) {
-            if (self.init_action) |a|
-                _ = a(self.id);
+            if (self.init_task_ref) |id|
+                firefly.api.Task.runTaskById(id, null);
         }
     }
 

@@ -4,8 +4,11 @@ const tile = @import("tile.zig");
 const json = @import("json.zig");
 const world = @import("world.zig");
 
+const CCondition = firefly.api.CCondition;
 const View = firefly.graphics.View;
 const ComponentControlType = firefly.api.ComponentControlType;
+const EMovement = firefly.physics.EMovement;
+const Attributes = firefly.api.Attributes;
 const Vector2f = firefly.utils.Vector2f;
 const RectF = firefly.utils.RectF;
 const PosF = firefly.utils.PosF;
@@ -49,9 +52,76 @@ pub fn deinit() void {
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const GameTaskAttributes = struct {
+pub const GlobalConditions = struct {
+    const ENTITY_MOVES = "ENTITY_MOVES";
+    const ENTITY_MOVES_UP = "ENTITY_MOVES_UP";
+    const ENTITY_MOVES_DOWN = "ENTITY_MOVES_DOWN";
+    const ENTITY_MOVES_RIGHT = "ENTITY_MOVES_RIGHT";
+    const ENTITY_MOVES_LEFT = "ENTITY_MOVES_LEFT";
+
+    var loaded = false;
+
+    pub fn load() void {
+        defer loaded = true;
+        if (loaded) return;
+
+        _ = CCondition.new(.{ .name = ENTITY_MOVES, .condition = .{ .f = entityMoves } });
+        _ = CCondition.new(.{ .name = ENTITY_MOVES_UP, .condition = .{ .f = entityMovesUp } });
+        _ = CCondition.new(.{ .name = ENTITY_MOVES_DOWN, .condition = .{ .f = entityMovesDown } });
+        _ = CCondition.new(.{ .name = ENTITY_MOVES_RIGHT, .condition = .{ .f = entityMovesRight } });
+        _ = CCondition.new(.{ .name = ENTITY_MOVES_LEFT, .condition = .{ .f = entityMovesLeft } });
+    }
+
+    pub fn dispose() void {
+        defer loaded = false;
+        if (!loaded) return;
+
+        CCondition.disposeByName(ENTITY_MOVES);
+        CCondition.disposeByName(ENTITY_MOVES_UP);
+        CCondition.disposeByName(ENTITY_MOVES_DOWN);
+        CCondition.disposeByName(ENTITY_MOVES_RIGHT);
+        CCondition.disposeByName(ENTITY_MOVES_LEFT);
+    }
+
+    fn entityMoves(index: ?Index, _: ?Attributes) bool {
+        if (index) |i|
+            if (EMovement.byId(i)) |m| return m.velocity[0] != 0 or m.velocity[1] != 0;
+        return false;
+    }
+
+    fn entityMovesUp(index: ?Index, _: ?Attributes) bool {
+        if (index) |i|
+            if (EMovement.byId(i)) |m| return m.velocity[1] < 0;
+        return false;
+    }
+
+    fn entityMovesDown(index: ?Index, _: ?Attributes) bool {
+        if (index) |i|
+            if (EMovement.byId(i)) |m| return m.velocity[1] > 0;
+        return false;
+    }
+
+    fn entityMovesRight(index: ?Index, _: ?Attributes) bool {
+        if (index) |i|
+            if (EMovement.byId(i)) |m| return m.velocity[0] > 0;
+        return false;
+    }
+
+    fn entityMovesLeft(index: ?Index, _: ?Attributes) bool {
+        if (index) |i|
+            if (EMovement.byId(i)) |m| return m.velocity[0] < 0;
+        return false;
+    }
+};
+
+pub const TaskAttributes = struct {
+    /// Name of the owner composite. If this is set, task should get the
+    /// composite referenced to and add all created components as owner to the composite
     pub const OWNER_COMPOSITE = "owner_composite";
-    pub const LOAD_FILE_NAME = "file_name";
+    /// File resource name. If this is set, a task shall try to load the data from referenced file
+    pub const FILE_RESOURCE = "file_name";
+    /// JSON String resource reference. If this is set, a task shall interpret this as JSON Sting
+    /// and try to load defined components from JSON
     pub const JSON_RESOURCE = "json_resource";
 };
 
@@ -62,10 +132,12 @@ pub const TileSet = tile.TileSet;
 pub const SpriteData = tile.SpriteData;
 pub const TileTemplate = tile.TileTemplate;
 pub const TileMapping = tile.TileMapping;
-pub const MappedTileSet = tile.MappedTileSet;
+pub const TileSetMapping = tile.TileSetMapping;
 pub const TileSetLayerMapping = tile.TileSetLayerMapping;
 
 pub const JSONTasks = json.JSONTasks;
+pub const JSONTile = json.JSONTile;
+pub const JSONTileSet = json.JSONTileSet;
 
 //////////////////////////////////////////////////////////////
 //// Simple pivot camera

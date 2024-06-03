@@ -112,11 +112,11 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    var attributes = firefly.api.Attributes.new();
+    var attributes = firefly.api.CallAttributes{};
     defer attributes.deinit();
-    attributes.set(firefly.game.GameTaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
+    attributes.setProperty(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
 
-    firefly.api.Task.runTaskByName(firefly.game.JSONTasks.LOAD_TILE_SET_TASK, null, attributes);
+    firefly.api.Task.runTaskByName(firefly.game.JSONTasks.LOAD_TILE_SET, &attributes);
     var tile_set: *TileSet = TileSet.byName("TestTileSet").?;
     TileSet.activateByName("TestTileSet", true);
 

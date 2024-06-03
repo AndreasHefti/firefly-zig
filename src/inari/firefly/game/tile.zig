@@ -1,6 +1,11 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
+const utils = firefly.utils;
+
+const Composite = firefly.api.Composite;
+const NamePool = firefly.api.NamePool;
+const Attributes = firefly.api.Attributes;
 const Component = firefly.api.Component;
 const GroupKind = firefly.api.GroupKind;
 const GroupAspectGroup = firefly.api.GroupAspectGroup;
@@ -300,7 +305,7 @@ pub const TileSet = struct {
 //// TileMapping
 //////////////////////////////////////////////////////////////
 
-pub const MappedTileSet = struct {
+pub const TileSetMapping = struct {
     tile_set_id: Index,
     name: String,
     _map_code_offset: Index = UNDEF_INDEX,
@@ -319,7 +324,7 @@ pub const TileMapping = struct {
     pub usingnamespace Component.Trait(
         @This(),
         .{
-            .name = "TileSet",
+            .name = "TileMapping",
             .subscription = false,
         },
     );
@@ -329,13 +334,13 @@ pub const TileMapping = struct {
 
     view_id: Index = UNDEF_INDEX,
 
-    tile_sets: DynArray(MappedTileSet) = undefined,
+    tile_sets: DynArray(TileSetMapping) = undefined,
     tile_sets_per_layer: DynArray(TileSetLayerMapping) = undefined,
     _layer_entity_mapping: DynArray(DynIndexArray) = undefined,
 
     pub fn construct(self: *TileMapping) void {
-        self.tile_sets = DynArray(MappedTileSet).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
-        self.tile_sets_per_layer = DynArray(MappedTileSet).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self.tile_sets = DynArray(TileSetMapping).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self.tile_sets_per_layer = DynArray(TileSetLayerMapping).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
         self._layer_entity_mapping = DynArray(DynIndexArray).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
     }
 
@@ -348,8 +353,8 @@ pub const TileMapping = struct {
         self._layer_entity_mapping = undefined;
     }
 
-    pub fn withMappedTileSet(self: *TileMapping, mapping: MappedTileSet) *TileMapping {
-        var _mapping: MappedTileSet = mapping;
+    pub fn withTileSetMapping(self: *TileMapping, mapping: TileSetMapping) *TileMapping {
+        var _mapping: TileSetMapping = mapping;
         var ts: *TileSet = TileSet.byId(mapping.tile_set_id);
         const size = self.tile_sets.nextFreeSlot();
         if (size > 0) {
@@ -364,9 +369,9 @@ pub const TileMapping = struct {
         return self;
     }
 
-    pub fn withMappedTileSetByName(self: *TileMapping, tile_set_name: String) *TileMapping {
+    pub fn withTileSetMappingByName(self: *TileMapping, tile_set_name: String) *TileMapping {
         if (TileSet.byName(tile_set_name)) |ts| {
-            return self.withMappedTileSet(MappedTileSet{
+            return self.withTileSetMapping(TileSetMapping{
                 .name = tile_set_name,
                 .tile_set_id = ts.id,
             });
@@ -416,8 +421,8 @@ pub const TileMapping = struct {
 
                 // get involved TileSet
                 if (TileSet.byName(tile_set_layer_mapping.mapped_tile_set_name)) |tile_set| {
-                    // get involved MappedTileSet
-                    const mapped_tile_set: *MappedTileSet = self.tile_sets.get(tile_set_layer_mapping._mapped_tile_set_id).?;
+                    // get involved TileSetMapping
+                    const mapped_tile_set: *TileSetMapping = self.tile_sets.get(tile_set_layer_mapping._mapped_tile_set_id).?;
 
                     // add new code -> entity mapping for layer if not existing
                     if (!self._layer_entity_mapping.exists(tile_set_layer_mapping.layer_id orelse 0))
@@ -428,7 +433,7 @@ pub const TileMapping = struct {
 
                     // get code -> entity mapping for layer
                     if (self._layer_entity_mapping.get(tile_set_layer_mapping.layer_id orelse 0)) |e_mapping| {
-                        // set code to mapping offset of MappedTileSet
+                        // set code to mapping offset of TileSetMapping
                         var code = mapped_tile_set._map_code_offset;
 
                         // for all TileTemplates in TileSet
