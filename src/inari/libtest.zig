@@ -25,33 +25,34 @@ test "Attributes" {
     try firefly.init(init_context);
     defer firefly.deinit();
 
-    var attrs1 = firefly.api.Attributes.new();
+    var attrs1 = firefly.api.CallAttributes{};
     defer attrs1.deinit();
 
-    attrs1.set("param1", "value1");
-    attrs1.set("param2", "value2");
-    attrs1.set("param3", "value3");
-    attrs1.set("param4", "value4");
+    attrs1.setProperty("param1", "value1");
+    attrs1.setProperty("param2", "value2");
+    attrs1.setProperty("param3", "value3");
+    attrs1.setProperty("param4", "value4");
 
-    try std.testing.expectEqualStrings("value2", attrs1.get("param2").?);
-    try std.testing.expect(attrs1.size() == 4);
+    try std.testing.expectEqualStrings("value2", attrs1.getProperty("param2").?);
+    try std.testing.expect(attrs1.properties.?.unmanaged.size == 4);
 
-    attrs1.delete("param1");
-    try std.testing.expect(attrs1.size() == 3);
+    attrs1.deleteProperty("param1");
+    try std.testing.expect(attrs1.properties.?.unmanaged.size == 3);
 }
 
 test "Tasks" {
     try firefly.init(init_context);
     defer firefly.deinit();
 
-    var attrs1 = firefly.api.Attributes.new();
-    attrs1.set("attr1", "value1");
-    attrs1.set("attr2", "value2");
+    var attrs1 = firefly.api.CallAttributes{};
+    defer attrs1.deinit();
+    attrs1.setProperty("attr1", "value1");
+    attrs1.setProperty("attr2", "value2");
 
-    var attrs2 = firefly.api.Attributes.new();
-    attrs2.set("attr3", "value3");
-    attrs2.set("attr2", "Override");
+    var attrs2 = firefly.api.CallAttributes{};
     defer attrs2.deinit();
+    attrs2.setProperty("attr3", "value3");
+    attrs2.setProperty("attr2", "Override");
 
     var task: *firefly.api.Task = firefly.api.Task.new(.{
         .name = "Task1",
@@ -61,18 +62,18 @@ test "Tasks" {
         .attributes = attrs1,
     });
 
-    task.runWith(12345, attrs2);
+    task.runWith(&attrs2);
 
     std.time.sleep(2 * std.time.ns_per_s);
 }
 
-fn task1(id: ?Index, attrs: ?*firefly.api.Attributes) void {
-    std.debug.print("\nTask 1 running: id: {?d}, attrs: {?any}\n", .{ id, attrs });
+fn task1(attrs: *firefly.api.CallAttributes) void {
+    std.debug.print("\nTask 1 running: attrs: {?any}\n", .{attrs});
     std.time.sleep(1 * std.time.ns_per_s);
 }
 
-fn callback1(id: Index) void {
-    std.debug.print("\nTask {} executed\n", .{id});
+fn callback1(attrs: *firefly.api.CallAttributes) void {
+    std.debug.print("\nTask {} executed\n", .{attrs});
 }
 
 test "CCondition" {
@@ -92,16 +93,16 @@ test "CCondition" {
     _ = firefly.api.CCondition.newANDByName("Condition1 AND Condition2", "Condition1", "Condition2");
     _ = firefly.api.CCondition.newORByName("Condition1 OR Condition2", "Condition1", "Condition2");
 
-    try std.testing.expect(firefly.api.CCondition.checkByName("Condition1", null, null));
-    try std.testing.expect(!firefly.api.CCondition.checkByName("Condition2", null, null));
-    try std.testing.expect(!firefly.api.CCondition.checkByName("Condition1 AND Condition2", null, null));
-    try std.testing.expect(firefly.api.CCondition.checkByName("Condition1 OR Condition2", null, null));
+    try std.testing.expect(firefly.api.CCondition.checkByName("Condition1", null));
+    try std.testing.expect(!firefly.api.CCondition.checkByName("Condition2", null));
+    try std.testing.expect(!firefly.api.CCondition.checkByName("Condition1 AND Condition2", null));
+    try std.testing.expect(firefly.api.CCondition.checkByName("Condition1 OR Condition2", null));
 }
 
-fn condition1(_: ?Index, _: ?firefly.api.Attributes) bool {
+fn condition1(_: ?*firefly.api.CallAttributes) bool {
     return true;
 }
-fn condition2(_: ?Index, _: ?firefly.api.Attributes) bool {
+fn condition2(_: ?*firefly.api.CallAttributes) bool {
     return false;
 }
 
@@ -109,9 +110,10 @@ test "Trigger" {
     try firefly.init(init_context);
     defer firefly.deinit();
 
-    var attrs1 = firefly.api.Attributes.new();
-    attrs1.set("attr1", "value1");
-    attrs1.set("attr2", "value2");
+    var attrs1 = firefly.api.CallAttributes{ .c1_id = 300 };
+    defer attrs1.deinit();
+    attrs1.setProperty("attr1", "value1");
+    attrs1.setProperty("attr2", "value2");
 
     const task_id = firefly.api.Task.new(.{
         .name = "Task1",
@@ -128,7 +130,6 @@ test "Trigger" {
         .condition_ref = c_id,
         .attributes = attrs1,
         .task_ref = task_id,
-        .component_ref = 100,
     }).activate();
 
     const UPDATE_EVENT = firefly.api.UpdateEvent{};
@@ -137,7 +138,7 @@ test "Trigger" {
     firefly.api.update(UPDATE_EVENT);
 }
 
-fn triggerCondition(_: ?Index, _: ?firefly.api.Attributes) bool {
+fn triggerCondition(_: ?*firefly.api.CallAttributes) bool {
     const count = struct {
         var c: usize = 0;
     };
