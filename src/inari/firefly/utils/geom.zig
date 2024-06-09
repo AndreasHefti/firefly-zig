@@ -102,6 +102,25 @@ pub inline fn parseRectF(value: ?String) ?RectF {
     return null;
 }
 
+pub inline fn parseColor(value: ?String) ?Color {
+    if (value) |v| {
+        if (v.len == 0) return null;
+        var it = std.mem.split(u8, v, ",");
+        return .{
+            if (it.next()) |n| parseByte(n) else return null,
+            if (it.next()) |n| parseByte(n) else return null,
+            if (it.next()) |n| parseByte(n) else return null,
+            if (it.next()) |n| parseByte(n) else return null,
+        };
+    }
+    return null;
+}
+
+pub inline fn parseByte(value: ?String) Byte {
+    if (value) |b| return std.fmt.parseInt(Byte, b, 10) catch return 0;
+    return 0;
+}
+
 pub inline fn rectIFromRectF(rect: RectF) RectI {
     return .{
         @intFromFloat(@floor(rect[0])),

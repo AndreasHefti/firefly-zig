@@ -131,6 +131,10 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
             return Asset(T).resource.get(Asset(T).new(asset_type)).?;
         }
 
+        pub fn existsByName(name: String) bool {
+            return AssetComponent.existsName(name);
+        }
+
         pub fn load(self: *T) void {
             loadByName(self.name);
         }

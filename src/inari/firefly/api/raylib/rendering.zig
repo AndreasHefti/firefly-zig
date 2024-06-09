@@ -3,6 +3,7 @@ const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
 const rlgl = @cImport(@cInclude("rlgl.h"));
 
+const NamePool = firefly.api.NamePool;
 const Texture2D = rl.Texture2D;
 const Font = rl.Font;
 const RenderTexture2D = rl.RenderTexture2D;
@@ -29,6 +30,7 @@ const BindingId = firefly.api.BindingId;
 const DynArray = firefly.utils.DynArray;
 const StringBuffer = firefly.utils.StringBuffer;
 const CInt = firefly.utils.CInt;
+const CString = firefly.utils.CString;
 const Float = firefly.utils.Float;
 const WindowHandle = firefly.api.WindowHandle;
 const NO_BINDING = firefly.api.NO_BINDING;
@@ -218,7 +220,8 @@ const RaylibRenderAPI = struct {
         filter: TextureFilter,
         wrap: TextureWrap,
     ) TextureBinding {
-        var tex = rl.LoadTexture(@ptrCast(resource));
+        var tex = rl.LoadTexture(NamePool.getCName(resource).?);
+        defer NamePool.freeCNames();
         if (is_mipmap) {
             rl.GenTextureMipmaps(&tex);
         }
@@ -289,7 +292,8 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadImageFromFile(resource: String) ImageBinding {
-        const img: Image = rl.LoadImage(@ptrCast(resource));
+        const img: Image = rl.LoadImage(NamePool.getCName(resource).?);
+        defer NamePool.freeCNames();
         const img_id = images.add(img);
         return ImageBinding{
             .id = img_id,
@@ -324,8 +328,9 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadFont(resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) BindingId {
+        defer NamePool.freeCNames();
         return fonts.add(rl.LoadFontEx(
-            @ptrCast(resource),
+            NamePool.getCName(resource).?,
             size orelse default_font_size,
             code_points orelse 0,
             char_num orelse default_char_num,
@@ -366,16 +371,17 @@ const RaylibRenderAPI = struct {
     }
 
     fn createShader(vertex_shader: ?String, fragment_shade: ?String, file: bool) ShaderBinding {
+        defer NamePool.freeCNames();
         var shader: Shader = undefined;
         if (file) {
             shader = rl.LoadShader(
-                @ptrCast(vertex_shader orelse EMPTY_STRING),
-                @ptrCast(fragment_shade orelse EMPTY_STRING),
+                NamePool.getCName(vertex_shader orelse EMPTY_STRING).?,
+                NamePool.getCName(fragment_shade orelse EMPTY_STRING).?,
             );
         } else {
             shader = rl.LoadShaderFromMemory(
-                @ptrCast(vertex_shader orelse DEFAULT_VERTEX_SHADER),
-                @ptrCast(fragment_shade orelse DEFAULT_FRAGMENT_SHADER),
+                NamePool.getCName(vertex_shader orelse DEFAULT_VERTEX_SHADER).?,
+                NamePool.getCName(fragment_shade orelse DEFAULT_FRAGMENT_SHADER).?,
             );
         }
 
@@ -600,7 +606,7 @@ const RaylibRenderAPI = struct {
 
     fn renderText(
         font_id: ?BindingId,
-        text: String,
+        text: CString,
         position: PosF,
         pivot: ?PosF,
         rotation: ?Float,
@@ -625,7 +631,7 @@ const RaylibRenderAPI = struct {
 
         rl.DrawTextPro(
             font,
-            @ptrCast(text),
+            text,
             rl.Vector2{ .x = position[0], .y = position[1] },
             @bitCast(pivot orelse default_pivot),
             rotation orelse 0,
@@ -648,28 +654,31 @@ const RaylibRenderAPI = struct {
         // TODO something else?
     }
 
-    fn setShaderValueFloat(shader_id: BindingId, name: String, val: *Float) bool {
+    fn setShaderValueFloat(shader_id: BindingId, name: CString, val: *Float) bool {
         return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_FLOAT);
     }
-    fn setShaderValueVec2(shader_id: BindingId, name: String, val: *Vector2f) bool {
+    fn setShaderValueVec2(shader_id: BindingId, name: CString, val: *Vector2f) bool {
         return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC2);
     }
-    fn setShaderValueVec3(shader_id: BindingId, name: String, val: *Vector3f) bool {
+    fn setShaderValueVec3(shader_id: BindingId, name: CString, val: *Vector3f) bool {
         return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC3);
-    } 
-    fn setShaderValueVec4(shader_id: BindingId, name: String, val: *Vector4f) bool {
+    }
+    fn setShaderValueVec4(shader_id: BindingId, name: CString, val: *Vector4f) bool {
         return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC4);
     }
-    fn setShaderValueTex(shader_id: BindingId, name: String, val: BindingId) bool {
+    fn setShaderValueTex(shader_id: BindingId, name: CString, val: BindingId) bool {
         if (render_textures.get(val)) |rt| {
             return setShaderValue(shader_id, name, rt, rl.SHADER_UNIFORM_SAMPLER2D);
         }
         return false;
     }
 
-    fn setShaderValue(shader_id: BindingId, name: String, val: anytype, v_type: CInt) bool {
+    fn setShaderValue(shader_id: BindingId, name: CString, val: anytype, v_type: CInt) bool {
         if (shaders.get(shader_id)) |shader| {
-            const location = rl.GetShaderLocation(shader.*, @ptrCast(name));
+            const location = rl.GetShaderLocation(
+                shader.*,
+                name,
+            );
             if (location < 0)
                 return false;
 

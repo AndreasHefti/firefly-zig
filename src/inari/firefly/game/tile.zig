@@ -37,6 +37,7 @@ const Index = firefly.utils.Index;
 const RectF = firefly.utils.RectF;
 const ClipI = firefly.utils.ClipI;
 const CInt = firefly.utils.CInt;
+const Vector2f = firefly.utils.Vector2f;
 const BindingId = firefly.api.BindingId;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
@@ -230,6 +231,9 @@ pub const TileSet = struct {
                 }
             }
             contact_mask_cache.put(tile_template.contact_mask_name.?, result) catch unreachable;
+        } else {
+            std.debug.print("Missing texture with name: {s}", .{self.texture_name});
+            @panic("Missing texture with name");
         }
 
         return contact_mask_cache.get(tile_template.contact_mask_name.?);
@@ -314,7 +318,7 @@ pub const TileSetMapping = struct {
 
 pub const TileSetLayerMapping = struct {
     mapped_tile_set_name: String,
-    layer_id: ?Index,
+    layer_name: ?String,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
     _mapped_tile_set_id: Index = UNDEF_INDEX,
@@ -385,7 +389,7 @@ pub const TileMapping = struct {
         while (next) |i| {
             if (self.tile_sets.get(i)) |ts| {
                 if (std.mem.eql(u8, ts.name, mapping.mapped_tile_set_name))
-                    _mapping._mapped_tile_set_id = ts;
+                    _mapping._mapped_tile_set_id = ts.tile_set_id;
             }
             next = self.tile_sets.slots.nextSetBit(i + 1);
         }
@@ -419,20 +423,25 @@ pub const TileMapping = struct {
         while (next) |i| {
             if (self.tile_sets_per_layer.get(i)) |tile_set_layer_mapping| {
 
+                // get involved layer
+                var layer_id: Index = 0;
+                if (tile_set_layer_mapping.layer_name) |ln|
+                    layer_id = firefly.graphics.Layer.idByName(ln).?;
+
                 // get involved TileSet
                 if (TileSet.byName(tile_set_layer_mapping.mapped_tile_set_name)) |tile_set| {
                     // get involved TileSetMapping
                     const mapped_tile_set: *TileSetMapping = self.tile_sets.get(tile_set_layer_mapping._mapped_tile_set_id).?;
 
                     // add new code -> entity mapping for layer if not existing
-                    if (!self._layer_entity_mapping.exists(tile_set_layer_mapping.layer_id orelse 0))
+                    if (!self._layer_entity_mapping.exists(layer_id))
                         _ = self._layer_entity_mapping.set(
                             DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 50),
-                            tile_set_layer_mapping.layer_id orelse 0,
+                            layer_id,
                         );
 
                     // get code -> entity mapping for layer
-                    if (self._layer_entity_mapping.get(tile_set_layer_mapping.layer_id orelse 0)) |e_mapping| {
+                    if (self._layer_entity_mapping.get(layer_id)) |e_mapping| {
                         // set code to mapping offset of TileSetMapping
                         var code = mapped_tile_set._map_code_offset;
 
@@ -447,7 +456,7 @@ pub const TileMapping = struct {
                                     .groups = GroupKind.fromStringList(tile_template.groups),
                                 })
                                     .withComponent(ETransform{})
-                                    .withComponent(EView{ .view_id = self.view_id, .layer_id = tile_set_layer_mapping.layer_id })
+                                    .withComponent(EView{ .view_id = self.view_id, .layer_id = layer_id })
                                     .withComponent(ETile{
                                     .sprite_template_id = tile_template._sprite_template_id.?,
                                     .tint_color = tile_set_layer_mapping.tint_color,

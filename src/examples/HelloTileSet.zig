@@ -31,7 +31,10 @@ const JSON_TILE_SET: String =
     \\  {
     \\      "type": "tileset",
     \\      "name": "TestTileSet",
-    \\      "atlas_texture_name": "Atlas",
+    \\      "texture": {
+    \\          "name": "Atlas",
+    \\          "file": "resources/atlas1616.png"
+    \\      },
     \\      "tile_width": 16,
     \\      "tile_height": 16,
     \\      "tiles": [
@@ -106,11 +109,11 @@ fn init() void {
 
     View.activateById(viewId, true);
 
-    Texture.new(.{
-        .name = "Atlas",
-        .resource = "resources/atlas1616.png",
-        .is_mipmap = false,
-    }).load();
+    // Texture.new(.{
+    //     .name = "Atlas",
+    //     .resource = "resources/atlas1616.png",
+    //     .is_mipmap = false,
+    // }).load();
 
     var attributes = firefly.api.CallAttributes{};
     defer attributes.deinit();

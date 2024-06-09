@@ -631,10 +631,11 @@ pub const CompositeLifeCycle = enum {
     DISPOSE,
 };
 
-pub const LifeCycleTaskRef = struct {
+pub const CompositeObject = struct {
+    name: String,
     life_cycle: CompositeLifeCycle,
-    task_id: Index,
-    attributes: CallAttributes,
+    task_name: String,
+    attributes: ?CallAttributes,
 };
 
 pub const Composite = struct {
@@ -647,56 +648,64 @@ pub const Composite = struct {
     loaded: bool = false,
     active: bool = false,
 
-    tasks: DynArray(LifeCycleTaskRef) = undefined,
+    attributes: api.Attributes,
+    objects: DynArray(CompositeObject) = undefined,
     _loaded_components: DynArray(CReference) = undefined,
 
     pub fn construct(self: *Composite) void {
-        self.tasks = DynArray(LifeCycleTaskRef).newWithRegisterSize(
+        self.objects = DynArray(CompositeObject).newWithRegisterSize(
             api.COMPONENT_ALLOC,
-            3,
+            5,
         );
         self._loaded_components = DynArray(CReference).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             3,
         );
+
+        self.attributes = std.StringHashMap(String).init(api.COMPONENT_ALLOC);
     }
 
     pub fn destruct(self: *Composite) void {
-        self.tasks.deinit();
-        self.tasks = undefined;
+        self.objects.deinit();
+        self.objects = undefined;
         self._loaded_components.deinit();
         self._loaded_components = undefined;
+        self.attributes.deinit();
+        self.attributes = undefined;
     }
 
-    pub fn withTask(self: *Composite, task: Task) *Composite {
-        _ = self.tasks.add(Task.new(task));
+    pub fn withTask(
+        self: *Composite,
+        task: Task,
+        life_cycle: CompositeLifeCycle,
+        attributes: ?CallAttributes,
+    ) *Composite {
+        const _task = Task.new(task);
+        _ = self.objects.add(CompositeObject{
+            .name = _task.name,
+            .task_name = _task.name,
+            .life_cycle = life_cycle,
+            .attributes = attributes,
+        });
         return self;
     }
 
-    pub fn withTaskById(self: *Composite, task_id: Index, life_cycle: CompositeLifeCycle) void {
-        self.tasks.add(.{ .life_cycle = life_cycle, .task_id = task_id });
-    }
+    pub fn withObject(self: *Composite, object: CompositeObject) *Composite {
+        if (Task.byName(object.task_name)) |_| {
+            _ = self.objects.add(object);
+        } else {
+            @panic("No Task with name: " ++ object.task_name);
+        }
 
-    pub fn withTaskByName(self: *Composite, name: String, life_cycle: CompositeLifeCycle) void {
-        if (firefly.api.Task.byName(name)) |t|
-            self.tasks.add(.{ .life_cycle = life_cycle, .task_id = t.id });
-    }
-
-    pub fn applyLifeCycleById(composite_id: String, life_cycle: CompositeLifeCycle) void {
-        Composite.byId(composite_id).runTasks(life_cycle);
-    }
-
-    pub fn applyLifeCycleByName(composite_name: String, life_cycle: CompositeLifeCycle) void {
-        if (Composite.byName(composite_name)) |c|
-            c.runTasks(life_cycle);
-    }
-
-    pub fn load(self: *Composite) void {
-        self.runTasks(.LOAD);
+        return self;
     }
 
     pub fn addCReference(self: *Composite, ref: ?CReference) void {
         if (ref) |r| _ = self._loaded_components.add(r);
+    }
+
+    pub fn load(self: *Composite) void {
+        self.runTasks(.LOAD);
     }
 
     pub fn dispose(self: *Composite) void {
@@ -729,16 +738,16 @@ pub const Composite = struct {
     }
 
     fn runTasks(self: *Composite, life_cycle: CompositeLifeCycle) void {
-        var next = self.tasks.slots.nextSetBit(0);
+        var next = self.objects.slots.nextSetBit(0);
         while (next) |i| {
-            if (self.tasks.get(i)) |tr| {
+            if (self.objects.get(i)) |tr| {
                 if (tr.life_cycle == life_cycle)
-                    firefly.api.Task.runTaskById(
-                        tr.task_id,
-                        &tr.attributes,
+                    Task.runTaskByName(
+                        tr.task_name,
+                        if (tr.attributes) |*attrs| attrs else null,
                     );
             }
-            next = self.tasks.slots.nextSetBit(i + 1);
+            next = self.objects.slots.nextSetBit(i + 1);
         }
     }
 };

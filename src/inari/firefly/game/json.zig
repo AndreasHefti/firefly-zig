@@ -3,6 +3,7 @@ const firefly = @import("../firefly.zig");
 
 const utils = firefly.utils;
 const api = firefly.api;
+const graphics = firefly.graphics;
 const game = firefly.game;
 const physics = firefly.physics;
 
@@ -51,8 +52,8 @@ pub fn deinit() void {
 pub const FileResource = struct {
     name: String,
     file: String,
-    load_task: ?String,
-    update_task: ?String,
+    load_task: ?String = null,
+    update_task: ?String = null,
 };
 
 pub const JSONTasks = struct {
@@ -65,7 +66,10 @@ pub const JSONTasks = struct {
 //////////////////////////////////////////////////////////////
 ///  {
 ///      "name": "TileSet1",
-///      "atlas_texture_name": "Atlas1",
+///      "texture": {
+///         "name": "Atlas1",
+///         "file": "resources/logo.png"
+///      },
 ///      "tile_width": 16,
 ///      "tile_height": 16,
 ///      "tiles": [
@@ -90,7 +94,7 @@ pub const JSONTile = struct {
 
 pub const JSONTileSet = struct {
     name: String,
-    atlas_texture_name: String,
+    texture: FileResource,
     tile_width: Float,
     tile_height: Float,
     tiles: []const JSONTile,
@@ -114,10 +118,31 @@ fn loadTileSetFromJSON(attributes: *api.CallAttributes) void {
 
         const jsonTileSet: JSONTileSet = parsed.value;
 
+        std.debug.print("************ jsonTileSet.texture.name: {s}\n", .{jsonTileSet.texture.name});
+        std.debug.print("************ jsonTileSet.texture.file: {s} length: {d}\n", .{ jsonTileSet.texture.file, jsonTileSet.texture.file.len });
+
+        // check texture and load or create if needed
+        if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
+            if (jsonTileSet.texture.load_task) |lt| {
+                api.Task.runTaskByName(lt, null);
+            } else {
+                _ = graphics.Texture.new(.{
+                    .name = api.NamePool.alloc(jsonTileSet.texture.name).?,
+                    .resource = api.NamePool.alloc(jsonTileSet.texture.file).?,
+                    .is_mipmap = false,
+                }).load();
+            }
+        }
+        // check Texture exists now
+        if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
+            std.debug.print("Failed to find/load texture: {any}", .{jsonTileSet.texture});
+            @panic("Failed to find/load texture");
+        }
+
         // create TileSet from jsonTileSet
         var tile_set = game.TileSet.new(.{
             .name = api.NamePool.alloc(jsonTileSet.name),
-            .texture_name = api.NamePool.alloc(jsonTileSet.atlas_texture_name).?,
+            .texture_name = api.NamePool.alloc(jsonTileSet.texture.name).?,
         });
 
         // create all tile templates for tile set
@@ -178,6 +203,7 @@ fn loadTileSetFromJSON(attributes: *api.CallAttributes) void {
 //////////////////////////////////////////////////////////////
 /// {
 ///     "name": "TileSetMapping1",
+///     "view_name": "view1",
 ///     "tile_sets": [
 ///         { "name": "TileSet1", "file": "resources/tileset1.json", "load_task": "LOAD_TILE_SET" },
 ///         { "name": "TileSet2", "file": "resources/tileset2.json"},
@@ -186,16 +212,18 @@ fn loadTileSetFromJSON(attributes: *api.CallAttributes) void {
 ///     "layer_mapping": [
 ///         {
 ///             "layer_name": "Background",
+///             "offset": "0,0",
 ///             "tile_sets_refs": [
-///                 { "name_ref": "TileSet1", "tint_color": "255,255,255,128", "blend_mode": "ALPHA" },
-///                 { "name_ref": "TileSet3" }
+///                 { "tile_set_name": "TileSet1", "tint_color": "255,255,255,128", "blend_mode": "ALPHA" },
+///                 { "tile_set_name": "TileSet3" }
 ///             ]
 ///         },
 ///         {
 ///             "layer_name": "Foreground",
+///             "offset": "10,10",
 ///             "tile_sets_refs": [
-///                 { "name_ref": "TileSet1" },
-///                 { "name_ref": "TileSet2" }
+///                 { "tile_set_name": "TileSet1" },
+///                 { "tile_set_name": "TileSet2" }
 ///             ]
 ///         }
 ///     ]
@@ -203,18 +231,20 @@ fn loadTileSetFromJSON(attributes: *api.CallAttributes) void {
 //////////////////////////////////////////////////////////////
 
 pub const TileSetReference = struct {
-    name_ref: String,
+    tile_set_name: String,
     tint_color: ?String = null, // r,g,b,a --> u8 --> 0-255
     blend_mode: ?String = null, // BlendMode Enum field name
 };
 
 pub const TileLayerMapping = struct {
     layer_name: String,
+    offset: ?String,
     tile_sets_refs: []const TileSetReference,
 };
 
 pub const JSONTileMapping = struct {
     name: String,
+    view_name: ?String,
     tile_sets: []const FileResource,
     layer_mapping: []const TileLayerMapping,
 };
@@ -258,7 +288,39 @@ fn loadTileMappingFromJSON(attributes: *api.CallAttributes) void {
             }
         }
 
-        // TODO add layer mappings
+        // get view id or null when screen
+        var view_id: ?Index = null;
+        if (jsonTileMapping.view_name) |vn|
+            view_id = firefly.graphics.View.idByName(vn).?;
+
+        for (0..jsonTileMapping.layer_mapping.len) |i| {
+            const layer_mapping = jsonTileMapping.layer_mapping[i];
+
+            // get involved layer, if name exists but layer not yet, create one
+            var layer_id: ?Index = null;
+            if (firefly.graphics.Layer.existsName(layer_mapping.layer_name)) {
+                layer_id = firefly.graphics.Layer.idByName(layer_mapping.layer_name).?;
+            } else {
+                layer_id = firefly.graphics.Layer.new(.{
+                    .name = layer_mapping.layer_name,
+                    .view_id = view_id.?,
+                }).id;
+            }
+
+            // set layer offset if available
+            if (layer_id) |lid|
+                firefly.graphics.Layer.byId(lid).offset = utils.parsePosF(layer_mapping.offset);
+
+            for (0..layer_mapping.tile_sets_refs.len) |ii| {
+                const tile_set_ref = layer_mapping.tile_sets_refs[ii];
+                _ = tile_mapping.withTileSetLayerMapping(.{
+                    .mapped_tile_set_name = tile_set_ref.tile_set_name,
+                    .layer_name = layer_mapping.layer_name,
+                    .tint_color = utils.parseColor(tile_set_ref.tint_color),
+                    .blend_mode = BlendMode.byName(tile_set_ref.blend_mode),
+                });
+            }
+        }
 
         // add tile set as owned reference if requested
         if (attributes.getProperty(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {

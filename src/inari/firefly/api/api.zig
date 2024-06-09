@@ -56,6 +56,7 @@ pub const AssetComponent = asset.AssetComponent;
 pub const AssetTrait = asset.AssetTrait;
 
 pub const Component = component;
+pub const CReference = component.CReference;
 pub const ComponentAspectGroup = component.ComponentAspectGroup;
 pub const ComponentKind = ComponentAspectGroup.Kind;
 pub const ComponentAspect = ComponentAspectGroup.Aspect;
@@ -77,6 +78,7 @@ pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const CCondition = control.CCondition;
 pub const ConditionFunction = control.ConditionFunction;
+pub const Attributes = control.Attributes;
 pub const CallAttributes = control.CallAttributes;
 pub const ActionResult = control.ActionResult;
 pub const UpdateActionFunction = control.UpdateActionFunction;
@@ -89,8 +91,7 @@ pub const ComponentControl = control.ComponentControl;
 pub const ComponentControlType = control.ComponentControlType;
 pub const Composite = component.Composite;
 pub const CompositeLifeCycle = component.CompositeLifeCycle;
-pub const ComponentRef = component.ComponentRef;
-pub const LifeCycleTaskRef = component.LifeCycleTaskRef;
+pub const CompositeObject = component.CompositeObject;
 
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
@@ -180,21 +181,46 @@ pub fn deinit() void {
 
 pub const NamePool = struct {
     var names: BufSet = undefined;
+    var c_names: std.ArrayList([:0]const u8) = undefined;
 
     fn init() void {
         names = BufSet.init(ALLOC);
+        c_names = std.ArrayList([:0]const u8).init(ALLOC);
     }
 
     fn deinit() void {
         names.deinit();
+
+        freeCNames();
+        c_names.deinit();
     }
 
     pub fn alloc(name: ?String) ?String {
         if (name) |n| {
+            if (names.contains(n))
+                return names.hash_map.getKey(n);
+
             names.insert(n) catch unreachable;
+            //std.debug.print("************ NamePool names add: {s}\n", .{n});
             return names.hash_map.getKey(n);
         }
         return null;
+    }
+
+    pub fn getCName(name: ?String) ?CString {
+        if (name) |n| {
+            const _n = firefly.api.ALLOC.dupeZ(u8, n) catch unreachable;
+            c_names.append(_n) catch unreachable;
+            //std.debug.print("************ NamePool c_names add: {s}\n", .{_n});
+            return @ptrCast(_n);
+        }
+        return null;
+    }
+
+    pub fn freeCNames() void {
+        for (c_names.items) |item|
+            firefly.api.ALLOC.free(item);
+        c_names.clearRetainingCapacity();
     }
 
     pub fn indexToString(index: ?Index) ?String {
@@ -355,6 +381,27 @@ pub const BlendMode = enum(CInt) {
     /// Blend textures using custom rgb/alpha separate src/dst factors (use rlSetBlendFactorsSeparate())
     CUSTOM_SEPARATE = 7,
 
+    const BlendModeNameTable = [@typeInfo(BlendMode).Enum.fields.len][:0]const u8{
+        "ALPHA",
+        "ADDITIVE",
+        "MULTIPLIED",
+        "ADD_COLORS",
+        "SUBTRACT_COLORS",
+        "ALPHA_PREMULTIPLY",
+        "CUSTOM",
+        "CUSTOM_SEPARATE",
+    };
+
+    pub fn byName(name: ?String) ?BlendMode {
+        if (name) |n| {
+            for (0..BlendModeNameTable.len) |i| {
+                if (firefly.utils.stringEquals(BlendModeNameTable[i], n))
+                    return @enumFromInt(i);
+            }
+        }
+        return null;
+    }
+
     pub fn format(
         self: BlendMode,
         comptime _: []const u8,
@@ -465,11 +512,11 @@ pub const RenderTextureBinding = struct {
 pub const ShaderBinding = struct {
     id: BindingId = NO_BINDING,
 
-    _set_uniform_float: *const fn (BindingId, String, *Float) bool,
-    _set_uniform_vec2: *const fn (BindingId, String, *Vector2f) bool,
-    _set_uniform_vec3: *const fn (BindingId, String, *Vector3f) bool,
-    _set_uniform_vec4: *const fn (BindingId, String, *Vector4f) bool,
-    _set_uniform_texture: *const fn (BindingId, String, BindingId) bool,
+    _set_uniform_float: *const fn (BindingId, CString, *Float) bool,
+    _set_uniform_vec2: *const fn (BindingId, CString, *Vector2f) bool,
+    _set_uniform_vec3: *const fn (BindingId, CString, *Vector3f) bool,
+    _set_uniform_vec4: *const fn (BindingId, CString, *Vector4f) bool,
+    _set_uniform_texture: *const fn (BindingId, CString, BindingId) bool,
 };
 
 pub const ImageBinding = struct {
@@ -570,7 +617,7 @@ pub fn IRenderAPI() type {
 
         renderText: *const fn (
             font_id: ?BindingId,
-            text: String,
+            text: CString,
             position: PosF,
             pivot: ?PosF,
             rotation: ?Float,

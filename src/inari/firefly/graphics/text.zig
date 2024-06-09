@@ -18,6 +18,7 @@ const Index = firefly.utils.Index;
 const Float = firefly.utils.Float;
 const String = firefly.utils.String;
 const CInt = firefly.utils.CInt;
+const CString = firefly.utils.CString;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const BindingId = firefly.api.BindingId;
 
@@ -103,7 +104,7 @@ pub const EText = struct {
 
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
-    text: String,
+    text: CString,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
     size: ?Float = null,

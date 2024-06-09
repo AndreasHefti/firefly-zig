@@ -36,7 +36,7 @@ pub fn deinit() void {
 //// Properties and CallAttributes
 //////////////////////////////////////////////////////////////////////////
 
-pub const Properties = std.StringHashMap(String);
+pub const Attributes = std.StringHashMap(String);
 
 pub const CallAttributes = struct {
     caller_id: ?Index = null,
@@ -44,17 +44,17 @@ pub const CallAttributes = struct {
     c1_id: ?Index = null,
     c2_id: ?Index = null,
     c3_id: ?Index = null,
-    properties: ?Properties = undefined,
+    attributes: ?Attributes = undefined,
 
     pub fn deinit(self: *CallAttributes) void {
         self.clearProperties();
-        if (self.properties) |*p|
+        if (self.attributes) |*p|
             p.deinit();
-        self.properties = undefined;
+        self.attributes = undefined;
     }
 
     pub fn clearProperties(self: *CallAttributes) void {
-        if (self.properties) |*p| {
+        if (self.attributes) |*p| {
             var it = p.iterator();
             while (it.next()) |e| {
                 api.ALLOC.free(e.key_ptr.*);
@@ -66,10 +66,10 @@ pub const CallAttributes = struct {
     }
 
     pub fn setProperty(self: *CallAttributes, name: String, value: String) void {
-        if (self.properties == null)
-            self.properties = std.StringHashMap(String).init(api.ALLOC);
+        if (self.attributes == null)
+            self.attributes = std.StringHashMap(String).init(api.ALLOC);
         // if existing, delete old first
-        if (self.properties) |*p| {
+        if (self.attributes) |*p| {
             if (p.contains(name))
                 self.deleteProperty(name);
             // add new with allocated key and value
@@ -80,19 +80,19 @@ pub const CallAttributes = struct {
         }
     }
 
-    pub fn setAllProperties(self: *CallAttributes, properties: Properties) void {
-        var it = properties.iterator();
+    pub fn setAllProperties(self: *CallAttributes, attributes: Attributes) void {
+        var it = attributes.iterator();
         while (it.next()) |e|
             self.setProperty(e.key_ptr.*, e.value_ptr.*);
     }
 
     pub fn getProperty(self: *CallAttributes, name: String) ?String {
-        if (self.properties) |p| return p.get(name);
+        if (self.attributes) |p| return p.get(name);
         return null;
     }
 
     pub fn deleteProperty(self: *CallAttributes, name: String) void {
-        if (self.properties) |*p| {
+        if (self.attributes) |*p| {
             if (p.fetchRemove(name)) |kv| {
                 api.ALLOC.free(kv.key);
                 api.ALLOC.free(kv.value);
@@ -109,9 +109,9 @@ pub const CallAttributes = struct {
             .c3_id = other.c3_id,
         };
 
-        if (self.properties) |p|
+        if (self.attributes) |p|
             copy.setAllProperties(p);
-        if (other.properties) |p|
+        if (other.attributes) |p|
             copy.setAllProperties(p);
 
         return copy;
@@ -129,8 +129,8 @@ pub const CallAttributes = struct {
         if (self.c1_id) |ci| try writer.print(" c1_id:{d}", .{ci});
         if (self.c2_id) |ci| try writer.print(" c2_id:{d}", .{ci});
         if (self.c3_id) |ci| try writer.print(" c3_id:{d}", .{ci});
-        if (self.properties) |p| {
-            try writer.print(" properties: ", .{});
+        if (self.attributes) |p| {
+            try writer.print(" attributes: ", .{});
             var i = p.iterator();
             while (i.next()) |e|
                 try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });

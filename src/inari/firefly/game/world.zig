@@ -1,7 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
-const Component = firefly.api.Component;
+const utils = firefly.utils;
+const api = firefly.api;
 
 const PosF = firefly.utils.PosF;
 const Index = firefly.utils.Index;
@@ -24,9 +25,6 @@ pub fn init() void {
     defer initialized = true;
     if (initialized)
         return;
-
-    Component.registerComponent(Room);
-    Component.registerComponent(Area);
 }
 
 pub fn deinit() void {
@@ -39,44 +37,35 @@ pub fn deinit() void {
 //// Area
 //////////////////////////////////////////////////////////////
 
-pub const Area = struct {
-    pub usingnamespace Component.Trait(
-        @This(),
-        .{
-            .name = "Area",
-            .subscription = false,
-        },
-    );
-
-    id: Index = UNDEF_INDEX,
-    name: ?String = null,
-
-    _composite_id: ?Index = null,
-};
+pub const Area = struct {};
 
 //////////////////////////////////////////////////////////////
 //// Room
 //////////////////////////////////////////////////////////////
 
-pub const RoomLayer = struct {
-    name: String,
+// pub const Room = struct {
+//     pub fn createRoom(name: String) Index {
+//         if (api.Composite.existsName(name))
+//             @panic("Composite with name exists: " ++ name);
 
-    _layer_id: ?Index = null,
-};
+//         return api.Composite.new(.{ .name = name }).id;
+//     }
 
-pub const Room = struct {
-    pub usingnamespace Component.Trait(
-        @This(),
-        .{
-            .name = "Room",
-            .subscription = false,
-        },
-    );
+//     pub fn withLoadTask(room_name: String, task: api.Task) void {
 
-    id: Index = UNDEF_INDEX,
-    name: ?String = null,
+//     }
 
-    view_id: Index,
+//     pub fn withTileSetTask(room_name: String, attributes: api.CallAttributes) void {}
 
-    _composite_id: ?Index = null,
-};
+//     pub fn withTileMappingTask(room_name: String, attributes: api.CallAttributes) void {}
+
+//     pub fn withTileGridTask(room_name: String, attributes: api.CallAttributes) void {}
+
+//     pub fn withObjectTask(room_name: String, object: api.CompositeObject) void {
+//         if (api.Composite.byName(name)) |c| {
+//             _ = c.withObject(object);
+//         } else {
+//             @panic("Composite with name exists: " ++ name);
+//         }
+//     }
+// };
