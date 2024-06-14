@@ -207,6 +207,15 @@ pub const NamePool = struct {
         return null;
     }
 
+    pub fn concat(s1: String, s2: String, delimiter: ?String) String {
+        const c = if (delimiter) |d|
+            std.fmt.allocPrint(ALLOC, "{s}{s}{s}", .{ s1, s2, d }) catch unreachable
+        else
+            std.fmt.allocPrint(ALLOC, "{s}{s}", .{ s1, s2 }) catch unreachable;
+        defer ALLOC.free(c);
+        return alloc(c).?;
+    }
+
     pub fn getCName(name: ?String) ?CString {
         if (name) |n| {
             const _n = firefly.api.ALLOC.dupeZ(u8, n) catch unreachable;

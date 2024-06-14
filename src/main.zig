@@ -13,21 +13,22 @@ pub fn main() !void {
     };
 
     try @import("examples/HelloFirefly.zig").run(init_context);
-    // try @import("examples/HelloSprite.zig").run(init_context);
-    // try @import("examples/HelloSpriteAnimation.zig").run(init_context);
-    // try @import("examples/SpriteMultiply.zig").run(init_context);
-    // try @import("examples/HelloViewport.zig").run(init_context);
-    // try @import("examples/HelloShape.zig").run(init_context);
-    // try @import("examples/RenderSpeedRaw.zig").run(init_context);
-    // try @import("examples/EasingExample.zig").run(init_context);
-    // try @import("examples/RenderSpeed.zig").run(init_context);
-    // try @import("examples/HelloTileGrid.zig").run(init_context);
-    // try @import("examples/HelloGravity.zig").run(init_context);
-    // try @import("examples/InputExample1.zig").run(init_context);
-    // try @import("examples/StateExample2.zig").run(init_context);
-    // try @import("examples/HelloContact.zig").run(init_context);
-    // try @import("examples/HelloCamera.zig").run(init_context);
+    try @import("examples/HelloSprite.zig").run(init_context);
+    try @import("examples/HelloSpriteAnimation.zig").run(init_context);
+    try @import("examples/SpriteMultiply.zig").run(init_context);
+    try @import("examples/HelloViewport.zig").run(init_context);
+    try @import("examples/HelloShape.zig").run(init_context);
+    try @import("examples/RenderSpeedRaw.zig").run(init_context);
+    try @import("examples/EasingExample.zig").run(init_context);
+    try @import("examples/RenderSpeed.zig").run(init_context);
+    try @import("examples/HelloTileGrid.zig").run(init_context);
+    try @import("examples/HelloGravity.zig").run(init_context);
+    try @import("examples/InputExample1.zig").run(init_context);
+    try @import("examples/StateExample2.zig").run(init_context);
+    try @import("examples/HelloContact.zig").run(init_context);
+    try @import("examples/HelloCamera.zig").run(init_context);
     try @import("examples/HelloTileSet.zig").run(init_context);
+    try @import("examples/HelloTileMap.zig").run(init_context);
 }
 
 test "API Tests" {

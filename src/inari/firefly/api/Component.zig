@@ -375,7 +375,7 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
             return self;
         }
 
-        pub fn withControlOfType(self: *T, control_type: anytype) *T {
+        pub fn withControlOf(self: *T, control_type: anytype) *T {
             if (adapter.pool.control_mapping) |*cm| {
                 const ct = @TypeOf(control_type);
                 const control = ComponentControlType(ct).new(control_type);
@@ -560,7 +560,11 @@ pub fn ComponentPool(comptime T: type) type {
 
         fn activate(id: Index, a: bool) void {
             if (active_mapping) |*am| {
+                if ((a and am.isSet(id)) or (!a and !am.isSet(id)))
+                    return; // already active or inactive
+
                 am.setValue(id, a);
+
                 if (has_activation)
                     if (items.get(id)) |v| v.activation(a);
                 notify(if (a) ComponentEvent.Type.ACTIVATED else ComponentEvent.Type.DEACTIVATING, id);

@@ -118,10 +118,10 @@ pub const TileGrid = struct {
     layer_id: ?Index = null,
     spherical: bool = false,
     /// captures the grid dimensions in usize and c_int
-    /// [0] = grid_pixel_width,
-    /// [1] = grid_pixel_height,
-    /// [2] = cell_pixel_width,
-    /// [3] = cell_pixel_height
+    /// [0] = grid_tile_width,
+    /// [1] = grid_tile_height,
+    /// [2] = tile_width,
+    /// [3] = tile_height
     dimensions: @Vector(4, usize),
 
     _dimensionsF: Vector4f = undefined,
@@ -388,6 +388,9 @@ const DefaultTileGridRenderer = struct {
                 var iterator = tile_grid.getIteratorForProjection(e.projection.?);
                 if (iterator) |*itr| {
                     while (itr.next()) |entity_id| {
+                        if (entity_id == UNDEF_INDEX)
+                            continue;
+
                         const tile = ETile.byId(entity_id).?;
                         const trans = ETransform.byId(entity_id).?;
                         if (tile.sprite_template_id != NO_BINDING) {

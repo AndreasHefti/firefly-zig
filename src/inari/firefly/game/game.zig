@@ -151,6 +151,7 @@ pub const SimplePivotCamera = struct {
     snap_to_bounds: ?RectF,
     pivot: *PosF = undefined,
     offset: Vector2f = .{ 0, 0 },
+    enable_parallax: bool = false,
     velocity_relative_to_pivot: Vector2f = .{ 1, 1 },
 
     pub fn setPivot(self: *SimplePivotCamera, view_id: Index, pivot: *PosF) void {
@@ -178,6 +179,26 @@ pub const SimplePivotCamera = struct {
                     self.pixel_perfect,
                     self.snap_to_bounds,
                 );
+                // apply parallax scrolling if enabled
+                if (self.enable_parallax) {
+                    if (view.ordered_active_layer) |ol| {
+                        var next = ol.slots.nextSetBit(0);
+                        while (next) |i| {
+                            var layer = firefly.graphics.Layer.byId(i);
+                            if (layer.parallax) |parallax| {
+                                if (layer.offset) |*off| {
+                                    off[0] = -view.projection.position[0] * parallax[0];
+                                    off[1] = -view.projection.position[1] * parallax[1];
+                                    if (self.pixel_perfect) {
+                                        off[0] = @floor(off[0]);
+                                        off[1] = @floor(off[1]);
+                                    }
+                                }
+                            }
+                            next = ol.slots.nextSetBit(i + 1);
+                        }
+                    }
+                }
             }
         }
     }

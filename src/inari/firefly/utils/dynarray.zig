@@ -50,7 +50,7 @@ pub const DynIndexArray = struct {
     }
 
     pub fn set(self: *DynIndexArray, at: usize, index: Index) void {
-        ensureCapacity(self, index);
+        ensureCapacity(self, at + 1);
         self.items[at] = index;
         if (self.size_pointer < at) {
             self.size_pointer = at + 1;
@@ -103,15 +103,17 @@ pub const DynIndexArray = struct {
             if (self.allocator.resize(self.items, self.items.len + self.grow_size)) {
                 self.items.len = self.items.len + self.grow_size;
             } else {
+                std.debug.print("items before {any}\n", .{self.items});
                 const new_memory = self.allocator.alloc(Index, self.items.len + self.grow_size) catch unreachable;
                 @memcpy(new_memory[0..self.items.len], self.items);
+                std.debug.print("Mem alloc {any}\n", .{new_memory});
                 self.allocator.free(self.items);
                 self.items = new_memory;
+                std.debug.print("items after {any}\n", .{self.items});
             }
         }
-        for (self.size_pointer..self.items.len) |i| {
+        for (self.size_pointer..self.items.len) |i|
             self.items[i] = UNDEF_INDEX;
-        }
     }
 };
 

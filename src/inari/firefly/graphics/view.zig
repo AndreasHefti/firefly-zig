@@ -232,14 +232,10 @@ pub const View = struct {
         eventDispatch = undefined;
     }
 
-    pub fn withLayer(self: *View, layer: *Layer) *View {
-        layer.view_id = self.id;
-        return self;
-    }
-
-    pub fn withLayerByName(self: *View, name: String) *View {
-        if (Layer.byName(name)) |l| l.view_id = self.id;
-        return self;
+    pub fn destruct(self: *View) void {
+        if (self.ordered_active_layer) |*l|
+            l.deinit();
+        self.ordered_active_layer = undefined;
     }
 
     pub fn setFullscreen() void {
@@ -356,7 +352,7 @@ pub const View = struct {
         }
         if (view.ordered_active_layer.?.slots.isSet(layer.order)) {
             std.log.err("Order of Layer already in use: {any}", .{layer});
-            @panic("message: []const u8");
+            @panic("Order of Layer already in use");
         }
 
         _ = view.ordered_active_layer.?.set(layer.order, layer.id);
@@ -379,9 +375,10 @@ pub const Layer = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    offset: ?Vector2f = null,
-    order: u8 = 0,
     view_id: Index,
+    order: u8 = 0,
+    offset: ?Vector2f = null,
+    parallax: ?Vector2f = null,
     shader_binding: ?BindingId = null,
 
     pub fn setViewByName(self: *Layer, view_name: String) void {
