@@ -34,9 +34,11 @@ const BlendMode = firefly.api.BlendMode;
 const Color = firefly.utils.Color;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
+const Float = firefly.utils.Float;
 const RectF = firefly.utils.RectF;
 const ClipI = firefly.utils.ClipI;
 const CInt = firefly.utils.CInt;
+const PosF = firefly.utils.PosF;
 const Vector2f = firefly.utils.Vector2f;
 const BindingId = firefly.api.BindingId;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
@@ -94,7 +96,7 @@ pub const TileContactMaterialType = struct {
 //////////////////////////////////////////////////////////////
 
 pub const SpriteData = struct {
-    texture_bounds: RectF,
+    texture_pos: PosF,
     flip_x: bool = false,
     flip_y: bool = false,
 };
@@ -152,6 +154,8 @@ pub const TileSet = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     texture_name: String,
+    tile_width: Float,
+    tile_height: Float,
     tile_templates: DynArray(TileTemplate) = undefined,
 
     pub fn componentTypeInit() !void {
@@ -181,9 +185,8 @@ pub const TileSet = struct {
         self.tile_templates = undefined;
     }
 
-    pub fn withTileTemplate(self: *TileSet, template: TileTemplate) *TileSet {
+    pub fn addTileTemplate(self: *TileSet, template: TileTemplate) void {
         _ = self.tile_templates.add(template);
-        return self;
     }
 
     pub fn activation(self: *TileSet, active: bool) void {
@@ -247,7 +250,12 @@ pub const TileSet = struct {
                 var st: *SpriteTemplate = SpriteTemplate.new(.{
                     .name = tt.name,
                     .texture_name = self.texture_name,
-                    .texture_bounds = tt.sprite_data.texture_bounds,
+                    .texture_bounds = .{
+                        tt.sprite_data.texture_pos[0],
+                        tt.sprite_data.texture_pos[1],
+                        self.tile_width,
+                        self.tile_height,
+                    },
                 });
                 if (tt.sprite_data.flip_x)
                     _ = st.flipX();
@@ -262,7 +270,12 @@ pub const TileSet = struct {
                         if (animations.get(ii)) |frame| {
                             var ast: *SpriteTemplate = SpriteTemplate.new(.{
                                 .texture_name = self.texture_name,
-                                .texture_bounds = frame.sprite_data.texture_bounds,
+                                .texture_bounds = .{
+                                    frame.sprite_data.texture_pos[0],
+                                    frame.sprite_data.texture_pos[1],
+                                    self.tile_width,
+                                    self.tile_height,
+                                },
                             });
                             if (frame.sprite_data.flip_x)
                                 _ = ast.flipX();
@@ -310,18 +323,31 @@ pub const TileSet = struct {
 //////////////////////////////////////////////////////////////
 
 pub const TileSetMapping = struct {
-    tile_set_id: Index,
-    name: String,
-    _map_code_offset: Index = UNDEF_INDEX,
-    _tile_set_size: Index = UNDEF_INDEX,
+    tile_set_name: String,
+    code_offset: Index,
 };
 
-pub const TileSetLayerMapping = struct {
-    mapped_tile_set_name: String,
-    layer_name: ?String,
-    tint_color: ?Color = null,
-    blend_mode: ?BlendMode = null,
-    _mapped_tile_set_id: Index = UNDEF_INDEX,
+pub const TileLayerData = struct {
+    layer: String,
+    tint: ?Color = null,
+    blend: ?BlendMode = null,
+    parallax: ?Vector2f = null,
+    offset: ?Vector2f = null,
+    tile_set_mappings: DynArray(TileSetMapping) = undefined,
+
+    pub fn withTileSetMapping(self: *TileLayerData, mapping: TileSetMapping) *TileLayerData {
+        _ = self.tile_set_mappings.add(mapping);
+        return self;
+    }
+};
+
+pub const TileGridData = struct {
+    name: String,
+    layer: String,
+    world_position: PosF,
+    spherical: bool = false,
+    dimensions: @Vector(4, usize),
+    codes: String,
 };
 
 pub const TileMapping = struct {
@@ -335,66 +361,57 @@ pub const TileMapping = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-
     view_id: Index = UNDEF_INDEX,
 
-    tile_sets: DynArray(TileSetMapping) = undefined,
-    tile_sets_per_layer: DynArray(TileSetLayerMapping) = undefined,
-    _layer_entity_mapping: DynArray(DynIndexArray) = undefined,
+    tile_layer_data: DynArray(TileLayerData) = undefined,
+    tile_grid_data: DynArray(TileGridData) = undefined,
+    layer_entity_mapping: DynArray(DynIndexArray) = undefined,
 
     pub fn construct(self: *TileMapping) void {
-        self.tile_sets = DynArray(TileSetMapping).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
-        self.tile_sets_per_layer = DynArray(TileSetLayerMapping).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
-        self._layer_entity_mapping = DynArray(DynIndexArray).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self.tile_layer_data = DynArray(TileLayerData).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self.tile_grid_data = DynArray(TileGridData).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self.layer_entity_mapping = DynArray(DynIndexArray).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
     }
 
     pub fn destruct(self: *TileMapping) void {
-        self.tile_sets.deinit();
-        self.tile_sets = undefined;
-        self.tile_sets_per_layer.deinit();
-        self.tile_sets_per_layer = undefined;
-        self._layer_entity_mapping.deinit();
-        self._layer_entity_mapping = undefined;
-    }
-
-    pub fn withTileSetMapping(self: *TileMapping, mapping: TileSetMapping) *TileMapping {
-        var _mapping: TileSetMapping = mapping;
-        var ts: *TileSet = TileSet.byId(mapping.tile_set_id);
-        const size = self.tile_sets.nextFreeSlot();
-        if (size > 0) {
-            if (self.tile_sets.get(size - 1)) |last| {
-                _mapping._map_code_offset = last._map_code_offset + last._tile_set_size;
-            }
-        } else {
-            _mapping._map_code_offset = 1;
-        }
-        _mapping._tile_set_size = ts.tile_templates.size();
-        _ = self.tile_sets.add(_mapping);
-        return self;
-    }
-
-    pub fn withTileSetMappingByName(self: *TileMapping, tile_set_name: String) *TileMapping {
-        if (TileSet.byName(tile_set_name)) |ts| {
-            return self.withTileSetMapping(TileSetMapping{
-                .name = tile_set_name,
-                .tile_set_id = ts.id,
-            });
-        }
-        return self;
-    }
-
-    pub fn withTileSetLayerMapping(self: *TileMapping, mapping: TileSetLayerMapping) *TileMapping {
-        var _mapping = mapping;
-        var next = self.tile_sets.slots.nextSetBit(0);
+        var next = self.tile_layer_data.slots.nextSetBit(0);
         while (next) |i| {
-            if (self.tile_sets.get(i)) |ts| {
-                if (std.mem.eql(u8, ts.name, mapping.mapped_tile_set_name))
-                    _mapping._mapped_tile_set_id = ts.tile_set_id;
-            }
-            next = self.tile_sets.slots.nextSetBit(i + 1);
+            self.tile_layer_data.get(i).?.tile_set_mappings.deinit();
+            next = self.tile_layer_data.slots.nextSetBit(i + 1);
         }
-        _ = self.tile_sets_per_layer.add(_mapping);
-        return self;
+        self.tile_layer_data.deinit();
+        self.tile_layer_data = undefined;
+        self.tile_grid_data.deinit();
+        self.tile_grid_data = undefined;
+        self.layer_entity_mapping.deinit();
+        self.layer_entity_mapping = undefined;
+    }
+
+    pub fn addTileSetMapping(self: *TileMapping, layer: String, mapping: TileSetMapping) void {
+        var next = self.tile_layer_data.slots.nextSetBit(0);
+        while (next) |i| {
+            var layer_mapping = self.tile_layer_data.get(i).?;
+            if (firefly.utils.stringEquals(layer_mapping.layer, layer)) {
+                _ = layer_mapping.withTileSetMapping(mapping);
+                return;
+            }
+            next = self.tile_layer_data.slots.nextSetBit(i + 1);
+        }
+    }
+
+    pub fn withTileLayerData(self: *TileMapping, layer: String) *TileLayerData {
+        var tile_layer_data = self.tile_layer_data.addAndGet(.{
+            .layer = layer,
+        }).ref;
+        tile_layer_data.tile_set_mappings = DynArray(TileSetMapping).newWithRegisterSize(
+            firefly.api.COMPONENT_ALLOC,
+            10,
+        );
+        return tile_layer_data;
+    }
+
+    pub fn addTileGridData(self: *TileMapping, grid_data: TileGridData) void {
+        _ = self.tile_grid_data.add(grid_data);
     }
 
     pub fn activation(self: *TileMapping, active: bool) void {
@@ -406,78 +423,102 @@ pub const TileMapping = struct {
     }
 
     pub fn getEntityId(self: *TileMapping, layer_id: Index, code: Index) Index {
-        return self._layer_entity_mapping.get(layer_id).?.get(code);
+        return self.layer_entity_mapping.get(layer_id).?.get(code);
     }
 
     fn _activate(self: *TileMapping) void {
-        // activate all involved tile sets
-        var next = self.tile_sets.slots.nextSetBit(0);
+        // create entities vor all tiles of layer based tile sets
+        // for all TileLayerData ...
+        var next = self.tile_layer_data.slots.nextSetBit(0);
         while (next) |i| {
-            TileSet.activateById(i, true);
-            next = self.tile_sets.slots.nextSetBit(i + 1);
-        }
-
-        // create entities vor all tiles in all tile sets per layer and fill up the entity mapping
-        // for all TileSetLayerMappings ...
-        next = self.tile_sets_per_layer.slots.nextSetBit(0);
-        while (next) |i| {
-            if (self.tile_sets_per_layer.get(i)) |tile_set_layer_mapping| {
-
+            if (self.tile_layer_data.get(i)) |layer_mapping| {
                 // get involved layer
-                var layer_id: Index = 0;
-                if (tile_set_layer_mapping.layer_name) |ln|
-                    layer_id = firefly.graphics.Layer.idByName(ln).?;
-
-                // get involved TileSet
-                if (TileSet.byName(tile_set_layer_mapping.mapped_tile_set_name)) |tile_set| {
-                    // get involved TileSetMapping
-                    const mapped_tile_set: *TileSetMapping = self.tile_sets.get(tile_set_layer_mapping._mapped_tile_set_id).?;
-
+                if (firefly.graphics.Layer.byName(layer_mapping.layer)) |layer| {
                     // add new code -> entity mapping for layer if not existing
-                    if (!self._layer_entity_mapping.exists(layer_id))
-                        _ = self._layer_entity_mapping.set(
+                    if (!self.layer_entity_mapping.exists(layer.id))
+                        _ = self.layer_entity_mapping.set(
                             DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 50),
-                            layer_id,
+                            layer.id,
                         );
+                    var entity_mapping: *DynIndexArray = self.layer_entity_mapping.get(layer.id).?;
 
-                    // get code -> entity mapping for layer
-                    if (self._layer_entity_mapping.get(layer_id)) |e_mapping| {
-                        // set code to mapping offset of TileSetMapping
-                        var code = mapped_tile_set._map_code_offset;
+                    // set layer offset if available
+                    layer.offset = layer_mapping.offset;
 
-                        // for all TileTemplates in TileSet
-                        var next_ti = tile_set.tile_templates.slots.nextSetBit(0);
-                        while (next_ti) |ti| {
-                            if (tile_set.tile_templates.get(ti)) |tile_template| {
+                    // get involved TileSets
+                    var next_ts = layer_mapping.tile_set_mappings.slots.nextSetBit(0);
+                    while (next_ts) |ii| {
+                        const tile_set_mapping: *TileSetMapping = layer_mapping.tile_set_mappings.get(ii).?;
+                        var code = tile_set_mapping.code_offset;
+                        if (TileSet.byName(tile_set_mapping.tile_set_name)) |tile_set| {
+                            _ = tile_set.activate();
 
-                                // create entity from TileTemplate for specific view and layer and add code mapping
-                                const entity = Entity.new(.{
-                                    .name = tile_template.name,
-                                    .groups = GroupKind.fromStringList(tile_template.groups),
-                                })
-                                    .withComponent(ETransform{})
-                                    .withComponent(EView{ .view_id = self.view_id, .layer_id = layer_id })
-                                    .withComponent(ETile{
-                                    .sprite_template_id = tile_template._sprite_template_id.?,
-                                    .tint_color = tile_set_layer_mapping.tint_color,
-                                    .blend_mode = tile_set_layer_mapping.blend_mode,
-                                }).entity();
+                            // for all TileTemplates in TileSet
+                            var next_ti = tile_set.tile_templates.slots.nextSetBit(0);
+                            while (next_ti) |ti| {
+                                if (tile_set.tile_templates.get(ti)) |tile_template| {
 
-                                // add contact if needed
-                                addContactData(entity, tile_set, tile_template);
-                                // add animation if needed
-                                addAnimationData(entity, tile_template);
-                                // set code -> entity id mapping for layer
-                                e_mapping.set(code, entity.id);
-                                _ = entity.activate();
+                                    // create entity from TileTemplate for specific view and layer and add code mapping
+                                    const entity = Entity.new(.{
+                                        .name = tile_template.name,
+                                        .groups = GroupKind.fromStringList(tile_template.groups),
+                                    })
+                                        .withComponent(ETransform{})
+                                        .withComponent(EView{ .view_id = self.view_id, .layer_id = layer.id })
+                                        .withComponent(ETile{
+                                        .sprite_template_id = tile_template._sprite_template_id.?,
+                                        .tint_color = layer_mapping.tint,
+                                        .blend_mode = layer_mapping.blend,
+                                    }).entity();
+
+                                    // add contact if needed
+                                    addContactData(entity, tile_set, tile_template);
+                                    // add animation if needed
+                                    addAnimationData(entity, tile_template);
+                                    // set code -> entity id mapping for layer
+                                    entity_mapping.set(code, entity.id);
+                                    _ = entity.activate();
+                                }
+                                next_ti = tile_set.tile_templates.slots.nextSetBit(ti + 1);
+                                code += 1;
                             }
-                            next_ti = tile_set.tile_templates.slots.nextSetBit(ti + 1);
-                            code += 1;
                         }
+
+                        next_ts = layer_mapping.tile_set_mappings.slots.nextSetBit(ii + 1);
                     }
                 }
             }
-            next = self.tile_sets_per_layer.slots.nextSetBit(i + 1);
+            next = self.tile_layer_data.slots.nextSetBit(i + 1);
+        }
+
+        // create TileGrids
+        next = self.tile_grid_data.slots.nextSetBit(0);
+        while (next) |i| {
+            const tile_grid_data = self.tile_grid_data.get(i).?;
+            if (firefly.graphics.Layer.idByName(tile_grid_data.layer)) |layer_id| {
+                var tile_grid = firefly.graphics.TileGrid.new(.{
+                    .name = tile_grid_data.name,
+                    .view_id = self.view_id,
+                    .layer_id = layer_id,
+                    .dimensions = tile_grid_data.dimensions,
+                    .world_position = tile_grid_data.world_position,
+                    .spherical = tile_grid_data.spherical,
+                });
+
+                // fill grid
+                const code_mapping = self.layer_entity_mapping.get(layer_id).?;
+                var code_it = std.mem.split(u8, tile_grid_data.codes, ",");
+                for (0..tile_grid.dimensions[1]) |y| {
+                    for (0..tile_grid.dimensions[0]) |x| {
+                        const code = std.fmt.parseInt(Index, code_it.next().?, 10) catch unreachable;
+                        const entity_id = code_mapping.get(code);
+                        tile_grid.set(x, y, entity_id);
+                    }
+                }
+
+                _ = tile_grid.activate();
+            }
+            next = self.tile_grid_data.slots.nextSetBit(i + 1);
         }
     }
 
@@ -488,8 +529,8 @@ pub const TileMapping = struct {
                     .rect = .{
                         0,
                         0,
-                        tile_template.sprite_data.texture_bounds[2],
-                        tile_template.sprite_data.texture_bounds[3],
+                        tile_set.tile_width,
+                        tile_set.tile_height,
                     },
                 },
                 .c_material = tile_template.contact_material_type,
@@ -521,15 +562,15 @@ pub const TileMapping = struct {
 
     fn _deactivate(self: *TileMapping) void {
         // dispose all entities and clear the mapping
-        var next = self._layer_entity_mapping.slots.nextSetBit(0);
+        var next = self.layer_entity_mapping.slots.nextSetBit(0);
         while (next) |i| {
-            if (self._layer_entity_mapping.get(i)) |layer_mapping| {
+            if (self.layer_entity_mapping.get(i)) |layer_mapping| {
                 for (0..layer_mapping.size_pointer) |ii|
                     Entity.disposeById(layer_mapping.items[ii]);
                 layer_mapping.clear();
             }
-            next = self._layer_entity_mapping.slots.nextSetBit(i + 1);
+            next = self.layer_entity_mapping.slots.nextSetBit(i + 1);
         }
-        self._layer_entity_mapping.clear();
+        self.layer_entity_mapping.clear();
     }
 };

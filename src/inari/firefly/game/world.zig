@@ -43,7 +43,20 @@ pub const Area = struct {};
 //// Room
 //////////////////////////////////////////////////////////////
 
+// TODO define life-cycle of a Room, When should be done what
+// 1. Build --> populate the room with needed attributes a load/activation tasks
+// 2. Load  --> run load tasks --> all needed data is in memory no file load after this. This might also create new activation tasks
+// 3. Activate --> run activation tasks to create needed components and entities are created from in memory meta data
+// 4. Start (Scene) --> starts the room by init player and camera and play start scene if available
+// 5. Play/Pause/Resume (is this room dependent?) --> pauses or resumes the play
+// 6. End (Scene) --> stops the play and start end scene if available
+// 7. Deactivate --> dispose all components and entities created by Activate. Only meta data persists
+// 8. Dispose --> Dispose also meta data and delete the room object
+
 // pub const Room = struct {
+
+//     pub const ATTR_AREA_NAME = "ROOM_AREA_NAME";
+
 //     pub fn createRoom(name: String) Index {
 //         if (api.Composite.existsName(name))
 //             @panic("Composite with name exists: " ++ name);
@@ -51,21 +64,17 @@ pub const Area = struct {};
 //         return api.Composite.new(.{ .name = name }).id;
 //     }
 
-//     pub fn withLoadTask(room_name: String, task: api.Task) void {
+//     pub fn addAttribute(room_name: String, attr_name: String, attr_value: String) void {
+//         if (api.Composite.byName(room_name)) |room|
+//             room.setAttribute(attr_name, attr_value);
+//     }
+
+//     pub fn addLoadTask(room_name: String, task: api.Task) void {
 
 //     }
 
-//     pub fn withTileSetTask(room_name: String, attributes: api.CallAttributes) void {}
+//     pub fn addActivationTask(room_name: String, task: api.Task) void {
 
-//     pub fn withTileMappingTask(room_name: String, attributes: api.CallAttributes) void {}
-
-//     pub fn withTileGridTask(room_name: String, attributes: api.CallAttributes) void {}
-
-//     pub fn withObjectTask(room_name: String, object: api.CompositeObject) void {
-//         if (api.Composite.byName(name)) |c| {
-//             _ = c.withObject(object);
-//         } else {
-//             @panic("Composite with name exists: " ++ name);
-//         }
 //     }
+
 // };

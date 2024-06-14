@@ -109,12 +109,6 @@ fn init() void {
 
     View.activateById(viewId, true);
 
-    // Texture.new(.{
-    //     .name = "Atlas",
-    //     .resource = "resources/atlas1616.png",
-    //     .is_mipmap = false,
-    // }).load();
-
     var attributes = firefly.api.CallAttributes{};
     defer attributes.deinit();
     attributes.setProperty(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);

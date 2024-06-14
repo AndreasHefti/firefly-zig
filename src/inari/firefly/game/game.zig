@@ -133,7 +133,7 @@ pub const SpriteData = tile.SpriteData;
 pub const TileTemplate = tile.TileTemplate;
 pub const TileMapping = tile.TileMapping;
 pub const TileSetMapping = tile.TileSetMapping;
-pub const TileSetLayerMapping = tile.TileSetLayerMapping;
+pub const TileLayerData = tile.TileLayerData;
 
 pub const JSONTasks = json.JSONTasks;
 pub const JSONTile = json.JSONTile;

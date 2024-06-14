@@ -674,6 +674,10 @@ pub const Composite = struct {
         self.attributes = undefined;
     }
 
+    pub fn addAttribute(self: *Composite, name: String, value: String) void {
+        self.attributes.put(name, value) catch unreachable;
+    }
+
     pub fn withTask(
         self: *Composite,
         task: Task,

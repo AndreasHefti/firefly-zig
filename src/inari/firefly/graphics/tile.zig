@@ -186,7 +186,7 @@ pub const TileGrid = struct {
         if (self.spherical) {
             self._grid[y % self.dimensions[1]][x % self.dimensions[0]] = tile_id;
         } else {
-            if (checkBounds) {
+            if (self.checkBounds(x, y)) {
                 self._grid[y][x] = tile_id;
             } else @panic("out of bounds");
         }
