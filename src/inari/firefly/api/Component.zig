@@ -545,7 +545,7 @@ pub fn ComponentPool(comptime T: type) type {
                 if (name_mapping) |*nm| {
                     if (result.name) |n| {
                         if (nm.contains(n))
-                            @panic("Component name already exists");
+                            utils.panic(api.ALLOC, "Component name already exists: {s}", .{n});
                         nm.put(n, id) catch unreachable;
                     }
                 }

@@ -79,10 +79,10 @@ const JSON_TILE_SET: String =
 
 const JSON_TILE_MAPPING =
     \\ {
-    \\     "name": "TileSetMapping1",
-    \\     "view_name": "view1",
+    \\     "name": "TileMapping",
+    \\     "view_name": "TestView",
     \\     "tile_sets": [
-    \\         { "name": "TestTileSet" }
+    \\         { "code_offset": 1, "resource": { "name": "TestTileSet" }}
     \\     ],
     \\     "layer_mapping": [
     \\         {
@@ -90,25 +90,42 @@ const JSON_TILE_MAPPING =
     \\             "offset": "0,0",
     \\             "blend_mode": "ALPHA",
     \\             "tint_color": "255,255,255,100",
-    \\             "tile_sets_refs": [
-    \\                 { "tile_set_name": "TestTileSet" }
-    \\             ]
+    \\             "tile_sets_refs": "TestTileSet"
     \\         },
     \\         {
     \\             "layer_name": "Foreground",
     \\             "offset": "0,0",
     \\             "blend_mode": "ALPHA",
     \\             "tint_color": "255,255,255,255",
-    \\             "tile_sets_refs": [
-    \\                 { "tile_set_name": "TestTileSet" },
-    \\             ]
+    \\             "tile_sets_refs": "TestTileSet" 
+    \\         }
+    \\     ],
+    \\     "tile_grids": [
+    \\         {
+    \\             "name": "Grid1",
+    \\             "layer": "Background",
+    \\             "position": "0,0",
+    \\             "spherical": false,
+    \\             "tile_width": 16,
+    \\             "tile_height": 16,
+    \\             "grid_tile_width": 20,
+    \\             "grid_tile_height": 10,
+    \\             "codes": "0,0,0,0,0,0,0,0,0,2,32,22,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,39,0,0,29,22,12,0,0,0,0,0,0,0,0,0,0,0,2,32,0,0,19,19,0,0,22,12,0,0,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,22,12,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,22,12,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+    \\         },
+    \\         {
+    \\             "name": "Grid2",
+    \\             "layer": "Foreground",
+    \\             "position": "0,0",
+    \\             "spherical": false,
+    \\             "tile_width": 16,
+    \\             "tile_height": 16,
+    \\             "grid_tile_width": 20,
+    \\             "grid_tile_height": 10,
+    \\             "codes": "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,1,0,0,0,13,0,0,0,40,0,0,0,0,0,3,1,1,1,1,1,1,5,0,0,1,14,13,0,1,0,0,0,0,0,0,0,0,0,0,1,1,6,0,0,1,1,1,0,22,1,1,21,21,11,11,0,2,1,1,1,1,1,5,0,0,0,0,0,0,0,0,0,0,0,0,0,23,33,0,1,1,1,6,0,0,3,7,13,0,3,4,14,13,3,13,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1"
     \\         }
     \\     ]
     \\ }
 ;
-
-const LAYER_1_GRID = "0,0,0,0,0,0,0,0,0,2,32,22,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,39,0,0,29,22,12,0,0,0,0,0,0,0,0,0,0,0,2,32,0,0,19,19,0,0,22,12,0,0,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,22,12,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,22,12,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0";
-const LAYER_2_GRID = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,1,0,0,0,13,0,0,0,40,0,0,0,0,0,3,1,1,1,1,1,1,5,0,0,1,14,13,0,1,0,0,0,0,0,0,0,0,0,0,1,1,6,0,0,1,1,1,0,22,1,1,21,21,11,11,0,2,1,1,1,1,1,5,0,0,0,0,0,0,0,0,0,0,0,0,0,23,33,0,1,1,1,6,0,0,3,7,13,0,3,4,14,13,3,13,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1";
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -152,51 +169,14 @@ fn init() void {
     attributes.setProperty(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
     firefly.api.Task.runTaskByName(firefly.game.JSONTasks.LOAD_TILE_SET, &attributes);
 
-    // create TileMap
-    var tile_mapping = game.TileMapping.new(.{
-        .name = "Test Tile Map",
-        .view_id = view_id,
-    });
-
-    // add layers
-    _ = tile_mapping.withTileLayerData(.{
-        .layer = layer1,
-        .blend = api.BlendMode.ALPHA,
-        .tint = .{ 255, 255, 255, 100 },
-    }).withTileSetMapping(.{
-        .tile_set_name = "TestTileSet",
-        .code_offset = 1,
-    });
-
-    _ = tile_mapping.withTileLayerData(.{
-        .layer = layer2,
-        .blend = api.BlendMode.ALPHA,
-        .tint = .{ 255, 255, 255, 255 },
-    }).withTileSetMapping(.{
-        .tile_set_name = "TestTileSet",
-        .code_offset = 1,
-    });
-
-    // add tile grids
-    _ = tile_mapping.addTileGridData(.{
-        .name = "Background Grid",
-        .layer = layer1,
-        .world_position = .{ 0, 0 },
-        .dimensions = .{ room_tile_width, room_tile_height, tile_width, tile_height },
-        .codes = LAYER_1_GRID,
-    });
-
-    _ = tile_mapping.addTileGridData(.{
-        .name = "Foreground Grid",
-        .layer = layer2,
-        .world_position = .{ 0, 0 },
-        .dimensions = .{ room_tile_width, room_tile_height, tile_width, tile_height },
-        .codes = LAYER_2_GRID,
-    });
+    // load tile mapping from json
+    attributes.setProperty(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_MAPPING);
+    firefly.api.Task.runTaskByName(firefly.game.JSONTasks.LOAD_TILE_MAPPING, &attributes);
 
     // activate
     graphics.Layer.activateById(layer1_id, true);
     graphics.Layer.activateById(layer2_id, true);
     graphics.View.activateById(view_id, true);
-    _ = tile_mapping.activate();
+    game.TileMapping.activateByName("TileMapping", true);
+    //_ = tile_mapping.activate();
 }

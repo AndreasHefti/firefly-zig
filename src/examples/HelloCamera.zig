@@ -80,7 +80,7 @@ fn init() void {
         .withComponent(ESprite{ .template_id = sprite.id })
         .activate();
 
-    _ = view.withControlOfType(SimplePivotCamera{
+    _ = view.withControlOf(SimplePivotCamera{
         .name = "Camera1",
         .pixel_perfect = false,
         .snap_to_bounds = .{ -100, -100, 800, 800 },
