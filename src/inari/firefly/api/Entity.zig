@@ -172,6 +172,12 @@ pub const EComponent = struct {
                 return pool.items.get(id);
             }
 
+            pub fn byName(name: String) ?*T {
+                if (Entity.byName(name)) |e|
+                    return byId(e.id);
+                return null;
+            }
+
             pub fn count() usize {
                 return pool.items.slots.count();
             }

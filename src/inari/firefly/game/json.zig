@@ -98,14 +98,14 @@ pub const JSONTileSet = struct {
     tiles: []const JSONTile,
 };
 
-fn loadTileSetFromJSON(attributes: *api.CallAttributes) void {
-    if (attributes.getProperty(game.TaskAttributes.FILE_RESOURCE)) |file| {
+fn loadTileSetFromJSON(context: *api.CallContext) void {
+    if (context.getAttribute(game.TaskAttributes.FILE_RESOURCE)) |file| {
         const res = firefly.api.loadFromFile(file);
         defer firefly.api.ALLOC.free(res);
-        attributes.setProperty(game.TaskAttributes.JSON_RESOURCE, res);
+        context.setAttribute(game.TaskAttributes.JSON_RESOURCE, res);
     }
 
-    if (attributes.getProperty(game.TaskAttributes.JSON_RESOURCE)) |json| {
+    if (context.getAttribute(game.TaskAttributes.JSON_RESOURCE)) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileSet,
             firefly.api.ALLOC,
@@ -119,7 +119,7 @@ fn loadTileSetFromJSON(attributes: *api.CallAttributes) void {
         // check texture and load or create if needed
         if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
             if (jsonTileSet.texture.load_task) |lt| {
-                api.Task.runTaskByName(lt, null);
+                api.Task.runTaskByName(lt);
             } else {
                 _ = graphics.Texture.new(.{
                     .name = api.NamePool.alloc(jsonTileSet.texture.name).?,
@@ -182,7 +182,7 @@ fn loadTileSetFromJSON(attributes: *api.CallAttributes) void {
         }
 
         // add tile set as owned reference if requested
-        if (attributes.getProperty(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
+        if (context.getAttribute(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
                 comp.addCReference(game.TileSet.referenceById(tile_set.id, true));
         }
@@ -278,14 +278,14 @@ pub const JSONTileGrid = struct {
     codes: String,
 };
 
-fn loadTileMappingFromJSON(attributes: *api.CallAttributes) void {
-    if (attributes.getProperty(game.TaskAttributes.FILE_RESOURCE)) |file| {
+fn loadTileMappingFromJSON(context: *api.CallContext) void {
+    if (context.getAttribute(game.TaskAttributes.FILE_RESOURCE)) |file| {
         const res = firefly.api.loadFromFile(file);
         defer firefly.api.ALLOC.free(res);
-        attributes.setProperty(game.TaskAttributes.JSON_RESOURCE, res);
+        context.setAttribute(game.TaskAttributes.JSON_RESOURCE, res);
     }
 
-    if (attributes.getProperty(game.TaskAttributes.JSON_RESOURCE)) |json| {
+    if (context.getAttribute(game.TaskAttributes.JSON_RESOURCE)) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileMapping,
             firefly.api.ALLOC,
@@ -316,18 +316,20 @@ fn loadTileMappingFromJSON(attributes: *api.CallAttributes) void {
             var tile_set_def = jsonTileMapping.tile_sets[i];
             if (!game.TileSet.existsName(tile_set_def.resource.name)) {
                 if (tile_set_def.resource.file == null)
-                    @panic("No File defined for missing resource");
+                    utils.panic(
+                        api.ALLOC,
+                        "No File defined for missing resource: {s}",
+                        .{tile_set_def.resource.name},
+                    );
 
                 // load tile set from file
-                var tile_set_attrs = api.CallAttributes{
-                    .caller_id = attributes.c1_id,
-                    .caller_name = attributes.caller_name,
-                };
+                var tile_set_attrs = api.Attributes.new();
                 defer tile_set_attrs.deinit();
-                tile_set_attrs.setProperty(game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.?);
-                api.Task.runTaskByName(
+                tile_set_attrs.setAttribute(game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.?);
+                api.Task.runTaskByNameWith(
                     if (tile_set_def.resource.load_task) |load_task| load_task else game.JSONTasks.LOAD_TILE_SET,
-                    &tile_set_attrs,
+                    context.caller_id,
+                    tile_set_attrs,
                 );
             }
 
@@ -396,7 +398,7 @@ fn loadTileMappingFromJSON(attributes: *api.CallAttributes) void {
         }
 
         // add tile set as owned reference if requested
-        if (attributes.getProperty(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
+        if (context.getAttribute(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
                 comp.addCReference(game.TileSet.referenceById(tile_mapping.id, true));
         }

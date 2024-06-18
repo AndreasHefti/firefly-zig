@@ -51,6 +51,7 @@ pub const ETransform = view.ETransform;
 pub const ViewRenderEvent = firefly.api.ViewRenderEvent;
 pub const ViewRenderListener = firefly.api.ViewRenderListener;
 pub const ViewRenderer = view.ViewRenderer;
+pub const Scene = view.Scene;
 
 //////////////////////////////////////////////////////////////
 //// module init

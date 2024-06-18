@@ -303,7 +303,7 @@ const MovementSystem = struct {
     }
 
     pub fn update(_: UpdateEvent) void {
-        const dt: Float = @min(@as(Float, @floatFromInt(Timer.time_elapsed)) / 1000, 0.5);
+        const dt: Float = @min(@as(Float, @floatFromInt(Timer.d_time)) / 1000, 0.5);
         moved.clear();
         var next = movements.nextSetBit(0);
         while (next) |i| {

@@ -16,6 +16,7 @@ const CInt = firefly.utils.CInt;
 
 var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
+var running = false;
 
 pub const CoreSystems = struct {
     pub const StateSystem = struct {
@@ -152,7 +153,6 @@ pub fn startWindow(
     reorderRenderer(&DefaultRenderer.DEFAULT_RENDER_ORDER);
 
     firefly.api.window.openWindow(window);
-    defer firefly.api.window.closeWindow();
 
     View.screen_projection.width = @floatFromInt(window.width);
     View.screen_projection.height = @floatFromInt(window.height);
@@ -161,8 +161,26 @@ pub fn startWindow(
     if (init_callback) |ic|
         ic();
 
-    while (!firefly.api.window.hasWindowClosed()) {
+    running = true;
+    while (!firefly.api.window.hasWindowClosed() and running)
         tick();
+}
+
+pub fn stop() void {
+    running = false;
+    if (!firefly.api.window.hasWindowClosed())
+        firefly.api.window.closeWindow();
+}
+
+pub fn registerQuitKey(quit_key: firefly.api.KeyboardKey) void {
+    firefly.api.input.setKeyMapping(quit_key, firefly.api.InputButtonType.QUIT);
+    firefly.api.subscribeUpdate(update);
+}
+
+pub fn update(_: firefly.api.UpdateEvent) void {
+    if (firefly.api.input.checkButtonPressed(firefly.api.InputButtonType.QUIT)) {
+        firefly.api.unsubscribeUpdate(update);
+        firefly.Engine.stop();
     }
 }
 
@@ -195,6 +213,8 @@ pub fn tick() void {
     // update
     Timer.tick();
     firefly.api.update(UPDATE_EVENT);
+
+    if (!running) return;
 
     // rendering
     RENDER_EVENT.type = RenderEventType.PRE_RENDER;

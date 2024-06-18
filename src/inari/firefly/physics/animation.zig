@@ -1,5 +1,6 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
 
 const Timer = firefly.api.Timer;
 const Entity = firefly.api.Entity;
@@ -17,6 +18,7 @@ const AssetComponent = firefly.api.AssetComponent;
 const Easing = firefly.utils.Easing;
 const Float = firefly.utils.Float;
 const Index = firefly.utils.Index;
+const Byte = firefly.utils.Byte;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const NO_NAME = firefly.utils.NO_NAME;
 
@@ -37,6 +39,7 @@ pub fn init() void {
         true,
     );
     AnimationSystem.registerAnimationType(EasedValueIntegration);
+    AnimationSystem.registerAnimationType(EasedColorIntegration);
     AnimationSystem.registerAnimationType(IndexFrameIntegration);
     EComponent.registerEntityComponent(EAnimation);
 }
@@ -176,15 +179,15 @@ pub fn Animation(comptime Integration: type) type {
         fn updateAll() void {
             var next = animations.slots.nextSetBit(0);
             while (next) |i| {
-                if (animations.get(i)) |a| {
+                if (animations.get(i)) |a|
                     if (a._active) a.update();
-                }
+
                 next = animations.slots.nextSetBit(i + 1);
             }
         }
 
         fn update(self: *Self) void {
-            self._t_normalized += 1.0 * firefly.utils.usize_f32(Timer.time_elapsed) / firefly.utils.usize_f32(self.duration);
+            self._t_normalized += 1.0 * firefly.utils.usize_f32(Timer.d_time) / firefly.utils.usize_f32(self.duration);
             if (self._t_normalized >= 1.0) {
                 self._t_normalized = 0.0;
                 if (self._suspending or !self.looping) {
@@ -427,27 +430,72 @@ pub const EasedValueIntegration = struct {
     property_ref: ?*const fn (Index) *Float = null,
     _property: *Float = undefined,
 
+    _easing_v: Float = 0,
+
     pub fn init(self: *EasedValueIntegration, id: Index) void {
-        if (self.property_ref) |i| {
+        if (self.property_ref) |i|
             self._property = i(id);
-        }
+
+        self._easing_v = self.end_value - self.start_value;
+        self._property.* = self.start_value;
     }
 
     pub fn integrate(a: *Animation(EasedValueIntegration)) void {
-        if (a._inverted)
-            a.integration._property.* = @mulAdd(
-                Float,
-                a.integration.start_value - a.integration.end_value,
-                a.integration.easing.f(a._t_normalized),
-                a.integration.end_value,
-            )
-        else
-            a.integration._property.* = @mulAdd(
-                Float,
-                a.integration.end_value - a.integration.start_value,
-                a.integration.easing.f(a._t_normalized),
-                a.integration.start_value,
-            );
+        const self = a.integration;
+        self._property.* = @mulAdd(
+            Float,
+            if (a._inverted) -self._easing_v else self._easing_v,
+            self.easing.f(a._t_normalized),
+            if (a._inverted) self.end_value else self.start_value,
+        );
+    }
+};
+
+pub const EasedColorIntegration = struct {
+    pub const resolver = AnimationResolver(EasedColorIntegration);
+
+    start_value: utils.Color = .{ 0, 0, 0, 255 },
+    end_value: utils.Color = .{ 0, 0, 0, 255 },
+    easing: Easing = Easing.Linear,
+    property_ref: ?*const fn (Index) *utils.Color = null,
+    _property: *utils.Color = undefined,
+
+    _norm_range: @Vector(4, Float) = .{ 0, 0, 0, 0 },
+
+    pub fn init(self: *EasedColorIntegration, id: Index) void {
+        if (self.property_ref) |i|
+            self._property = i(id);
+
+        self._norm_range = .{
+            @floatFromInt(self.end_value[0] - self.start_value[0]),
+            @floatFromInt(self.end_value[1] - self.start_value[1]),
+            @floatFromInt(self.end_value[2] - self.start_value[2]),
+            @floatFromInt(self.end_value[3] - self.start_value[3]),
+        };
+
+        self._property.*[0] = self.start_value[0];
+        self._property.*[1] = self.start_value[1];
+        self._property.*[2] = self.start_value[2];
+        self._property.*[3] = self.start_value[3];
+    }
+
+    pub fn integrate(a: *Animation(EasedColorIntegration)) void {
+        const self = a.integration;
+        const v_normalized: Float = self.easing.f(a._t_normalized);
+
+        for (0..4) |slot| {
+            if (self._norm_range[slot] != 0)
+                _integrate(self, v_normalized, a._inverted, slot);
+        }
+    }
+
+    inline fn _integrate(self: EasedColorIntegration, v_normalized: Float, inv: bool, slot: usize) void {
+        self._property.*[slot] = @intFromFloat(@mulAdd(
+            Float,
+            if (inv) -self._norm_range[slot] else self._norm_range[slot],
+            v_normalized,
+            @floatFromInt(if (inv) self.end_value[slot] else self.start_value[slot]),
+        ));
     }
 };
 

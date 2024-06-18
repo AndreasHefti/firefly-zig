@@ -33,105 +33,49 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////////////////
-//// Properties and CallAttributes
+//// CallContext
 //////////////////////////////////////////////////////////////////////////
 
-pub const Attributes = std.StringHashMap(String);
+pub const CallContext = struct {
+    parent_id: Index,
+    caller_id: ?Index,
+    attributes: ?api.Attributes = undefined,
 
-pub const CallAttributes = struct {
-    caller_id: ?Index = null,
-    caller_name: ?String = null,
-    c1_id: ?Index = null,
-    c2_id: ?Index = null,
-    c3_id: ?Index = null,
-    attributes: ?Attributes = undefined,
-
-    pub fn deinit(self: *CallAttributes) void {
-        self.clearProperties();
+    pub fn deinit(self: *CallContext) void {
         if (self.attributes) |*p|
             p.deinit();
         self.attributes = undefined;
     }
 
-    pub fn clearProperties(self: *CallAttributes) void {
-        if (self.attributes) |*p| {
-            var it = p.iterator();
-            while (it.next()) |e| {
-                api.ALLOC.free(e.key_ptr.*);
-                api.ALLOC.free(e.value_ptr.*);
-            }
-
-            p.clearAndFree();
-        }
-    }
-
-    pub fn setProperty(self: *CallAttributes, name: String, value: String) void {
+    pub fn setAttribute(self: *CallContext, name: String, value: String) void {
         if (self.attributes == null)
-            self.attributes = std.StringHashMap(String).init(api.ALLOC);
-        // if existing, delete old first
-        if (self.attributes) |*p| {
-            if (p.contains(name))
-                self.deleteProperty(name);
-            // add new with allocated key and value
-            p.put(
-                api.ALLOC.dupe(u8, name) catch unreachable,
-                api.ALLOC.dupe(u8, value) catch unreachable,
-            ) catch unreachable;
-        }
+            self.attributes = api.Attributes.new();
+
+        self.attributes.?.setAttribute(name, value);
     }
 
-    pub fn setAllProperties(self: *CallAttributes, attributes: Attributes) void {
-        var it = attributes.iterator();
-        while (it.next()) |e|
-            self.setProperty(e.key_ptr.*, e.value_ptr.*);
+    pub fn setAllAttributes(self: *CallContext, attributes: api.Attributes) void {
+        if (self.attributes == null)
+            self.attributes = api.Attributes.new();
+
+        self.attributes.?.setAllAttributes(attributes);
     }
 
-    pub fn getProperty(self: *CallAttributes, name: String) ?String {
-        if (self.attributes) |p| return p.get(name);
+    pub fn getAttribute(self: *CallContext, name: String) ?String {
+        if (self.attributes) |*a| return a.getAttribute(name);
         return null;
     }
 
-    pub fn deleteProperty(self: *CallAttributes, name: String) void {
-        if (self.attributes) |*p| {
-            if (p.fetchRemove(name)) |kv| {
-                api.ALLOC.free(kv.key);
-                api.ALLOC.free(kv.value);
-            }
-        }
-    }
-
-    pub fn copyMerge(self: *CallAttributes, other: *const CallAttributes) CallAttributes {
-        var copy = CallAttributes{
-            .caller_id = self.caller_id,
-            .caller_name = self.caller_name,
-            .c1_id = other.c1_id,
-            .c2_id = other.c2_id,
-            .c3_id = other.c3_id,
-        };
-
-        if (self.attributes) |p|
-            copy.setAllProperties(p);
-        if (other.attributes) |p|
-            copy.setAllProperties(p);
-
-        return copy;
-    }
-
     pub fn format(
-        self: CallAttributes,
+        self: CallContext,
         comptime _: []const u8,
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.print("CallAttributes[", .{});
-        if (self.caller_id) |ci| try writer.print(" caller_id:{d}", .{ci});
-        if (self.caller_name) |cn| try writer.print(" caller_name:{s}", .{cn});
-        if (self.c1_id) |ci| try writer.print(" c1_id:{d}", .{ci});
-        if (self.c2_id) |ci| try writer.print(" c2_id:{d}", .{ci});
-        if (self.c3_id) |ci| try writer.print(" c3_id:{d}", .{ci});
+        try writer.print("CallContext[ parent_id: {d} caller_id: {?d}", .{ self.parent_id, self.caller_id });
         if (self.attributes) |p| {
             try writer.print(" attributes: ", .{});
-            var i = p.iterator();
+            var i = p._map.iterator();
             while (i.next()) |e|
                 try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
         }
@@ -143,7 +87,7 @@ pub const CallAttributes = struct {
 //// Condition Component
 //////////////////////////////////////////////////////////////////////////
 
-pub const ConditionFunction = *const fn (?*CallAttributes) bool;
+pub const ConditionFunction = *const fn (*CallContext) bool;
 pub const ConditionType = enum { f, f_and, f_or, f_not };
 pub const Condition = union(ConditionType) {
     f: ConditionFunction,
@@ -151,14 +95,14 @@ pub const Condition = union(ConditionType) {
     f_or: CRef2,
     f_not: CRef1,
 
-    fn check(self: Condition, attributes: ?*CallAttributes) bool {
+    fn check(self: Condition, context: *CallContext) bool {
         return switch (self) {
-            .f => self.f(attributes),
-            .f_and => CCondition.byId(self.f_and.left_ref).condition.check(attributes) and
-                CCondition.byId(self.f_and.right_ref).condition.check(attributes),
-            .f_or => CCondition.byId(self.f_or.left_ref).condition.check(attributes) or
-                CCondition.byId(self.f_or.right_ref).condition.check(attributes),
-            .f_not => !CCondition.byId(self.f_not.f_ref).condition.check(attributes),
+            .f => self.f(context),
+            .f_and => CCondition.byId(self.f_and.left_ref).condition.check(context) and
+                CCondition.byId(self.f_and.right_ref).condition.check(context),
+            .f_or => CCondition.byId(self.f_or.left_ref).condition.check(context) or
+                CCondition.byId(self.f_or.right_ref).condition.check(context),
+            .f_not => !CCondition.byId(self.f_not.f_ref).condition.check(context),
         };
     }
 };
@@ -184,11 +128,20 @@ pub const CCondition = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-
     condition: Condition,
+    context: CallContext = undefined,
 
-    pub fn check(self: *CCondition, attributes: ?*CallAttributes) bool {
-        return self.condition.check(attributes);
+    pub fn construct(self: *CCondition) void {
+        self.context = .{ .parent_id = self.id };
+    }
+
+    pub fn destruct(self: *CCondition) void {
+        self.context.deinit();
+    }
+
+    pub fn check(self: *CCondition, caller_id: Index) bool {
+        self.context.caller_id = caller_id;
+        return self.condition.check(&self.context);
     }
 
     pub fn newANDById(name: String, c1_id: Index, c2_id: Index) *CCondition {
@@ -231,13 +184,13 @@ pub const CCondition = struct {
         });
     }
 
-    pub fn checkById(c_id: Index, attributes: ?*CallAttributes) bool {
-        return CCondition.byId(c_id).check(attributes);
+    pub fn checkById(c_id: Index, caller_id: Index) bool {
+        return CCondition.byId(c_id).check(caller_id);
     }
 
-    pub fn checkByName(c_name: String, attributes: ?*CallAttributes) bool {
+    pub fn checkByName(c_name: String, caller_id: Index) bool {
         if (CCondition.byName(c_name)) |cc|
-            return cc.check(attributes);
+            return cc.check(caller_id);
         return false;
     }
 };
@@ -254,20 +207,8 @@ pub const ActionResult = enum {
 
 pub const UpdateActionFunction = *const fn (Index) ActionResult;
 pub const UpdateActionCallback = *const fn (Index, ActionResult) void;
-pub const TaskFunction = *const fn (*CallAttributes) void;
-pub const TaskCallback = *const fn (*CallAttributes) void;
-
-pub const GlobalTaskAttributes = struct {
-    pub const CALLER_ID = "CALLER_ID";
-    pub const CALLER_NAME = "CALLER_Name";
-
-    pub const COMPONENT1_ID = "COMPONENT1_ID";
-    pub const COMPONENT1_NAME = "COMPONENT1_NAME";
-    pub const COMPONENT2_ID = "COMPONENT2_ID";
-    pub const COMPONENT2_NAME = "COMPONENT2_NAME";
-    pub const COMPONENT3_ID = "COMPONENT3_ID";
-    pub const COMPONENT3_NAME = "COMPONENT3_NAME";
-};
+pub const TaskFunction = *const fn (*CallContext) void;
+pub const TaskCallback = *const fn (*CallContext) void;
 
 pub const Task = struct {
     pub usingnamespace Component.Trait(Task, .{
@@ -284,67 +225,69 @@ pub const Task = struct {
 
     function: TaskFunction,
     callback: ?TaskCallback = null,
-
-    attributes: CallAttributes = undefined,
-
-    pub fn construct(self: *Task) void {
-        self.attributes = CallAttributes{
-            .caller_id = self.id,
-            .caller_name = self.name,
-        };
-    }
+    attributes: ?api.Attributes = undefined,
 
     pub fn destruct(self: *Task) void {
-        self.attributes.deinit();
+        if (self.attributes) |*a| a.deinit();
         self.attributes = undefined;
     }
 
     pub fn run(self: *Task) void {
+        self.runWith(self, null, null);
+    }
+
+    pub fn runWith(
+        self: *Task,
+        caller_id: ?Index,
+        attributes: ?api.Attributes,
+    ) void {
         defer {
             if (self.run_once)
                 Task.disposeById(self.id);
         }
 
         if (self.blocking) {
-            self._run(null, null);
+            self._run(caller_id, attributes);
         } else {
-            _ = std.Thread.spawn(.{}, _run, .{ self, null, null }) catch unreachable;
+            _ = std.Thread.spawn(.{}, _run, .{ self, caller_id, attributes }) catch unreachable;
         }
     }
 
-    pub fn runWith(self: *Task, attributes: ?*CallAttributes) void {
-        defer {
-            if (self.run_once)
-                Task.disposeById(self.id);
-        }
-
-        if (self.blocking) {
-            self._run(attributes);
-        } else {
-            _ = std.Thread.spawn(.{}, _run, .{ self, attributes }) catch unreachable;
-        }
+    pub fn runTaskById(task_id: Index) void {
+        Task.byId(task_id).runWith(null, null);
     }
 
-    pub fn runTaskById(task_id: Index, attributes: ?*CallAttributes) void {
-        Task.byId(task_id).runWith(attributes);
+    pub fn runTaskByIdWith(task_id: Index, caller_id: ?Index, attributes: ?api.Attributes) void {
+        Task.byId(task_id).runWith(caller_id, attributes);
+    }
+    pub fn runTaskByName(task_name: String) void {
+        if (Task.byName(task_name)) |t| t.runWith(null, null);
     }
 
-    pub fn runTaskByName(task_name: String, attributes: ?*CallAttributes) void {
-        if (Task.byName(task_name)) |t| t.runWith(attributes);
+    pub fn runTaskByNameWith(task_name: String, caller_id: ?Index, attributes: ?api.Attributes) void {
+        if (Task.byName(task_name)) |t| t.runWith(caller_id, attributes);
     }
 
-    fn _run(self: *Task, additional_attributes: ?*CallAttributes) void {
-        if (additional_attributes) |aa| {
-            var attrs = self.attributes.copyMerge(aa);
-            defer attrs.deinit();
-            self.function(&attrs);
-            if (self.callback) |c|
-                c(&attrs);
-        } else {
-            self.function(&self.attributes);
-            if (self.callback) |c|
-                c(&self.attributes);
-        }
+    fn _run(
+        self: *Task,
+        caller_id: ?Index,
+        /// Additional attributes for Task call. Caller is owner of the attributes.
+        additional_attributes: ?api.Attributes,
+    ) void {
+        var context = CallContext{
+            .parent_id = self.id,
+            .caller_id = caller_id,
+        };
+        defer context.deinit();
+
+        if (self.attributes) |a|
+            context.setAllAttributes(a);
+        if (additional_attributes) |a|
+            context.setAllAttributes(a);
+
+        self.function(&context);
+        if (self.callback) |c|
+            c(&context);
     }
 
     pub fn format(
@@ -354,7 +297,7 @@ pub const Task = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "Task[ id:{d} name:{?s} run_once:{} blocking:{} callback:{} {?any} ], ",
+            "Task[ id:{d} name:{?s} run_once:{} blocking:{} callback:{} attributes: {any} ], ",
             .{ self.id, self.name, self.run_once, self.blocking, self.callback != null, self.attributes },
         );
     }
@@ -370,7 +313,7 @@ pub const Trigger = struct {
 
     task_ref: Index,
     condition_ref: Index,
-    attributes: CallAttributes = undefined,
+    attributes: ?api.Attributes = null,
 
     pub fn componentTypeInit() !void {
         firefly.api.subscribeUpdate(update);
@@ -380,28 +323,8 @@ pub const Trigger = struct {
         firefly.api.unsubscribeUpdate(update);
     }
 
-    pub fn construct(self: *Trigger) void {
-        self.attributes = CallAttributes{
-            .caller_id = self.id,
-            .caller_name = self.name,
-        };
-    }
-
-    pub fn withComponentRef1(self: *Trigger, id: Index) *Trigger {
-        self.attributes.c1_id = id;
-        return self;
-    }
-    pub fn withComponentRef2(self: *Trigger, id: Index) *Trigger {
-        self.attributes.c2_id = id;
-        return self;
-    }
-    pub fn withComponentRef3(self: *Trigger, id: Index) *Trigger {
-        self.attributes.c3_id = id;
-        return self;
-    }
-
     pub fn destruct(self: *Trigger) void {
-        self.attributes.deinit();
+        if (self.attributes) |*a| a.deinit();
         self.attributes = undefined;
     }
 
@@ -409,8 +332,8 @@ pub const Trigger = struct {
         var next = Trigger.nextActiveId(0);
         while (next) |i| {
             const trigger = Trigger.byId(i);
-            if (CCondition.byId(trigger.condition_ref).check(&trigger.attributes))
-                Task.byId(trigger.task_ref).runWith(&trigger.attributes);
+            if (CCondition.byId(trigger.condition_ref).check(trigger.id))
+                Task.byId(trigger.task_ref).runWith(trigger.id, trigger.attributes);
 
             next = Trigger.nextActiveId(i + 1);
         }

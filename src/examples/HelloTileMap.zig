@@ -164,14 +164,22 @@ fn init() void {
     }).id;
 
     // load atlas and create tile set with task
-    var attributes = firefly.api.CallAttributes{};
+    var attributes = firefly.api.Attributes.new();
     defer attributes.deinit();
-    attributes.setProperty(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
-    firefly.api.Task.runTaskByName(firefly.game.JSONTasks.LOAD_TILE_SET, &attributes);
+    attributes.setAttribute(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
+    firefly.api.Task.runTaskByNameWith(
+        firefly.game.JSONTasks.LOAD_TILE_SET,
+        null,
+        attributes,
+    );
 
     // load tile mapping from json
-    attributes.setProperty(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_MAPPING);
-    firefly.api.Task.runTaskByName(firefly.game.JSONTasks.LOAD_TILE_MAPPING, &attributes);
+    attributes.setAttribute(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_MAPPING);
+    firefly.api.Task.runTaskByNameWith(
+        firefly.game.JSONTasks.LOAD_TILE_MAPPING,
+        null,
+        attributes,
+    );
 
     // activate
     graphics.Layer.activateById(layer1_id, true);

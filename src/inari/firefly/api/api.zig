@@ -78,8 +78,7 @@ pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const CCondition = control.CCondition;
 pub const ConditionFunction = control.ConditionFunction;
-pub const Attributes = control.Attributes;
-pub const CallAttributes = control.CallAttributes;
+pub const CallContext = control.CallContext;
 pub const ActionResult = control.ActionResult;
 pub const UpdateActionFunction = control.UpdateActionFunction;
 pub const UpdateActionCallback = control.UpdateActionCallback;
@@ -244,6 +243,63 @@ pub const NamePool = struct {
 
     pub fn free(name: String) void {
         names.remove(name);
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Attributes
+//////////////////////////////////////////////////////////////
+
+pub const Attributes = struct {
+    c_ref1: ?Index = null,
+    c_ref2: ?Index = null,
+    c_ref3: ?Index = null,
+    _map: std.StringHashMap(String),
+
+    pub fn new() Attributes {
+        return .{ ._map = std.StringHashMap(String).init(ALLOC) };
+    }
+
+    pub fn deinit(self: *Attributes) void {
+        self.clearAttribute();
+        self._map.deinit();
+    }
+
+    pub fn clearAttribute(self: *Attributes) void {
+        var it = self._map.iterator();
+        while (it.next()) |e| {
+            ALLOC.free(e.key_ptr.*);
+            ALLOC.free(e.value_ptr.*);
+        }
+
+        self._map.clearAndFree();
+    }
+
+    pub fn setAttribute(self: *Attributes, name: String, value: String) void {
+        if (self._map.contains(name))
+            self.deleteAttribute(name);
+
+        self._map.put(
+            ALLOC.dupe(u8, name) catch unreachable,
+            ALLOC.dupe(u8, value) catch unreachable,
+        ) catch unreachable;
+    }
+
+    pub fn setAllAttributes(self: *Attributes, attributes: Attributes) void {
+        var it = attributes._map.iterator();
+        while (it.next()) |e|
+            self.setAttribute(e.key_ptr.*, e.value_ptr.*);
+    }
+
+    pub fn getAttribute(self: *Attributes, name: String) ?String {
+        return self._map.get(name);
+    }
+
+    pub fn deleteAttribute(self: *Attributes, name: String) void {
+        if (self._map.fetchRemove(name)) |kv| {
+            ALLOC.free(kv.key);
+            ALLOC.free(kv.value);
+        }
     }
 };
 

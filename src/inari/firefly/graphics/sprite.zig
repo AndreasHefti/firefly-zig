@@ -199,9 +199,9 @@ pub const ESprite = struct {
         }
         pub fn TintColor(id: Index) *Color {
             var sprite = ESprite.byId(id).?;
-            if (sprite.tint_color == null) {
-                sprite.tint_color = Color{};
-            }
+            if (sprite.tint_color == null)
+                sprite.tint_color = Color{ 255, 255, 255, 255 };
+
             return &sprite.tint_color.?;
         }
     };

@@ -4,7 +4,7 @@ const utils = firefly.utils;
 const api = firefly.api;
 
 const Task = api.Task;
-const CallAttributes = api.CallAttributes;
+const CallContext = api.CallContext;
 const ComponentControl = api.ComponentControl;
 const ComponentControlType = api.ComponentControlType;
 const DynIndexMap = utils.DynIndexMap;
@@ -639,7 +639,7 @@ pub const CompositeObject = struct {
     name: String,
     life_cycle: CompositeLifeCycle,
     task_name: String,
-    attributes: ?CallAttributes,
+    attributes: ?api.Attributes,
 };
 
 pub const Composite = struct {
@@ -686,7 +686,7 @@ pub const Composite = struct {
         self: *Composite,
         task: Task,
         life_cycle: CompositeLifeCycle,
-        attributes: ?CallAttributes,
+        attributes: ?CallContext,
     ) *Composite {
         const _task = Task.new(task);
         _ = self.objects.add(CompositeObject{
@@ -701,10 +701,7 @@ pub const Composite = struct {
     pub fn withObject(self: *Composite, object: CompositeObject) *Composite {
         if (Task.byName(object.task_name)) |_| {
             _ = self.objects.add(object);
-        } else {
-            @panic("No Task with name: " ++ object.task_name);
-        }
-
+        } else utils.panic(api.ALLOC, "No Task with name: {s}", .{object.task_name});
         return self;
     }
 
@@ -750,9 +747,10 @@ pub const Composite = struct {
         while (next) |i| {
             if (self.objects.get(i)) |tr| {
                 if (tr.life_cycle == life_cycle)
-                    Task.runTaskByName(
+                    Task.runTaskByNameWith(
                         tr.task_name,
-                        if (tr.attributes) |*attrs| attrs else null,
+                        self.id,
+                        tr.attributes orelse null,
                     );
             }
             next = self.objects.slots.nextSetBit(i + 1);

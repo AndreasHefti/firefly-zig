@@ -13,6 +13,7 @@ const Float = firefly.utils.Float;
 pub const Gravity: Float = 9.8;
 
 pub const EasedValueIntegration = animation.EasedValueIntegration;
+pub const EasedColorIntegration = animation.EasedColorIntegration;
 pub const IAnimation = animation.IAnimation;
 pub const Animation = animation.Animation;
 pub const EAnimation = animation.EAnimation;
