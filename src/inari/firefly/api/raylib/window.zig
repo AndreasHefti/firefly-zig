@@ -80,7 +80,9 @@ const RaylibWindowAPI = struct {
         if (!initialized)
             @panic("Not initialized");
 
-        rl.CloseWindow();
+        if (rl.IsWindowReady())
+            rl.CloseWindow();
+
         singleton = null;
     }
 

@@ -164,12 +164,12 @@ pub fn startWindow(
     running = true;
     while (!firefly.api.window.hasWindowClosed() and running)
         tick();
+
+    firefly.api.window.closeWindow();
 }
 
 pub fn stop() void {
     running = false;
-    if (!firefly.api.window.hasWindowClosed())
-        firefly.api.window.closeWindow();
 }
 
 pub fn registerQuitKey(quit_key: firefly.api.KeyboardKey) void {

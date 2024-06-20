@@ -99,13 +99,13 @@ pub const JSONTileSet = struct {
 };
 
 fn loadTileSetFromJSON(context: *api.CallContext) void {
-    if (context.getAttribute(game.TaskAttributes.FILE_RESOURCE)) |file| {
+    if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
         const res = firefly.api.loadFromFile(file);
         defer firefly.api.ALLOC.free(res);
-        context.setAttribute(game.TaskAttributes.JSON_RESOURCE, res);
+        context.set(game.TaskAttributes.JSON_RESOURCE, res);
     }
 
-    if (context.getAttribute(game.TaskAttributes.JSON_RESOURCE)) |json| {
+    if (context.get(game.TaskAttributes.JSON_RESOURCE)) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileSet,
             firefly.api.ALLOC,
@@ -182,7 +182,7 @@ fn loadTileSetFromJSON(context: *api.CallContext) void {
         }
 
         // add tile set as owned reference if requested
-        if (context.getAttribute(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
+        if (context.get(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
                 comp.addCReference(game.TileSet.referenceById(tile_set.id, true));
         }
@@ -279,13 +279,13 @@ pub const JSONTileGrid = struct {
 };
 
 fn loadTileMappingFromJSON(context: *api.CallContext) void {
-    if (context.getAttribute(game.TaskAttributes.FILE_RESOURCE)) |file| {
+    if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
         const res = firefly.api.loadFromFile(file);
         defer firefly.api.ALLOC.free(res);
-        context.setAttribute(game.TaskAttributes.JSON_RESOURCE, res);
+        context.set(game.TaskAttributes.JSON_RESOURCE, res);
     }
 
-    if (context.getAttribute(game.TaskAttributes.JSON_RESOURCE)) |json| {
+    if (context.get(game.TaskAttributes.JSON_RESOURCE)) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileMapping,
             firefly.api.ALLOC,
@@ -325,7 +325,7 @@ fn loadTileMappingFromJSON(context: *api.CallContext) void {
                 // load tile set from file
                 var tile_set_attrs = api.Attributes.new();
                 defer tile_set_attrs.deinit();
-                tile_set_attrs.setAttribute(game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.?);
+                tile_set_attrs.set(game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.?);
                 api.Task.runTaskByNameWith(
                     if (tile_set_def.resource.load_task) |load_task| load_task else game.JSONTasks.LOAD_TILE_SET,
                     context.caller_id,
@@ -398,7 +398,7 @@ fn loadTileMappingFromJSON(context: *api.CallContext) void {
         }
 
         // add tile set as owned reference if requested
-        if (context.getAttribute(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
+        if (context.get(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
                 comp.addCReference(game.TileSet.referenceById(tile_mapping.id, true));
         }

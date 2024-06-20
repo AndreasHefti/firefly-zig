@@ -47,22 +47,22 @@ pub const CallContext = struct {
         self.attributes = undefined;
     }
 
-    pub fn setAttribute(self: *CallContext, name: String, value: String) void {
+    pub fn set(self: *CallContext, name: String, value: String) void {
         if (self.attributes == null)
             self.attributes = api.Attributes.new();
 
-        self.attributes.?.setAttribute(name, value);
+        self.attributes.?.set(name, value);
     }
 
-    pub fn setAllAttributes(self: *CallContext, attributes: api.Attributes) void {
+    pub fn setAll(self: *CallContext, attributes: api.Attributes) void {
         if (self.attributes == null)
             self.attributes = api.Attributes.new();
 
-        self.attributes.?.setAllAttributes(attributes);
+        self.attributes.?.setAll(attributes);
     }
 
-    pub fn getAttribute(self: *CallContext, name: String) ?String {
-        if (self.attributes) |*a| return a.getAttribute(name);
+    pub fn get(self: *CallContext, name: String) ?String {
+        if (self.attributes) |*a| return a.get(name);
         return null;
     }
 
@@ -281,9 +281,9 @@ pub const Task = struct {
         defer context.deinit();
 
         if (self.attributes) |a|
-            context.setAllAttributes(a);
+            context.setAll(a);
         if (additional_attributes) |a|
-            context.setAllAttributes(a);
+            context.setAll(a);
 
         self.function(&context);
         if (self.callback) |c|

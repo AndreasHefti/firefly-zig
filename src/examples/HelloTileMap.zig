@@ -166,7 +166,7 @@ fn init() void {
     // load atlas and create tile set with task
     var attributes = firefly.api.Attributes.new();
     defer attributes.deinit();
-    attributes.setAttribute(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
+    attributes.set(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
     firefly.api.Task.runTaskByNameWith(
         firefly.game.JSONTasks.LOAD_TILE_SET,
         null,
@@ -174,7 +174,7 @@ fn init() void {
     );
 
     // load tile mapping from json
-    attributes.setAttribute(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_MAPPING);
+    attributes.set(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_MAPPING);
     firefly.api.Task.runTaskByNameWith(
         firefly.game.JSONTasks.LOAD_TILE_MAPPING,
         null,

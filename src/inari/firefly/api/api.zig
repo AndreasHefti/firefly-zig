@@ -261,11 +261,11 @@ pub const Attributes = struct {
     }
 
     pub fn deinit(self: *Attributes) void {
-        self.clearAttribute();
+        self.clear();
         self._map.deinit();
     }
 
-    pub fn clearAttribute(self: *Attributes) void {
+    pub fn clear(self: *Attributes) void {
         var it = self._map.iterator();
         while (it.next()) |e| {
             ALLOC.free(e.key_ptr.*);
@@ -275,9 +275,9 @@ pub const Attributes = struct {
         self._map.clearAndFree();
     }
 
-    pub fn setAttribute(self: *Attributes, name: String, value: String) void {
+    pub fn set(self: *Attributes, name: String, value: String) void {
         if (self._map.contains(name))
-            self.deleteAttribute(name);
+            self.remove(name);
 
         self._map.put(
             ALLOC.dupe(u8, name) catch unreachable,
@@ -285,17 +285,17 @@ pub const Attributes = struct {
         ) catch unreachable;
     }
 
-    pub fn setAllAttributes(self: *Attributes, attributes: Attributes) void {
+    pub fn setAll(self: *Attributes, attributes: Attributes) void {
         var it = attributes._map.iterator();
         while (it.next()) |e|
-            self.setAttribute(e.key_ptr.*, e.value_ptr.*);
+            self.set(e.key_ptr.*, e.value_ptr.*);
     }
 
-    pub fn getAttribute(self: *Attributes, name: String) ?String {
+    pub fn get(self: *Attributes, name: String) ?String {
         return self._map.get(name);
     }
 
-    pub fn deleteAttribute(self: *Attributes, name: String) void {
+    pub fn remove(self: *Attributes, name: String) void {
         if (self._map.fetchRemove(name)) |kv| {
             ALLOC.free(kv.key);
             ALLOC.free(kv.value);

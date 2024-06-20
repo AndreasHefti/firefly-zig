@@ -109,11 +109,15 @@ fn init() void {
 
     View.activateById(viewId, true);
 
-    var attributes = firefly.api.CallAttributes{};
+    var attributes = firefly.api.Attributes.new();
     defer attributes.deinit();
-    attributes.setProperty(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
+    attributes.set(firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET);
 
-    firefly.api.Task.runTaskByName(firefly.game.JSONTasks.LOAD_TILE_SET, &attributes);
+    firefly.api.Task.runTaskByNameWith(
+        firefly.game.JSONTasks.LOAD_TILE_SET,
+        null,
+        attributes,
+    );
     var tile_set: *TileSet = TileSet.byName("TestTileSet").?;
     TileSet.activateByName("TestTileSet", true);
 
