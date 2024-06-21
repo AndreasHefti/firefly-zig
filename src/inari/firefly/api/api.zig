@@ -293,7 +293,7 @@ pub const Attributes = struct {
             self.set(e.key_ptr.*, e.value_ptr.*);
     }
 
-    pub fn get(self: *Attributes, name: String) ?String {
+    pub fn get(self: Attributes, name: String) ?String {
         return self._map.get(name);
     }
 

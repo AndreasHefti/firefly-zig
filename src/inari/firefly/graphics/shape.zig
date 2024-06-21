@@ -1,17 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const api = firefly.api;
+const graphics = firefly.graphics;
 
-const System = firefly.api.System;
-const EComponent = firefly.api.EComponent;
-const EntityTypeCondition = firefly.api.EntityTypeCondition;
-const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
-const ComponentEvent = firefly.api.ComponentEvent;
-const EventType = firefly.api.Component.ActionType;
-const EMultiplier = firefly.api.EMultiplier;
-const EView = firefly.graphics.EView;
-const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
-const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
-const ETransform = firefly.graphics.ETransform;
 const Index = firefly.utils.Index;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const Float = firefly.utils.Float;
@@ -29,9 +20,9 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    EComponent.registerEntityComponent(EShape);
+    api.EComponent.registerEntityComponent(EShape);
     // init renderer
-    System(DefaultShapeRenderer).createSystem(
+    api.System(DefaultShapeRenderer).createSystem(
         firefly.Engine.DefaultRenderer.SHAPE,
         "Default renderer for shape based entities",
         true,
@@ -44,7 +35,7 @@ pub fn deinit() void {
         return;
 
     // deinit renderer
-    System(DefaultShapeRenderer).disposeSystem();
+    api.System(DefaultShapeRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -52,7 +43,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const EShape = struct {
-    pub usingnamespace EComponent.Trait(@This(), "EShape");
+    pub usingnamespace api.EComponent.Trait(@This(), "EShape");
 
     id: Index = UNDEF_INDEX,
 
@@ -84,13 +75,13 @@ pub const EShape = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultShapeRenderer = struct {
-    pub var entity_condition: EntityTypeCondition = undefined;
-    var shape_refs: ViewLayerMapping = undefined;
+    pub var entity_condition: api.EntityTypeCondition = undefined;
+    var shape_refs: graphics.ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
-        shape_refs = ViewLayerMapping.new();
-        entity_condition = EntityTypeCondition{
-            .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, EShape }),
+        shape_refs = graphics.ViewLayerMapping.new();
+        entity_condition = api.EntityTypeCondition{
+            .accept_kind = api.EComponentAspectGroup.newKindOf(.{ graphics.ETransform, EShape }),
         };
     }
 
@@ -102,18 +93,18 @@ const DefaultShapeRenderer = struct {
 
     pub fn entityRegistration(id: Index, register: bool) void {
         if (register)
-            shape_refs.addWithEView(EView.byId(id), id)
+            shape_refs.addWithEView(graphics.EView.byId(id), id)
         else
-            shape_refs.removeWithEView(EView.byId(id), id);
+            shape_refs.removeWithEView(graphics.EView.byId(id), id);
     }
 
-    pub fn renderView(e: ViewRenderEvent) void {
+    pub fn renderView(e: graphics.ViewRenderEvent) void {
         if (shape_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the shape
                 const es = EShape.byId(id).?;
-                const trans = ETransform.byId(id).?;
+                const trans = graphics.ETransform.byId(id).?;
                 firefly.api.rendering.renderShape(
                     es.shape_type,
                     es.vertices,

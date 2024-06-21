@@ -98,14 +98,16 @@ pub const JSONTileSet = struct {
     tiles: []const JSONTile,
 };
 
-fn loadTileSetFromJSON(context: *api.CallContext) void {
+fn loadTileSetFromJSON(context: api.CallContext) void {
+    var json_resource: ?String = null;
+    defer if (json_resource) |r| firefly.api.ALLOC.free(r);
     if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
-        const res = firefly.api.loadFromFile(file);
-        defer firefly.api.ALLOC.free(res);
-        context.set(game.TaskAttributes.JSON_RESOURCE, res);
-    }
+        json_resource = firefly.api.loadFromFile(file);
+    } else json_resource = context.get(game.TaskAttributes.JSON_RESOURCE);
 
-    if (context.get(game.TaskAttributes.JSON_RESOURCE)) |json| {
+    std.debug.print("json_resource: {?s}\n", .{json_resource});
+
+    if (json_resource) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileSet,
             firefly.api.ALLOC,
@@ -278,14 +280,14 @@ pub const JSONTileGrid = struct {
     codes: String,
 };
 
-fn loadTileMappingFromJSON(context: *api.CallContext) void {
+fn loadTileMappingFromJSON(context: api.CallContext) void {
+    var json_resource: ?String = null;
+    defer if (json_resource) |r| firefly.api.ALLOC.free(r);
     if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
-        const res = firefly.api.loadFromFile(file);
-        defer firefly.api.ALLOC.free(res);
-        context.set(game.TaskAttributes.JSON_RESOURCE, res);
-    }
+        json_resource = firefly.api.loadFromFile(file);
+    } else json_resource = context.get(game.TaskAttributes.JSON_RESOURCE);
 
-    if (context.get(game.TaskAttributes.JSON_RESOURCE)) |json| {
+    if (json_resource) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileMapping,
             firefly.api.ALLOC,

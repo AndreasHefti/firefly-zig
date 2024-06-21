@@ -164,8 +164,6 @@ pub const ViewChangeEvent = struct {
 //// View api.Component
 //////////////////////////////////////////////////////////////
 
-// TODO ViewChangeEvent
-
 pub const View = struct {
     pub usingnamespace api.Component.Trait(View, .{
         .name = "View",

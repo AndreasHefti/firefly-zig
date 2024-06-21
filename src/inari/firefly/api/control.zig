@@ -54,8 +54,8 @@ pub const CallContext = struct {
         self.attributes.?.setAll(attributes);
     }
 
-    pub fn get(self: *CallContext, name: String) ?String {
-        if (self.attributes) |*a| return a.get(name);
+    pub fn get(self: CallContext, name: String) ?String {
+        if (self.attributes) |a| return a.get(name);
         return null;
     }
 
@@ -80,7 +80,7 @@ pub const CallContext = struct {
 //// Condition Component
 //////////////////////////////////////////////////////////////////////////
 
-pub const ConditionFunction = *const fn (*CallContext) bool;
+pub const ConditionFunction = *const fn (CallContext) bool;
 pub const ConditionType = enum { f, f_and, f_or, f_not };
 pub const Condition = union(ConditionType) {
     f: ConditionFunction,
@@ -88,7 +88,7 @@ pub const Condition = union(ConditionType) {
     f_or: CRef2,
     f_not: CRef1,
 
-    fn check(self: Condition, context: *CallContext) bool {
+    fn check(self: Condition, context: CallContext) bool {
         return switch (self) {
             .f => self.f(context),
             .f_and => CCondition.byId(self.f_and.left_ref).condition.check(context) and
@@ -134,7 +134,7 @@ pub const CCondition = struct {
 
     pub fn check(self: *CCondition, caller_id: Index) bool {
         self.context.caller_id = caller_id;
-        return self.condition.check(&self.context);
+        return self.condition.check(self.context);
     }
 
     pub fn newANDById(name: String, c1_id: Index, c2_id: Index) *CCondition {
@@ -244,7 +244,7 @@ pub fn ComponentControlType(comptime T: type) type {
         var register: utils.DynArray(T) = undefined;
 
         pub fn init() void {
-            register = utils.DynArray(T).new(firefly.api.COMPONENT_ALLOC);
+            register = utils.DynArray(T).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 20);
         }
 
         pub fn deinit() void {
@@ -287,8 +287,8 @@ pub const ActionResult = enum {
 pub const UpdateActionFunction = *const fn (Index) ActionResult;
 pub const UpdateActionCallback = *const fn (Index, ActionResult) void;
 
-pub const TaskFunction = *const fn (*CallContext) void;
-pub const TaskCallback = *const fn (*CallContext) void;
+pub const TaskFunction = *const fn (CallContext) void;
+pub const TaskCallback = *const fn (CallContext) void;
 
 pub const Task = struct {
     pub usingnamespace api.Component.Trait(Task, .{
@@ -305,12 +305,6 @@ pub const Task = struct {
 
     function: TaskFunction,
     callback: ?TaskCallback = null,
-    attributes: ?api.Attributes = undefined,
-
-    pub fn destruct(self: *Task) void {
-        if (self.attributes) |*a| a.deinit();
-        self.attributes = undefined;
-    }
 
     pub fn run(self: *Task) void {
         self.runWith(self, null, null);
@@ -351,23 +345,17 @@ pub const Task = struct {
     fn _run(
         self: *Task,
         caller_id: ?Index,
-        /// Additional attributes for Task call. Caller is owner of the attributes.
-        additional_attributes: ?api.Attributes,
+        attributes: ?api.Attributes,
     ) void {
-        var context = CallContext{
+        const context: CallContext = .{
             .parent_id = self.id,
             .caller_id = caller_id,
+            .attributes = attributes,
         };
-        defer context.deinit();
 
-        if (self.attributes) |a|
-            context.setAll(a);
-        if (additional_attributes) |a|
-            context.setAll(a);
-
-        self.function(&context);
+        self.function(context);
         if (self.callback) |c|
-            c(&context);
+            c(context);
     }
 
     pub fn format(
@@ -377,8 +365,8 @@ pub const Task = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "Task[ id:{d} name:{?s} run_once:{} blocking:{} callback:{} attributes: {any} ], ",
-            .{ self.id, self.name, self.run_once, self.blocking, self.callback != null, self.attributes },
+            "Task[ id:{d} name:{?s} run_once:{} blocking:{} callback:{} ], ",
+            .{ self.id, self.name, self.run_once, self.blocking, self.callback != null },
         );
     }
 };
