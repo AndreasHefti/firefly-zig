@@ -1,15 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-
 const api = firefly.api;
+const utils = firefly.utils;
 
-const GroupAspect = firefly.api.GroupAspect;
-const GroupKind = firefly.api.GroupKind;
-const GroupAspectGroup = firefly.api.GroupAspectGroup;
-const DynArray = firefly.utils.DynArray;
-const ComponentAspect = firefly.api.ComponentAspect;
-const UpdateEvent = firefly.api.UpdateEvent;
-const Component = firefly.api.Component;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
@@ -20,10 +13,10 @@ pub fn init() void {
     if (initialized)
         return;
 
-    Component.registerComponent(CCondition);
-    Component.registerComponent(Task);
-    Component.registerComponent(Trigger);
-    Component.registerComponent(ComponentControl);
+    api.Component.registerComponent(CCondition);
+    api.Component.registerComponent(Task);
+    api.Component.registerComponent(Trigger);
+    api.Component.registerComponent(ComponentControl);
 }
 
 pub fn deinit() void {
@@ -117,7 +110,7 @@ pub const CRef1 = struct {
 };
 
 pub const CCondition = struct {
-    pub usingnamespace Component.Trait(
+    pub usingnamespace api.Component.Trait(
         @This(),
         .{
             .name = "CCondition",
@@ -196,6 +189,92 @@ pub const CCondition = struct {
 };
 
 //////////////////////////////////////////////////////////////////////////
+//// Component Control
+//////////////////////////////////////////////////////////////////////////
+
+pub const ControlFunction = *const fn (CallContext) void;
+pub const ControlDispose = *const fn (Index) void;
+
+pub const ComponentControl = struct {
+    pub usingnamespace api.Component.Trait(ComponentControl, .{
+        .name = "ComponentControl",
+        .grouping = true,
+        .subscription = false,
+    });
+
+    component_type: api.ComponentAspect,
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+    groups: ?api.GroupKind = null,
+
+    control: ControlFunction,
+    dispose: ?ControlDispose = null,
+    attributes: ?api.Attributes = null,
+
+    pub fn destruct(self: *ComponentControl) void {
+        if (self.dispose) |df| df(self.id);
+        self.groups = null;
+    }
+
+    pub fn update(control_id: Index, c_id: Index) void {
+        const c = ComponentControl.byId(control_id);
+        c.control(.{
+            .parent_id = control_id,
+            .caller_id = c_id,
+            .attributes = c.attributes,
+        });
+    }
+};
+
+pub fn ComponentControlType(comptime T: type) type {
+    comptime {
+        if (@typeInfo(T) != .Struct)
+            @compileError("Expects component control type is a struct.");
+        if (!@hasDecl(T, "update"))
+            @compileError("Expects component control type to have function 'update(Index)'");
+        if (!@hasField(T, "name"))
+            @compileError("Expects component control type to have field 'name: String'");
+        if (!@hasDecl(T, "component_type"))
+            @compileError("Expects component control type to have var 'component_type: ComponentAspect'");
+    }
+
+    return struct {
+        const Self = @This();
+
+        var register: utils.DynArray(T) = undefined;
+
+        pub fn init() void {
+            register = utils.DynArray(T).new(firefly.api.COMPONENT_ALLOC);
+        }
+
+        pub fn deinit() void {
+            register.deinit();
+        }
+
+        pub fn stateByControlId(id: Index) ?*T {
+            return register.get(id);
+        }
+
+        pub fn new(control_type: T) *ComponentControl {
+            const control = ComponentControl.new(.{
+                .name = control_type.name,
+                .control = T.update,
+                .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type).?.*,
+                .dispose = dispose,
+            });
+
+            _ = register.set(control_type, control.id);
+
+            return control;
+        }
+
+        fn dispose(id: Index) void {
+            register.delete(id);
+        }
+    };
+}
+
+//////////////////////////////////////////////////////////////////////////
 //// Action, Task and Trigger
 //////////////////////////////////////////////////////////////////////////
 
@@ -207,11 +286,12 @@ pub const ActionResult = enum {
 
 pub const UpdateActionFunction = *const fn (Index) ActionResult;
 pub const UpdateActionCallback = *const fn (Index, ActionResult) void;
+
 pub const TaskFunction = *const fn (*CallContext) void;
 pub const TaskCallback = *const fn (*CallContext) void;
 
 pub const Task = struct {
-    pub usingnamespace Component.Trait(Task, .{
+    pub usingnamespace api.Component.Trait(Task, .{
         .name = "Task",
         .activation = false,
         .subscription = false,
@@ -304,7 +384,7 @@ pub const Task = struct {
 };
 
 pub const Trigger = struct {
-    pub usingnamespace Component.Trait(Trigger, .{
+    pub usingnamespace api.Component.Trait(Trigger, .{
         .name = "Trigger",
     });
 
@@ -328,7 +408,7 @@ pub const Trigger = struct {
         self.attributes = undefined;
     }
 
-    fn update(_: UpdateEvent) void {
+    fn update(_: api.UpdateEvent) void {
         var next = Trigger.nextActiveId(0);
         while (next) |i| {
             const trigger = Trigger.byId(i);
@@ -339,83 +419,3 @@ pub const Trigger = struct {
         }
     }
 };
-
-//////////////////////////////////////////////////////////////////////////
-//// Component Control
-//////////////////////////////////////////////////////////////////////////
-
-pub const ComponentControl = struct {
-    pub usingnamespace Component.Trait(ComponentControl, .{
-        .name = "ComponentControl",
-        .grouping = true,
-        .subscription = false,
-    });
-
-    id: Index = UNDEF_INDEX,
-    name: ?String = null,
-    groups: ?GroupKind = null,
-
-    component_type: ComponentAspect,
-    control: *const fn (Index, Index) void,
-
-    dispose: ?*const fn (Index) void = null,
-
-    pub fn destruct(self: *ComponentControl) void {
-        if (self.dispose) |df| df(self.id);
-        self.groups = null;
-    }
-
-    pub fn update(control_id: Index, c_id: Index) void {
-        const Self = @This();
-        if (Self.isActiveById(control_id))
-            Self.byId(control_id).control(c_id, control_id);
-    }
-};
-
-pub fn ComponentControlType(comptime T: type) type {
-    comptime {
-        if (@typeInfo(T) != .Struct)
-            @compileError("Expects component control type is a struct.");
-        if (!@hasDecl(T, "update"))
-            @compileError("Expects component control type to have function 'update(Index)'");
-        if (!@hasField(T, "name"))
-            @compileError("Expects component control type to have field 'name: String'");
-        if (!@hasDecl(T, "component_type"))
-            @compileError("Expects component control type to have var 'component_type: ComponentAspect'");
-    }
-
-    return struct {
-        const Self = @This();
-
-        var register: DynArray(T) = undefined;
-
-        pub fn init() void {
-            register = DynArray(T).new(firefly.api.COMPONENT_ALLOC);
-        }
-
-        pub fn deinit() void {
-            register.deinit();
-        }
-
-        pub fn stateByControlId(id: Index) ?*T {
-            return register.get(id);
-        }
-
-        pub fn new(control_type: T) *ComponentControl {
-            const control = ComponentControl.new(.{
-                .name = control_type.name,
-                .control = T.update,
-                .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type).?.*,
-                .dispose = dispose,
-            });
-
-            _ = register.set(control_type, control.id);
-
-            return control;
-        }
-
-        fn dispose(id: Index) void {
-            register.delete(id);
-        }
-    };
-}

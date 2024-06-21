@@ -1,26 +1,24 @@
 const std = @import("std");
 const firefly = @import("../../firefly.zig");
+const api = firefly.api;
 const rl = @cImport(@cInclude("raylib.h"));
 
-const IWindowAPI = firefly.api.IWindowAPI;
-const WindowData = firefly.api.WindowData;
 const CInt = firefly.utils.CInt;
 const CUInt = firefly.utils.CUInt;
-const WindowFlag = firefly.api.WindowFlag;
 
-var singleton: ?IWindowAPI() = null;
-pub fn createWindowAPI() !IWindowAPI() {
+var singleton: ?api.IWindowAPI() = null;
+pub fn createWindowAPI() !api.IWindowAPI() {
     if (singleton == null)
-        singleton = IWindowAPI().init(RaylibWindowAPI.initImpl);
+        singleton = api.IWindowAPI().init(RaylibWindowAPI.initImpl);
 
     return singleton.?;
 }
 
 const RaylibWindowAPI = struct {
     var initialized = false;
-    var window_data: WindowData = undefined;
+    var window_data: api.WindowData = undefined;
 
-    fn initImpl(interface: *IWindowAPI()) void {
+    fn initImpl(interface: *api.IWindowAPI()) void {
         defer initialized = true;
         if (initialized)
             return;
@@ -56,7 +54,7 @@ const RaylibWindowAPI = struct {
         return rl.GetMonitorHeight(m);
     }
 
-    fn openWindow(data: WindowData) void {
+    fn openWindow(data: api.WindowData) void {
         if (!initialized)
             @panic("Not initialized");
 
@@ -71,7 +69,7 @@ const RaylibWindowAPI = struct {
         return rl.WindowShouldClose();
     }
 
-    fn getWindowData() *WindowData {
+    fn getWindowData() *api.WindowData {
         return &window_data;
     }
 
@@ -98,7 +96,7 @@ const RaylibWindowAPI = struct {
         rl.ToggleBorderlessWindowed();
     }
 
-    fn setWindowFlags(flags: []const WindowFlag) void {
+    fn setWindowFlags(flags: []const api.WindowFlag) void {
         var flag: CUInt = 0;
         for (flags) |f|
             flag |= @intFromEnum(f);

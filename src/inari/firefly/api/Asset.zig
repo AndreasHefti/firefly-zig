@@ -1,12 +1,11 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const api = firefly.api;
+const utils = firefly.utils;
 
-const DynArray = firefly.utils.DynArray;
-const Component = firefly.api.Component;
-const AspectGroup = firefly.utils.AspectGroup;
-const String = firefly.utils.String;
-const Index = firefly.utils.Index;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const String = utils.String;
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 var initialized = false;
 pub fn init() void {
@@ -14,7 +13,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    Component.registerComponent(AssetComponent);
+    api.Component.registerComponent(AssetComponent);
 }
 
 pub fn deinit() void {
@@ -27,14 +26,14 @@ pub fn deinit() void {
 //// Public API
 //////////////////////////////////////////////////////////////////////////
 
-pub const AssetAspectGroup = AspectGroup(struct {
+pub const AssetAspectGroup = utils.AspectGroup(struct {
     pub const name = "AssetComponent";
 });
 pub const AssetKind = AssetAspectGroup.Kind;
 pub const AssetAspect = AssetAspectGroup.Aspect;
 
 pub const AssetComponent = struct {
-    pub usingnamespace Component.Trait(AssetComponent, .{
+    pub usingnamespace api.Component.Trait(AssetComponent, .{
         .name = "AssetComponent",
     });
 
@@ -76,10 +75,10 @@ pub fn Asset(comptime T: type) type {
     return struct {
         const Self = @This();
 
-        var resource: DynArray(T) = undefined;
+        var resource: utils.DynArray(T) = undefined;
 
         pub fn init() void {
-            resource = DynArray(T).new(firefly.api.COMPONENT_ALLOC);
+            resource = utils.DynArray(T).new(firefly.api.COMPONENT_ALLOC);
         }
 
         pub fn deinit() void {
@@ -184,9 +183,8 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
         }
 
         pub fn resourceByName(asset_name: String) ?*T {
-            if (AssetComponent.byName(asset_name)) |asset|
-                return Asset(T).resource.get(asset.resource_id);
-            return null;
+            const asset = AssetComponent.byName(asset_name) orelse return null;
+            return Asset(T).resource.get(asset.resource_id);
         }
     };
 }

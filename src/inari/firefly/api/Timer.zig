@@ -1,7 +1,6 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
-const ArrayList = std.ArrayList;
 const Float = firefly.utils.Float;
 
 pub const UpdateScheduler = struct {
@@ -20,14 +19,14 @@ pub const UpdateScheduler = struct {
 
 var initialized = false;
 var last_update_time: usize = undefined;
-var scheduler: ArrayList(UpdateScheduler) = undefined;
+var scheduler: std.ArrayList(UpdateScheduler) = undefined;
 
 pub fn init() void {
     defer initialized = true;
     if (initialized)
         return;
 
-    scheduler = ArrayList(UpdateScheduler).init(firefly.api.ALLOC);
+    scheduler = std.ArrayList(UpdateScheduler).init(firefly.api.ALLOC);
     last_update_time = firefly.utils.i64_usize(std.time.milliTimestamp());
 }
 

@@ -88,16 +88,16 @@ fn init() void {
     }
 }
 
-fn control(entity_id: Index, _: Index) void {
-    if (EContactScan.byId(entity_id)) |scan| {
-        if (EShape.byId(entity_id)) |shape| {
-            if (scan.hasAnyContact()) {
-                shape.color[0] = 255;
-                shape.color[2] = 0;
-            } else {
-                shape.color[0] = 0;
-                shape.color[2] = 255;
-            }
-        }
+fn control(call_context: firefly.api.CallContext) void {
+    const entity_id = call_context.caller_id orelse return;
+    const scan = EContactScan.byId(entity_id) orelse return;
+    const shape = EShape.byId(entity_id) orelse return;
+
+    if (scan.hasAnyContact()) {
+        shape.color[0] = 255;
+        shape.color[2] = 0;
+    } else {
+        shape.color[0] = 0;
+        shape.color[2] = 255;
     }
 }

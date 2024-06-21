@@ -169,38 +169,39 @@ pub const SimplePivotCamera = struct {
         );
     }
 
-    pub fn update(view_id: Index, control_id: Index) void {
-        if (ComponentControlType(SimplePivotCamera).stateByControlId(control_id)) |self| {
-            var view = View.byId(view_id);
-            const move = getMove(self, view);
-            if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
-                view.moveProjection(
-                    move * self.velocity_relative_to_pivot,
-                    self.pixel_perfect,
-                    self.snap_to_bounds,
-                );
-                // apply parallax scrolling if enabled
-                if (self.enable_parallax) {
-                    if (view.ordered_active_layer) |ol| {
-                        var next = ol.slots.nextSetBit(0);
-                        while (next) |i| {
-                            var layer = firefly.graphics.Layer.byId(i);
-                            if (layer.parallax) |parallax| {
-                                if (layer.offset) |*off| {
-                                    off[0] = -view.projection.position[0] * parallax[0];
-                                    off[1] = -view.projection.position[1] * parallax[1];
-                                    if (self.pixel_perfect) {
-                                        off[0] = @floor(off[0]);
-                                        off[1] = @floor(off[1]);
+    pub fn update(call_context: firefly.api.CallContext) void {
+        if (call_context.caller_id) |view_id|
+            if (ComponentControlType(SimplePivotCamera).stateByControlId(call_context.parent_id)) |self| {
+                var view = View.byId(view_id);
+                const move = getMove(self, view);
+                if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
+                    view.moveProjection(
+                        move * self.velocity_relative_to_pivot,
+                        self.pixel_perfect,
+                        self.snap_to_bounds,
+                    );
+                    // apply parallax scrolling if enabled
+                    if (self.enable_parallax) {
+                        if (view.ordered_active_layer) |ol| {
+                            var next = ol.slots.nextSetBit(0);
+                            while (next) |i| {
+                                var layer = firefly.graphics.Layer.byId(i);
+                                if (layer.parallax) |parallax| {
+                                    if (layer.offset) |*off| {
+                                        off[0] = -view.projection.position[0] * parallax[0];
+                                        off[1] = -view.projection.position[1] * parallax[1];
+                                        if (self.pixel_perfect) {
+                                            off[0] = @floor(off[0]);
+                                            off[1] = @floor(off[1]);
+                                        }
                                     }
                                 }
+                                next = ol.slots.nextSetBit(i + 1);
                             }
-                            next = ol.slots.nextSetBit(i + 1);
                         }
                     }
                 }
-            }
-        }
+            };
     }
 
     inline fn getMove(self: *SimplePivotCamera, view: *View) Vector2f {

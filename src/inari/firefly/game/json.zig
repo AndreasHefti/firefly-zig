@@ -184,7 +184,7 @@ fn loadTileSetFromJSON(context: *api.CallContext) void {
         // add tile set as owned reference if requested
         if (context.get(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
-                comp.addCReference(game.TileSet.referenceById(tile_set.id, true));
+                comp.addComponentReference(game.TileSet.referenceById(tile_set.id, true));
         }
     }
 }
@@ -400,7 +400,7 @@ fn loadTileMappingFromJSON(context: *api.CallContext) void {
         // add tile set as owned reference if requested
         if (context.get(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
-                comp.addCReference(game.TileSet.referenceById(tile_mapping.id, true));
+                comp.addComponentReference(game.TileSet.referenceById(tile_mapping.id, true));
         }
     }
 }

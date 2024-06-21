@@ -3,7 +3,7 @@ const firefly = @import("../firefly.zig");
 
 const System = firefly.api.System;
 const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
-const EntityCondition = firefly.api.EntityCondition;
+const EntityTypeCondition = firefly.api.EntityTypeCondition;
 const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
 const EView = firefly.graphics.EView;
 const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
@@ -126,12 +126,12 @@ pub const EText = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultTextRenderer = struct {
-    pub var entity_condition: EntityCondition = undefined;
+    pub var entity_condition: EntityTypeCondition = undefined;
     var text_refs: ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
         text_refs = ViewLayerMapping.new();
-        entity_condition = EntityCondition{
+        entity_condition = EntityTypeCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, EText }),
         };
     }

@@ -1,36 +1,10 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
-
 const utils = firefly.utils;
+const api = firefly.api;
+const physics = firefly.physics;
+const graphics = firefly.graphics;
 
-const Composite = firefly.api.Composite;
-const NamePool = firefly.api.NamePool;
-const Attributes = firefly.api.Attributes;
-const Component = firefly.api.Component;
-const GroupKind = firefly.api.GroupKind;
-const GroupAspectGroup = firefly.api.GroupAspectGroup;
-const ContactMaterialAspect = firefly.physics.ContactMaterialAspect;
-const ContactMaterialAspectGroup = firefly.physics.ContactMaterialAspectGroup;
-const TileTypeKind = firefly.graphics.TileTypeKind;
-const BitMask = firefly.utils.BitMask;
-const IndexFrameList = firefly.physics.IndexFrameList;
-const ContactTypeAspect = firefly.physics.ContactTypeAspect;
-const Asset = firefly.api.Asset;
-const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
-const Entity = firefly.api.Entity;
-const ETransform = firefly.graphics.ETransform;
-const ETile = firefly.graphics.ETile;
-const EView = firefly.graphics.EView;
-const EAnimation = firefly.physics.EAnimation;
-const EContact = firefly.physics.EContact;
-const IndexFrameIntegration = firefly.physics.IndexFrameIntegration;
-const ImageBinding = firefly.api.ImageBinding;
-
-const StringHashMap = std.StringHashMap;
-const DynIndexArray = firefly.utils.DynIndexArray;
-const DynArray = firefly.utils.DynArray;
-const BlendMode = firefly.api.BlendMode;
 const Color = firefly.utils.Color;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
@@ -53,16 +27,16 @@ pub fn init() void {
     if (initialized)
         return;
 
-    TileContactMaterialType.NONE = ContactMaterialAspectGroup.getAspect("NONE");
-    TileContactMaterialType.TERRAIN = ContactMaterialAspectGroup.getAspect("TERRAIN");
-    TileContactMaterialType.PROJECTILE = ContactMaterialAspectGroup.getAspect("PROJECTILE");
-    TileContactMaterialType.WATER = ContactMaterialAspectGroup.getAspect("WATER");
-    TileContactMaterialType.LADDER = ContactMaterialAspectGroup.getAspect("LADDER");
-    TileContactMaterialType.ROPE = ContactMaterialAspectGroup.getAspect("ROPE");
-    TileContactMaterialType.INTERACTIVE = ContactMaterialAspectGroup.getAspect("INTERACTIVE");
+    TileContactMaterialType.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
+    TileContactMaterialType.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");
+    TileContactMaterialType.PROJECTILE = physics.ContactMaterialAspectGroup.getAspect("PROJECTILE");
+    TileContactMaterialType.WATER = physics.ContactMaterialAspectGroup.getAspect("WATER");
+    TileContactMaterialType.LADDER = physics.ContactMaterialAspectGroup.getAspect("LADDER");
+    TileContactMaterialType.ROPE = physics.ContactMaterialAspectGroup.getAspect("ROPE");
+    TileContactMaterialType.INTERACTIVE = physics.ContactMaterialAspectGroup.getAspect("INTERACTIVE");
 
-    Component.registerComponent(TileSet);
-    Component.registerComponent(TileMapping);
+    api.Component.registerComponent(TileSet);
+    api.Component.registerComponent(TileMapping);
 }
 
 pub fn deinit() void {
@@ -82,13 +56,13 @@ pub const TileDimensionType = enum {
 };
 
 pub const TileContactMaterialType = struct {
-    pub var NONE: ContactMaterialAspect = undefined;
-    pub var TERRAIN: ContactMaterialAspect = undefined;
-    pub var PROJECTILE: ContactMaterialAspect = undefined;
-    pub var WATER: ContactMaterialAspect = undefined;
-    pub var LADDER: ContactMaterialAspect = undefined;
-    pub var ROPE: ContactMaterialAspect = undefined;
-    pub var INTERACTIVE: ContactMaterialAspect = undefined;
+    pub var NONE: physics.ContactMaterialAspect = undefined;
+    pub var TERRAIN: physics.ContactMaterialAspect = undefined;
+    pub var PROJECTILE: physics.ContactMaterialAspect = undefined;
+    pub var WATER: physics.ContactMaterialAspect = undefined;
+    pub var LADDER: physics.ContactMaterialAspect = undefined;
+    pub var ROPE: physics.ContactMaterialAspect = undefined;
+    pub var INTERACTIVE: physics.ContactMaterialAspect = undefined;
 };
 
 //////////////////////////////////////////////////////////////
@@ -112,9 +86,9 @@ pub const TileTemplate = struct {
     groups: ?String = null,
 
     sprite_data: SpriteData,
-    animation: ?DynArray(TileAnimationFrame) = null,
+    animation: ?utils.DynArray(TileAnimationFrame) = null,
 
-    contact_material_type: ?ContactMaterialAspect = null,
+    contact_material_type: ?physics.ContactMaterialAspect = null,
     contact_mask_name: ?String = null,
 
     _sprite_template_id: ?Index = null,
@@ -126,7 +100,7 @@ pub const TileTemplate = struct {
     pub fn withAnimationFrame(self: TileTemplate, frame: TileAnimationFrame) TileTemplate {
         var _self = self;
         if (_self.animation == null)
-            _self.animation = DynArray(TileAnimationFrame).new(firefly.api.COMPONENT_ALLOC);
+            _self.animation = utils.DynArray(TileAnimationFrame).new(firefly.api.COMPONENT_ALLOC);
 
         if (_self.animation) |*a|
             _ = a.add(frame);
@@ -141,7 +115,7 @@ pub const TileTemplate = struct {
 };
 
 pub const TileSet = struct {
-    pub usingnamespace Component.Trait(
+    pub usingnamespace api.Component.Trait(
         @This(),
         .{
             .name = "TileSet",
@@ -149,17 +123,17 @@ pub const TileSet = struct {
         },
     );
 
-    var contact_mask_cache: StringHashMap(BitMask) = undefined;
+    var contact_mask_cache: std.StringHashMap(utils.BitMask) = undefined;
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     texture_name: String,
     tile_width: Float,
     tile_height: Float,
-    tile_templates: DynArray(TileTemplate) = undefined,
+    tile_templates: utils.DynArray(TileTemplate) = undefined,
 
     pub fn componentTypeInit() !void {
-        contact_mask_cache = StringHashMap(BitMask).init(firefly.api.ALLOC);
+        contact_mask_cache = std.StringHashMap(utils.BitMask).init(firefly.api.ALLOC);
         return;
     }
 
@@ -171,7 +145,7 @@ pub const TileSet = struct {
     }
 
     pub fn construct(self: *TileSet) void {
-        self.tile_templates = DynArray(TileTemplate).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 50);
+        self.tile_templates = utils.DynArray(TileTemplate).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 50);
     }
 
     pub fn destruct(self: *TileSet) void {
@@ -197,7 +171,7 @@ pub const TileSet = struct {
         }
     }
 
-    pub fn createContactMaskFromImage(self: *TileSet, tile_template: *TileTemplate) ?BitMask {
+    pub fn createContactMaskFromImage(self: *TileSet, tile_template: *TileTemplate) ?utils.BitMask {
         if (tile_template.contact_mask_name == null)
             return null;
 
@@ -206,11 +180,11 @@ pub const TileSet = struct {
 
         // create contact mask from image data and cache it
         // make sure involved texture is loaded into GPU
-        Texture.loadByName(self.texture_name);
-        if (Texture.resourceByName(self.texture_name)) |tex| {
+        graphics.Texture.loadByName(self.texture_name);
+        if (graphics.Texture.resourceByName(self.texture_name)) |tex| {
             // load image of texture to CPU
-            const st = SpriteTemplate.byId(tile_template._sprite_template_id.?);
-            var image: ImageBinding = firefly.api.rendering.loadImageRegionFromTexture(
+            const st = graphics.SpriteTemplate.byId(tile_template._sprite_template_id.?);
+            var image: api.ImageBinding = firefly.api.rendering.loadImageRegionFromTexture(
                 tex._binding.?.id,
                 st.texture_bounds,
             );
@@ -218,7 +192,7 @@ pub const TileSet = struct {
 
             const width: usize = firefly.utils.f32_usize(@abs(st.texture_bounds[2]));
             const height: usize = firefly.utils.f32_usize(@abs(st.texture_bounds[3]));
-            var result: BitMask = BitMask.new(
+            var result: utils.BitMask = utils.BitMask.new(
                 firefly.api.ALLOC,
                 width,
                 height,
@@ -247,7 +221,7 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                var st: *SpriteTemplate = SpriteTemplate.new(.{
+                var st: *graphics.SpriteTemplate = graphics.SpriteTemplate.new(.{
                     .name = tt.name,
                     .texture_name = self.texture_name,
                     .texture_bounds = .{
@@ -268,7 +242,7 @@ pub const TileSet = struct {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            var ast: *SpriteTemplate = SpriteTemplate.new(.{
+                            var ast: *graphics.SpriteTemplate = graphics.SpriteTemplate.new(.{
                                 .texture_name = self.texture_name,
                                 .texture_bounds = .{
                                     frame.sprite_data.texture_pos[0],
@@ -291,7 +265,7 @@ pub const TileSet = struct {
         }
 
         // load texture asset for sprites
-        Texture.loadByName(self.texture_name);
+        graphics.Texture.loadByName(self.texture_name);
     }
 
     fn _deactivate(self: *TileSet) void {
@@ -299,14 +273,14 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                SpriteTemplate.disposeById(tt._sprite_template_id.?);
+                graphics.SpriteTemplate.disposeById(tt._sprite_template_id.?);
                 tt._sprite_template_id = null;
                 // cleanup animation if defined
                 if (tt.animation) |*animations| {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            SpriteTemplate.disposeById(frame._sprite_template_id.?);
+                            graphics.SpriteTemplate.disposeById(frame._sprite_template_id.?);
                             frame._sprite_template_id = null;
                         }
                         next_a = animations.slots.nextSetBit(ii + 1);
@@ -330,10 +304,10 @@ pub const TileSetMapping = struct {
 pub const TileLayerData = struct {
     layer: String,
     tint: ?Color = null,
-    blend: ?BlendMode = null,
+    blend: ?api.BlendMode = null,
     offset: ?Vector2f = null,
     parallax: ?Vector2f = null,
-    tile_set_mappings: DynArray(TileSetMapping) = undefined,
+    tile_set_mappings: utils.DynArray(TileSetMapping) = undefined,
 
     pub fn withTileSetMapping(self: *TileLayerData, mapping: TileSetMapping) *TileLayerData {
         _ = self.tile_set_mappings.add(mapping);
@@ -351,7 +325,7 @@ pub const TileGridData = struct {
 };
 
 pub const TileMapping = struct {
-    pub usingnamespace Component.Trait(
+    pub usingnamespace api.Component.Trait(
         @This(),
         .{
             .name = "TileMapping",
@@ -363,14 +337,14 @@ pub const TileMapping = struct {
     name: ?String = null,
     view_id: Index = UNDEF_INDEX,
 
-    tile_layer_data: DynArray(TileLayerData) = undefined,
-    tile_grid_data: DynArray(TileGridData) = undefined,
-    layer_entity_mapping: DynArray(DynIndexArray) = undefined,
+    tile_layer_data: utils.DynArray(TileLayerData) = undefined,
+    tile_grid_data: utils.DynArray(TileGridData) = undefined,
+    layer_entity_mapping: utils.DynArray(utils.DynIndexArray) = undefined,
 
     pub fn construct(self: *TileMapping) void {
-        self.tile_layer_data = DynArray(TileLayerData).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
-        self.tile_grid_data = DynArray(TileGridData).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
-        self.layer_entity_mapping = DynArray(DynIndexArray).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self.tile_layer_data = utils.DynArray(TileLayerData).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self.tile_grid_data = utils.DynArray(TileGridData).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self.layer_entity_mapping = utils.DynArray(utils.DynIndexArray).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
     }
 
     pub fn destruct(self: *TileMapping) void {
@@ -395,7 +369,7 @@ pub const TileMapping = struct {
 
     pub fn withTileLayerData(self: *TileMapping, tile_layer: TileLayerData) *TileLayerData {
         var tile_layer_data = self.tile_layer_data.addAndGet(tile_layer).ref;
-        tile_layer_data.tile_set_mappings = DynArray(TileSetMapping).newWithRegisterSize(
+        tile_layer_data.tile_set_mappings = utils.DynArray(TileSetMapping).newWithRegisterSize(
             firefly.api.COMPONENT_ALLOC,
             10,
         );
@@ -429,12 +403,12 @@ pub const TileMapping = struct {
                     // add new code -> entity mapping for layer if not existing
                     if (!self.layer_entity_mapping.exists(layer.id))
                         _ = self.layer_entity_mapping.set(
-                            DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 50),
+                            utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 50),
                             layer.id,
                         );
 
-                    var entity_mapping: *DynIndexArray = self.layer_entity_mapping.set(
-                        DynIndexArray.new(firefly.api.ALLOC, 100),
+                    var entity_mapping: *utils.DynIndexArray = self.layer_entity_mapping.set(
+                        utils.DynIndexArray.new(firefly.api.ALLOC, 100),
                         layer.id,
                     );
 
@@ -456,13 +430,13 @@ pub const TileMapping = struct {
                                 if (tile_set.tile_templates.get(ti)) |tile_template| {
 
                                     // create entity from TileTemplate for specific view and layer and add code mapping
-                                    const entity = Entity.new(.{
+                                    const entity = api.Entity.new(.{
                                         .name = firefly.api.NamePool.concat(tile_template.name.?, layer_mapping.layer, "_"),
-                                        .groups = GroupKind.fromStringList(tile_template.groups),
+                                        .groups = api.GroupKind.fromStringList(tile_template.groups),
                                     })
-                                        .withComponent(ETransform{})
-                                        .withComponent(EView{ .view_id = self.view_id, .layer_id = layer.id })
-                                        .withComponent(ETile{
+                                        .withComponent(graphics.ETransform{})
+                                        .withComponent(graphics.EView{ .view_id = self.view_id, .layer_id = layer.id })
+                                        .withComponent(graphics.ETile{
                                         .sprite_template_id = tile_template._sprite_template_id.?,
                                         .tint_color = layer_mapping.tint,
                                         .blend_mode = layer_mapping.blend,
@@ -521,9 +495,9 @@ pub const TileMapping = struct {
         }
     }
 
-    fn addContactData(entity: *Entity, tile_set: *TileSet, tile_template: *TileTemplate) void {
+    fn addContactData(entity: *api.Entity, tile_set: *TileSet, tile_template: *TileTemplate) void {
         if (tile_template.hasContact()) {
-            _ = entity.withComponent(EContact{
+            _ = entity.withComponent(physics.EContact{
                 .bounds = .{
                     .rect = .{
                         0,
@@ -538,9 +512,9 @@ pub const TileMapping = struct {
         }
     }
 
-    fn addAnimationData(entity: *Entity, tile_template: *TileTemplate) void {
+    fn addAnimationData(entity: *api.Entity, tile_template: *TileTemplate) void {
         if (tile_template.animation) |*frames| {
-            var list = IndexFrameList.new();
+            var list = physics.IndexFrameList.new();
             var next = frames.slots.nextSetBit(0);
             while (next) |i| {
                 if (frames.get(i)) |frame|
@@ -548,12 +522,12 @@ pub const TileMapping = struct {
                 next = frames.slots.nextSetBit(i + 1);
             }
 
-            _ = entity.withComponent(EAnimation{})
+            _ = entity.withComponent(physics.EAnimation{})
                 .withAnimation(
                 .{ .duration = list._duration, .looping = true, .active_on_init = true },
-                IndexFrameIntegration{
+                physics.IndexFrameIntegration{
                     .timeline = list,
-                    .property_ref = ETile.Property.FrameId,
+                    .property_ref = graphics.ETile.Property.FrameId,
                 },
             );
         }
@@ -565,7 +539,7 @@ pub const TileMapping = struct {
         while (next) |i| {
             if (self.layer_entity_mapping.get(i)) |entity_mapping| {
                 for (0..entity_mapping.size_pointer) |ii|
-                    Entity.disposeById(entity_mapping.items[ii]);
+                    api.Entity.disposeById(entity_mapping.items[ii]);
                 entity_mapping.deinit();
             }
             next = self.layer_entity_mapping.slots.nextSetBit(i + 1);

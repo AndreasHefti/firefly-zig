@@ -10,7 +10,7 @@ const EComponent = firefly.api.EComponent;
 const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
 const EventDispatch = firefly.utils.EventDispatch;
 const ETransform = firefly.graphics.ETransform;
-const EntityCondition = firefly.api.EntityCondition;
+const EntityTypeCondition = firefly.api.EntityTypeCondition;
 const UpdateEvent = firefly.api.UpdateEvent;
 const AspectGroup = firefly.utils.AspectGroup;
 const BitSet = firefly.utils.BitSet;
@@ -267,7 +267,7 @@ pub fn adjustVelocity(movement: *EMovement) void {
 //////////////////////////////////////////////////////////////
 
 const MovementSystem = struct {
-    pub var entity_condition: EntityCondition = undefined;
+    pub var entity_condition: EntityTypeCondition = undefined;
 
     var movements: BitSet = undefined;
     var moved: BitSet = undefined;
@@ -275,7 +275,7 @@ const MovementSystem = struct {
     var event: MovementEvent = MovementEvent{};
 
     pub fn systemInit() void {
-        entity_condition = EntityCondition{
+        entity_condition = EntityTypeCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EMovement}),
         };
         movements = BitSet.new(firefly.api.COMPONENT_ALLOC);

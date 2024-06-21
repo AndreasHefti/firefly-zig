@@ -3,19 +3,6 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 
-const Task = api.Task;
-const CallContext = api.CallContext;
-const ComponentControl = api.ComponentControl;
-const ComponentControlType = api.ComponentControlType;
-const DynIndexMap = utils.DynIndexMap;
-const UpdateEvent = api.UpdateEvent;
-const ArrayList = std.ArrayList;
-const StringHashMap = std.StringHashMap;
-const StringBuffer = utils.StringBuffer;
-const AspectGroup = utils.AspectGroup;
-const EventDispatch = utils.EventDispatch;
-const DynArray = utils.DynArray;
-const BitSet = utils.BitSet;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const String = utils.String;
@@ -29,7 +16,7 @@ pub fn init() void {
     if (INIT)
         return;
 
-    COMPONENT_INTERFACE_TABLE = DynArray(ComponentTypeInterface).new(api.COMPONENT_ALLOC);
+    COMPONENT_INTERFACE_TABLE = utils.DynArray(ComponentTypeInterface).new(api.COMPONENT_ALLOC);
     registerComponent(Composite);
 }
 
@@ -54,13 +41,13 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 //// Component API
 //////////////////////////////////////////////////////////////
-pub const ComponentAspectGroup = AspectGroup(struct {
+pub const ComponentAspectGroup = utils.AspectGroup(struct {
     pub const name = "ComponentType";
 });
 pub const ComponentKind = ComponentAspectGroup.Kind;
 pub const ComponentAspect = *const ComponentAspectGroup.Aspect;
 
-pub const GroupAspectGroup = AspectGroup(struct {
+pub const GroupAspectGroup = utils.AspectGroup(struct {
     pub const name = "ComponentGroup";
 });
 pub const GroupKind = GroupAspectGroup.Kind;
@@ -70,9 +57,9 @@ const ComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
     clear: *const fn (Index) void,
     deinit: *const fn () void,
-    to_string: *const fn (*StringBuffer) void,
+    to_string: *const fn (*utils.StringBuffer) void,
 };
-var COMPONENT_INTERFACE_TABLE: DynArray(ComponentTypeInterface) = undefined;
+var COMPONENT_INTERFACE_TABLE: utils.DynArray(ComponentTypeInterface) = undefined;
 
 pub const Context = struct {
     name: String,
@@ -98,7 +85,7 @@ pub const CReference = struct {
     dispose: ?*const fn (Index) void,
 };
 
-pub fn print(string_buffer: *StringBuffer) void {
+pub fn print(string_buffer: *utils.StringBuffer) void {
     string_buffer.print("\nComponents:", .{});
     var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
     while (next) |i| {
@@ -163,15 +150,13 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
         }
 
         pub fn referenceById(id: Index, owned: bool) ?CReference {
-            if (pool.items.get(id)) |_| {
-                return .{
-                    .type = aspect,
-                    .id = id,
-                    .activation = if (context.activation) T.activateById else null,
-                    .dispose = if (owned) disposeById else null,
-                };
-            }
-            return null;
+            _ = pool.items.get(id) orelse return null;
+            return .{
+                .type = aspect,
+                .id = id,
+                .activation = if (context.activation) T.activateById else null,
+                .dispose = if (owned) disposeById else null,
+            };
         }
 
         pub fn nextId(id: Index) ?Index {
@@ -182,7 +167,7 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
             pool.clear(id);
         }
 
-        pub fn processBitSet(indices: *BitSet, f: *const fn (*T) void) void {
+        pub fn processBitSet(indices: *utils.BitSet, f: *const fn (*T) void) void {
             var next = indices.nextSetBit(0);
             while (next) |i| {
                 if (pool.items.get(i)) |c| f(c);
@@ -207,17 +192,15 @@ fn GroupingTrait(comptime T: type, comptime adapter: anytype, comptime _: Contex
     }
     return struct {
         pub fn getGroups(id: Index) ?GroupKind {
-            if (adapter.pool.items.get(id)) |c|
-                return c.groups;
-            return null;
+            const c = adapter.pool.items.get(id) orelse return null;
+            return c.groups;
         }
 
         pub fn addToGroup(self: *T, group: GroupAspect) void {
-            if (self.groups == null) {
-                self.groups = GroupAspectGroup.newKind(group);
-            } else {
+            if (self.groups == null)
+                self.groups = GroupAspectGroup.newKind(group)
+            else
                 self.groups.addAspect(group);
-            }
         }
 
         pub fn removeFromGroup(self: *T, group: GroupAspect) void {
@@ -226,19 +209,18 @@ fn GroupingTrait(comptime T: type, comptime adapter: anytype, comptime _: Contex
         }
 
         pub fn isInGroup(self: *T, group: GroupAspect) bool {
-            if (self.groups) |g|
-                return g.hasAspect(group);
-            return false;
+            const g = self.groups orelse return false;
+            return g.hasAspect(group);
         }
 
         fn processGroup(group: GroupAspect, f: *const fn (*T) void) void {
             var next = adapter.pool.items.slots.nextSetBit(0);
             while (next) |i| {
-                if (adapter.pool.items.get(i)) |c| {
-                    if (c.groups) |g|
-                        if (g.hasAspect(group))
-                            f(c);
-                }
+                const c = adapter.pool.items.get(i) orelse continue;
+                const g = c.groups orelse continue;
+                if (g.hasAspect(group))
+                    f(c);
+
                 next = adapter.pool.items.slots.nextSetBit(i + 1);
             }
         }
@@ -310,6 +292,7 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
         pub fn activateById(id: Index, active: bool) void {
             adapter.pool.activate(id, active);
         }
+
         pub fn activateByName(name: String, active: bool) void {
             if (adapter.pool.name_mapping) |*nm| {
                 if (nm.get(name)) |id| {
@@ -321,6 +304,7 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
             if (adapter.pool.active_mapping) |am| return am.isSet(index);
             return false;
         }
+
         pub fn isActiveByName(name: String) bool {
             if (adapter.pool.name_mapping) |*nm| {
                 if (nm.get(name)) |id| {
@@ -329,9 +313,11 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
             }
             return false;
         }
+
         pub fn isActive(self: T) bool {
             return adapter.pool.active_mapping.?.isSet(self.id);
         }
+
         pub fn activeCount() usize {
             return adapter.pool.active_mapping.?.count();
         }
@@ -362,15 +348,15 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
 
 fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
-        pub fn withControl(self: *T, control: *const fn (Index, Index) void, name: ?String) *T {
+        pub fn withControl(self: *T, control: api.ControlFunction, name: ?String) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                const c = ComponentControl.new(.{
+                const c = api.ComponentControl.new(.{
                     .name = name,
                     .component_type = T.aspect.*,
                     .control = control,
                 });
                 cm.map(self.id, c.id);
-                ComponentControl.activateById(c.id, true);
+                api.ComponentControl.activateById(c.id, true);
             }
             return self;
         }
@@ -378,20 +364,20 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
         pub fn withControlOf(self: *T, control_type: anytype) *T {
             if (adapter.pool.control_mapping) |*cm| {
                 const ct = @TypeOf(control_type);
-                const control = ComponentControlType(ct).new(control_type);
+                const control = api.ComponentControlType(ct).new(control_type);
                 cm.map(self.id, control.id);
 
                 if (@hasDecl(ct, "initForComponent"))
                     control_type.initForComponent(self.id);
 
-                ComponentControl.activateById(control.id, true);
+                api.ComponentControl.activateById(control.id, true);
             }
             return self;
         }
 
         pub fn withControlById(self: *T, control_id: Index) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                const c = ComponentControl.byId(control_id);
+                const c = api.ComponentControl.byId(control_id);
                 if (c.component_type == T.aspect)
                     cm.map(self.id, c.id);
             }
@@ -401,7 +387,7 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
 
         pub fn withControlByName(self: *T, name: String) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                if (ComponentControl.byName(name)) |c| {
+                if (api.ComponentControl.byName(name)) |c| {
                     if (c.component_type == T.aspect)
                         cm.map(self.id, c.id);
                 }
@@ -447,13 +433,13 @@ pub fn ComponentPool(comptime T: type) type {
         // ensure type based singleton
         var _type_init = false;
 
-        var items: DynArray(T) = undefined;
+        var items: utils.DynArray(T) = undefined;
         // mappings
-        var active_mapping: ?BitSet = null;
-        var name_mapping: ?StringHashMap(Index) = null;
-        var control_mapping: ?DynIndexMap = null;
+        var active_mapping: ?utils.BitSet = null;
+        var name_mapping: ?std.StringHashMap(Index) = null;
+        var control_mapping: ?utils.DynIndexMap = null;
         // events
-        var eventDispatch: ?EventDispatch(ComponentEvent) = null;
+        var eventDispatch: ?utils.EventDispatch(ComponentEvent) = null;
 
         pub fn init() void {
             if (_type_init)
@@ -470,17 +456,17 @@ pub fn ComponentPool(comptime T: type) type {
                 _type_init = true;
             }
 
-            items = DynArray(T).new(api.COMPONENT_ALLOC);
+            items = utils.DynArray(T).new(api.COMPONENT_ALLOC);
             ComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
 
             if (has_active_mapping)
-                active_mapping = BitSet.newEmpty(api.COMPONENT_ALLOC, 64);
+                active_mapping = utils.BitSet.newEmpty(api.COMPONENT_ALLOC, 64);
 
             if (has_subscribe)
-                eventDispatch = EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
+                eventDispatch = utils.EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
 
             if (has_name_mapping)
-                name_mapping = StringHashMap(Index).init(api.COMPONENT_ALLOC);
+                name_mapping = std.StringHashMap(Index).init(api.COMPONENT_ALLOC);
 
             if (has_component_type_init) {
                 T.componentTypeInit() catch
@@ -488,7 +474,7 @@ pub fn ComponentPool(comptime T: type) type {
             }
 
             if (has_control_mapping) {
-                control_mapping = DynIndexMap.new(api.COMPONENT_ALLOC);
+                control_mapping = utils.DynIndexMap.new(api.COMPONENT_ALLOC);
                 api.subscribeUpdate(update);
             }
         }
@@ -522,7 +508,7 @@ pub fn ComponentPool(comptime T: type) type {
             control_mapping = null;
         }
 
-        fn update(_: UpdateEvent) void {
+        fn update(_: api.UpdateEvent) void {
             if (control_mapping) |cm| {
                 var iterator = cm.mapping.iterator();
                 while (iterator.next()) |e| {
@@ -532,30 +518,29 @@ pub fn ComponentPool(comptime T: type) type {
                         if (!am.isSet(c_id)) continue;
 
                     for (0..e.value_ptr.size_pointer) |i|
-                        ComponentControl.update(e.value_ptr.items[i], c_id);
+                        api.ComponentControl.update(e.value_ptr.items[i], c_id);
                 }
             }
         }
 
         fn register(c: T) *T {
             const id = items.add(c);
-            if (items.get(id)) |result| {
-                result.id = id;
+            const result = items.get(id) orelse unreachable;
 
-                if (name_mapping) |*nm| {
-                    if (result.name) |n| {
-                        if (nm.contains(n))
-                            utils.panic(api.ALLOC, "Component name already exists: {s}", .{n});
-                        nm.put(n, id) catch unreachable;
-                    }
+            result.id = id;
+            if (name_mapping) |*nm| {
+                if (result.name) |n| {
+                    if (nm.contains(n))
+                        utils.panic(api.ALLOC, "Component name already exists: {s}", .{n});
+                    nm.put(n, id) catch unreachable;
                 }
+            }
 
-                if (has_construct)
-                    result.construct();
+            if (has_construct)
+                result.construct();
 
-                notify(ComponentEvent.Type.CREATED, id);
-                return result;
-            } else unreachable;
+            notify(ComponentEvent.Type.CREATED, id);
+            return result;
         }
 
         fn activate(id: Index, a: bool) void {
@@ -604,7 +589,7 @@ pub fn ComponentPool(comptime T: type) type {
             }
         }
 
-        fn toString(string_buffer: *StringBuffer) void {
+        fn toString(string_buffer: *utils.StringBuffer) void {
             string_buffer.print("\n  {s} size: {d}", .{ T.COMPONENT_TYPE_NAME, items.slots.count() });
             var next = items.slots.nextSetBit(0);
             while (next) |i| {
@@ -636,10 +621,10 @@ pub const CompositeLifeCycle = enum {
 };
 
 pub const CompositeObject = struct {
-    name: String,
+    task_ref: ?Index = null,
+    task_name: ?String = null,
     life_cycle: CompositeLifeCycle,
-    task_name: String,
-    attributes: ?api.Attributes,
+    attributes: ?api.Attributes = null,
 };
 
 pub const Composite = struct {
@@ -650,18 +635,17 @@ pub const Composite = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     loaded: bool = false,
-    active: bool = false,
 
     attributes: api.Attributes,
-    objects: DynArray(CompositeObject) = undefined,
-    _loaded_components: DynArray(CReference) = undefined,
+    objects: utils.DynArray(CompositeObject) = undefined,
+    _loaded_components: utils.DynArray(CReference) = undefined,
 
     pub fn construct(self: *Composite) void {
-        self.objects = DynArray(CompositeObject).newWithRegisterSize(
+        self.objects = utils.DynArray(CompositeObject).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             5,
         );
-        self._loaded_components = DynArray(CReference).newWithRegisterSize(
+        self._loaded_components = utils.DynArray(CReference).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             3,
         );
@@ -678,19 +662,19 @@ pub const Composite = struct {
         self.attributes = undefined;
     }
 
-    pub fn addAttribute(self: *Composite, name: String, value: String) void {
+    pub fn setAttribute(self: *Composite, name: String, value: String) void {
         self.attributes.put(name, value) catch unreachable;
     }
 
     pub fn withTask(
         self: *Composite,
-        task: Task,
+        task: api.Task,
         life_cycle: CompositeLifeCycle,
-        attributes: ?CallContext,
+        attributes: ?api.CallContext,
     ) *Composite {
-        const _task = Task.new(task);
+        const _task = api.Task.new(task);
         _ = self.objects.add(CompositeObject{
-            .name = _task.name,
+            .task_ref = _task.id,
             .task_name = _task.name,
             .life_cycle = life_cycle,
             .attributes = attributes,
@@ -699,21 +683,30 @@ pub const Composite = struct {
     }
 
     pub fn withObject(self: *Composite, object: CompositeObject) *Composite {
-        if (Task.byName(object.task_name)) |_| {
-            _ = self.objects.add(object);
-        } else utils.panic(api.ALLOC, "No Task with name: {s}", .{object.task_name});
+        if (object.task_ref == null and object.task_name == null)
+            utils.panic(api.ALLOC, "CompositeObject has whether id nor name. {any}", object);
+
+        _ = self.objects.add(object);
         return self;
     }
 
-    pub fn addCReference(self: *Composite, ref: ?CReference) void {
+    pub fn addComponentReference(self: *Composite, ref: ?CReference) void {
         if (ref) |r| _ = self._loaded_components.add(r);
     }
 
     pub fn load(self: *Composite) void {
+        defer self.loaded = true;
+        if (self.loaded)
+            return;
+
         self.runTasks(.LOAD);
     }
 
     pub fn dispose(self: *Composite) void {
+        defer self.loaded = false;
+        if (!self.loaded)
+            return;
+
         // first deactivate if still active
         Composite.activateById(self.id, false);
         // run dispose tasks if defined
@@ -729,6 +722,9 @@ pub const Composite = struct {
     }
 
     pub fn activation(self: *Composite, active: bool) void {
+        if ((active and self.isActive()) or (!active and !self.isActive()))
+            return;
+
         self.runTasks(if (active) .ACTIVATE else .DEACTIVATE);
         // activate all references
         var next = self._loaded_components.slots.nextSetBit(0);
@@ -745,14 +741,17 @@ pub const Composite = struct {
     fn runTasks(self: *Composite, life_cycle: CompositeLifeCycle) void {
         var next = self.objects.slots.nextSetBit(0);
         while (next) |i| {
-            if (self.objects.get(i)) |tr| {
-                if (tr.life_cycle == life_cycle)
-                    Task.runTaskByNameWith(
-                        tr.task_name,
-                        self.id,
-                        tr.attributes orelse null,
-                    );
-            }
+            const tr = self.objects.get(i) orelse {
+                next = self.objects.slots.nextSetBit(i + 1);
+                continue;
+            };
+
+            if (tr.life_cycle == life_cycle)
+                if (tr.task_ref) |id|
+                    api.Task.runTaskByIdWith(id, self.id, tr.attributes)
+                else if (tr.task_name) |name|
+                    api.Task.runTaskByNameWith(name, self.id, tr.attributes);
+
             next = self.objects.slots.nextSetBit(i + 1);
         }
     }

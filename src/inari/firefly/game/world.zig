@@ -56,6 +56,8 @@ pub const Area = struct {};
 pub const Room = struct {
     pub const ATTR_AREA_NAME = "ROOM_AREA_NAME";
 
+    pub var active_room: ?String = null;
+
     pub fn new(name: String) Index {
         if (api.Composite.existsName(name))
             utils.panic(api.ALLOC, "Composite with name exists: {s}", .{name});
@@ -65,10 +67,81 @@ pub const Room = struct {
 
     pub fn addAttribute(room_name: String, attr_name: String, attr_value: String) void {
         if (api.Composite.byName(room_name)) |room|
-            room.attributes.setAttribute(attr_name, attr_value);
+            room.attributes.set(attr_name, attr_value);
     }
 
-    // pub fn addLoadTask(room_name: String, task: api.Task) void {}
+    pub fn addLoadTask(room_name: String, task: api.Task, call_attributes: ?api.Attributes) void {
+        addTask(room_name, task, api.CompositeLifeCycle.LOAD, call_attributes);
+    }
 
-    // pub fn addActivationTask(room_name: String, task: api.Task) void {}
+    pub fn addLoadTaskById(room_name: String, task_id: Index, call_attributes: ?api.Attributes) void {
+        addTaskById(room_name, task_id, api.CompositeLifeCycle.LOAD, call_attributes);
+    }
+
+    pub fn addLoadTaskByName(room_name: String, task_name: String, call_attributes: ?api.Attributes) void {
+        addTaskByName(room_name, task_name, api.CompositeLifeCycle.LOAD, call_attributes);
+    }
+
+    pub fn addActivationTask(room_name: String, task: api.Task, call_attributes: ?api.Attributes) void {
+        addTask(room_name, task, api.CompositeLifeCycle.ACTIVATE, call_attributes);
+    }
+
+    pub fn addActivationTaskById(room_name: String, task_id: Index, call_attributes: ?api.Attributes) void {
+        addTaskById(room_name, task_id, api.CompositeLifeCycle.ACTIVATE, call_attributes);
+    }
+
+    pub fn addActivationTaskByName(room_name: String, task_name: String, call_attributes: ?api.Attributes) void {
+        addTaskByName(room_name, task_name, api.CompositeLifeCycle.ACTIVATE, call_attributes);
+    }
+
+    pub fn addTask(
+        room_name: String,
+        task: api.Task,
+        life_cycle: api.CompositeLifeCycle,
+        call_attributes: ?api.Attributes,
+    ) void {
+        addTaskById(
+            room_name,
+            api.Task.new(task).id,
+            life_cycle,
+            call_attributes,
+        );
+    }
+
+    pub fn addTaskById(
+        room_name: String,
+        task_id: Index,
+        life_cycle: api.CompositeLifeCycle,
+        attributes: ?api.Attributes,
+    ) void {
+        if (api.Composite.byName(room_name)) |room|
+            room.withObject(.{
+                .task_ref = task_id,
+                .life_cycle = life_cycle,
+                .attributes = attributes,
+            });
+    }
+
+    pub fn addTaskByName(
+        room_name: String,
+        task_name: String,
+        life_cycle: api.CompositeLifeCycle,
+        attributes: ?api.Attributes,
+    ) void {
+        if (api.Composite.byName(room_name)) |room|
+            room.withObject(.{
+                .task_name = task_name,
+                .life_cycle = life_cycle,
+                .attributes = attributes,
+            });
+    }
+
+    pub fn load(room_name: String) void {
+        if (api.Composite.byName(room_name)) |room|
+            room.load();
+    }
+
+    pub fn activate(room_name: String) void {
+        api.Composite.activateByName(room_name, true);
+    }
 };

@@ -1,9 +1,7 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const api = firefly.api;
 
-const Component = firefly.api.Component;
-const ComponentEvent = firefly.api.ComponentEvent;
-const Entity = firefly.api.Entity;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
@@ -14,7 +12,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    Component.registerComponent(SystemComponent);
+    api.Component.registerComponent(SystemComponent);
 }
 
 pub fn deinit() void {
@@ -90,28 +88,28 @@ pub fn System(comptime T: type) type {
                 T.systemDeinit();
         }
 
-        fn notifyComponentChange(e: ComponentEvent) void {
+        fn notifyComponentChange(e: api.ComponentEvent) void {
             if (e.c_id) |id| {
                 if (has_component_condition and !T.componentCondition(id))
                     return;
 
                 switch (e.event_type) {
-                    ComponentEvent.Type.ACTIVATED => T.componentRegistration(id, true),
-                    ComponentEvent.Type.DEACTIVATING => T.componentRegistration(id, false),
+                    api.ComponentEvent.Type.ACTIVATED => T.componentRegistration(id, true),
+                    api.ComponentEvent.Type.DEACTIVATING => T.componentRegistration(id, false),
                     else => {},
                 }
             }
         }
 
-        fn notifyEntityChange(e: ComponentEvent) void {
+        fn notifyEntityChange(e: api.ComponentEvent) void {
             if (e.c_id) |id| {
                 switch (e.event_type) {
-                    ComponentEvent.Type.ACTIVATED => {
+                    api.ComponentEvent.Type.ACTIVATED => {
                         if (has_entity_condition and !T.entity_condition.check(id))
                             return;
                         T.entityRegistration(id, true);
                     },
-                    ComponentEvent.Type.DEACTIVATING => T.entityRegistration(id, false),
+                    api.ComponentEvent.Type.DEACTIVATING => T.entityRegistration(id, false),
                     else => {},
                 }
             }
@@ -120,7 +118,7 @@ pub fn System(comptime T: type) type {
         fn activation(active: bool) void {
             if (active) {
                 if (has_entity_registration) {
-                    Entity.subscribe(notifyEntityChange);
+                    api.Entity.subscribe(notifyEntityChange);
                 }
                 if (has_component_registration) {
                     T.component_register_type.subscribe(notifyComponentChange);
@@ -148,7 +146,7 @@ pub fn System(comptime T: type) type {
                 }
             } else {
                 if (has_entity_registration) {
-                    Entity.unsubscribe(notifyEntityChange);
+                    api.Entity.unsubscribe(notifyEntityChange);
                 }
                 if (has_component_registration) {
                     T.component_register_type.unsubscribe(notifyComponentChange);
@@ -179,7 +177,7 @@ pub fn isSystemActive(name: String) bool {
 }
 
 const SystemComponent = struct {
-    pub usingnamespace Component.Trait(SystemComponent, .{ .name = "System", .subscription = false });
+    pub usingnamespace api.Component.Trait(SystemComponent, .{ .name = "System", .subscription = false });
     // struct fields of a System
     id: Index = UNDEF_INDEX,
     name: ?String = null,

@@ -4,7 +4,7 @@ const firefly = @import("../firefly.zig");
 const System = firefly.api.System;
 const UpdateScheduler = firefly.api.UpdateScheduler;
 const EComponent = firefly.api.EComponent;
-const EntityCondition = firefly.api.EntityCondition;
+const EntityTypeCondition = firefly.api.EntityTypeCondition;
 const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
 const UpdateEvent = firefly.api.UpdateEvent;
 const BitSet = firefly.utils.BitSet;
@@ -192,12 +192,12 @@ const StateSystem = struct {
 };
 
 const EntityStateSystem = struct {
-    pub var entity_condition: EntityCondition = undefined;
+    pub var entity_condition: EntityTypeCondition = undefined;
     var entities: BitSet = undefined;
 
     pub fn systemInit() void {
         entities = BitSet.new(firefly.api.COMPONENT_ALLOC);
-        entity_condition = EntityCondition{
+        entity_condition = EntityTypeCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EState}),
         };
     }

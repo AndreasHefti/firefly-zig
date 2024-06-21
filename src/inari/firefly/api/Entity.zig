@@ -1,19 +1,15 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const api = firefly.api;
+const utils = firefly.utils;
 
-const GroupKind = firefly.api.GroupKind;
-const StringBuffer = firefly.utils.StringBuffer;
-const DynArray = firefly.utils.DynArray;
-const Component = firefly.api.Component;
-const Condition = firefly.utils.Condition;
-const AspectGroup = firefly.utils.AspectGroup;
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
 const Vector2f = firefly.utils.Vector2f;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 pub const Entity = struct {
-    pub usingnamespace Component.Trait(Entity, .{
+    pub usingnamespace api.Component.Trait(Entity, .{
         .name = "Entity",
         .control = true,
         .grouping = true,
@@ -22,7 +18,7 @@ pub const Entity = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     kind: EComponentKind = undefined,
-    groups: ?GroupKind = null,
+    groups: ?api.GroupKind = null,
 
     pub fn componentTypeInit() !void {
         if (@This().isInitialized())
@@ -99,13 +95,12 @@ pub const Entity = struct {
     }
 };
 
-pub const EntityCondition = struct {
+pub const EntityTypeCondition = struct {
     accept_kind: ?EComponentKind = null,
     accept_full_only: bool = true,
     dismiss_kind: ?EComponentKind = null,
-    condition: ?Condition(Index) = null,
 
-    pub fn check(self: *EntityCondition, id: Index) bool {
+    pub fn check(self: *EntityTypeCondition, id: Index) bool {
         const e_kind = Entity.byId(id).kind;
         if (self.accept_kind) |*ak| {
             if (self.accept_full_only) {
@@ -118,8 +113,7 @@ pub const EntityCondition = struct {
         }
         if (self.dismiss_kind) |*dk| if (!dk.isNotPartOf(e_kind))
             return false;
-        if (self.condition) |*c| if (!c.check(id))
-            return false;
+
         return true;
     }
 };
@@ -147,11 +141,11 @@ const EComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
     clear: *const fn (Index) void,
     deinit: *const fn () void,
-    to_string: *const fn (*StringBuffer) void,
+    to_string: *const fn (*utils.StringBuffer) void,
 };
-var INTERFACE_TABLE: DynArray(EComponentTypeInterface) = undefined;
+var INTERFACE_TABLE: utils.DynArray(EComponentTypeInterface) = undefined;
 
-pub const EComponentAspectGroup = AspectGroup(struct {
+pub const EComponentAspectGroup = utils.AspectGroup(struct {
     pub const name = "EComponent";
 });
 pub const EComponentKind = EComponentAspectGroup.Kind;
@@ -226,7 +220,7 @@ pub const EComponent = struct {
         if (initialized)
             return;
 
-        INTERFACE_TABLE = DynArray(EComponentTypeInterface).new(firefly.api.ENTITY_ALLOC);
+        INTERFACE_TABLE = utils.DynArray(EComponentTypeInterface).new(firefly.api.ENTITY_ALLOC);
     }
 
     // module deinit
@@ -290,7 +284,7 @@ pub fn EComponentPool(comptime T: type) type {
         // ensure type based singleton
         var initialized = false;
         // internal state
-        var items: DynArray(T) = undefined;
+        var items: utils.DynArray(T) = undefined;
 
         pub fn init() void {
             defer Self.initialized = true;
@@ -300,7 +294,7 @@ pub fn EComponentPool(comptime T: type) type {
             errdefer Self.deinit();
 
             EComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
-            items = DynArray(T).new(firefly.api.ENTITY_ALLOC);
+            items = utils.DynArray(T).new(firefly.api.ENTITY_ALLOC);
             _ = INTERFACE_TABLE.add(EComponentTypeInterface{
                 .activate = Self.activate,
                 .clear = Self.clear,
@@ -373,7 +367,7 @@ pub fn EComponentPool(comptime T: type) type {
             items.delete(id);
         }
 
-        fn toString(string_buffer: *StringBuffer) void {
+        fn toString(string_buffer: *utils.StringBuffer) void {
             string_buffer.print("\n  {s} size: {d}", .{ T.aspect.name, items.size() });
             var next = items.slots.nextSetBit(0);
             while (next) |i| {

@@ -1,20 +1,17 @@
 const std = @import("std");
 const firefly = @import("../../firefly.zig");
+const api = firefly.api;
+const utils = firefly.utils;
 const rl = @cImport(@cInclude("raylib.h"));
 
-const IAudioAPI = firefly.api.IAudioAPI;
-const SoundBinding = firefly.api.SoundBinding;
-const DynArray = firefly.utils.DynArray;
-const Sound = rl.Sound;
-const Music = rl.Music;
 const Float = firefly.utils.Float;
 const String = firefly.utils.String;
 const BindingId = firefly.api.BindingId;
 
-var singleton: ?IAudioAPI() = null;
-pub fn createInputAPI() !IAudioAPI() {
+var singleton: ?api.IAudioAPI() = null;
+pub fn createInputAPI() !api.IAudioAPI() {
     if (singleton == null)
-        singleton = IAudioAPI().init(RaylibAudioAPI.initImpl);
+        singleton = api.IAudioAPI().init(RaylibAudioAPI.initImpl);
 
     return singleton.?;
 }
@@ -22,16 +19,16 @@ pub fn createInputAPI() !IAudioAPI() {
 const RaylibAudioAPI = struct {
     var initialized = false;
 
-    var sounds: DynArray(Sound) = undefined;
-    var music: DynArray(Music) = undefined;
+    var sounds: utils.DynArray(rl.Sound) = undefined;
+    var music: utils.DynArray(rl.Music) = undefined;
 
-    fn initImpl(interface: *IAudioAPI()) void {
+    fn initImpl(interface: *api.IAudioAPI()) void {
         defer initialized = true;
         if (initialized)
             return;
 
-        sounds = DynArray(Sound).new(firefly.api.ALLOC);
-        music = DynArray(Music).new(firefly.api.ALLOC);
+        sounds = utils.DynArray(rl.Sound).new(firefly.api.ALLOC);
+        music = utils.DynArray(rl.Music).new(firefly.api.ALLOC);
 
         interface.initAudioDevice = initAudioDevice;
         interface.closeAudioDevice = closeAudioDevice;
@@ -103,10 +100,10 @@ const RaylibAudioAPI = struct {
         return rl.GetMasterVolume();
     }
 
-    fn loadSound(file: String, channels: usize) SoundBinding {
+    fn loadSound(file: String, channels: usize) api.SoundBinding {
         const sound = rl.LoadSound(firefly.api.NamePool.getCName(file).?);
         defer firefly.api.NamePool.freeCNames();
-        var sound_binding = SoundBinding{ .id = sounds.add(sound) };
+        var sound_binding = api.SoundBinding{ .id = sounds.add(sound) };
         if (channels > 0) sound_binding.channel_1 = sounds.add(rl.LoadSoundAlias(sound));
         if (channels > 1) sound_binding.channel_2 = sounds.add(rl.LoadSoundAlias(sound));
         if (channels > 2) sound_binding.channel_3 = sounds.add(rl.LoadSoundAlias(sound));
@@ -117,7 +114,7 @@ const RaylibAudioAPI = struct {
         return sound_binding;
     }
 
-    fn disposeSound(binding: SoundBinding) void {
+    fn disposeSound(binding: api.SoundBinding) void {
         if (binding.channel_1) |cb| if (sounds.get(cb)) |s| {
             rl.UnloadSoundAlias(s.*);
             sounds.remove(s);

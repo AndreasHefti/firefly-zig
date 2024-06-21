@@ -10,7 +10,7 @@ const MovementEvent = firefly.physics.MovementEvent;
 const Component = firefly.api.Component;
 const Entity = firefly.api.Entity;
 const EComponent = firefly.api.EComponent;
-const EntityCondition = firefly.api.EntityCondition;
+const EntityTypeCondition = firefly.api.EntityTypeCondition;
 const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
 const ETransform = firefly.graphics.ETransform;
 const AspectGroup = firefly.utils.AspectGroup;
@@ -630,12 +630,12 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
 //////////////////////////////////////////////////////////////
 
 const ContactSystem = struct {
-    pub var entity_condition: EntityCondition = undefined;
+    pub var entity_condition: EntityTypeCondition = undefined;
 
     var contact_maps: DynArray(IContactMap) = undefined;
 
     pub fn systemInit() void {
-        entity_condition = EntityCondition{
+        entity_condition = EntityTypeCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{EContact}),
             .dismiss_kind = EComponentAspectGroup.newKindOf(.{ETile}),
         };

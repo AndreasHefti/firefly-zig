@@ -3,7 +3,7 @@ const firefly = @import("../firefly.zig");
 
 const System = firefly.api.System;
 const EComponent = firefly.api.EComponent;
-const EntityCondition = firefly.api.EntityCondition;
+const EntityTypeCondition = firefly.api.EntityTypeCondition;
 const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
 const ComponentEvent = firefly.api.ComponentEvent;
 const EventType = firefly.api.Component.ActionType;
@@ -84,12 +84,12 @@ pub const EShape = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultShapeRenderer = struct {
-    pub var entity_condition: EntityCondition = undefined;
+    pub var entity_condition: EntityTypeCondition = undefined;
     var shape_refs: ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
         shape_refs = ViewLayerMapping.new();
-        entity_condition = EntityCondition{
+        entity_condition = EntityTypeCondition{
             .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, EShape }),
         };
     }
