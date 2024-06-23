@@ -36,13 +36,10 @@ pub fn run(init_c: firefly.api.InitContext) !void {
         .height = 480,
         .fps = 60,
         .title = "Hello Contact",
-        // .flags = &[_]WindowFlag{ WindowFlag.FLAG_WINDOW_RESIZABLE, WindowFlag.FLAG_VSYNC_HINT },
     }, init);
 }
 
 fn init() void {
-    //firefly.api.window.toggleFullscreen();
-    //View.setFullscreen();
     Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

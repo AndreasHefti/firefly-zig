@@ -357,7 +357,7 @@ pub const Layer = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     view_id: Index,
-    order: u8 = 0,
+    order: usize = 0,
     offset: ?Vector2f = null,
     parallax: ?Vector2f = null,
     shader_binding: ?BindingId = null,
@@ -703,6 +703,7 @@ pub const ViewRenderer = struct {
                 // we have no layer so only one render call for this view
                 VIEW_RENDER_EVENT.view_id = view.id;
                 VIEW_RENDER_EVENT.layer_id = null;
+                VIEW_RENDER_EVENT.projection = &view.projection;
                 firefly.api.renderView(VIEW_RENDER_EVENT);
             }
             // end rendering to FBO

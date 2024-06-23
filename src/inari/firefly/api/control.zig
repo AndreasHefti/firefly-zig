@@ -290,6 +290,7 @@ pub const UpdateActionCallback = *const fn (Index, ActionResult) void;
 pub const TaskFunction = *const fn (CallContext) void;
 pub const TaskCallback = *const fn (CallContext) void;
 
+/// Task takes ownership over given attributes and free memory for attributes after use
 pub const Task = struct {
     pub usingnamespace api.Component.Trait(Task, .{
         .name = "Task",
@@ -356,6 +357,11 @@ pub const Task = struct {
         self.function(context);
         if (self.callback) |c|
             c(context);
+
+        if (attributes) |attrs| {
+            var a = attrs;
+            a.deinit();
+        }
     }
 
     pub fn format(
@@ -365,7 +371,7 @@ pub const Task = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "Task[ id:{d} name:{?s} run_once:{} blocking:{} callback:{} ], ",
+            "Task[ id:{d} name:{?s} run_once:{any} blocking:{any} callback:{any} ] ",
             .{ self.id, self.name, self.run_once, self.blocking, self.callback != null },
         );
     }

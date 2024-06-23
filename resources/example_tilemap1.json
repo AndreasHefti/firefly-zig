@@ -1,6 +1,5 @@
 {
     "name": "TileMapping",
-    "view_name": "TestView",
     "tile_sets": [
         { "code_offset": 1, "resource": { "name": "TestTileSet" }}
     ],

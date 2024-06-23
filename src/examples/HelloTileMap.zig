@@ -14,6 +14,7 @@ const room_tile_width = 20;
 const room_tile_height = 10;
 const room_pixel_width = tile_width * room_tile_width * zoom;
 const room_pixel_height = tile_height * room_tile_height * zoom;
+const view_name: String = "TestView";
 const layer1: String = "Background";
 const layer2: String = "Foreground";
 
@@ -31,9 +32,9 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    // view with two layer
-    const view_id = graphics.View.new(.{
-        .name = "TestView",
+    // view, layer are auto-created by tile mapping if not present
+    _ = graphics.View.new(.{
+        .name = view_name,
         .position = .{ 0, 0 },
         .projection = .{
             .width = room_pixel_width,
@@ -42,38 +43,25 @@ fn init() void {
         },
     }).id;
 
-    const layer1_id = graphics.Layer.new(.{
-        .name = layer1,
-        .view_id = view_id,
-        .order = 1,
-    }).id;
-    const layer2_id = graphics.Layer.new(.{
-        .name = layer2,
-        .view_id = view_id,
-        .order = 2,
-    }).id;
-
     // load atlas and create tile set with task
-    var attributes = firefly.api.Attributes.new();
-    defer attributes.deinit();
-    attributes.set(firefly.game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json");
     firefly.api.Task.runTaskByNameWith(
         firefly.game.JSONTasks.LOAD_TILE_SET,
         null,
-        attributes,
+        api.Attributes.newWith(.{
+            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
+        }),
     );
 
     // load tile mapping from json
-    attributes.set(firefly.game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json");
     firefly.api.Task.runTaskByNameWith(
         firefly.game.JSONTasks.LOAD_TILE_MAPPING,
         null,
-        attributes,
+        api.Attributes.newWith(.{
+            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
+            .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
+        }),
     );
 
     // activate
-    graphics.Layer.activateById(layer1_id, true);
-    graphics.Layer.activateById(layer2_id, true);
-    graphics.View.activateById(view_id, true);
     game.TileMapping.activateByName("TileMapping", true);
 }

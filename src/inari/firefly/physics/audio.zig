@@ -1,14 +1,11 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const api = firefly.api;
+const utils = firefly.utils;
 
-const Component = firefly.api.Component;
+const String = firefly.utils.String;
 const Index = firefly.utils.Index;
 const Float = firefly.utils.Float;
-const Asset = firefly.api.Asset;
-const AssetComponent = firefly.api.AssetComponent;
-const String = firefly.utils.String;
-const BindingId = firefly.api.BindingId;
-const SoundBinding = firefly.api.SoundBinding;
 
 //////////////////////////////////////////////////////////////
 //// audio init
@@ -21,8 +18,8 @@ pub fn init() void {
     if (initialized)
         return;
 
-    Asset(Sound).init();
-    Asset(Music).init();
+    api.Asset(Sound).init();
+    api.Asset(Music).init();
 }
 
 pub fn deinit() void {
@@ -30,8 +27,8 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    Asset(Sound).deinit();
-    Asset(Music).deinit();
+    api.Asset(Sound).deinit();
+    api.Asset(Music).deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -43,16 +40,44 @@ pub const AudioPlayer = struct {
         playSoundByIdPro(id, null, null, null, override);
     }
 
-    pub fn playSoundByIdPro(id: Index, volume: ?Float, pitch: ?Float, pan: ?Float, channel: ?usize, override: bool) void {
-        if (Sound.getResourceById(id)) |sound| playSound(sound, volume, pitch, pan, channel, override);
+    pub fn playSoundByIdPro(
+        id: Index,
+        volume: ?Float,
+        pitch: ?Float,
+        pan: ?Float,
+        channel: ?usize,
+        override: bool,
+    ) void {
+        if (Sound.getResourceById(id)) |sound| playSound(
+            sound,
+            volume,
+            pitch,
+            pan,
+            channel,
+            override,
+        );
     }
 
     pub fn playSoundByName(name: String, override: bool) void {
         playSoundByNamePro(name, null, null, null, override);
     }
 
-    pub fn playSoundByNamePro(name: String, volume: ?Float, pitch: ?Float, pan: ?Float, channel: ?usize, override: bool) void {
-        if (Sound.getResourceByName(name)) |sound| playSound(sound, volume, pitch, pan, channel, override);
+    pub fn playSoundByNamePro(
+        name: String,
+        volume: ?Float,
+        pitch: ?Float,
+        pan: ?Float,
+        channel: ?usize,
+        override: bool,
+    ) void {
+        if (Sound.getResourceByName(name)) |sound| playSound(
+            sound,
+            volume,
+            pitch,
+            pan,
+            channel,
+            override,
+        );
     }
 
     inline fn playSound(sound: *Sound, volume: ?Float, pitch: ?Float, pan: ?Float, channel: ?usize, override: bool) void {
@@ -126,9 +151,9 @@ pub const Sound = struct {
     pan: Float = 0,
     channels: usize = 0,
 
-    _binding: ?SoundBinding = null,
+    _binding: ?api.SoundBinding = null,
 
-    pub fn loadResource(component: *AssetComponent) void {
+    pub fn loadResource(component: *api.AssetComponent) void {
         if (Sound.resourceById(component.resource_id)) |res| {
             if (res._binding != null)
                 return; // already loaded
@@ -137,7 +162,7 @@ pub const Sound = struct {
         }
     }
 
-    pub fn disposeResource(component: *AssetComponent) void {
+    pub fn disposeResource(component: *api.AssetComponent) void {
         if (Sound.resourceById(component.resource_id)) |res| {
             if (res._binding) |b| {
                 firefly.api.audio.disposeSound(b);
@@ -160,9 +185,9 @@ pub const Music = struct {
     pitch: Float = 0,
     pan: Float = 0,
 
-    _binding: ?BindingId = null,
+    _binding: ?api.BindingId = null,
 
-    pub fn loadResource(component: *AssetComponent) void {
+    pub fn loadResource(component: *api.AssetComponent) void {
         if (Music.resourceById(component.resource_id)) |res| {
             if (res._binding != null)
                 return; // already loaded
@@ -171,7 +196,7 @@ pub const Music = struct {
         }
     }
 
-    pub fn disposeResource(component: *AssetComponent) void {
+    pub fn disposeResource(component: *api.AssetComponent) void {
         if (Music.resourceById(component.resource_id)) |res| {
             if (res._binding) |b| {
                 firefly.api.audio.disposeMusic(b);

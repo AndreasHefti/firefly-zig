@@ -105,8 +105,6 @@ fn loadTileSetFromJSON(context: api.CallContext) void {
         json_resource = firefly.api.loadFromFile(file);
     } else json_resource = context.get(game.TaskAttributes.JSON_RESOURCE);
 
-    std.debug.print("json_resource: {?s}\n", .{json_resource});
-
     if (json_resource) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileSet,
@@ -196,7 +194,6 @@ fn loadTileSetFromJSON(context: api.CallContext) void {
 //////////////////////////////////////////////////////////////
 /// {
 ///     "name": "TileSetMapping1",
-///     "view_name": "view1",
 ///     "tile_sets": [
 ///         { "code_offset": 1, "resource": { "name": "TileSet1", "file": "resources/tileset1.json", "load_task": "LOAD_TILE_SET" }},
 ///         { "code_offset": 10, "resource": { "name": "TileSet2", "file": "resources/tileset2.json"}},
@@ -262,7 +259,6 @@ pub const TileLayerMapping = struct {
 
 pub const JSONTileMapping = struct {
     name: String,
-    view_name: String,
     tile_sets: []const TileSetDef,
     layer_mapping: []const TileLayerMapping,
     tile_grids: []const JSONTileGrid,
@@ -281,6 +277,9 @@ pub const JSONTileGrid = struct {
 };
 
 fn loadTileMappingFromJSON(context: api.CallContext) void {
+    const view_name = context.get(game.TaskAttributes.ATTR_VIEW_NAME) orelse
+        @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
+
     var json_resource: ?String = null;
     defer if (json_resource) |r| firefly.api.ALLOC.free(r);
     if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
@@ -300,9 +299,9 @@ fn loadTileMappingFromJSON(context: api.CallContext) void {
 
         // prepare view
         var view_id: ?Index = null;
-        if (firefly.graphics.View.idByName(jsonTileMapping.view_name)) |vid| {
+        if (firefly.graphics.View.idByName(view_name)) |vid| {
             view_id = vid;
-        } else utils.panic(api.ALLOC, "View does not exists: {s}", .{jsonTileMapping.view_name});
+        } else utils.panic(api.ALLOC, "View does not exists: {s}", .{view_name});
 
         var tile_mapping = game.TileMapping.new(.{
             .name = api.NamePool.alloc(jsonTileMapping.name),
@@ -353,6 +352,7 @@ fn loadTileMappingFromJSON(context: api.CallContext) void {
                 layer_id = firefly.graphics.Layer.new(.{
                     .name = api.NamePool.alloc(layer_mapping.layer_name),
                     .view_id = view_id.?,
+                    .order = i,
                 }).id;
             }
 
@@ -402,7 +402,7 @@ fn loadTileMappingFromJSON(context: api.CallContext) void {
         // add tile set as owned reference if requested
         if (context.get(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
-                comp.addComponentReference(game.TileSet.referenceById(tile_mapping.id, true));
+                comp.addComponentReference(game.TileMapping.referenceById(tile_mapping.id, true));
         }
     }
 }

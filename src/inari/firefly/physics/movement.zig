@@ -1,19 +1,9 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
-const Entity = firefly.api.Entity;
-const Pausing = firefly.api.Pausing;
-const Timer = firefly.api.Timer;
-const UpdateScheduler = firefly.api.UpdateScheduler;
-const System = firefly.api.System;
-const EComponent = firefly.api.EComponent;
-const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
-const EventDispatch = firefly.utils.EventDispatch;
-const ETransform = firefly.graphics.ETransform;
-const EntityTypeCondition = firefly.api.EntityTypeCondition;
-const UpdateEvent = firefly.api.UpdateEvent;
-const AspectGroup = firefly.utils.AspectGroup;
-const BitSet = firefly.utils.BitSet;
 const Index = firefly.utils.Index;
 const Float = firefly.utils.Float;
 const Vector2f = firefly.utils.Vector2f;
@@ -30,8 +20,8 @@ pub fn init() void {
     if (initialized)
         return;
 
-    EComponent.registerEntityComponent(EMovement);
-    System(MovementSystem).createSystem(
+    api.EComponent.registerEntityComponent(EMovement);
+    api.System(MovementSystem).createSystem(
         firefly.Engine.CoreSystems.MovementSystem.name,
         "Processes the movement for all Entities with EMovement component",
         true,
@@ -58,7 +48,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    System(MovementSystem).disposeSystem();
+    api.System(MovementSystem).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -68,7 +58,7 @@ pub fn deinit() void {
 //pub const Direction = enum { NONE, ANY, NORTH, SOUTH, EAST, WEST };
 
 pub const MovementEvent = struct {
-    moved: *BitSet = undefined,
+    moved: *utils.BitSet = undefined,
 };
 pub const MovementListener = *const fn (MovementEvent) void;
 
@@ -86,7 +76,7 @@ pub fn unsubscribe(listener: MovementListener) void {
     MovementSystem.event_dispatch.unregister(listener);
 }
 
-pub const MovementAspectGroup = AspectGroup(struct {
+pub const MovementAspectGroup = utils.AspectGroup(struct {
     pub const name = "Movement";
 });
 pub const MovementAspect = *const MovementAspectGroup.Aspect;
@@ -116,12 +106,12 @@ pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: 
 //////////////////////////////////////////////////////////////
 
 pub const EMovement = struct {
-    pub usingnamespace EComponent.Trait(@This(), "EMovement");
+    pub usingnamespace api.EComponent.Trait(@This(), "EMovement");
 
     id: Index = UNDEF_INDEX,
     kind: MovementKind = undefined,
     integrator: MoveIntegrator = SimpleStepIntegrator,
-    update_scheduler: ?UpdateScheduler = null,
+    update_scheduler: ?api.UpdateScheduler = null,
 
     active: bool = true,
     mass: Float = 0,
@@ -184,7 +174,7 @@ pub fn SimpleStepIntegrator(movement: *EMovement, delta_time_seconds: Float) boo
     adjustVelocity(movement);
 
     if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        if (ETransform.byId(movement.id)) |transform| {
+        if (graphics.ETransform.byId(movement.id)) |transform| {
             transform.move(
                 movement.velocity[0] * delta_time_seconds,
                 movement.velocity[1] * delta_time_seconds,
@@ -203,7 +193,7 @@ pub fn VerletIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
     adjustVelocity(movement);
 
     if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        if (ETransform.byId(movement.id)) |transform| {
+        if (graphics.ETransform.byId(movement.id)) |transform| {
             transform.move(
                 delta_time_seconds * (movement.velocity[0] + delta_time_seconds * movement.acceleration[0] / 2),
                 delta_time_seconds * (movement.velocity[1] + delta_time_seconds * movement.acceleration[1] / 2),
@@ -224,7 +214,7 @@ pub fn EulerIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
     adjustVelocity(movement);
 
     if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        if (ETransform.byId(movement.id)) |transform| {
+        if (graphics.ETransform.byId(movement.id)) |transform| {
             transform.move(
                 movement.velocity[0] * delta_time_seconds,
                 movement.velocity[1] * delta_time_seconds,
@@ -267,21 +257,21 @@ pub fn adjustVelocity(movement: *EMovement) void {
 //////////////////////////////////////////////////////////////
 
 const MovementSystem = struct {
-    pub var entity_condition: EntityTypeCondition = undefined;
+    pub var entity_condition: api.EntityTypeCondition = undefined;
 
-    var movements: BitSet = undefined;
-    var moved: BitSet = undefined;
-    var event_dispatch: EventDispatch(MovementEvent) = undefined;
+    var movements: utils.BitSet = undefined;
+    var moved: utils.BitSet = undefined;
+    var event_dispatch: utils.EventDispatch(MovementEvent) = undefined;
     var event: MovementEvent = MovementEvent{};
 
     pub fn systemInit() void {
-        entity_condition = EntityTypeCondition{
-            .accept_kind = EComponentAspectGroup.newKindOf(.{EMovement}),
+        entity_condition = api.EntityTypeCondition{
+            .accept_kind = api.EComponentAspectGroup.newKindOf(.{EMovement}),
         };
-        movements = BitSet.new(firefly.api.COMPONENT_ALLOC);
-        moved = BitSet.new(firefly.api.COMPONENT_ALLOC);
+        movements = utils.BitSet.new(firefly.api.COMPONENT_ALLOC);
+        moved = utils.BitSet.new(firefly.api.COMPONENT_ALLOC);
         event.moved = &moved;
-        event_dispatch = EventDispatch(MovementEvent).new(firefly.api.COMPONENT_ALLOC);
+        event_dispatch = utils.EventDispatch(MovementEvent).new(firefly.api.COMPONENT_ALLOC);
     }
 
     pub fn systemDeinit() void {
@@ -302,8 +292,8 @@ const MovementSystem = struct {
             movements.unset(id);
     }
 
-    pub fn update(_: UpdateEvent) void {
-        const dt: Float = @min(@as(Float, @floatFromInt(Timer.d_time)) / 1000, 0.5);
+    pub fn update(_: api.UpdateEvent) void {
+        const dt: Float = @min(@as(Float, @floatFromInt(api.Timer.d_time)) / 1000, 0.5);
         moved.clear();
         var next = movements.nextSetBit(0);
         while (next) |i| {

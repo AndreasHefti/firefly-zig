@@ -1,20 +1,9 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
+const api = firefly.api;
 
-const Timer = firefly.api.Timer;
-const Entity = firefly.api.Entity;
-const EComponent = firefly.api.EComponent;
-const System = firefly.api.System;
-const UpdateEvent = firefly.api.UpdateEvent;
-const Engine = firefly.Engine;
-const BitSet = firefly.utils.BitSet;
-const DynArray = firefly.utils.DynArray;
 const String = firefly.utils.String;
-const CubicBezierFunction = firefly.utils.CubicBezierFunction;
-const SpriteSet = firefly.graphics.SpriteSet;
-const Asset = firefly.api.Asset;
-const AssetComponent = firefly.api.AssetComponent;
 const Easing = firefly.utils.Easing;
 const Float = firefly.utils.Float;
 const Index = firefly.utils.Index;
@@ -33,7 +22,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    System(AnimationSystem).createSystem(
+    api.System(AnimationSystem).createSystem(
         firefly.Engine.CoreSystems.AnimationSystem.name,
         "Updates all active animations",
         true,
@@ -41,7 +30,7 @@ pub fn init() void {
     AnimationSystem.registerAnimationType(EasedValueIntegration);
     AnimationSystem.registerAnimationType(EasedColorIntegration);
     AnimationSystem.registerAnimationType(IndexFrameIntegration);
-    EComponent.registerEntityComponent(EAnimation);
+    api.EComponent.registerEntityComponent(EAnimation);
 }
 
 pub fn deinit() void {
@@ -49,7 +38,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    System(AnimationSystem).disposeSystem();
+    api.System(AnimationSystem).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -81,7 +70,7 @@ pub fn Animation(comptime Integration: type) type {
 
         // type state
         var initialized = false;
-        var animations: DynArray(Self) = undefined;
+        var animations: utils.DynArray(Self) = undefined;
 
         // object properties
         duration: usize = 0,
@@ -107,7 +96,7 @@ pub fn Animation(comptime Integration: type) type {
             if (Self.initialized)
                 @panic("Animation Type already initialized: " ++ @typeName(Integration));
 
-            animations = DynArray(Self).new(firefly.api.COMPONENT_ALLOC);
+            animations = utils.DynArray(Self).new(firefly.api.COMPONENT_ALLOC);
             return AnimationTypeReference{
                 ._update_all = Self.updateAll,
                 ._deinit = Self.deinit,
@@ -187,7 +176,7 @@ pub fn Animation(comptime Integration: type) type {
         }
 
         fn update(self: *Self) void {
-            self._t_normalized += 1.0 * firefly.utils.usize_f32(Timer.d_time) / firefly.utils.usize_f32(self.duration);
+            self._t_normalized += 1.0 * firefly.utils.usize_f32(api.Timer.d_time) / firefly.utils.usize_f32(self.duration);
             if (self._t_normalized >= 1.0) {
                 self._t_normalized = 0.0;
                 if (self._suspending or !self.looping) {
@@ -266,13 +255,13 @@ fn AnimationResolver(comptime Integration: type) type {
 //////////////////////////////////////////////////////////////
 
 pub const EAnimation = struct {
-    pub usingnamespace EComponent.Trait(@This(), "EAnimation");
+    pub usingnamespace api.EComponent.Trait(@This(), "EAnimation");
 
     id: Index = UNDEF_INDEX,
-    animations: BitSet = undefined,
+    animations: utils.BitSet = undefined,
 
     pub fn construct(self: *EAnimation) void {
-        self.animations = BitSet.new(firefly.api.ENTITY_ALLOC);
+        self.animations = utils.BitSet.new(firefly.api.ENTITY_ALLOC);
     }
 
     pub const AnimationTemplate = struct {
@@ -333,16 +322,16 @@ pub const EAnimation = struct {
 //////////////////////////////////////////////////////////////
 
 pub const AnimationSystem = struct {
-    var animation_type_refs: DynArray(AnimationTypeReference) = undefined;
-    var animation_refs: DynArray(IAnimation) = undefined;
+    var animation_type_refs: utils.DynArray(AnimationTypeReference) = undefined;
+    var animation_refs: utils.DynArray(IAnimation) = undefined;
 
     pub fn systemInit() void {
-        animation_type_refs = DynArray(AnimationTypeReference).newWithRegisterSize(
+        animation_type_refs = utils.DynArray(AnimationTypeReference).newWithRegisterSize(
             firefly.api.COMPONENT_ALLOC,
             10,
         );
 
-        animation_refs = DynArray(IAnimation).new(firefly.api.COMPONENT_ALLOC);
+        animation_refs = utils.DynArray(IAnimation).new(firefly.api.COMPONENT_ALLOC);
     }
 
     pub fn systemDeinit() void {
@@ -367,9 +356,9 @@ pub const AnimationSystem = struct {
 
     pub fn systemActivation(active: bool) void {
         if (active)
-            Engine.subscribeUpdate(update)
+            firefly.Engine.subscribeUpdate(update)
         else
-            Engine.unsubscribeUpdate(update);
+            firefly.Engine.unsubscribeUpdate(update);
     }
 
     pub fn activateById(id: Index, active: bool) void {
@@ -408,7 +397,7 @@ pub const AnimationSystem = struct {
         }
     }
 
-    fn update(_: UpdateEvent) void {
+    fn update(_: api.UpdateEvent) void {
         var next = animation_type_refs.slots.nextSetBit(0);
         while (next) |i| {
             if (animation_type_refs.get(i)) |ar| ar._update_all();
@@ -509,13 +498,13 @@ pub const IndexFrame = struct {
 };
 
 pub const IndexFrameList = struct {
-    frames: DynArray(IndexFrame) = undefined,
+    frames: utils.DynArray(IndexFrame) = undefined,
     _state_pointer: Index = 0,
     _duration: usize = 0,
 
     pub fn new() IndexFrameList {
         return IndexFrameList{
-            .frames = DynArray(IndexFrame).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10),
+            .frames = utils.DynArray(IndexFrame).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10),
         };
     }
 
@@ -531,24 +520,6 @@ pub const IndexFrameList = struct {
         self._duration += frame_duration;
         return self;
     }
-
-    // pub fn createFromSpriteSet(name: String, frame_duration: usize) ?IndexFrameList {
-    //     AssetComponent.activateByName(name, true);
-    //     if (Asset(SpriteSet).getResourceByName(name)) |res| {
-    //         var result = IndexFrameList.new();
-
-    //         for (res.sprites_indices.items) |spi| {
-    //             const index = result.frames.add(IndexFrame{
-    //                 .sprite_id = res.byListIndex(spi).id,
-    //                 .duration = frame_duration,
-    //             });
-    //             result.indices.set(index);
-    //         }
-    //         return result;
-    //     }
-
-    //     return null;
-    // }
 
     pub fn getAt(self: *IndexFrameList, t_normalized: Float, invert: bool) Index {
         const t: usize = firefly.utils.f32_usize(t_normalized * firefly.utils.usize_f32(self._duration));
@@ -636,7 +607,7 @@ pub const IndexFrameIntegration = struct {
 pub const BezierCurveIntegration = struct {
     pub const resolver = AnimationResolver(BezierCurveIntegration);
 
-    bezier_function: CubicBezierFunction = undefined,
+    bezier_function: utils.CubicBezierFunction = undefined,
     easing: Easing = Easing.Linear,
     property_ref_x: ?*const fn (Index) *Float,
     property_ref_y: ?*const fn (Index) *Float,

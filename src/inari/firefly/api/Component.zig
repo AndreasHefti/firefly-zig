@@ -636,7 +636,7 @@ pub const Composite = struct {
     name: ?String = null,
     loaded: bool = false,
 
-    attributes: api.Attributes,
+    attributes: api.Attributes = undefined,
     objects: utils.DynArray(CompositeObject) = undefined,
     _loaded_components: utils.DynArray(CReference) = undefined,
 
@@ -650,7 +650,7 @@ pub const Composite = struct {
             3,
         );
 
-        self.attributes = std.StringHashMap(String).init(api.COMPONENT_ALLOC);
+        self.attributes = api.Attributes.new();
     }
 
     pub fn destruct(self: *Composite) void {
@@ -684,7 +684,7 @@ pub const Composite = struct {
 
     pub fn withObject(self: *Composite, object: CompositeObject) *Composite {
         if (object.task_ref == null and object.task_name == null)
-            utils.panic(api.ALLOC, "CompositeObject has whether id nor name. {any}", object);
+            utils.panic(api.ALLOC, "CompositeObject has whether id nor name. {any}", .{object});
 
         _ = self.objects.add(object);
         return self;
@@ -722,9 +722,6 @@ pub const Composite = struct {
     }
 
     pub fn activation(self: *Composite, active: bool) void {
-        if ((active and self.isActive()) or (!active and !self.isActive()))
-            return;
-
         self.runTasks(if (active) .ACTIVATE else .DEACTIVATE);
         // activate all references
         var next = self._loaded_components.slots.nextSetBit(0);

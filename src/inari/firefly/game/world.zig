@@ -72,7 +72,7 @@ pub const Room = struct {
     name: String,
     area_ref: ?String = null,
     state: RoomState = RoomState.NONE,
-    bounds: utils.Vector4f = .{},
+    bounds: utils.Vector4f,
 
     start_scene_ref: ?String = null,
     end_scene_ref: ?String = null,
@@ -99,12 +99,56 @@ pub const Room = struct {
     pub fn new(room: Room) *Room {
         var result = rooms.getOrPut(room.name) catch unreachable;
         if (result.found_existing)
-            utils.panic(api.ALLOC, "Room with name already exists: {}", .{room.name});
+            utils.panic(api.ALLOC, "Room with name already exists: {any}", .{room.name});
 
         result.value_ptr.* = room;
         result.value_ptr.composite_ref = api.Composite.new(.{ .name = room.name }).id;
         result.value_ptr.state = RoomState.CREATED;
         return result.value_ptr;
+    }
+
+    pub fn withLoadTaskByName(self: *Room, task_name: String, attributes: anytype) *Room {
+        Room.addTaskByName(
+            self.name,
+            task_name,
+            api.CompositeLifeCycle.LOAD,
+            api.Attributes.newWith(attributes),
+        );
+
+        return self;
+    }
+
+    pub fn withLoadTaskById(self: *Room, task_Id: Index, attributes: anytype) *Room {
+        Room.addTaskById(
+            self.name,
+            task_Id,
+            api.CompositeLifeCycle.LOAD,
+            api.Attributes.newWith(attributes),
+        );
+
+        return self;
+    }
+
+    pub fn withActivationTaskByName(self: *Room, task_name: String, attributes: anytype) *Room {
+        Room.addTaskByName(
+            self.name,
+            task_name,
+            api.CompositeLifeCycle.ACTIVATE,
+            api.Attributes.newWith(attributes),
+        );
+
+        return self;
+    }
+
+    pub fn withActivationTaskById(self: *Room, task_Id: Index, attributes: anytype) *Room {
+        Room.addTaskById(
+            self.name,
+            task_Id,
+            api.CompositeLifeCycle.ACTIVATE,
+            api.Attributes.newWith(attributes),
+        );
+
+        return self;
     }
 
     pub fn deconstruct(self: *Room) void {
@@ -114,7 +158,7 @@ pub const Room = struct {
         _ = rooms.remove(self.name);
     }
 
-    pub fn get(name: String) ?*Room {
+    pub fn byName(name: String) ?*Room {
         return rooms.getPtr(name);
     }
 
@@ -174,7 +218,7 @@ pub const Room = struct {
 
     fn runNextRoom() void {
         if (next_room) |name| {
-            const room = Room.get(name).?;
+            const room = Room.byName(name).?;
             active_room = room.name;
             next_room = null;
             _resume();
@@ -196,7 +240,7 @@ pub const Room = struct {
         // ignore call when there is no active room
         if (active_room == null) return;
 
-        if (Room.get(active_room.?)) |room| {
+        if (Room.byName(active_room.?)) |room| {
             // ignore when room is already stopping
             if (room.state == RoomState.STOPPING) return;
 
@@ -218,14 +262,14 @@ pub const Room = struct {
         // deactivate all room objects
         if (active_room) |name| {
             api.Composite.activateByName(name, false);
-            if (Room.get(name)) |room|
+            if (Room.byName(name)) |room|
                 room.state = RoomState.LOADED;
         }
 
         active_room = null;
 
         if (next_room) |name| {
-            if (Room.get(name)) |room|
+            if (Room.byName(name)) |room|
                 room.start();
         }
     }
@@ -234,48 +278,19 @@ pub const Room = struct {
         deactivateRoom();
     }
 
-    pub fn addAttribute(room_name: String, attr_name: String, attr_value: String) void {
-        checkInCreationState(room_name);
-        if (api.Composite.byName(room_name)) |room|
-            room.attributes.set(attr_name, attr_value);
-    }
-
-    pub fn addLoadTask(room_name: String, task: api.Task, call_attributes: ?api.Attributes) void {
-        addTask(room_name, task, api.CompositeLifeCycle.LOAD, call_attributes);
-    }
-
-    pub fn addLoadTaskById(room_name: String, task_id: Index, call_attributes: ?api.Attributes) void {
-        addTaskById(room_name, task_id, api.CompositeLifeCycle.LOAD, call_attributes);
-    }
-
-    pub fn addLoadTaskByName(room_name: String, task_name: String, call_attributes: ?api.Attributes) void {
-        addTaskByName(room_name, task_name, api.CompositeLifeCycle.LOAD, call_attributes);
-    }
-
-    pub fn addActivationTask(room_name: String, task: api.Task, call_attributes: ?api.Attributes) void {
-        addTask(room_name, task, api.CompositeLifeCycle.ACTIVATE, call_attributes);
-    }
-
-    pub fn addActivationTaskById(room_name: String, task_id: Index, call_attributes: ?api.Attributes) void {
-        addTaskById(room_name, task_id, api.CompositeLifeCycle.ACTIVATE, call_attributes);
-    }
-
-    pub fn addActivationTaskByName(room_name: String, task_name: String, call_attributes: ?api.Attributes) void {
-        addTaskByName(room_name, task_name, api.CompositeLifeCycle.ACTIVATE, call_attributes);
-    }
-
     pub fn addTask(
         room_name: String,
         task: api.Task,
         life_cycle: api.CompositeLifeCycle,
-        call_attributes: ?api.Attributes,
+        attributes: ?api.Attributes,
     ) void {
         checkInCreationState(room_name);
+        addInternalAttributes(room_name, attributes);
         addTaskById(
             room_name,
             api.Task.new(task).id,
             life_cycle,
-            call_attributes,
+            attributes,
         );
     }
 
@@ -286,8 +301,9 @@ pub const Room = struct {
         attributes: ?api.Attributes,
     ) void {
         checkInCreationState(room_name);
-        if (api.Composite.byName(room_name)) |room|
-            room.withObject(.{
+        addInternalAttributes(room_name, attributes);
+        if (api.Composite.byName(room_name)) |comp|
+            _ = comp.withObject(.{
                 .task_ref = task_id,
                 .life_cycle = life_cycle,
                 .attributes = attributes,
@@ -301,16 +317,24 @@ pub const Room = struct {
         attributes: ?api.Attributes,
     ) void {
         checkInCreationState(room_name);
-        if (api.Composite.byName(room_name)) |room|
-            room.withObject(.{
+        addInternalAttributes(room_name, attributes);
+        if (api.Composite.byName(room_name)) |comp|
+            _ = comp.withObject(.{
                 .task_name = task_name,
                 .life_cycle = life_cycle,
                 .attributes = attributes,
             });
     }
 
+    fn addInternalAttributes(room_name: String, attributes: ?api.Attributes) void {
+        if (attributes) |a| {
+            var _a = a;
+            _a.set(firefly.game.TaskAttributes.OWNER_COMPOSITE, room_name);
+        }
+    }
+
     fn checkInCreationState(room_name: String) void {
-        if (Room.get(room_name).?.state != RoomState.CREATED)
+        if (Room.byName(room_name).?.state != RoomState.CREATED)
             utils.panic(api.ALLOC, "Room not in expected CREATED state: {s}", .{room_name});
     }
 };

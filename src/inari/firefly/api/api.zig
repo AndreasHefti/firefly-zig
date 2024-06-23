@@ -262,6 +262,16 @@ pub const Attributes = struct {
         return .{ ._map = std.StringHashMap(String).init(ALLOC) };
     }
 
+    pub fn newWith(attributes: anytype) Attributes {
+        var result: Attributes = .{ ._map = std.StringHashMap(String).init(ALLOC) };
+
+        inline for (attributes) |v| {
+            result.set(v[0], v[1]);
+        }
+
+        return result;
+    }
+
     pub fn deinit(self: *Attributes) void {
         self.clear();
         self._map.deinit();

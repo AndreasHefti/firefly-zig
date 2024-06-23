@@ -1,25 +1,9 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
-const System = firefly.api.System;
-const TileGrid = firefly.graphics.TileGrid;
-const ETile = firefly.graphics.ETile;
-const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
-const EView = firefly.graphics.EView;
-const MovementEvent = firefly.physics.MovementEvent;
-const Component = firefly.api.Component;
-const Entity = firefly.api.Entity;
-const EComponent = firefly.api.EComponent;
-const EntityTypeCondition = firefly.api.EntityTypeCondition;
-const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
-const ETransform = firefly.graphics.ETransform;
-const AspectGroup = firefly.utils.AspectGroup;
-const DynArray = firefly.utils.DynArray;
-const DynIndexArray = firefly.utils.DynIndexArray;
-const BitSet = firefly.utils.BitSet;
-const BitMask = firefly.utils.BitMask;
-const CircleF = firefly.utils.CircleF;
-const RectF = firefly.utils.RectF;
 const Vector2i = firefly.utils.Vector2i;
 const Vector2f = firefly.utils.Vector2f;
 const CInt = firefly.utils.CInt;
@@ -39,10 +23,10 @@ pub fn init() void {
         return;
 
     Contact.init();
-    Component.registerComponent(ContactConstraint);
-    EComponent.registerEntityComponent(EContact);
-    EComponent.registerEntityComponent(EContactScan);
-    System(ContactSystem).createSystem(
+    api.Component.registerComponent(ContactConstraint);
+    api.EComponent.registerEntityComponent(EContact);
+    api.EComponent.registerEntityComponent(EContactScan);
+    api.System(ContactSystem).createSystem(
         firefly.Engine.CoreSystems.ContactSystem.name,
         "Processes contact scans for all moved entities per frame",
         false,
@@ -54,7 +38,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    System(ContactSystem).disposeSystem();
+    api.System(ContactSystem).disposeSystem();
     Contact.deinit();
 }
 
@@ -63,22 +47,22 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 // Contact Type Aspects
-pub const ContactTypeAspectGroup = AspectGroup(struct {
+pub const ContactTypeAspectGroup = utils.AspectGroup(struct {
     pub const name = "ContactType";
 });
 pub const ContactTypeAspect = *const ContactTypeAspectGroup.Aspect;
 pub const ContactTypeKind = ContactTypeAspectGroup.Kind;
 
 // Contact Material Aspects
-pub const ContactMaterialAspectGroup = AspectGroup(struct {
+pub const ContactMaterialAspectGroup = utils.AspectGroup(struct {
     pub const name = "ContactMaterial";
 });
 pub const ContactMaterialAspect = *const ContactMaterialAspectGroup.Aspect;
 pub const ContactMaterialKind = ContactMaterialAspectGroup.Kind;
 
 pub const ContactBounds = struct {
-    rect: RectF,
-    circle: ?CircleF = null,
+    rect: utils.RectF,
+    circle: ?utils.CircleF = null,
 
     pub fn intersects(self: *ContactBounds, offset: Vector2i, other: *ContactBounds, other_offset: Vector2i) bool {
         return intersectContactBounds(self, other, offset, other_offset);
@@ -129,14 +113,14 @@ fn intersectContactBounds(
 
 pub const Contact = struct {
     var initialized = false;
-    var pool: DynArray(Contact) = undefined;
+    var pool: utils.DynArray(Contact) = undefined;
     var size: usize = 0;
     const grow: usize = 100;
 
     entity_id: Index = UNDEF_INDEX,
     type: ?ContactTypeAspect = null,
     material: ?ContactMaterialAspect = null,
-    mask: BitMask,
+    mask: utils.BitMask,
 
     pub fn clear(self: *Contact) void {
         if (!Contact.initialized)
@@ -165,7 +149,7 @@ pub const Contact = struct {
         if (Contact.initialized)
             return;
 
-        pool = DynArray(Contact).new(firefly.api.COMPONENT_ALLOC);
+        pool = utils.DynArray(Contact).new(firefly.api.COMPONENT_ALLOC);
     }
 
     fn deinit() void {
@@ -218,7 +202,7 @@ pub const Contact = struct {
         for (size..size + grow) |i| {
             _ = pool.set(
                 .{
-                    .mask = BitMask.new(firefly.api.COMPONENT_ALLOC, 0, 0),
+                    .mask = utils.BitMask.new(firefly.api.COMPONENT_ALLOC, 0, 0),
                 },
                 i,
             );
@@ -243,7 +227,7 @@ pub const Contact = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ContactConstraint = struct {
-    pub usingnamespace Component.Trait(ContactConstraint, .{ .name = "ContactConstraint" });
+    pub usingnamespace api.Component.Trait(ContactConstraint, .{ .name = "ContactConstraint" });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -308,8 +292,8 @@ pub const ContactConstraint = struct {
             if (!self.match(e_contact.c_type, e_contact.c_material))
                 return false;
 
-            const t1 = ETransform.byId(self_entity).?;
-            const t2 = ETransform.byId(other_entity).?;
+            const t1 = graphics.ETransform.byId(self_entity).?;
+            const t2 = graphics.ETransform.byId(other_entity).?;
             const t2_pos = if (other_offset) |off| t2.position + off else t2.position;
 
             if (intersectContactBounds(&self.scan.bounds, &e_contact.bounds, t1.position, t2_pos)) {
@@ -360,16 +344,16 @@ pub const ContactScan = struct {
     // The contact bounds of this contact scan relative to the entity origin (ETransform origin)
     bounds: ContactBounds,
     // List of entity ids that has a contact with this contact scan
-    entities: DynIndexArray,
+    entities: utils.DynIndexArray,
     // Collection of contact type aspects to filter on (null = any type)
     types: ContactTypeKind,
     // Collection of material aspects to filter on (null = any material)
     materials: ContactMaterialKind,
     // List of Contact ids has a contact with this contact scan (only available on full contact scan)
-    contacts: ?DynIndexArray = null,
+    contacts: ?utils.DynIndexArray = null,
     // The overall accumulated contact mask of all contacts of this scan (only available on full contact scan)
     // The mask has the same dimension like bounds but has the origin (0, 0)
-    mask: ?BitMask = null,
+    mask: ?utils.BitMask = null,
 
     pub fn format(
         self: ContactScan,
@@ -385,7 +369,7 @@ pub const ContactScan = struct {
             .bounds = bounds,
             .types = ContactTypeAspectGroup.newKind(),
             .materials = ContactMaterialAspectGroup.newKind(),
-            .entities = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
+            .entities = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
         };
     }
 
@@ -394,9 +378,9 @@ pub const ContactScan = struct {
             .bounds = bounds,
             .types = ContactTypeAspectGroup.newKind(),
             .materials = ContactMaterialAspectGroup.newKind(),
-            .entities = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
-            .contacts = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
-            .mask = BitMask.new(
+            .entities = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
+            .contacts = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
+            .mask = utils.BitMask.new(
                 firefly.api.COMPONENT_ALLOC,
                 @intFromFloat(bounds.rect[2]),
                 @intFromFloat(bounds.rect[3]),
@@ -497,8 +481,8 @@ pub const CollisionResolver = *const fn (Index) void;
 pub const DebugCollisionResolver: CollisionResolver = debugCollisionResolver;
 
 fn debugCollisionResolver(entity_id: Index) void {
-    const entity = Entity.byId(entity_id);
-    const transform = ETransform.byId(entity_id).?;
+    const entity = api.Entity.byId(entity_id);
+    const transform = graphics.ETransform.byId(entity_id).?;
     const scans = EContactScan.byId(entity_id).?;
 
     std.debug.print("******************************************\n", .{});
@@ -518,26 +502,26 @@ fn debugCollisionResolver(entity_id: Index) void {
 //////////////////////////////////////////////////////////////
 
 pub const EContact = struct {
-    pub usingnamespace EComponent.Trait(EContact, "EContact");
+    pub usingnamespace api.EComponent.Trait(EContact, "EContact");
 
     id: Index = UNDEF_INDEX,
 
     bounds: ContactBounds,
     c_type: ?ContactTypeAspect = null,
     c_material: ?ContactMaterialAspect = null,
-    mask: ?BitMask = null,
+    mask: ?utils.BitMask = null,
 };
 
 pub const EContactScan = struct {
-    pub usingnamespace EComponent.Trait(EContactScan, "EContactScan");
+    pub usingnamespace api.EComponent.Trait(EContactScan, "EContactScan");
 
     id: Index = UNDEF_INDEX,
 
     collision_resolver: ?CollisionResolver = null,
-    constraints: BitSet = undefined,
+    constraints: utils.BitSet = undefined,
 
     pub fn construct(self: *EContactScan) void {
-        self.constraints = BitSet.new(firefly.api.ENTITY_ALLOC);
+        self.constraints = utils.BitSet.new(firefly.api.ENTITY_ALLOC);
     }
 
     pub fn destruct(self: *EContactScan) void {
@@ -570,7 +554,7 @@ pub const IContactMap = struct {
 
     entityRegistration: *const fn (Index, register: bool) void = undefined,
     update: *const fn () void = undefined,
-    getPotentialContactIds: *const fn (region: RectF) ?[]Index = undefined,
+    getPotentialContactIds: *const fn (region: utils.RectF) ?[]Index = undefined,
     deinit: *const fn () void = undefined,
 
     fn init(initImpl: *const fn (*IContactMap) void) IContactMap {
@@ -590,14 +574,14 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
         const Self = @This();
         var initialized = false;
 
-        var entity_ids: DynIndexArray = undefined;
+        var entity_ids: utils.DynIndexArray = undefined;
 
         fn initImpl(interface: *IContactMap) void {
             defer Self.initialized = true;
             if (Self.initialized)
                 return;
 
-            entity_ids = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 50);
+            entity_ids = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 50);
 
             interface.view_id = view_id;
             interface.layer_id = layer_id;
@@ -619,7 +603,7 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
             // does nothing since DummyContactMap is just an ordinary list
         }
 
-        fn getPotentialContactIds(_: RectF) ?[]Index {
+        fn getPotentialContactIds(_: utils.RectF) ?[]Index {
             return entity_ids.items;
         }
     };
@@ -630,16 +614,16 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
 //////////////////////////////////////////////////////////////
 
 const ContactSystem = struct {
-    pub var entity_condition: EntityTypeCondition = undefined;
+    pub var entity_condition: api.EntityTypeCondition = undefined;
 
-    var contact_maps: DynArray(IContactMap) = undefined;
+    var contact_maps: utils.DynArray(IContactMap) = undefined;
 
     pub fn systemInit() void {
-        entity_condition = EntityTypeCondition{
-            .accept_kind = EComponentAspectGroup.newKindOf(.{EContact}),
-            .dismiss_kind = EComponentAspectGroup.newKindOf(.{ETile}),
+        entity_condition = api.EntityTypeCondition{
+            .accept_kind = api.EComponentAspectGroup.newKindOf(.{EContact}),
+            .dismiss_kind = api.EComponentAspectGroup.newKindOf(.{graphics.ETile}),
         };
-        contact_maps = DynArray(IContactMap).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5);
+        contact_maps = utils.DynArray(IContactMap).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5);
         firefly.physics.subscribe(processMoved);
     }
 
@@ -665,7 +649,7 @@ const ContactSystem = struct {
         }
     }
 
-    fn processMoved(event: MovementEvent) void {
+    fn processMoved(event: firefly.physics.MovementEvent) void {
         var next = event.moved.nextSetBit(0);
         while (next) |i| {
             if (EContactScan.byId(i)) |e_scan|
@@ -677,7 +661,7 @@ const ContactSystem = struct {
     fn applyScan(e_scan: *EContactScan) void {
         var view_id: ?Index = null;
         var layer_id: ?Index = null;
-        if (EView.byId(e_scan.id)) |view| {
+        if (graphics.EView.byId(e_scan.id)) |view| {
             view_id = view.view_id;
             layer_id = view.layer_id;
         }
@@ -687,8 +671,8 @@ const ContactSystem = struct {
         var next_constraint = e_scan.constraints.nextSetBit(0);
         while (next_constraint) |i| {
             var constraint = ContactConstraint.byId(i);
-            const t1 = ETransform.byId(e_scan.id).?;
-            const world_contact_bounds = RectF{
+            const t1 = graphics.ETransform.byId(e_scan.id).?;
+            const world_contact_bounds = utils.RectF{
                 t1.position[0] + constraint.scan.bounds.rect[0],
                 t1.position[1] + constraint.scan.bounds.rect[1],
                 constraint.scan.bounds.rect[2],
@@ -726,7 +710,7 @@ const ContactSystem = struct {
     fn scanOnMappings(
         e_scan: *EContactScan,
         constraint: *ContactConstraint,
-        world_contact_bounds: RectF,
+        world_contact_bounds: utils.RectF,
         view_id: ?Index,
         layer_id: ?Index,
     ) bool {
@@ -734,7 +718,7 @@ const ContactSystem = struct {
         var next = contact_maps.slots.nextSetBit(0);
         while (next) |i| {
             if (contact_maps.get(i)) |map| {
-                if (ViewLayerMapping.match(map.view_id, view_id, map.layer_id, layer_id)) {
+                if (graphics.ViewLayerMapping.match(map.view_id, view_id, map.layer_id, layer_id)) {
                     if (map.getPotentialContactIds(world_contact_bounds)) |entity_ids| {
                         for (entity_ids) |entity_id|
                             has_any_contact = has_any_contact or constraint.scanEntity(
@@ -754,15 +738,15 @@ const ContactSystem = struct {
     fn scanOnTileGrids(
         e_scan: *EContactScan,
         constraint: *ContactConstraint,
-        world_contact_bounds: RectF,
+        world_contact_bounds: utils.RectF,
         view_id: ?Index,
         layer_id: ?Index,
     ) bool {
         var has_any_contact = false;
-        var next = TileGrid.nextActiveId(0);
+        var next = graphics.TileGrid.nextActiveId(0);
         while (next) |i| {
-            const tile_grid = TileGrid.byId(i);
-            if (ViewLayerMapping.match(tile_grid.view_id, view_id, tile_grid.layer_id, layer_id)) {
+            const tile_grid = graphics.TileGrid.byId(i);
+            if (graphics.ViewLayerMapping.match(tile_grid.view_id, view_id, tile_grid.layer_id, layer_id)) {
                 if (tile_grid.getIteratorWorldClipF(world_contact_bounds)) |iterator| {
                     var it = iterator;
                     while (it.next()) |entity_id| {
@@ -775,7 +759,7 @@ const ContactSystem = struct {
                 }
             }
 
-            next = TileGrid.nextActiveId(i + 1);
+            next = graphics.TileGrid.nextActiveId(i + 1);
         }
 
         return has_any_contact;

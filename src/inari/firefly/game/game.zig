@@ -115,14 +115,16 @@ pub const GlobalConditions = struct {
 };
 
 pub const TaskAttributes = struct {
-    /// Name of the owner composite. If this is set, task should get the
-    /// composite referenced to and add all created components as owner to the composite
-    pub const OWNER_COMPOSITE = "owner_composite";
+    /// Name of the current view
+    pub const ATTR_VIEW_NAME = "VIEW_NAME";
     /// File resource name. If this is set, a task shall try to load the data from referenced file
     pub const FILE_RESOURCE = "file_name";
     /// JSON String resource reference. If this is set, a task shall interpret this as JSON Sting
     /// and try to load defined components from JSON
     pub const JSON_RESOURCE = "json_resource";
+    /// Name of the owner composite. If this is set, task should get the
+    /// composite referenced to and add all created components as owner to the composite
+    pub const OWNER_COMPOSITE = "owner_composite";
 };
 
 pub const TileDimensionType = tile.TileDimensionType;
@@ -138,6 +140,10 @@ pub const TileLayerData = tile.TileLayerData;
 pub const JSONTasks = json.JSONTasks;
 pub const JSONTile = json.JSONTile;
 pub const JSONTileSet = json.JSONTileSet;
+
+pub const Room = world.Room;
+pub const RoomState = world.RoomState;
+pub const Area = world.Area;
 
 //////////////////////////////////////////////////////////////
 //// Simple pivot camera

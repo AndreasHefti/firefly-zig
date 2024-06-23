@@ -393,6 +393,8 @@ pub const TileMapping = struct {
     }
 
     fn _activate(self: *TileMapping) void {
+        // activate view, if nor already active
+        graphics.View.activateById(self.view_id, true);
         // create entities vor all tiles of layer based tile sets
         // for all TileLayerData ...
         var next = self.tile_layer_data.slots.nextSetBit(0);
@@ -400,6 +402,8 @@ pub const TileMapping = struct {
             if (self.tile_layer_data.get(i)) |layer_mapping| {
                 // get involved layer
                 if (firefly.graphics.Layer.byName(layer_mapping.layer)) |layer| {
+                    // activates the layer if not already active
+                    _ = layer.activate();
                     // add new code -> entity mapping for layer if not existing
                     if (!self.layer_entity_mapping.exists(layer.id))
                         _ = self.layer_entity_mapping.set(
