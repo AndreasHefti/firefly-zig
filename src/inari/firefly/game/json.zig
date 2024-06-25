@@ -44,6 +44,44 @@ pub fn deinit() void {
     api.Task.disposeByName(JSONTasks.LOAD_TILE_SET);
 }
 
+//////////////////////////////////////////////////////////////
+//// API
+//////////////////////////////////////////////////////////////
+
+pub const JSONResourceHandle = struct {
+    json_resource: ?String,
+    free_json_resource: bool,
+
+    pub fn new(context: api.CallContext) JSONResourceHandle {
+        if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
+            return .{
+                .json_resource = firefly.api.loadFromFile(file),
+                .free_json_resource = true,
+            };
+        } else {
+            return .{
+                .json_resource = context.get(game.TaskAttributes.JSON_RESOURCE),
+                .free_json_resource = false,
+            };
+        }
+    }
+
+    pub fn deinit(self: JSONResourceHandle) void {
+        if (self.free_json_resource) {
+            if (self.json_resource) |r| firefly.api.ALLOC.free(r);
+        }
+    }
+};
+
+pub const JSONTasks = struct {
+    pub const LOAD_TILE_SET = "LOAD_TILE_SET";
+    pub const LOAD_TILE_MAPPING = "LOAD_TILE_MAPPING";
+};
+
+//////////////////////////////////////////////////////////////
+//// JSON Binding
+//////////////////////////////////////////////////////////////
+
 /// Refers a component of context specific kind that can be loaded from file.
 /// Usually a load task shall check if the referenced component with "name" already exists.
 /// If so, and "update_task" is set too, update if given task.
@@ -52,11 +90,6 @@ pub const FileResource = struct {
     name: String,
     file: ?String = null,
     load_task: ?String = null,
-};
-
-pub const JSONTasks = struct {
-    pub const LOAD_TILE_SET = "LOAD_TILE_SET";
-    pub const LOAD_TILE_MAPPING = "LOAD_TILE_MAPPING";
 };
 
 //////////////////////////////////////////////////////////////
@@ -99,13 +132,10 @@ pub const JSONTileSet = struct {
 };
 
 fn loadTileSetFromJSON(context: api.CallContext) void {
-    var json_resource: ?String = null;
-    defer if (json_resource) |r| firefly.api.ALLOC.free(r);
-    if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
-        json_resource = firefly.api.loadFromFile(file);
-    } else json_resource = context.get(game.TaskAttributes.JSON_RESOURCE);
+    var json_res_handle = JSONResourceHandle.new(context);
+    defer json_res_handle.deinit();
 
-    if (json_resource) |json| {
+    if (json_res_handle.json_resource) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileSet,
             firefly.api.ALLOC,
@@ -280,13 +310,10 @@ fn loadTileMappingFromJSON(context: api.CallContext) void {
     const view_name = context.get(game.TaskAttributes.ATTR_VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
 
-    var json_resource: ?String = null;
-    defer if (json_resource) |r| firefly.api.ALLOC.free(r);
-    if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
-        json_resource = firefly.api.loadFromFile(file);
-    } else json_resource = context.get(game.TaskAttributes.JSON_RESOURCE);
+    var json_res_handle = JSONResourceHandle.new(context);
+    defer json_res_handle.deinit();
 
-    if (json_resource) |json| {
+    if (json_res_handle.json_resource) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileMapping,
             firefly.api.ALLOC,

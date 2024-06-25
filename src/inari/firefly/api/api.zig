@@ -48,6 +48,8 @@ pub var window: IWindowAPI() = undefined;
 pub var input: IInputAPI() = undefined;
 pub var audio: IAudioAPI() = undefined;
 
+pub const CallCondition = control.CallCondition;
+
 pub const Asset = asset.Asset;
 pub const AssetAspectGroup = asset.AssetAspectGroup;
 pub const AssetKind = AssetAspectGroup.Kind;
@@ -76,8 +78,6 @@ pub const EComponent = entity.EComponent;
 pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
-pub const CCondition = control.CCondition;
-pub const ConditionFunction = control.ConditionFunction;
 pub const CallContext = control.CallContext;
 pub const ControlFunction = control.ControlFunction;
 pub const ControlDispose = control.ControlDispose;
@@ -93,6 +93,10 @@ pub const ComponentControlType = control.ComponentControlType;
 pub const Composite = component.Composite;
 pub const CompositeLifeCycle = component.CompositeLifeCycle;
 pub const CompositeObject = component.CompositeObject;
+pub const State = control.State;
+pub const StateEngine = control.StateEngine;
+pub const EntityStateEngine = control.EntityStateEngine;
+pub const EState = control.EState;
 
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
@@ -280,6 +284,7 @@ pub const Attributes = struct {
     pub fn clear(self: *Attributes) void {
         var it = self._map.iterator();
         while (it.next()) |e| {
+            std.debug.print("*********************** free key: {s} value: {s}\n ", .{ e.key_ptr.*, e.value_ptr.* });
             ALLOC.free(e.key_ptr.*);
             ALLOC.free(e.value_ptr.*);
         }
@@ -314,6 +319,59 @@ pub const Attributes = struct {
         }
     }
 };
+
+//////////////////////////////////////////////////////////////
+//// Condition Type
+//////////////////////////////////////////////////////////////
+
+pub fn Condition(comptime F: type) type {
+    return struct {
+        pub const Function = F;
+
+        var CONDITION_MAP: std.StringHashMap(Function) = undefined;
+
+        pub fn init() void {
+            CONDITION_MAP = std.StringHashMap(Function).init(ALLOC);
+        }
+
+        pub fn deinit() void {
+            CONDITION_MAP.deinit();
+        }
+
+        pub fn register(name: String, c_function: Function) void {
+            if (CONDITION_MAP.contains(name))
+                firefly.utils.panic(ALLOC, "CallCondition with name: {s} already exists", .{name});
+
+            CONDITION_MAP.put(name, c_function) catch unreachable;
+        }
+
+        pub fn get(name: String) ?Function {
+            return CONDITION_MAP.get(name);
+        }
+
+        pub fn AND(comptime c1: String, comptime c2: String) Function {
+            return struct {
+                const _c1: Function = CONDITION_MAP.get(c1).?;
+                const _c2: Function = CONDITION_MAP.get(c2).?;
+
+                fn check(context: *const CallContext) bool {
+                    return _c1(context) and _c2(context);
+                }
+            }.check;
+        }
+
+        pub fn OR(comptime c1: String, comptime c2: String) Function {
+            return struct {
+                const _c1: Function = CONDITION_MAP.get(c1).?;
+                const _c2: Function = CONDITION_MAP.get(c2).?;
+
+                fn check(context: *const CallContext) bool {
+                    return _c1(context) or _c2(context);
+                }
+            }.check;
+        }
+    };
+}
 
 //////////////////////////////////////////////////////////////
 //// Convenient Functions

@@ -9,7 +9,6 @@ pub fn init(init_c: api.InitContext) !void {
         return;
 
     try api.init(init_c);
-    try workflow.init(init_c);
     try graphics.init(init_c);
     try physics.init(init_c);
     try game.init();
@@ -23,7 +22,6 @@ pub fn deinit() void {
     game.deinit();
     physics.deinit();
     graphics.deinit();
-    workflow.deinit();
     api.deinit();
 }
 
@@ -32,7 +30,6 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const api = @import("api/api.zig");
-pub const workflow = @import("workflow/workflow.zig");
 pub const graphics = @import("graphics/graphics.zig");
 pub const physics = @import("physics/physics.zig");
 pub const utils = @import("utils/utils.zig");

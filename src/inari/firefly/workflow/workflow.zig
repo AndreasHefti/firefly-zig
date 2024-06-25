@@ -1,38 +1,38 @@
-const std = @import("std");
-const firefly = @import("../firefly.zig");
-const state = @import("state.zig");
+// const std = @import("std");
+// const firefly = @import("../firefly.zig");
+// const state = @import("state.zig");
 
-const Float = firefly.utils.Float;
+// const Float = firefly.utils.Float;
 
-//////////////////////////////////////////////////////////////
-//// Public API declarations
-//////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////
+// //// Public API declarations
+// //////////////////////////////////////////////////////////////
 
-pub const State = state.State;
-pub const StateEngine = state.StateEngine;
-pub const EntityStateEngine = state.EntityStateEngine;
-pub const EState = state.EState;
+// pub const State = state.State;
+// pub const StateEngine = state.StateEngine;
+// pub const EntityStateEngine = state.EntityStateEngine;
+// pub const EState = state.EState;
 
-//////////////////////////////////////////////////////////////
-//// module init
-//////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////
+// //// module init
+// //////////////////////////////////////////////////////////////
 
-var initialized = false;
+// var initialized = false;
 
-pub fn init(_: firefly.api.InitContext) !void {
-    defer initialized = true;
-    if (initialized)
-        return;
+// pub fn init(_: firefly.api.InitContext) !void {
+//     defer initialized = true;
+//     if (initialized)
+//         return;
 
-    // TODO
-    state.init();
-}
+//     // TODO
+//     state.init();
+// }
 
-pub fn deinit() void {
-    defer initialized = false;
-    if (!initialized)
-        return;
+// pub fn deinit() void {
+//     defer initialized = false;
+//     if (!initialized)
+//         return;
 
-    // TODO
-    state.deinit();
-}
+//     // TODO
+//     state.deinit();
+// }

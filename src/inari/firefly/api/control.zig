@@ -13,16 +13,36 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(CCondition);
+    api.Condition(*const fn (*const CallContext) bool).init();
+    api.Condition(*const fn (Index, ?*State) bool).init();
     api.Component.registerComponent(Task);
     api.Component.registerComponent(Trigger);
     api.Component.registerComponent(ComponentControl);
+    api.Component.registerComponent(StateEngine);
+    api.Component.registerComponent(EntityStateEngine);
+    api.EComponent.registerEntityComponent(EState);
+
+    api.System(StateSystem).createSystem(
+        firefly.Engine.CoreSystems.StateSystem.name,
+        "Updates all active StateEngine components, and change state on conditions",
+        false,
+    );
+    api.System(EntityStateSystem).createSystem(
+        firefly.Engine.CoreSystems.EntityStateSystem.name,
+        "Updates all active Entities with EState components, and change state on conditions",
+        false,
+    );
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
+
+    api.System(StateSystem).disposeSystem();
+    api.System(EntityStateSystem).disposeSystem();
+    api.Condition(*const fn (*const CallContext) bool).deinit();
+    api.Condition(*const fn (Index, ?*State) bool).deinit();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -77,116 +97,10 @@ pub const CallContext = struct {
 };
 
 //////////////////////////////////////////////////////////////////////////
-//// Condition Component
+//// Call Condition
 //////////////////////////////////////////////////////////////////////////
 
-pub const ConditionFunction = *const fn (CallContext) bool;
-pub const ConditionType = enum { f, f_and, f_or, f_not };
-pub const Condition = union(ConditionType) {
-    f: ConditionFunction,
-    f_and: CRef2,
-    f_or: CRef2,
-    f_not: CRef1,
-
-    fn check(self: Condition, context: CallContext) bool {
-        return switch (self) {
-            .f => self.f(context),
-            .f_and => CCondition.byId(self.f_and.left_ref).condition.check(context) and
-                CCondition.byId(self.f_and.right_ref).condition.check(context),
-            .f_or => CCondition.byId(self.f_or.left_ref).condition.check(context) or
-                CCondition.byId(self.f_or.right_ref).condition.check(context),
-            .f_not => !CCondition.byId(self.f_not.f_ref).condition.check(context),
-        };
-    }
-};
-
-pub const CRef2 = struct {
-    left_ref: Index,
-    right_ref: Index,
-};
-
-pub const CRef1 = struct {
-    f_ref: Index,
-};
-
-pub const CCondition = struct {
-    pub usingnamespace api.Component.Trait(
-        @This(),
-        .{
-            .name = "CCondition",
-            .subscription = false,
-            .activation = false,
-        },
-    );
-
-    id: Index = UNDEF_INDEX,
-    name: ?String = null,
-    condition: Condition,
-    context: CallContext = undefined,
-
-    pub fn construct(self: *CCondition) void {
-        self.context = .{ .parent_id = self.id };
-    }
-
-    pub fn destruct(self: *CCondition) void {
-        self.context.deinit();
-    }
-
-    pub fn check(self: *CCondition, caller_id: Index) bool {
-        self.context.caller_id = caller_id;
-        return self.condition.check(self.context);
-    }
-
-    pub fn newANDById(name: String, c1_id: Index, c2_id: Index) *CCondition {
-        return CCondition.new(.{
-            .name = name,
-            .condition = .{ .f_and = .{
-                .left_ref = c1_id,
-                .right_ref = c2_id,
-            } },
-        });
-    }
-
-    pub fn newANDByName(name: String, c1_name: String, c2_name: String) *CCondition {
-        return CCondition.new(.{
-            .name = name,
-            .condition = .{ .f_and = .{
-                .left_ref = CCondition.idByName(c1_name).?,
-                .right_ref = CCondition.idByName(c2_name).?,
-            } },
-        });
-    }
-
-    pub fn newORById(name: String, c1_id: Index, c2_id: Index) *CCondition {
-        return CCondition.new(.{
-            .name = name,
-            .condition = .{ .f_or = .{
-                .left_ref = c1_id,
-                .right_ref = c2_id,
-            } },
-        });
-    }
-
-    pub fn newORByName(name: String, c1_name: String, c2_name: String) *CCondition {
-        return CCondition.new(.{
-            .name = name,
-            .condition = .{ .f_or = .{
-                .left_ref = CCondition.idByName(c1_name).?,
-                .right_ref = CCondition.idByName(c2_name).?,
-            } },
-        });
-    }
-
-    pub fn checkById(c_id: Index, caller_id: Index) bool {
-        return CCondition.byId(c_id).check(caller_id);
-    }
-
-    pub fn checkByName(c_name: String, caller_id: Index) bool {
-        if (CCondition.byName(c_name)) |cc|
-            return cc.check(caller_id);
-        return false;
-    }
-};
+pub const CallCondition = api.Condition(*const fn (*const CallContext) bool);
 
 //////////////////////////////////////////////////////////////////////////
 //// Component Control
@@ -386,8 +300,8 @@ pub const Trigger = struct {
     name: ?String = null,
 
     task_ref: Index,
-    condition_ref: Index,
-    attributes: ?api.Attributes = null,
+    condition: CallCondition.Function,
+    context: CallContext = undefined,
 
     pub fn componentTypeInit() !void {
         firefly.api.subscribeUpdate(update);
@@ -397,19 +311,224 @@ pub const Trigger = struct {
         firefly.api.unsubscribeUpdate(update);
     }
 
+    pub fn construct(self: *Trigger) void {
+        self.context = .{ .parent_id = self.id };
+    }
+
     pub fn destruct(self: *Trigger) void {
-        if (self.attributes) |*a| a.deinit();
-        self.attributes = undefined;
+        self.context.deinit();
     }
 
     fn update(_: api.UpdateEvent) void {
         var next = Trigger.nextActiveId(0);
         while (next) |i| {
             const trigger = Trigger.byId(i);
-            if (CCondition.byId(trigger.condition_ref).check(trigger.id))
-                Task.byId(trigger.task_ref).runWith(trigger.id, trigger.attributes);
+            if (trigger.condition(&trigger.context))
+                Task.byId(trigger.task_ref).runWith(trigger.id, trigger.context.attributes);
 
             next = Trigger.nextActiveId(i + 1);
+        }
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// State API
+//////////////////////////////////////////////////////////////
+
+pub const StateCondition = api.Condition(*const fn (Index, ?*State) bool);
+
+pub const State = struct {
+    id: Index = UNDEF_INDEX,
+    name: ?String,
+    // Note using StateConditionFunction here results in dependency loop detected error (don't know why)
+    condition: ?StateCondition.Function = null,
+    init: ?*const fn (Index) void = null,
+    dispose: ?*const fn (Index) void = null,
+
+    pub fn equals(self: *State, other: ?*State) bool {
+        if (other) |s| {
+            return std.mem.eql(String, self.name, s.name);
+        }
+        return false;
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// State Engine Component
+//////////////////////////////////////////////////////////////
+
+pub const StateEngine = struct {
+    pub usingnamespace api.Component.Trait(StateEngine, .{ .name = "StateEngine" });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String,
+    states: utils.DynArray(State) = undefined,
+    current_state: ?*State = null,
+    update_scheduler: ?api.UpdateScheduler = null,
+
+    pub fn construct(self: *StateEngine) void {
+        self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable;
+    }
+
+    pub fn destruct(self: *StateEngine) void {
+        self.states.deinit();
+    }
+
+    pub fn withState(self: *StateEngine, state: State) *StateEngine {
+        const s = self.states.addAndGet(state);
+        if (state.condition) |condition| {
+            if (condition(self.id, self.current_state))
+                setNewState(self, s.ref);
+        }
+        return self;
+    }
+
+    pub fn setState(self: *StateEngine, name: String) void {
+        var next_state: ?*State = null;
+        var next = self.states.slots.nextSetBit(0);
+        while (next) |i| {
+            next_state = self.states.get(i).?;
+            if (next_state.hasName(name))
+                break;
+            next_state = null;
+            next = self.states.slots.nextSetBit(i + 1);
+        }
+
+        if (next_state) |ns| setNewState(ns);
+    }
+
+    fn setNewState(self: *StateEngine, target: *State) void {
+        if (self.current_state) |cs|
+            if (cs.dispose) |df| df(self.id);
+
+        if (target.init) |in| in(self.id);
+        self.current_state = target;
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// EntityStateEngine
+//////////////////////////////////////////////////////////////
+
+pub const EntityStateEngine = struct {
+    pub usingnamespace api.Component.Trait(EntityStateEngine, .{ .name = "EntityStateEngine" });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String,
+    states: utils.DynArray(State) = undefined,
+
+    pub fn construct(self: *EntityStateEngine) void {
+        self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+    }
+
+    pub fn destruct(self: *EntityStateEngine) void {
+        self.states.deinit();
+    }
+
+    pub fn withState(self: *EntityStateEngine, state: State) *EntityStateEngine {
+        _ = self.states.add(state);
+        return self;
+    }
+
+    fn setNewState(entity: *EState, target: *State) void {
+        if (entity.current_state) |cs|
+            if (cs.dispose) |df| df(entity.id);
+
+        if (target.init) |in| in(entity.id);
+        entity.current_state = target;
+    }
+};
+
+pub const EState = struct {
+    pub usingnamespace api.EComponent.Trait(@This(), "EState");
+
+    id: Index = UNDEF_INDEX,
+    state_engine_ref: Index = undefined,
+    current_state: ?*State = null,
+
+    pub fn withStateEngineByName(self: *EState, name: String) *EState {
+        self.state_engine_ref = EntityStateEngine.idByName(name) orelse undefined;
+        return self;
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// State Systems
+//////////////////////////////////////////////////////////////
+
+const StateSystem = struct {
+    pub fn update(_: api.UpdateEvent) void {
+        StateEngine.processActive(processEngine);
+    }
+
+    fn processEngine(state_engine: *StateEngine) void {
+        if (state_engine.update_scheduler) |u| if (!u.needs_update)
+            return;
+
+        var next = state_engine.states.slots.nextSetBit(0);
+        while (next) |i| {
+            if (state_engine.states.get(i)) |state| {
+                if (state.condition) |condition| {
+                    if (condition(state_engine.id, state_engine.current_state)) {
+                        state_engine.setNewState(state);
+                        return;
+                    }
+                }
+            }
+            next = state_engine.states.slots.nextSetBit(i + 1);
+        }
+    }
+};
+
+const EntityStateSystem = struct {
+    pub var entity_condition: api.EntityTypeCondition = undefined;
+    var entities: utils.BitSet = undefined;
+
+    pub fn systemInit() void {
+        entities = utils.BitSet.new(firefly.api.COMPONENT_ALLOC);
+        entity_condition = api.EntityTypeCondition{
+            .accept_kind = api.EComponentAspectGroup.newKindOf(.{EState}),
+        };
+    }
+
+    pub fn systemDeinit() void {
+        entity_condition = undefined;
+        entities.deinit();
+        entities = undefined;
+    }
+
+    pub fn entityRegistration(id: Index, register: bool) void {
+        entities.setValue(id, register);
+    }
+
+    pub fn update(_: api.UpdateEvent) void {
+        var next = entities.nextSetBit(0);
+        while (next) |i| {
+            if (EState.byId(i)) |e| processEntity(e);
+            next = entities.nextSetBit(i + 1);
+        }
+    }
+
+    inline fn processEntity(entity: *EState) void {
+        const state_engine = EntityStateEngine.byId(entity.state_engine_ref);
+        var next = state_engine.states.slots.nextSetBit(0);
+        while (next) |i| {
+            if (state_engine.states.get(i)) |state| {
+                if (entity.current_state) |cs| {
+                    if (state == cs) {
+                        next = state_engine.states.slots.nextSetBit(i + 1);
+                        continue;
+                    }
+                }
+
+                if (state.condition) |condition| {
+                    if (condition(entity.id, entity.current_state)) {
+                        EntityStateEngine.setNewState(entity, state);
+                        return;
+                    }
+                }
+            }
+            next = state_engine.states.slots.nextSetBit(i + 1);
         }
     }
 };

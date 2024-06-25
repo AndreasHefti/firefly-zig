@@ -65,7 +65,7 @@ pub const Context = struct {
     name: String,
     activation: bool = true,
     name_mapping: bool = true,
-    subscription: bool = true,
+    subscription: bool = true, // TODO make default false
     control: bool = false,
     grouping: bool = false,
 };

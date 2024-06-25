@@ -99,22 +99,22 @@ pub inline fn parseName(value: ?String) ?String {
 
 pub const AspectGroup = aspect.AspectGroup;
 
-pub fn Condition(comptime T: type) type {
-    return struct {
-        const Self = @This();
-        f: *const fn (T) bool,
+// pub fn Condition(comptime T: type) type {
+//     return struct {
+//         const Self = @This();
+//         f: *const fn (T) bool,
 
-        pub fn of(f: *const fn (T) bool) Self {
-            return Self{
-                .f = f,
-            };
-        }
+//         pub fn of(f: *const fn (T) bool) Self {
+//             return Self{
+//                 .f = f,
+//             };
+//         }
 
-        pub fn check(self: *Self, t: T) bool {
-            return self.f(t);
-        }
-    };
-}
+//         pub fn check(self: *Self, t: T) bool {
+//             return self.f(t);
+//         }
+//     };
+// }
 
 pub const StringBuffer = struct {
     buffer: std.ArrayList(u8),

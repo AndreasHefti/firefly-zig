@@ -7,11 +7,11 @@ const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const EMovement = firefly.physics.EMovement;
-const EState = firefly.workflow.EState;
+const EState = firefly.api.EState;
 const Allocator = std.mem.Allocator;
 const Vector2f = utils.Vector2f;
-const State = firefly.workflow.State;
-const EntityStateEngine = firefly.workflow.EntityStateEngine;
+const State = firefly.api.State;
+const EntityStateEngine = firefly.api.EntityStateEngine;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const Float = utils.Float;
@@ -46,11 +46,17 @@ fn init() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     }).id;
 
+    // This is just to test registering conditions works as expected (can also be assigned directly below)
+    firefly.api.StateCondition.register("right down", rightDown);
+    firefly.api.StateCondition.register("right up", rightUp);
+    firefly.api.StateCondition.register("left down", leftDown);
+    firefly.api.StateCondition.register("left up", leftUp);
+
     const state_engine = EntityStateEngine.new(.{ .name = "MoveX" })
-        .withState(.{ .id = 1, .name = "right down", .condition = rightDown })
-        .withState(.{ .id = 2, .name = "right up", .condition = rightUp })
-        .withState(.{ .id = 3, .name = "left down", .condition = leftDown })
-        .withState(.{ .id = 4, .name = "left up", .condition = leftUp })
+        .withState(.{ .id = 1, .name = "right down", .condition = firefly.api.StateCondition.get("right down").? })
+        .withState(.{ .id = 2, .name = "right up", .condition = firefly.api.StateCondition.get("right up").? })
+        .withState(.{ .id = 3, .name = "left down", .condition = firefly.api.StateCondition.get("left down").? })
+        .withState(.{ .id = 4, .name = "left up", .condition = firefly.api.StateCondition.get("left up").? })
         .activate();
 
     for (0..10000) |_| {
@@ -65,7 +71,7 @@ fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(ESprite{ .template_id = sprite_id })
         .withComponent(EMovement{ .velocity = .{ vx, vy } })
-        .withComponent(EState{ .state_engine = state_engine })
+        .withComponent(EState{ .state_engine_ref = state_engine.id })
         .activate().id;
 
     // just the initial state
