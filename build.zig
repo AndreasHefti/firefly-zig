@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
     // create firefly library
     const firefly = b.addStaticLibrary(.{
         .name = "firefly",
-        .root_source_file = .{ .path = "src/inari/firefly/firefly.zig" },
+        .root_source_file = b.path("src/inari/firefly/firefly.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) void {
 
     // expose firefly library as a module
     const firefly_module = b.addModule("firefly", .{
-        .root_source_file = .{ .path = "src/inari/firefly/firefly.zig" },
+        .root_source_file = b.path("src/inari/firefly/firefly.zig"),
     });
     firefly_module.addIncludePath(raylib_dep.path("src/"));
 
@@ -43,7 +43,7 @@ pub fn build(b: *std.Build) void {
         .name = "firefly-zig",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -78,7 +78,7 @@ pub fn build(b: *std.Build) void {
     // but does not run it.
     const unit_tests = b.addTest(.{
         .name = "firefly_test",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = true,
