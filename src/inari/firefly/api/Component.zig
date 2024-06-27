@@ -318,6 +318,27 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
             return adapter.pool.active_mapping.?.isSet(self.id);
         }
 
+        pub fn getWhenActiveById(id: Index) ?*T {
+            if (adapter.pool.active_mapping) |*am| {
+                if (am.isSet(id)) {
+                    return adapter.pool.items.get(id).?;
+                }
+            }
+            return null;
+        }
+
+        pub fn getWhenActiveByName(name: String) ?*T {
+            if (adapter.pool.name_mapping) |*nm| {
+                const id = nm.get(name) orelse return null;
+                if (adapter.pool.active_mapping) |*am| {
+                    if (am.isSet(id)) {
+                        return adapter.pool.items.get(id).?;
+                    }
+                }
+            }
+            return null;
+        }
+
         pub fn activeCount() usize {
             return adapter.pool.active_mapping.?.count();
         }
@@ -348,7 +369,7 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
 
 fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
-        pub fn withControl(self: *T, control: api.ControlFunction, name: ?String) *T {
+        pub fn withControl(self: *T, control: api.ControlFunction, name: ?String, active: bool) *T {
             if (adapter.pool.control_mapping) |*cm| {
                 const c = api.ComponentControl.new(.{
                     .name = name,
@@ -356,12 +377,12 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
                     .control = control,
                 });
                 cm.map(self.id, c.id);
-                api.ComponentControl.activateById(c.id, true);
+                api.ComponentControl.activateById(c.id, active);
             }
             return self;
         }
 
-        pub fn withControlOf(self: *T, control_type: anytype) *T {
+        pub fn withControlOf(self: *T, control_type: anytype, active: bool) *T {
             if (adapter.pool.control_mapping) |*cm| {
                 const ct = @TypeOf(control_type);
                 const control = api.ComponentControlType(ct).new(control_type);
@@ -370,7 +391,7 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
                 if (@hasDecl(ct, "initForComponent"))
                     control_type.initForComponent(self.id);
 
-                api.ComponentControl.activateById(control.id, true);
+                api.ComponentControl.activateById(control.id, active);
             }
             return self;
         }

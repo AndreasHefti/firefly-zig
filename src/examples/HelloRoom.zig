@@ -16,8 +16,8 @@ const room_tile_width: usize = 20;
 const room_tile_height: usize = 10;
 const room_pixel_width: usize = tile_width * room_tile_width;
 const room_pixel_height: usize = tile_height * room_tile_height;
-const screen_width: usize = 400;
-const screen_height: usize = 300;
+const screen_width: usize = 600;
+const screen_height: usize = 400;
 const layer1: String = "Background";
 const layer2: String = "Foreground";
 const start_scene_name = "StartScene";
@@ -52,26 +52,30 @@ fn init() void {
         },
     });
 
-    _ = view.withControlOf(game.SimplePivotCamera{
-        .name = "Camera1",
-        .pixel_perfect = false,
-        .snap_to_bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
-        .pivot = &pivot,
-        .velocity_relative_to_pivot = .{ 0.5, 0.5 },
-        .enable_parallax = true,
-    });
+    _ = view.withControlOf(
+        game.SimplePivotCamera{
+            .name = "Camera1",
+            .pixel_perfect = false,
+            .snap_to_bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
+            .pivot = &pivot,
+            .velocity_relative_to_pivot = .{ 0.5, 0.5 },
+            .enable_parallax = true,
+        },
+        true,
+    );
 
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_UP, api.InputButtonType.UP);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_DOWN, api.InputButtonType.DOWN);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_LEFT, api.InputButtonType.LEFT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_RIGHT, api.InputButtonType.RIGHT);
+    _ = view.withControl(pivot_control, "KeyControl", false);
 
     // crate start and end scene
-    // _ = graphics.Scene.new(.{
-    //     .name = start_scene_name,
-    //     .update_action = startSceneAction,
-    //     .scheduler = api.Timer.getScheduler(20)
-    // });
+    _ = graphics.Scene.new(.{
+        .name = start_scene_name,
+        .update_action = startSceneAction,
+        .scheduler = api.Timer.getScheduler(20),
+    });
     // _ = graphics.Scene.new(.{
     //     .name = end_scene_name,
     //     .update_action = endSceneAction,
@@ -81,6 +85,7 @@ fn init() void {
     // create new Room
     var room = game.Room.new(.{
         .name = "Test Room1",
+        .start_scene_ref = start_scene_name,
         .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
     })
         .withLoadTaskByName(game.JSONTasks.LOAD_TILE_SET, .{
@@ -92,10 +97,9 @@ fn init() void {
     });
 
     room.start();
-    firefly.Engine.subscribeUpdate(pivot_control);
 }
 
-fn pivot_control(_: firefly.api.UpdateEvent) void {
+fn pivot_control(_: api.CallContext) void {
     if (firefly.api.input.checkButtonPressed(api.InputButtonType.UP))
         pivot[1] -= speed;
     if (firefly.api.input.checkButtonPressed(api.InputButtonType.DOWN))
@@ -107,15 +111,38 @@ fn pivot_control(_: firefly.api.UpdateEvent) void {
 }
 
 var start_scene_init = false;
+var color: *utils.Color = undefined;
 fn startSceneAction(_: Index) api.ActionResult {
-    // if (!start_scene_init) {
-    //     // create overlay entity
-    //     api.Entity.new(.{})
-    //         .withComponent(graphics.ETransform{
-    //             .
-    //         })
+    if (!start_scene_init) {
+        // create overlay entity
+        const entity = api.Entity.new(.{ .name = "StartSceneEntity" })
+            .withComponent(graphics.ETransform{
+            .scale = .{ screen_width, screen_height },
+        })
+            .withComponent(graphics.EView{
+            .view_id = graphics.View.idByName(view_name).?,
+            .layer_id = graphics.Layer.idByName(layer2).?,
+        })
+            .withComponent(graphics.EShape{
+            .blend_mode = api.BlendMode.ALPHA,
+            .color = .{ 0, 0, 0, 255 },
+            .shape_type = api.ShapeType.RECTANGLE,
+            .fill = true,
+            .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
+        }).activate();
+        color = &graphics.EShape.byId(entity.id).?.color;
+        start_scene_init = true;
+    }
 
-    // }
+    color[3] -= @min(10, color[3]);
+
+    if (color[3] <= 0) {
+        api.Entity.disposeByName("StartSceneEntity");
+        api.ComponentControl.activateByName("KeyControl", true);
+        return api.ActionResult.Success;
+    }
+
+    return api.ActionResult.Running;
 }
 
 fn endSceneAction(_: Index) api.ActionResult {}

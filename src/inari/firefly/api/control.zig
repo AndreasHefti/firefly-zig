@@ -131,12 +131,13 @@ pub const ComponentControl = struct {
     }
 
     pub fn update(control_id: Index, c_id: Index) void {
-        const c = ComponentControl.byId(control_id);
-        c.control(.{
-            .parent_id = control_id,
-            .caller_id = c_id,
-            .attributes = c.attributes,
-        });
+        if (ComponentControl.getWhenActiveById(control_id)) |c| {
+            c.control(.{
+                .parent_id = control_id,
+                .caller_id = c_id,
+                .attributes = c.attributes,
+            });
+        }
     }
 };
 

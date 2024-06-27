@@ -474,7 +474,7 @@ pub const Scene = struct {
     name: ?String = null,
     delete_after_run: bool = false,
 
-    scheduler: ?api.UpdateScheduler = null,
+    scheduler: ?*api.UpdateScheduler = null,
 
     init_task: ?Index = null,
     dispose_task: ?Index = null,
@@ -570,9 +570,12 @@ pub const Scene = struct {
         var next = Scene.nextActiveId(0);
         while (next) |i| {
             var scene = Scene.byId(i);
-            if (scene.scheduler) |s|
-                if (!s.needs_update)
+            if (scene.scheduler) |s| {
+                if (!s.needs_update) {
+                    next = Scene.nextActiveId(i + 1);
                     continue;
+                }
+            }
 
             const result = scene.update_action(scene.id);
             if (result == .Running) {

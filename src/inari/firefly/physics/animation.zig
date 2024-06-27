@@ -440,6 +440,10 @@ pub const EasedValueIntegration = struct {
     }
 };
 
+//////////////////////////////////////////////////////////////
+//// Color Value Animation
+//////////////////////////////////////////////////////////////
+
 pub const EasedColorIntegration = struct {
     pub const resolver = AnimationResolver(EasedColorIntegration);
 
