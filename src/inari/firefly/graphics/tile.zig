@@ -1,5 +1,8 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
 const AspectGroup = firefly.utils.AspectGroup;
 const System = firefly.api.System;
@@ -236,19 +239,26 @@ pub const TileGrid = struct {
     }
 
     pub inline fn getIteratorForProjection(self: *TileGrid, projection: *const Projection) ?Iterator {
+        var offset: utils.Vector2f = projection.position;
+        if (self.layer_id) |lid| {
+            if (graphics.Layer.byId(lid).offset) |l_off| {
+                offset -= l_off;
+            }
+        }
+
         return getIteratorWorldClipF(
             self,
             .{
-                projection.position[0],
-                projection.position[1],
-                projection.width,
-                projection.height,
+                offset[0] / projection.zoom,
+                offset[1] / projection.zoom,
+                projection.width / projection.zoom,
+                projection.height / projection.zoom,
             },
         );
     }
 
     pub fn getIteratorWorldClipF(self: *TileGrid, clip: RectF) ?Iterator {
-        const intersectionF = firefly.utils.getIntersectionRectF(
+        const intersectionF = utils.getIntersectionRectF(
             .{
                 self.world_position[0],
                 self.world_position[1],
@@ -266,8 +276,8 @@ pub const TileGrid = struct {
             .{
                 @as(usize, @intFromFloat((intersectionF[0] - self.world_position[0]) / self._dimensionsF[2])),
                 @as(usize, @intFromFloat((intersectionF[1] - self.world_position[1]) / self._dimensionsF[3])),
-                @min(@as(usize, @intFromFloat(intersectionF[2] / self._dimensionsF[2] + 1)), self.dimensions[0]),
-                @min(@as(usize, @intFromFloat(intersectionF[3] / self._dimensionsF[3] + 1)), self.dimensions[1]),
+                @min(@as(usize, @intFromFloat(@ceil(intersectionF[2] / self._dimensionsF[2] + 1))), self.dimensions[0]),
+                @min(@as(usize, @intFromFloat(@ceil(intersectionF[3] / self._dimensionsF[3] + 1))), self.dimensions[1]),
             },
         );
     }
@@ -285,12 +295,6 @@ pub const TileGrid = struct {
 
         fn new(grid_ref: *const TileGrid, clip: ?@Vector(4, usize)) Iterator {
             if (clip) |c| {
-                // std.debug.print("clip: x1:{d} x2:{d} y1:{d} y2:{d} \n", .{
-                //     c[0],
-                //     @min(c[0] + c[2], grid_ref.dimensions[0]),
-                //     c[1],
-                //     @min(c[1] + c[3], grid_ref.dimensions[1]),
-                // });
                 return .{
                     ._grid_ref = grid_ref,
                     ._x1 = c[0],

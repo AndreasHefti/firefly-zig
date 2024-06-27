@@ -14,8 +14,8 @@ const tile_width: usize = 16;
 const tile_height: usize = 16;
 const room_tile_width: usize = 20;
 const room_tile_height: usize = 10;
-const room_pixel_width: usize = tile_width * room_tile_width * zoom;
-const room_pixel_height: usize = tile_height * room_tile_height * zoom;
+const room_pixel_width: usize = tile_width * room_tile_width;
+const room_pixel_height: usize = tile_height * room_tile_height;
 const screen_width: usize = 400;
 const screen_height: usize = 300;
 const layer1: String = "Background";
@@ -36,18 +36,35 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     );
 }
 
+const speed = 2;
+var pivot: utils.PosF = .{ 0, 0 };
+
 fn init() void {
 
     // view with two layer
-    _ = graphics.View.new(.{
+    var view = graphics.View.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
         .projection = .{
-            .width = room_pixel_width,
-            .height = room_pixel_height,
+            .width = screen_width,
+            .height = screen_height,
             .zoom = zoom,
         },
-    }).id;
+    });
+
+    _ = view.withControlOf(game.SimplePivotCamera{
+        .name = "Camera1",
+        .pixel_perfect = false,
+        .snap_to_bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
+        .pivot = &pivot,
+        .velocity_relative_to_pivot = .{ 0.5, 0.5 },
+        .enable_parallax = true,
+    });
+
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_UP, api.InputButtonType.UP);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_DOWN, api.InputButtonType.DOWN);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_LEFT, api.InputButtonType.LEFT);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_RIGHT, api.InputButtonType.RIGHT);
 
     // crate start and end scene
     // _ = graphics.Scene.new(.{
@@ -75,6 +92,18 @@ fn init() void {
     });
 
     room.start();
+    firefly.Engine.subscribeUpdate(pivot_control);
+}
+
+fn pivot_control(_: firefly.api.UpdateEvent) void {
+    if (firefly.api.input.checkButtonPressed(api.InputButtonType.UP))
+        pivot[1] -= speed;
+    if (firefly.api.input.checkButtonPressed(api.InputButtonType.DOWN))
+        pivot[1] += speed;
+    if (firefly.api.input.checkButtonPressed(api.InputButtonType.LEFT))
+        pivot[0] -= speed;
+    if (firefly.api.input.checkButtonPressed(api.InputButtonType.RIGHT))
+        pivot[0] += speed;
 }
 
 var start_scene_init = false;

@@ -9,7 +9,8 @@
             "offset": "0,0",
             "blend_mode": "ALPHA",
             "tint_color": "255,255,255,100",
-            "tile_sets_refs": "TestTileSet"
+            "tile_sets_refs": "TestTileSet",
+            "parallax_factor": "-0.2,-0.2"
         },
         {
             "layer_name": "Foreground",

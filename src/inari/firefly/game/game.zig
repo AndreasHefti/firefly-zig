@@ -218,7 +218,3 @@ pub const SimplePivotCamera = struct {
         return self.pivot.* + self.offset - cam_world_pivot;
     }
 };
-
-// pub fn ScreenSizeAdapter(view_id: Index, control_id: Index) void {
-
-// }
