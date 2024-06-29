@@ -45,7 +45,7 @@ fn loadWithView() void {
             .rotation = 0,
         },
     })
-        .withControl(view_control, null)
+        .withControl(view_control, null, true)
         .id;
 
     View.activateById(viewId, true);

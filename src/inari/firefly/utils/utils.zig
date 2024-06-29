@@ -64,6 +64,11 @@ pub inline fn cint_usize(v: c_int) usize {
     return @as(usize, @intCast(v));
 }
 
+pub inline fn cint_float(v: c_int) Float {
+    if (v < 0) return 0;
+    return @as(Float, @floatFromInt(v));
+}
+
 pub inline fn usize_cint(v: usize) c_int {
     return @as(c_int, @intCast(v));
 }
@@ -98,23 +103,6 @@ pub inline fn parseName(value: ?String) ?String {
 }
 
 pub const AspectGroup = aspect.AspectGroup;
-
-// pub fn Condition(comptime T: type) type {
-//     return struct {
-//         const Self = @This();
-//         f: *const fn (T) bool,
-
-//         pub fn of(f: *const fn (T) bool) Self {
-//             return Self{
-//                 .f = f,
-//             };
-//         }
-
-//         pub fn check(self: *Self, t: T) bool {
-//             return self.f(t);
-//         }
-//     };
-// }
 
 pub const StringBuffer = struct {
     buffer: std.ArrayList(u8),

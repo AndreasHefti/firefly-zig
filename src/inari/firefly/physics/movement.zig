@@ -27,20 +27,20 @@ pub fn init() void {
         true,
     );
 
-    BasicMovementAspects.ON_SLOPE_UP = MovementAspectGroup.getAspect("ON_SLOPE_UP");
-    BasicMovementAspects.ON_SLOPE_DOWN = MovementAspectGroup.getAspect("ON_SLOPE_DOWN");
-    BasicMovementAspects.GROUND_TOUCHED = MovementAspectGroup.getAspect("GROUND_TOUCHED");
-    BasicMovementAspects.GROUND_LOOSE = MovementAspectGroup.getAspect("GROUND_LOOSE");
-    BasicMovementAspects.SLIP_RIGHT = MovementAspectGroup.getAspect("SLIP_RIGHT");
-    BasicMovementAspects.SLIP_LEFT = MovementAspectGroup.getAspect("SLIP_RIGHT");
-    BasicMovementAspects.JUMP = MovementAspectGroup.getAspect("JUMP");
-    BasicMovementAspects.DOUBLE_JUMP = MovementAspectGroup.getAspect("DOUBLE_JUMP");
-    BasicMovementAspects.CLIMB_UP = MovementAspectGroup.getAspect("CLIMB_UP");
-    BasicMovementAspects.CLIMB_DOWN = MovementAspectGroup.getAspect("CLIMB_DOWN");
-    BasicMovementAspects.BLOCK_WEST = MovementAspectGroup.getAspect("BLOCK_WEST");
-    BasicMovementAspects.BLOCK_EAST = MovementAspectGroup.getAspect("BLOCK_EAST");
-    BasicMovementAspects.BLOCK_NORTH = MovementAspectGroup.getAspect("BLOCK_NORTH");
-    BasicMovementAspects.BLOCK_SOUTH = MovementAspectGroup.getAspect("BLOCK_SOUTH");
+    MovFlags.ON_SLOPE_UP = MovementAspectGroup.getAspect("ON_SLOPE_UP");
+    MovFlags.ON_SLOPE_DOWN = MovementAspectGroup.getAspect("ON_SLOPE_DOWN");
+    MovFlags.GROUND_TOUCHED = MovementAspectGroup.getAspect("GROUND_TOUCHED");
+    MovFlags.LOST_GROUND = MovementAspectGroup.getAspect("LOST_GROUND");
+    MovFlags.SLIP_RIGHT = MovementAspectGroup.getAspect("SLIP_RIGHT");
+    MovFlags.SLIP_LEFT = MovementAspectGroup.getAspect("SLIP_RIGHT");
+    MovFlags.JUMP = MovementAspectGroup.getAspect("JUMP");
+    MovFlags.DOUBLE_JUMP = MovementAspectGroup.getAspect("DOUBLE_JUMP");
+    MovFlags.CLIMB_UP = MovementAspectGroup.getAspect("CLIMB_UP");
+    MovFlags.CLIMB_DOWN = MovementAspectGroup.getAspect("CLIMB_DOWN");
+    MovFlags.BLOCK_WEST = MovementAspectGroup.getAspect("BLOCK_WEST");
+    MovFlags.BLOCK_EAST = MovementAspectGroup.getAspect("BLOCK_EAST");
+    MovFlags.BLOCK_NORTH = MovementAspectGroup.getAspect("BLOCK_NORTH");
+    MovFlags.BLOCK_SOUTH = MovementAspectGroup.getAspect("BLOCK_SOUTH");
 }
 
 pub fn deinit() void {
@@ -82,11 +82,11 @@ pub const MovementAspectGroup = utils.AspectGroup(struct {
 pub const MovementAspect = *const MovementAspectGroup.Aspect;
 pub const MovementKind = MovementAspectGroup.Kind;
 
-pub const BasicMovementAspects = struct {
+pub const MovFlags = struct {
     pub var ON_SLOPE_UP: MovementAspect = undefined;
     pub var ON_SLOPE_DOWN: MovementAspect = undefined;
     pub var GROUND_TOUCHED: MovementAspect = undefined;
-    pub var GROUND_LOOSE: MovementAspect = undefined;
+    pub var LOST_GROUND: MovementAspect = undefined;
     pub var SLIP_RIGHT: MovementAspect = undefined;
     pub var SLIP_LEFT: MovementAspect = undefined;
     pub var JUMP: MovementAspect = undefined;
@@ -160,6 +160,15 @@ pub const EMovement = struct {
         self.adjust_ground = true;
         self.adjust_block = false;
     }
+
+    pub fn flagAll(self: *EMovement, aspects: anytype, _flag: bool) void {
+        inline for (aspects) |a|
+            flag(self, a, _flag);
+    }
+
+    pub fn flag(self: *EMovement, aspect: MovementAspect, _flag: bool) void {
+        self.kind.activateAspect(aspect.*, _flag);
+    }
 };
 
 //////////////////////////////////////////////////////////////
@@ -227,13 +236,13 @@ pub fn EulerIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
 
 pub fn adjustVelocity(movement: *EMovement) void {
     if (movement.adjust_block) {
-        if (movement.kind.hasAspect(BasicMovementAspects.BLOCK_NORTH) and movement.velocity[1] < 0)
+        if (movement.kind.hasAspect(MovFlags.BLOCK_NORTH) and movement.velocity[1] < 0)
             movement.velocity[1] = 0;
-        if (movement.kind.hasAspect(BasicMovementAspects.BLOCK_EAST) and movement.velocity[0] > 0)
+        if (movement.kind.hasAspect(MovFlags.BLOCK_EAST) and movement.velocity[0] > 0)
             movement.velocity[0] = 0;
-        if (movement.kind.hasAspect(BasicMovementAspects.BLOCK_SOUTH) and movement.velocity[1] > 0)
+        if (movement.kind.hasAspect(MovFlags.BLOCK_SOUTH) and movement.velocity[1] > 0)
             movement.velocity[1] = 0;
-        if (movement.kind.hasAspect(BasicMovementAspects.BLOCK_WEST) and movement.velocity[0] < 0)
+        if (movement.kind.hasAspect(MovFlags.BLOCK_WEST) and movement.velocity[0] < 0)
             movement.velocity[0] = 0;
     }
 

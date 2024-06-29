@@ -139,6 +139,15 @@ pub fn AspectGroup(comptime T: type) type {
             /// The bitmask to store indices of owned aspects of this kind
             _mask: MaskInt = 0,
 
+            pub fn of(aspects: anytype) Kind {
+                var result: Kind = Kind{};
+                inline for (aspects) |a| {
+                    if (getAspectFromAnytype(a)) |_a| result = result.withAspect(_a);
+                }
+
+                return result;
+            }
+
             pub fn fromStringList(aspect_names: ?String) ?Kind {
                 if (aspect_names) |a_string| {
                     var result: Kind = Kind{};
@@ -191,6 +200,14 @@ pub fn AspectGroup(comptime T: type) type {
                     .group = self.group,
                     ._mask = self._mask,
                 };
+            }
+
+            pub fn activateAspect(self: *Kind, aspect: Aspect, active: bool) void {
+                if (active) {
+                    self.with(aspect.id);
+                } else {
+                    self.without(aspect.id);
+                }
             }
 
             pub fn removeAspect(self: *Kind, aspect: Aspect) void {

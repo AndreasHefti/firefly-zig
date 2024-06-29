@@ -71,13 +71,13 @@ fn init() void {
     });
 
     const entity = Entity.new(.{ .name = "TestEntity" })
-        .withControl(entity_control, "PlayerControl")
+        .withActiveControl(entity_control, "PlayerControl")
         .withComponent(EView{ .view_id = view.id })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
         .withComponent(ESprite{ .template_id = sprite.id })
         .activate();
 
-    _ = view.withControlOf(SimplePivotCamera{
+    _ = view.withActiveControlOf(SimplePivotCamera{
         .name = "Camera1",
         .pixel_perfect = false,
         .snap_to_bounds = .{ -100, -100, 800, 800 },

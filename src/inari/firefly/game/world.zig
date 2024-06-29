@@ -129,6 +129,10 @@ pub const Room = struct {
         return self;
     }
 
+    pub fn withActivationTask(self: *Room, task: api.Task, attributes: anytype) *Room {
+        return withActivationTaskById(self, api.Task.new(task).id, attributes);
+    }
+
     pub fn withActivationTaskByName(self: *Room, task_name: String, attributes: anytype) *Room {
         Room.addTaskByName(
             self.name,

@@ -4,16 +4,17 @@ const api = firefly.api;
 const utils = firefly.utils;
 const graphics = firefly.graphics;
 
-const String = firefly.utils.String;
-const Vector2f = firefly.utils.Vector2f;
-const PosF = firefly.utils.PosF;
-const RectF = firefly.utils.RectF;
-const Color = firefly.utils.Color;
-const BlendMode = firefly.api.BlendMode;
-const Index = firefly.utils.Index;
-const Float = firefly.utils.Float;
-const BindingId = firefly.api.BindingId;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const String = utils.String;
+const Vector2f = utils.Vector2f;
+const PosF = utils.PosF;
+const RectF = utils.RectF;
+const CInt = utils.CInt;
+const Color = utils.Color;
+const BlendMode = api.BlendMode;
+const Index = utils.Index;
+const Float = utils.Float;
+const BindingId = api.BindingId;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// global
@@ -421,6 +422,11 @@ pub const ETransform = struct {
     pub fn move(self: *ETransform, x: Float, y: Float) void {
         self.position[0] += x;
         self.position[1] += y;
+    }
+
+    pub fn moveCInt(self: *ETransform, x: CInt, y: CInt) void {
+        self.position[0] += utils.cint_float(x);
+        self.position[1] += utils.cint_float(y);
     }
 
     pub fn destruct(self: *ETransform) void {

@@ -56,7 +56,7 @@ pub const GroupAspect = *const GroupAspectGroup.Aspect;
 const ComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
     clear: *const fn (Index) void,
-    deinit: *const fn () void,
+    deinit: api.Deinit,
     to_string: *const fn (*utils.StringBuffer) void,
 };
 var COMPONENT_INTERFACE_TABLE: utils.DynArray(ComponentTypeInterface) = undefined;
@@ -369,6 +369,10 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
 
 fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
+        pub fn withActiveControl(self: *T, control: api.ControlFunction, name: ?String) *T {
+            return withControl(self, control, name, true);
+        }
+
         pub fn withControl(self: *T, control: api.ControlFunction, name: ?String, active: bool) *T {
             if (adapter.pool.control_mapping) |*cm| {
                 const c = api.ComponentControl.new(.{
@@ -380,6 +384,10 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
                 api.ComponentControl.activateById(c.id, active);
             }
             return self;
+        }
+
+        pub fn withActiveControlOf(self: *T, control_type: anytype) *T {
+            return withControlOf(self, control_type, true);
         }
 
         pub fn withControlOf(self: *T, control_type: anytype, active: bool) *T {

@@ -285,12 +285,11 @@ pub fn Register(comptime T: type) type {
         }
 
         pub fn deinit(self: Self) void {
-            for (0..self._num_arrays) |ix| {
+            for (0..self._num_arrays) |ix|
                 self._allocator.free(self.register[ix]);
-            }
-            if (self._num_arrays > 0) {
+
+            if (self._num_arrays > 0)
                 self._allocator.free(self.register);
-            }
         }
 
         pub fn size(self: Self) usize {

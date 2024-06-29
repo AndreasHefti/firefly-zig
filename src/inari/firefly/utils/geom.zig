@@ -1012,6 +1012,10 @@ pub const BitMask = struct {
         self.bits.clear();
     }
 
+    pub fn count(self: *BitMask) usize {
+        return self.bits.count();
+    }
+
     pub fn setBitAt(self: *BitMask, x: usize, y: usize) void {
         if (x >= self.width or y >= self.height)
             return;

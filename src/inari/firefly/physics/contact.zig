@@ -269,6 +269,10 @@ pub const ContactConstraint = struct {
         self.scan.destruct();
     }
 
+    pub inline fn clear(self: *ContactConstraint) void {
+        self.scan.clear();
+    }
+
     pub fn match(self: *ContactConstraint, c_type: ?ContactTypeAspect, c_material: ?ContactMaterialAspect) bool {
         if (c_type) |t| {
             if (self.type_filter) |tf|
@@ -352,7 +356,7 @@ pub const ContactScan = struct {
     // List of Contact ids has a contact with this contact scan (only available on full contact scan)
     contacts: ?utils.DynIndexArray = null,
     // The overall accumulated contact mask of all contacts of this scan (only available on full contact scan)
-    // The mask has the same dimension like bounds but has the origin (0, 0)
+    // The mask has the same dimension like bounds
     mask: ?utils.BitMask = null,
 
     pub fn format(
@@ -477,10 +481,22 @@ pub const ContactScan = struct {
 //// Collision Resolving
 //////////////////////////////////////////////////////////////
 
-pub const CollisionResolver = *const fn (Index) void;
-pub const DebugCollisionResolver: CollisionResolver = debugCollisionResolver;
+pub const CollisionResolverFunction = *const fn (entity_id: Index, _instance_id: ?Index) void;
+pub const CollisionResolverInit = *const fn (entity_id: Index, _instance_id: Index) void;
+pub const CollisionResolver = struct {
+    _resolve: CollisionResolverFunction,
+    _instance_id: ?Index = null,
+    _init: ?CollisionResolverInit = null,
 
-fn debugCollisionResolver(entity_id: Index) void {
+    pub fn resolve(self: *CollisionResolver, entity_id: Index) void {
+        self._resolve(entity_id, self._instance_id);
+    }
+};
+pub const DebugCollisionResolver: CollisionResolver = .{
+    ._resolve = debugCollisionResolver,
+};
+
+fn debugCollisionResolver(entity_id: Index, _: ?Index) void {
     const entity = api.Entity.byId(entity_id);
     const transform = graphics.ETransform.byId(entity_id).?;
     const scans = EContactScan.byId(entity_id).?;
@@ -525,7 +541,22 @@ pub const EContactScan = struct {
     }
 
     pub fn destruct(self: *EContactScan) void {
+        self.collision_resolver = null;
         self.constraints.deinit();
+    }
+
+    pub fn activation(self: *EContactScan, active: bool) void {
+        if (active)
+            if (self.collision_resolver) |cr|
+                if (cr._init) |cinit| cinit(self.id, cr._instance_id.?);
+    }
+
+    pub fn clear(self: *EContactScan) void {
+        var next = self.constraints.nextSetBit(0);
+        while (next) |i| {
+            ContactConstraint.byId(i).clear();
+            next = self.constraints.nextSetBit(i + 1);
+        }
     }
 
     pub fn withConstraint(self: *EContactScan, constraint: ContactConstraint) *EContactScan {
@@ -555,7 +586,7 @@ pub const IContactMap = struct {
     entityRegistration: *const fn (Index, register: bool) void = undefined,
     update: *const fn () void = undefined,
     getPotentialContactIds: *const fn (region: utils.RectF) ?[]Index = undefined,
-    deinit: *const fn () void = undefined,
+    deinit: api.Deinit = undefined,
 
     fn init(initImpl: *const fn (*IContactMap) void) IContactMap {
         var self = IContactMap{};
@@ -613,7 +644,7 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
 //// Contact System
 //////////////////////////////////////////////////////////////
 
-const ContactSystem = struct {
+pub const ContactSystem = struct {
     pub var entity_condition: api.EntityTypeCondition = undefined;
 
     var contact_maps: utils.DynArray(IContactMap) = undefined;
@@ -624,11 +655,11 @@ const ContactSystem = struct {
             .dismiss_kind = api.EComponentAspectGroup.newKindOf(.{graphics.ETile}),
         };
         contact_maps = utils.DynArray(IContactMap).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5);
-        firefly.physics.subscribe(processMoved);
+        firefly.physics.subscribeMovement(processMoved);
     }
 
     pub fn systemDeinit() void {
-        firefly.physics.unsubscribe(processMoved);
+        firefly.physics.unsubscribeMovement(processMoved);
         entity_condition = undefined;
         var next = contact_maps.slots.nextSetBit(0);
         while (next) |i| {
@@ -658,7 +689,7 @@ const ContactSystem = struct {
         }
     }
 
-    fn applyScan(e_scan: *EContactScan) void {
+    pub fn applyScan(e_scan: *EContactScan) void {
         var view_id: ?Index = null;
         var layer_id: ?Index = null;
         if (graphics.EView.byId(e_scan.id)) |view| {
@@ -666,11 +697,14 @@ const ContactSystem = struct {
             layer_id = view.layer_id;
         }
 
+        // clear old scan data
+        e_scan.clear();
+
         // apply scan for all defined constraints
         var has_any_contact = false;
         var next_constraint = e_scan.constraints.nextSetBit(0);
         while (next_constraint) |i| {
-            var constraint = ContactConstraint.byId(i);
+            const constraint = ContactConstraint.byId(i);
             const t1 = graphics.ETransform.byId(e_scan.id).?;
             const world_contact_bounds = utils.RectF{
                 t1.position[0] + constraint.scan.bounds.rect[0],
@@ -679,8 +713,6 @@ const ContactSystem = struct {
                 constraint.scan.bounds.rect[3],
             };
 
-            // clear old scan data
-            constraint.scan.clear();
             // apply scan on registered entity mappers
             has_any_contact = has_any_contact or scanOnMappings(
                 e_scan,
@@ -702,8 +734,8 @@ const ContactSystem = struct {
         }
 
         if (has_any_contact) {
-            if (e_scan.collision_resolver) |resolver|
-                resolver(e_scan.id);
+            if (e_scan.collision_resolver) |*resolver|
+                resolver.resolve(e_scan.id);
         }
     }
 

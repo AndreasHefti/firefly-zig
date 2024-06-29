@@ -53,7 +53,7 @@ fn init() void {
 
     var x: Float = 10;
     _ = Entity.new(.{})
-        .withControl(control, null)
+        .withControl(control, null, true)
         .withComponent(ETransform{ .position = .{ x, 0 } })
         .withComponent(ESprite{ .template_id = sprite.id })
         .withComponent(EMovement{ .gravity = .{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.3, .integrator = firefly.physics.EulerIntegrator })

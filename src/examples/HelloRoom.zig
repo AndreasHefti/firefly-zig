@@ -41,7 +41,9 @@ var pivot: utils.PosF = .{ 0, 0 };
 
 fn init() void {
 
-    // view with two layer
+    // view component
+    // two layers get automatically applied when loading the room tile maps
+    // see JSON file: resources/example_tilemap1.json
     var view = graphics.View.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
@@ -52,6 +54,7 @@ fn init() void {
         },
     });
 
+    // Room camera control with parallax scrolling according to layer data
     _ = view.withControlOf(
         game.SimplePivotCamera{
             .name = "Camera1",
@@ -64,25 +67,23 @@ fn init() void {
         true,
     );
 
+    // Key input for fake player and camera pivot
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_UP, api.InputButtonType.UP);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_DOWN, api.InputButtonType.DOWN);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_LEFT, api.InputButtonType.LEFT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_RIGHT, api.InputButtonType.RIGHT);
+    // add Control to view for key input
+    // key input is moving the invisible pivot point of the camera when the Room is active
     _ = view.withControl(pivot_control, "KeyControl", false);
 
-    // crate start and end scene
+    // crate start scene
     _ = graphics.Scene.new(.{
         .name = start_scene_name,
         .update_action = startSceneAction,
         .scheduler = api.Timer.getScheduler(20),
     });
-    // _ = graphics.Scene.new(.{
-    //     .name = end_scene_name,
-    //     .update_action = endSceneAction,
-    //     .scheduler = api.Timer.getScheduler(20)
-    // });
 
-    // create new Room
+    // create new Room from JSON file: resources/example_tilemap1.json with tile set: resources/example_tileset.json
     var room = game.Room.new(.{
         .name = "Test Room1",
         .start_scene_ref = start_scene_name,
@@ -96,9 +97,11 @@ fn init() void {
         .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
     });
 
+    // and just start the Room
     room.start();
 }
 
+// key input is moving the invisible pivot point of the camera when the Room is active
 fn pivot_control(_: api.CallContext) void {
     if (firefly.api.input.checkButtonPressed(api.InputButtonType.UP))
         pivot[1] -= speed;
@@ -110,6 +113,11 @@ fn pivot_control(_: api.CallContext) void {
         pivot[0] += speed;
 }
 
+// rudimentary implementation of an action control for the start scene
+// just creates a rectangle shape entity that overlaps the while screen
+// with initial black color, fading alpha to 0 with ALPHA blend of the background
+// Room view will appear from black screen. When alpha is 0, action successfully  ends
+// and pivot control is been activated.
 var start_scene_init = false;
 var color: *utils.Color = undefined;
 fn startSceneAction(_: Index) api.ActionResult {
@@ -144,5 +152,3 @@ fn startSceneAction(_: Index) api.ActionResult {
 
     return api.ActionResult.Running;
 }
-
-fn endSceneAction(_: Index) api.ActionResult {}

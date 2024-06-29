@@ -27,13 +27,13 @@ pub fn init() void {
     if (initialized)
         return;
 
-    TileContactMaterialType.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
-    TileContactMaterialType.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");
-    TileContactMaterialType.PROJECTILE = physics.ContactMaterialAspectGroup.getAspect("PROJECTILE");
-    TileContactMaterialType.WATER = physics.ContactMaterialAspectGroup.getAspect("WATER");
-    TileContactMaterialType.LADDER = physics.ContactMaterialAspectGroup.getAspect("LADDER");
-    TileContactMaterialType.ROPE = physics.ContactMaterialAspectGroup.getAspect("ROPE");
-    TileContactMaterialType.INTERACTIVE = physics.ContactMaterialAspectGroup.getAspect("INTERACTIVE");
+    BaseMaterialType.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
+    BaseMaterialType.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");
+    BaseMaterialType.PROJECTILE = physics.ContactMaterialAspectGroup.getAspect("PROJECTILE");
+    BaseMaterialType.WATER = physics.ContactMaterialAspectGroup.getAspect("WATER");
+    BaseMaterialType.LADDER = physics.ContactMaterialAspectGroup.getAspect("LADDER");
+    BaseMaterialType.ROPE = physics.ContactMaterialAspectGroup.getAspect("ROPE");
+    BaseMaterialType.INTERACTIVE = physics.ContactMaterialAspectGroup.getAspect("INTERACTIVE");
 
     api.Component.registerComponent(TileSet);
     api.Component.registerComponent(TileMapping);
@@ -55,7 +55,7 @@ pub const TileDimensionType = enum {
     THIRTY_TWO,
 };
 
-pub const TileContactMaterialType = struct {
+pub const BaseMaterialType = struct {
     pub var NONE: physics.ContactMaterialAspect = undefined;
     pub var TERRAIN: physics.ContactMaterialAspect = undefined;
     pub var PROJECTILE: physics.ContactMaterialAspect = undefined;

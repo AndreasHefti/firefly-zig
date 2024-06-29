@@ -1,7 +1,6 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
-const BufSet = std.BufSet;
 const Allocator = std.mem.Allocator;
 const asset = @import("asset.zig");
 const component = @import("Component.zig");
@@ -89,6 +88,7 @@ pub const TaskFunction = control.TaskFunction;
 pub const TaskCallback = control.TaskCallback;
 pub const Trigger = control.Trigger;
 pub const ComponentControl = control.ComponentControl;
+pub const ControlTypeTrait = control.ControlTypeTrait;
 pub const ComponentControlType = control.ComponentControlType;
 pub const Composite = component.Composite;
 pub const CompositeLifeCycle = component.CompositeLifeCycle;
@@ -97,9 +97,11 @@ pub const State = control.State;
 pub const StateEngine = control.StateEngine;
 pub const EntityStateEngine = control.EntityStateEngine;
 pub const EState = control.EState;
+pub const StateCondition = control.StateCondition;
 
 pub const BindingId = usize;
 pub const NO_BINDING: BindingId = std.math.maxInt(usize);
+pub const Deinit = *const fn () void;
 
 pub fn activateSystem(name: String, active: bool) void {
     system.activateSystem(name, active);
@@ -185,11 +187,11 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const NamePool = struct {
-    var names: BufSet = undefined;
+    var names: std.BufSet = undefined;
     var c_names: std.ArrayList([:0]const u8) = undefined;
 
     fn init() void {
-        names = BufSet.init(ALLOC);
+        names = std.BufSet.init(ALLOC);
         c_names = std.ArrayList([:0]const u8).init(ALLOC);
     }
 
@@ -266,9 +268,10 @@ pub const Attributes = struct {
         return .{ ._map = std.StringHashMap(String).init(ALLOC) };
     }
 
-    pub fn newWith(attributes: anytype) Attributes {
-        var result: Attributes = .{ ._map = std.StringHashMap(String).init(ALLOC) };
+    pub fn newWith(attributes: anytype) ?Attributes {
+        if (@typeInfo(@TypeOf(attributes)) != .Struct) return null;
 
+        var result: Attributes = .{ ._map = std.StringHashMap(String).init(ALLOC) };
         inline for (attributes) |v| {
             result.set(v[0], v[1]);
         }
@@ -284,7 +287,6 @@ pub const Attributes = struct {
     pub fn clear(self: *Attributes) void {
         var it = self._map.iterator();
         while (it.next()) |e| {
-            std.debug.print("*********************** free key: {s} value: {s}\n ", .{ e.key_ptr.*, e.value_ptr.* });
             ALLOC.free(e.key_ptr.*);
             ALLOC.free(e.value_ptr.*);
         }
@@ -769,7 +771,7 @@ pub fn IRenderAPI() type {
 
         printDebug: *const fn (*StringBuffer) void = undefined,
 
-        deinit: *const fn () void = undefined,
+        deinit: Deinit = undefined,
 
         pub fn init(initImpl: *const fn (*IRenderAPI()) void) Self {
             var self = Self{};
@@ -830,7 +832,7 @@ pub fn IWindowAPI() type {
         toggleBorderlessWindowed: *const fn () void = undefined,
         setWindowFlags: *const fn ([]WindowFlag) void = undefined,
 
-        deinit: *const fn () void = undefined,
+        deinit: Deinit = undefined,
 
         pub fn init(initImpl: *const fn (*IWindowAPI()) void) Self {
             var self = Self{};
@@ -1112,7 +1114,7 @@ pub fn IInputAPI() type {
         getMouseDelta: *const fn () Vector2f = undefined,
         setMouseButtonMapping: *const fn (MouseAction, InputButtonType) void = undefined,
 
-        deinit: *const fn () void = undefined,
+        deinit: Deinit = undefined,
 
         pub fn init(initImpl: *const fn (*IInputAPI()) void) Self {
             var self = Self{};
@@ -1171,7 +1173,7 @@ pub fn IAudioAPI() type {
         getMusicTimeLength: *const fn (BindingId) Float = undefined,
         getMusicTimePlayed: *const fn (BindingId) Float = undefined,
 
-        deinit: *const fn () void = undefined,
+        deinit: Deinit = undefined,
 
         pub fn init(initImpl: *const fn (*IAudioAPI()) void) Self {
             var self = Self{};

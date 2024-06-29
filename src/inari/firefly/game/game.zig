@@ -1,18 +1,15 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const api = firefly.api;
+const graphics = firefly.graphics;
 const tile = @import("tile.zig");
 const json = @import("json.zig");
 const world = @import("world.zig");
+const player = @import("player.zig");
 
-const CCondition = firefly.api.CCondition;
-const View = firefly.graphics.View;
-const ComponentControlType = firefly.api.ComponentControlType;
-const EMovement = firefly.physics.EMovement;
-const Attributes = firefly.api.Attributes;
 const Vector2f = firefly.utils.Vector2f;
 const RectF = firefly.utils.RectF;
 const PosF = firefly.utils.PosF;
-const Float = firefly.utils.Float;
 const Index = firefly.utils.Index;
 const String = firefly.utils.String;
 
@@ -27,12 +24,13 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    ComponentControlType(SimplePivotCamera).init();
+    api.ComponentControlType(SimplePivotCamera).init();
 
     // init sub packages
     tile.init();
     world.init();
     json.init();
+    player.init();
 }
 
 pub fn deinit() void {
@@ -41,11 +39,12 @@ pub fn deinit() void {
         return;
 
     // deinit sub packages
+    player.deinit();
     json.deinit();
     world.deinit();
     tile.deinit();
 
-    ComponentControlType(SimplePivotCamera).deinit();
+    api.ComponentControlType(SimplePivotCamera).deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -65,51 +64,51 @@ pub const GlobalConditions = struct {
         defer loaded = true;
         if (loaded) return;
 
-        _ = CCondition.new(.{ .name = ENTITY_MOVES, .condition = .{ .f = entityMoves } });
-        _ = CCondition.new(.{ .name = ENTITY_MOVES_UP, .condition = .{ .f = entityMovesUp } });
-        _ = CCondition.new(.{ .name = ENTITY_MOVES_DOWN, .condition = .{ .f = entityMovesDown } });
-        _ = CCondition.new(.{ .name = ENTITY_MOVES_RIGHT, .condition = .{ .f = entityMovesRight } });
-        _ = CCondition.new(.{ .name = ENTITY_MOVES_LEFT, .condition = .{ .f = entityMovesLeft } });
+        _ = api.CCondition.new(.{ .name = ENTITY_MOVES, .condition = .{ .f = entityMoves } });
+        _ = api.CCondition.new(.{ .name = ENTITY_MOVES_UP, .condition = .{ .f = entityMovesUp } });
+        _ = api.CCondition.new(.{ .name = ENTITY_MOVES_DOWN, .condition = .{ .f = entityMovesDown } });
+        _ = api.CCondition.new(.{ .name = ENTITY_MOVES_RIGHT, .condition = .{ .f = entityMovesRight } });
+        _ = api.CCondition.new(.{ .name = ENTITY_MOVES_LEFT, .condition = .{ .f = entityMovesLeft } });
     }
 
     pub fn dispose() void {
         defer loaded = false;
         if (!loaded) return;
 
-        CCondition.disposeByName(ENTITY_MOVES);
-        CCondition.disposeByName(ENTITY_MOVES_UP);
-        CCondition.disposeByName(ENTITY_MOVES_DOWN);
-        CCondition.disposeByName(ENTITY_MOVES_RIGHT);
-        CCondition.disposeByName(ENTITY_MOVES_LEFT);
+        api.CCondition.disposeByName(ENTITY_MOVES);
+        api.CCondition.disposeByName(ENTITY_MOVES_UP);
+        api.CCondition.disposeByName(ENTITY_MOVES_DOWN);
+        api.CCondition.disposeByName(ENTITY_MOVES_RIGHT);
+        api.CCondition.disposeByName(ENTITY_MOVES_LEFT);
     }
 
-    fn entityMoves(index: ?Index, _: ?Attributes) bool {
+    fn entityMoves(index: ?Index, _: ?api.Attributes) bool {
         if (index) |i|
-            if (EMovement.byId(i)) |m| return m.velocity[0] != 0 or m.velocity[1] != 0;
+            if (api.EMovement.byId(i)) |m| return m.velocity[0] != 0 or m.velocity[1] != 0;
         return false;
     }
 
-    fn entityMovesUp(index: ?Index, _: ?Attributes) bool {
+    fn entityMovesUp(index: ?Index, _: ?api.Attributes) bool {
         if (index) |i|
-            if (EMovement.byId(i)) |m| return m.velocity[1] < 0;
+            if (api.EMovement.byId(i)) |m| return m.velocity[1] < 0;
         return false;
     }
 
-    fn entityMovesDown(index: ?Index, _: ?Attributes) bool {
+    fn entityMovesDown(index: ?Index, _: ?api.Attributes) bool {
         if (index) |i|
-            if (EMovement.byId(i)) |m| return m.velocity[1] > 0;
+            if (api.EMovement.byId(i)) |m| return m.velocity[1] > 0;
         return false;
     }
 
-    fn entityMovesRight(index: ?Index, _: ?Attributes) bool {
+    fn entityMovesRight(index: ?Index, _: ?api.Attributes) bool {
         if (index) |i|
-            if (EMovement.byId(i)) |m| return m.velocity[0] > 0;
+            if (api.EMovement.byId(i)) |m| return m.velocity[0] > 0;
         return false;
     }
 
-    fn entityMovesLeft(index: ?Index, _: ?Attributes) bool {
+    fn entityMovesLeft(index: ?Index, _: ?api.Attributes) bool {
         if (index) |i|
-            if (EMovement.byId(i)) |m| return m.velocity[0] < 0;
+            if (api.EMovement.byId(i)) |m| return m.velocity[0] < 0;
         return false;
     }
 };
@@ -128,7 +127,7 @@ pub const TaskAttributes = struct {
 };
 
 pub const TileDimensionType = tile.TileDimensionType;
-pub const TileContactMaterialType = tile.TileContactMaterialType;
+pub const BaseMaterialType = tile.BaseMaterialType;
 pub const TileAnimationFrame = tile.TileAnimationFrame;
 pub const TileSet = tile.TileSet;
 pub const SpriteData = tile.SpriteData;
@@ -145,12 +144,14 @@ pub const Room = world.Room;
 pub const RoomState = world.RoomState;
 pub const Area = world.Area;
 
+pub const PlatformerCollisionResolver = player.PlatformerCollisionResolver;
+
 //////////////////////////////////////////////////////////////
 //// Simple pivot camera
 //////////////////////////////////////////////////////////////
 
 pub const SimplePivotCamera = struct {
-    pub const component_type = View;
+    pub usingnamespace api.ControlTypeTrait(SimplePivotCamera, graphics.View);
 
     name: String,
     pixel_perfect: bool = false,
@@ -166,7 +167,7 @@ pub const SimplePivotCamera = struct {
     }
 
     pub fn adjust(self: *SimplePivotCamera, view_id: Index) void {
-        var view = View.byId(view_id);
+        var view = graphics.View.byId(view_id);
         const move = getMove(self, view);
         view.adjustProjection(
             @floor(view.projection.position + move),
@@ -177,8 +178,8 @@ pub const SimplePivotCamera = struct {
 
     pub fn update(call_context: firefly.api.CallContext) void {
         if (call_context.caller_id) |view_id|
-            if (ComponentControlType(SimplePivotCamera).stateByControlId(call_context.parent_id)) |self| {
-                var view = View.byId(view_id);
+            if (api.ComponentControlType(SimplePivotCamera).stateByControlId(call_context.parent_id)) |self| {
+                var view = graphics.View.byId(view_id);
                 const move = getMove(self, view);
                 if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
                     view.moveProjection(
@@ -210,7 +211,7 @@ pub const SimplePivotCamera = struct {
             };
     }
 
-    inline fn getMove(self: *SimplePivotCamera, view: *View) Vector2f {
+    inline fn getMove(self: *SimplePivotCamera, view: *graphics.View) Vector2f {
         const cam_world_pivot: Vector2f = .{
             (view.projection.position[0] + view.projection.width / 2) / view.projection.zoom,
             (view.projection.position[1] + view.projection.height / 2) / view.projection.zoom,

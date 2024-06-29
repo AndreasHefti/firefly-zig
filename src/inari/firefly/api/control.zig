@@ -141,6 +141,16 @@ pub const ComponentControl = struct {
     }
 };
 
+pub fn ControlTypeTrait(comptime T: type, comptime ComponentType: type) type {
+    return struct {
+        pub const component_type = ComponentType;
+        pub fn byName(name: String) ?*T {
+            const control_component_id = ComponentControl.idByName(name) orelse return null;
+            return ComponentControlType(T).stateByControlId(control_component_id);
+        }
+    };
+}
+
 pub fn ComponentControlType(comptime T: type) type {
     comptime {
         if (@typeInfo(T) != .Struct)

@@ -140,7 +140,7 @@ pub const EMultiplier = struct {
 const EComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
     clear: *const fn (Index) void,
-    deinit: *const fn () void,
+    deinit: api.Deinit,
     to_string: *const fn (*utils.StringBuffer) void,
 };
 var INTERFACE_TABLE: utils.DynArray(EComponentTypeInterface) = undefined;
