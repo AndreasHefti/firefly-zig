@@ -184,7 +184,7 @@ pub fn ComponentControlType(comptime T: type) type {
             const control = ComponentControl.new(.{
                 .name = control_type.name,
                 .control = T.update,
-                .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type).?.*,
+                .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type).?,
                 .dispose = dispose,
             });
 

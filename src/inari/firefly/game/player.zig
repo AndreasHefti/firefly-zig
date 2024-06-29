@@ -52,6 +52,19 @@ pub const PlatformerCollisionResolver = struct {
         ground_scan: BitMask = undefined,
         terrain_constraint_ref: Index = undefined,
 
+        fn deinit(self: *Data) void {
+            self.north.deinit();
+            self.north = undefined;
+            self.south.deinit();
+            self.south = undefined;
+            self.west.deinit();
+            self.west = undefined;
+            self.east.deinit();
+            self.east = undefined;
+            self.ground_scan.deinit();
+            self.ground_scan = undefined;
+        }
+
         fn new(terrain_constraint_name: String) Data {
             return newWith(.{ 5, 2 }, 5, terrain_constraint_name);
         }
@@ -75,6 +88,12 @@ pub const PlatformerCollisionResolver = struct {
         s3: BitMask,
         max: CInt = 0,
 
+        fn deinit(self: *Sensor) void {
+            self.s1.deinit();
+            self.s2.deinit();
+            self.s3.deinit();
+        }
+
         fn scan(self: *Sensor, contact: *physics.ContactScan) void {
             self.s1.clear();
             self.s2.clear();
@@ -94,6 +113,12 @@ pub const PlatformerCollisionResolver = struct {
     }
 
     fn deinit() void {
+        var next = instances.slots.nextSetBit(0);
+        while (next) |i| {
+            if (instances.get(i)) |inst| inst.deinit();
+            next = instances.slots.nextSetBit(i + 1);
+        }
+
         instances.deinit();
         instances = undefined;
     }

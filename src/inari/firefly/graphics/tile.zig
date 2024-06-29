@@ -66,7 +66,7 @@ pub fn deinit() void {
 pub const TileTypeAspectGroup = AspectGroup(struct {
     pub const name = "TileType";
 });
-pub const TileTypeAspect = *const TileTypeAspectGroup.Aspect;
+pub const TileTypeAspect = TileTypeAspectGroup.Aspect;
 pub const TileTypeKind = TileTypeAspectGroup.Kind;
 pub const BasicTileTypes = struct {
     pub var UNDEFINED: TileTypeAspect = undefined;

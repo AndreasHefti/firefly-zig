@@ -50,14 +50,14 @@ pub fn deinit() void {
 pub const ContactTypeAspectGroup = utils.AspectGroup(struct {
     pub const name = "ContactType";
 });
-pub const ContactTypeAspect = *const ContactTypeAspectGroup.Aspect;
+pub const ContactTypeAspect = ContactTypeAspectGroup.Aspect;
 pub const ContactTypeKind = ContactTypeAspectGroup.Kind;
 
 // Contact Material Aspects
 pub const ContactMaterialAspectGroup = utils.AspectGroup(struct {
     pub const name = "ContactMaterial";
 });
-pub const ContactMaterialAspect = *const ContactMaterialAspectGroup.Aspect;
+pub const ContactMaterialAspect = ContactMaterialAspectGroup.Aspect;
 pub const ContactMaterialKind = ContactMaterialAspectGroup.Kind;
 
 pub const ContactBounds = struct {

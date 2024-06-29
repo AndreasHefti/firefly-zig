@@ -45,13 +45,13 @@ pub const ComponentAspectGroup = utils.AspectGroup(struct {
     pub const name = "ComponentType";
 });
 pub const ComponentKind = ComponentAspectGroup.Kind;
-pub const ComponentAspect = *const ComponentAspectGroup.Aspect;
+pub const ComponentAspect = ComponentAspectGroup.Aspect;
 
 pub const GroupAspectGroup = utils.AspectGroup(struct {
     pub const name = "ComponentGroup";
 });
 pub const GroupKind = GroupAspectGroup.Kind;
-pub const GroupAspect = *const GroupAspectGroup.Aspect;
+pub const GroupAspect = GroupAspectGroup.Aspect;
 
 const ComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
@@ -377,7 +377,7 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
             if (adapter.pool.control_mapping) |*cm| {
                 const c = api.ComponentControl.new(.{
                     .name = name,
-                    .component_type = T.aspect.*,
+                    .component_type = T.aspect,
                     .control = control,
                 });
                 cm.map(self.id, c.id);

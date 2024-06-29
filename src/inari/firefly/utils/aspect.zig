@@ -35,29 +35,29 @@ pub fn AspectGroup(comptime T: type) type {
             return _aspect_count;
         }
 
-        pub fn getAspectById(id: usize) *const Aspect {
+        pub fn getAspectById(id: usize) Aspect {
             if (id < _aspect_count)
-                return &_aspects[id];
+                return _aspects[id];
 
             @panic("Aspect id overflow");
         }
 
-        pub fn getAspectIfExists(aspect_name: String) ?*const Aspect {
+        pub fn getAspectIfExists(aspect_name: String) ?Aspect {
             var i: u8 = 0;
             while (i < _aspect_count) {
                 if (utils.stringEquals(Group._aspects[i].name, aspect_name)) {
-                    return &Group._aspects[i];
+                    return Group._aspects[i];
                 }
                 i = i + 1;
             }
             return null;
         }
 
-        pub fn getAspect(aspect_name: String) *const Aspect {
+        pub fn getAspect(aspect_name: String) Aspect {
             var i: u8 = 0;
             while (i < _aspect_count) {
                 if (utils.stringEquals(Group._aspects[i].name, aspect_name)) {
-                    return &Group._aspects[i];
+                    return Group._aspects[i];
                 }
                 i = i + 1;
             }
@@ -67,7 +67,7 @@ pub fn AspectGroup(comptime T: type) type {
 
             _aspects[_aspect_count] = .{ .id = _aspect_count, .name = aspect_name };
             _aspect_count = _aspect_count + 1;
-            return &_aspects[_aspect_count - 1];
+            return _aspects[_aspect_count - 1];
         }
 
         pub fn applyAspect(t: anytype, aspect_name: String) void {
@@ -120,13 +120,13 @@ pub fn AspectGroup(comptime T: type) type {
             }
         }
 
-        pub fn getAspectFromAnytype(aspect: anytype) ?*const Aspect {
+        pub fn getAspectFromAnytype(aspect: anytype) ?Aspect {
             const at: type = @TypeOf(aspect);
 
             if (at == Aspect) {
-                return &aspect;
-            } else if (at == *Aspect or at == *const Aspect) {
                 return aspect;
+            } else if (at == *Aspect or at == *const Aspect) {
+                return aspect.*;
             } else if (@hasDecl(aspect, "aspect")) {
                 return getAspectFromAnytype(aspect.aspect);
             } else {
@@ -153,7 +153,7 @@ pub fn AspectGroup(comptime T: type) type {
                     var result: Kind = Kind{};
                     var it = std.mem.split(u8, a_string, ",");
                     while (it.next()) |aspect_name|
-                        result.addAspect(Group.getAspect(aspect_name).*);
+                        result.addAspect(Group.getAspect(aspect_name));
                     return result;
                 }
                 return null;

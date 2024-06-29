@@ -149,7 +149,7 @@ pub const EComponentAspectGroup = utils.AspectGroup(struct {
     pub const name = "EComponent";
 });
 pub const EComponentKind = EComponentAspectGroup.Kind;
-pub const EComponentAspect = *const EComponentAspectGroup.Aspect;
+pub const EComponentAspect = EComponentAspectGroup.Aspect;
 
 pub const EComponent = struct {
     var initialized = false;

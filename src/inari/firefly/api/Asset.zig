@@ -93,7 +93,7 @@ pub fn Asset(comptime T: type) type {
 
             _ = AssetComponent.new(.{
                 .name = asset_type.name,
-                .asset_type = AssetAspectGroup.getAspect(T.ASSET_TYPE_NAME).*,
+                .asset_type = AssetAspectGroup.getAspect(T.ASSET_TYPE_NAME),
                 .resource_id = res_id,
                 ._activate = activate,
                 ._dispose = dispose,

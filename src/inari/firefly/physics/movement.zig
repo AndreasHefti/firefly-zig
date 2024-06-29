@@ -79,7 +79,7 @@ pub fn unsubscribe(listener: MovementListener) void {
 pub const MovementAspectGroup = utils.AspectGroup(struct {
     pub const name = "Movement";
 });
-pub const MovementAspect = *const MovementAspectGroup.Aspect;
+pub const MovementAspect = MovementAspectGroup.Aspect;
 pub const MovementKind = MovementAspectGroup.Kind;
 
 pub const MovFlags = struct {
@@ -167,7 +167,7 @@ pub const EMovement = struct {
     }
 
     pub fn flag(self: *EMovement, aspect: MovementAspect, _flag: bool) void {
-        self.kind.activateAspect(aspect.*, _flag);
+        self.kind.activateAspect(aspect, _flag);
     }
 };
 
