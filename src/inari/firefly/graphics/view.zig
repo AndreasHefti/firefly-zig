@@ -55,15 +55,11 @@ pub const ViewLayerMapping = struct {
     mapping: utils.DynArray(utils.DynArray(utils.BitSet)),
 
     pub fn match(view1_id: ?Index, view2_id: ?Index, layer1_id: ?Index, layer2_id: ?Index) bool {
-        if (view1_id) |v1| {
-            if (view2_id) |v2|
-                return v1 != v2;
-        }
-        if (layer1_id) |l1| {
-            if (layer2_id) |l2|
-                return l1 != l2;
-        }
-        return true;
+        const v1 = view1_id orelse 0;
+        const v2 = view2_id orelse 0;
+        const l1 = layer1_id orelse 0;
+        const l2 = layer2_id orelse 0;
+        return v1 == v2 and l1 == l2;
     }
 
     pub fn new() ViewLayerMapping {
@@ -271,16 +267,19 @@ pub const View = struct {
     }
 
     inline fn snapToBounds(self: *View, bounds: RectF) void {
+        //std.debug.print("bounds : {d}\n", .{bounds});
         const _bounds: RectF = .{
-            bounds[0] * self.projection.zoom,
-            bounds[1] * self.projection.zoom,
-            bounds[2] * self.projection.zoom,
-            bounds[3] * self.projection.zoom,
+            bounds[0] * self.projection.zoom * self.scale.?[0],
+            bounds[1] * self.projection.zoom * self.scale.?[1],
+            bounds[2] * self.projection.zoom * self.scale.?[0],
+            bounds[3] * self.projection.zoom * self.scale.?[1],
         };
-        self.projection.position[0] = @max(self.projection.position[0], _bounds[0]);
-        self.projection.position[1] = @max(self.projection.position[1], _bounds[1]);
+        //std.debug.print("_bounds : {d}\n", .{_bounds});
+
         self.projection.position[0] = @min(self.projection.position[0], _bounds[0] + _bounds[2] - self.projection.width);
         self.projection.position[1] = @min(self.projection.position[1], _bounds[1] + _bounds[3] - self.projection.height);
+        self.projection.position[0] = @max(self.projection.position[0], _bounds[0]);
+        self.projection.position[1] = @max(self.projection.position[1], _bounds[1]);
     }
 
     pub fn activation(view: *View, active: bool) void {

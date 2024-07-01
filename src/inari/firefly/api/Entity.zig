@@ -111,8 +111,10 @@ pub const EntityTypeCondition = struct {
                     return false;
             }
         }
-        if (self.dismiss_kind) |*dk| if (!dk.isNotPartOf(e_kind))
-            return false;
+        if (self.dismiss_kind) |*dk| {
+            if (!dk.isNotPartOf(e_kind))
+                return false;
+        }
 
         return true;
     }

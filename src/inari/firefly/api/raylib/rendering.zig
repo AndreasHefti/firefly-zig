@@ -187,6 +187,7 @@ const RaylibRenderAPI = struct {
         .rotation = 0,
         .zoom = 1,
     };
+    var active_camera_zoom_vec: Vector2f = .{ 0, 0 };
 
     var render_batch: ?rlgl.rlRenderBatch = null;
 
@@ -424,6 +425,8 @@ const RaylibRenderAPI = struct {
         active_camera.target = @bitCast(projection.pivot);
         active_camera.rotation = projection.rotation;
         active_camera.zoom = projection.zoom;
+        active_camera_zoom_vec[0] = projection.zoom;
+        active_camera_zoom_vec[1] = projection.zoom;
         active_clear_color = if (projection.clear_color != null) @bitCast(projection.clear_color.?) else null;
 
         if (active_render_texture) |tex_id| {
@@ -569,7 +572,21 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn renderShape(shape_type: ShapeType, vertices: []Float, fill: bool, thickness: ?Float, offset: PosF, color: Color, blend_mode: ?BlendMode, pivot: ?PosF, scale: ?PosF, rotation: ?Float, color1: ?Color, color2: ?Color, color3: ?Color) void {
+    fn renderShape(
+        shape_type: ShapeType,
+        vertices: []Float,
+        fill: bool,
+        thickness: ?Float,
+        offset: PosF,
+        color: Color,
+        blend_mode: ?BlendMode,
+        pivot: ?PosF,
+        scale: ?PosF,
+        rotation: ?Float,
+        color1: ?Color,
+        color2: ?Color,
+        color3: ?Color,
+    ) void {
 
         // set blend mode
         if (blend_mode) |bm| {
@@ -577,8 +594,7 @@ const RaylibRenderAPI = struct {
         }
 
         // apply translation functions if needed
-        // TODO check if this must be done for each when multiplier is present
-        addOffset(offset);
+        addOffset(offset * active_camera_zoom_vec);
         if (scale != null or rotation != null) {
             rlgl.rlPushMatrix();
             if (pivot) |p| rlgl.rlTranslatef(p[0], p[1], 0);
@@ -601,7 +617,7 @@ const RaylibRenderAPI = struct {
         if (scale != null or rotation != null) {
             rlgl.rlPopMatrix();
         }
-        minusOffset(offset);
+        minusOffset(offset * active_camera_zoom_vec);
     }
 
     fn renderText(

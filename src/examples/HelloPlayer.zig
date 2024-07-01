@@ -13,6 +13,7 @@ const texture_name = "Atlas";
 const view_name = "TestView";
 const cam_name = "Camera1";
 const zoom = 4;
+const scale = 1;
 const tile_width: usize = 16;
 const tile_height: usize = 16;
 const room_tile_width: usize = 20;
@@ -45,6 +46,7 @@ fn init() void {
     var view = graphics.View.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
+        .scale = .{ scale, scale },
         .projection = .{
             .width = screen_width,
             .height = screen_height,
@@ -103,6 +105,7 @@ fn create_player(_: api.CallContext) void {
     _ = api.Entity.new(.{ .name = "Player" })
         .withComponent(graphics.ETransform{
         .position = .{ 32, 32 },
+        .pivot = .{ 0, 0 },
     })
         .withComponent(graphics.EView{
         .view_id = graphics.View.idByName(view_name).?,
@@ -111,18 +114,21 @@ fn create_player(_: api.CallContext) void {
         .withComponent(graphics.ESprite{ .template_id = sprite_id })
         .withComponent(physics.EMovement{
         .mass = 1,
-        .integrator = physics.EulerIntegrator,
+        .integrator = physics.SimpleStepIntegrator,
     })
-        .withComponent(physics.EContactScan{
-        .collision_resolver = game.PlatformerCollisionResolver.new("TerrainConstraint"),
-    })
-        .withConstraint(.{
-        .name = "TerrainConstraint",
-        .layer_id = graphics.Layer.idByName(layer2),
-        .bounds = .{ .rect = .{ 4, 1, 8, 19 } },
-        .material_filter = physics.ContactMaterialKind.of(.{game.BaseMaterialType.TERRAIN}),
-        .full_scan = true,
-    })
+        .withComponent(physics.EContactScan{ .collision_resolver = physics.DebugCollisionResolver })
+        .withConstraint(.{ .bounds = .{ .rect = .{ 4, 1, 8, 19 } }, .full_scan = true })
+        .withComponent(graphics.EShape{ .shape_type = api.ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]utils.Float{ 4, 1, 8, 19 }), .color = .{ 0, 0, 255, 255 } })
+    //     .withComponent(physics.EContactScan{
+    //     .collision_resolver = game.PlatformerCollisionResolver.new("TerrainConstraint"),
+    // })
+    //     .withConstraint(.{
+    //     .name = "TerrainConstraint",
+    //     .layer_id = graphics.Layer.idByName(layer2),
+    //     .bounds = .{ .rect = .{ 4, 1, 8, 19 } },
+    //     .material_filter = physics.ContactMaterialKind.of(.{game.BaseMaterialType.TERRAIN}),
+    //     .full_scan = true,
+    // })
         .entity()
         .withActiveControl(player_control, "PlayerControl")
         .activate();

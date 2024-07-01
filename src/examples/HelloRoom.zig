@@ -10,6 +10,7 @@ const Index = utils.Index;
 
 const view_name = "TestView";
 const zoom = 4;
+const scale = 1;
 const tile_width: usize = 16;
 const tile_height: usize = 16;
 const room_tile_width: usize = 20;
@@ -36,7 +37,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     );
 }
 
-const speed = 2;
+const speed = 1;
 var pivot: utils.PosF = .{ 0, 0 };
 
 fn init() void {
@@ -47,6 +48,8 @@ fn init() void {
     var view = graphics.View.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
+        .scale = .{ scale, scale },
+        .pivot = .{ 0, 0 },
         .projection = .{
             .width = screen_width,
             .height = screen_height,

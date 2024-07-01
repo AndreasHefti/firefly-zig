@@ -93,10 +93,6 @@ pub const TileTemplate = struct {
 
     _sprite_template_id: ?Index = null,
 
-    pub fn hasContact(self: *TileTemplate) bool {
-        return self.contact_material_type != null and self.contact_mask_name != null;
-    }
-
     pub fn withAnimationFrame(self: TileTemplate, frame: TileAnimationFrame) TileTemplate {
         var _self = self;
         if (_self.animation == null)
@@ -500,20 +496,20 @@ pub const TileMapping = struct {
     }
 
     fn addContactData(entity: *api.Entity, tile_set: *TileSet, tile_template: *TileTemplate) void {
-        if (tile_template.hasContact()) {
-            _ = entity.withComponent(physics.EContact{
-                .bounds = .{
-                    .rect = .{
-                        0,
-                        0,
-                        tile_set.tile_width,
-                        tile_set.tile_height,
-                    },
+        const material_type = tile_template.contact_material_type orelse return;
+
+        _ = entity.withComponent(physics.EContact{
+            .bounds = .{
+                .rect = .{
+                    0,
+                    0,
+                    tile_set.tile_width,
+                    tile_set.tile_height,
                 },
-                .c_material = tile_template.contact_material_type,
-                .mask = tile_set.createContactMaskFromImage(tile_template),
-            });
-        }
+            },
+            .c_material = material_type,
+            .mask = tile_set.createContactMaskFromImage(tile_template),
+        });
     }
 
     fn addAnimationData(entity: *api.Entity, tile_template: *TileTemplate) void {

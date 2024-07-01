@@ -301,7 +301,6 @@ pub const ContactConstraint = struct {
             const t2_pos = if (other_offset) |off| t2.position + off else t2.position;
 
             if (intersectContactBounds(&self.scan.bounds, &e_contact.bounds, t1.position, t2_pos)) {
-
                 // now we have an intersection if this is simple scan just add the entity id to the scan result
                 self.scan.entities.add(other_entity);
                 if (self.full_scan) {
@@ -635,7 +634,7 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
         }
 
         fn getPotentialContactIds(_: utils.RectF) ?[]Index {
-            return entity_ids.items;
+            return entity_ids.items[0..entity_ids.size_pointer];
         }
     };
 }
@@ -752,12 +751,14 @@ pub const ContactSystem = struct {
             if (contact_maps.get(i)) |map| {
                 if (graphics.ViewLayerMapping.match(map.view_id, view_id, map.layer_id, layer_id)) {
                     if (map.getPotentialContactIds(world_contact_bounds)) |entity_ids| {
-                        for (entity_ids) |entity_id|
+                        for (entity_ids) |entity_id| {
+                            if (entity_id == e_scan.id) continue;
                             has_any_contact = has_any_contact or constraint.scanEntity(
                                 e_scan.id,
                                 entity_id,
                                 null,
                             );
+                        }
                     }
                 }
             }
@@ -779,15 +780,18 @@ pub const ContactSystem = struct {
         while (next) |i| {
             const tile_grid = graphics.TileGrid.byId(i);
             if (graphics.ViewLayerMapping.match(tile_grid.view_id, view_id, tile_grid.layer_id, layer_id)) {
-                if (tile_grid.getIteratorWorldClipF(world_contact_bounds)) |iterator| {
-                    var it = iterator;
-                    while (it.next()) |entity_id| {
-                        has_any_contact = has_any_contact or constraint.scanEntity(
-                            e_scan.id,
-                            entity_id,
-                            it.rel_position + tile_grid.world_position,
-                        );
-                    }
+                var it = tile_grid.getIteratorWorldClipF(world_contact_bounds) orelse {
+                    next = graphics.TileGrid.nextActiveId(i + 1);
+                    continue;
+                };
+
+                while (it.next()) |entity_id| {
+                    const has_contact = constraint.scanEntity(
+                        e_scan.id,
+                        entity_id,
+                        it.rel_position + tile_grid.world_position,
+                    );
+                    has_any_contact = has_any_contact or has_contact;
                 }
             }
 

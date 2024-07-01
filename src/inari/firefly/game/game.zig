@@ -181,12 +181,14 @@ pub const SimplePivotCamera = struct {
             if (api.ComponentControlType(SimplePivotCamera).stateByControlId(call_context.parent_id)) |self| {
                 var view = graphics.View.byId(view_id);
                 const move = getMove(self, view);
+                //std.debug.print("move: {d}\n", .{move});
                 if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
                     view.moveProjection(
                         move * self.velocity_relative_to_pivot,
                         self.pixel_perfect,
                         self.snap_to_bounds,
                     );
+
                     // apply parallax scrolling if enabled
                     if (self.enable_parallax) {
                         if (view.ordered_active_layer) |ol| {
@@ -213,9 +215,10 @@ pub const SimplePivotCamera = struct {
 
     inline fn getMove(self: *SimplePivotCamera, view: *graphics.View) Vector2f {
         const cam_world_pivot: Vector2f = .{
-            (view.projection.position[0] + view.projection.width / 2) / view.projection.zoom,
-            (view.projection.position[1] + view.projection.height / 2) / view.projection.zoom,
+            (view.projection.position[0] + view.projection.width / 2) / view.projection.zoom / view.scale.?[0],
+            (view.projection.position[1] + view.projection.height / 2) / view.projection.zoom / view.scale.?[1],
         };
+        //std.debug.print("self pivot: {d} cam_world_pivot: {d} \n", .{ self.pivot.*, cam_world_pivot });
         return self.pivot.* + self.offset - cam_world_pivot;
     }
 };

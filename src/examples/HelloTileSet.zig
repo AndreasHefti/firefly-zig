@@ -171,6 +171,12 @@ fn createTile(
             .vertices = firefly.api.ALLOC.dupe(Float, vert.items) catch unreachable,
             .color = .{ 255, 0, 0, 255 },
         });
+    } else if (tile_template.contact_material_type) |_| {
+        _ = entity.withComponent(EShape{
+            .shape_type = firefly.api.ShapeType.RECTANGLE,
+            .vertices = firefly.api.allocFloatArray(.{ 16, 16, 16, 16 }),
+            .color = .{ 255, 0, 0, 255 },
+        });
     }
 
     if (tile_template.animation) |*frames| {
