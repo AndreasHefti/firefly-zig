@@ -26,6 +26,7 @@ const layer1: String = "Background";
 const layer2: String = "Foreground";
 const start_scene_name = "StartScene";
 const end_scene_name = "EndScene";
+const terrain_constraint_name: String = "TerrainConstraint";
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -65,10 +66,9 @@ fn init() void {
         true,
     );
 
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_UP, api.InputButtonType.UP);
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_DOWN, api.InputButtonType.DOWN);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_LEFT, api.InputButtonType.LEFT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_RIGHT, api.InputButtonType.RIGHT);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // create new Room
     var room = game.Room.new(.{
@@ -113,36 +113,36 @@ fn create_player(_: api.CallContext) void {
     })
         .withComponent(graphics.ESprite{ .template_id = sprite_id })
         .withComponent(physics.EMovement{
-        .mass = 1,
-        .integrator = physics.SimpleStepIntegrator,
+        .mass = 50,
+        .max_velocity_south = 80,
+        .integrator = physics.EulerIntegrator,
     })
-        .withComponent(physics.EContactScan{ .collision_resolver = physics.DebugCollisionResolver })
-        .withConstraint(.{ .bounds = .{ .rect = .{ 4, 1, 8, 19 } }, .full_scan = true })
-        .withComponent(graphics.EShape{ .shape_type = api.ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]utils.Float{ 4, 1, 8, 19 }), .color = .{ 0, 0, 255, 255 } })
-    //     .withComponent(physics.EContactScan{
-    //     .collision_resolver = game.PlatformerCollisionResolver.new("TerrainConstraint"),
-    // })
-    //     .withConstraint(.{
-    //     .name = "TerrainConstraint",
-    //     .layer_id = graphics.Layer.idByName(layer2),
-    //     .bounds = .{ .rect = .{ 4, 1, 8, 19 } },
-    //     .material_filter = physics.ContactMaterialKind.of(.{game.BaseMaterialType.TERRAIN}),
-    //     .full_scan = true,
-    // })
+    // .withComponent(physics.EContactScan{ .collision_resolver = physics.DebugCollisionResolver })
+    // .withConstraint(.{ .bounds = .{ .rect = .{ 4, 1, 8, 19 } }, .full_scan = true })
+    // .withComponent(graphics.EShape{ .shape_type = api.ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]utils.Float{ 4, 1, 8, 19 }), .color = .{ 0, 0, 255, 255 } })
+        .withComponent(physics.EContactScan{
+        .collision_resolver = game.PlatformerCollisionResolver.new(terrain_constraint_name),
+    })
+        .withConstraint(.{
+        .name = terrain_constraint_name,
+        .layer_id = graphics.Layer.idByName(layer2),
+        .bounds = .{ .rect = .{ 4, 1, 8, 19 } },
+        .material_filter = physics.ContactMaterialKind.of(.{game.BaseMaterialType.TERRAIN}),
+        .full_scan = true,
+    })
         .entity()
-        .withActiveControl(player_control, "PlayerControl")
+        .withActiveControlOf(game.SimplePlatformerHorizontalMoveControl{
+        .button_left = api.InputButtonType.LEFT,
+        .button_right = api.InputButtonType.RIGHT,
+    })
+        .withActiveControlOf(game.SimplePlatformerJumpControl{
+        .jump_button = api.InputButtonType.FIRE_1,
+        .jump_impulse = 200,
+    })
         .activate();
 
     // apply player position as pivot for camera
     var cam = game.SimplePivotCamera.byName(cam_name).?;
     player_pos_ptr = &graphics.ETransform.byName("Player").?.position;
     cam.pivot = player_pos_ptr;
-}
-
-const move_speed = 0.5;
-fn player_control(_: api.CallContext) void {
-    if (firefly.api.input.checkButtonPressed(api.InputButtonType.LEFT))
-        player_pos_ptr[0] -= move_speed;
-    if (firefly.api.input.checkButtonPressed(api.InputButtonType.RIGHT))
-        player_pos_ptr[0] += move_speed;
 }

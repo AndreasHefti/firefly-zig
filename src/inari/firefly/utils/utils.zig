@@ -65,7 +65,6 @@ pub inline fn cint_usize(v: c_int) usize {
 }
 
 pub inline fn cint_float(v: c_int) Float {
-    if (v < 0) return 0;
     return @as(Float, @floatFromInt(v));
 }
 

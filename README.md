@@ -11,12 +11,12 @@ TODO:
       - [x] Text
       - [x] Shapes
       - [x] Move Collision-Detection
-      - [ ] Collision-Resolving
+      - [x] Collision-Resolving
       - [x] Audio
       - [ ] Behavior
       - [x] State Engine
       - [x] TileMap
-      - [ ] WorldMap
+      - [x] WorldMap
       - [ ] ...
 
  

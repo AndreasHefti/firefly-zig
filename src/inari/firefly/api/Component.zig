@@ -378,7 +378,7 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
                 const c = api.ComponentControl.new(.{
                     .name = name,
                     .component_type = T.aspect,
-                    .control = control,
+                    .f = control,
                 });
                 cm.map(self.id, c.id);
                 api.ComponentControl.activateById(c.id, active);

@@ -5,6 +5,7 @@ const graphics = firefly.graphics;
 const tile = @import("tile.zig");
 const json = @import("json.zig");
 const world = @import("world.zig");
+const platformer = @import("platformer.zig");
 const player = @import("player.zig");
 
 const Vector2f = firefly.utils.Vector2f;
@@ -30,6 +31,7 @@ pub fn init() !void {
     tile.init();
     world.init();
     json.init();
+    platformer.init();
     player.init();
 }
 
@@ -40,6 +42,7 @@ pub fn deinit() void {
 
     // deinit sub packages
     player.deinit();
+    platformer.deinit();
     json.deinit();
     world.deinit();
     tile.deinit();
@@ -144,7 +147,9 @@ pub const Room = world.Room;
 pub const RoomState = world.RoomState;
 pub const Area = world.Area;
 
-pub const PlatformerCollisionResolver = player.PlatformerCollisionResolver;
+pub const PlatformerCollisionResolver = platformer.PlatformerCollisionResolver;
+pub const SimplePlatformerHorizontalMoveControl = platformer.SimplePlatformerHorizontalMoveControl;
+pub const SimplePlatformerJumpControl = platformer.SimplePlatformerJumpControl;
 
 //////////////////////////////////////////////////////////////
 //// Simple pivot camera
@@ -176,41 +181,40 @@ pub const SimplePivotCamera = struct {
         );
     }
 
-    pub fn update(call_context: firefly.api.CallContext) void {
-        if (call_context.caller_id) |view_id|
-            if (api.ComponentControlType(SimplePivotCamera).stateByControlId(call_context.parent_id)) |self| {
-                var view = graphics.View.byId(view_id);
-                const move = getMove(self, view);
-                //std.debug.print("move: {d}\n", .{move});
-                if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
-                    view.moveProjection(
-                        move * self.velocity_relative_to_pivot,
-                        self.pixel_perfect,
-                        self.snap_to_bounds,
-                    );
+    pub fn update(view_id: Index, cam_id: ?Index) void {
+        const self = @This().byId(cam_id) orelse return;
+        var view = graphics.View.byId(view_id);
+        const move = getMove(self, view);
 
-                    // apply parallax scrolling if enabled
-                    if (self.enable_parallax) {
-                        if (view.ordered_active_layer) |ol| {
-                            var next = ol.slots.nextSetBit(0);
-                            while (next) |i| {
-                                var layer = firefly.graphics.Layer.byId(i);
-                                if (layer.parallax) |parallax| {
-                                    if (layer.offset) |*off| {
-                                        off[0] = -view.projection.position[0] * parallax[0];
-                                        off[1] = -view.projection.position[1] * parallax[1];
-                                        if (self.pixel_perfect) {
-                                            off[0] = @floor(off[0]);
-                                            off[1] = @floor(off[1]);
-                                        }
-                                    }
+        //std.debug.print("move: {d}\n", .{move});
+        if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
+            view.moveProjection(
+                move * self.velocity_relative_to_pivot,
+                self.pixel_perfect,
+                self.snap_to_bounds,
+            );
+
+            // apply parallax scrolling if enabled
+            if (self.enable_parallax) {
+                if (view.ordered_active_layer) |ol| {
+                    var next = ol.slots.nextSetBit(0);
+                    while (next) |i| {
+                        var layer = firefly.graphics.Layer.byId(i);
+                        if (layer.parallax) |parallax| {
+                            if (layer.offset) |*off| {
+                                off[0] = -view.projection.position[0] * parallax[0];
+                                off[1] = -view.projection.position[1] * parallax[1];
+                                if (self.pixel_perfect) {
+                                    off[0] = @floor(off[0]);
+                                    off[1] = @floor(off[1]);
                                 }
-                                next = ol.slots.nextSetBit(i + 1);
                             }
                         }
+                        next = ol.slots.nextSetBit(i + 1);
                     }
                 }
-            };
+            }
+        }
     }
 
     inline fn getMove(self: *SimplePivotCamera, view: *graphics.View) Vector2f {

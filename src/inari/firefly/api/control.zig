@@ -106,8 +106,8 @@ pub const CallCondition = api.Condition(*const fn (*const CallContext) bool);
 //// Component Control
 //////////////////////////////////////////////////////////////////////////
 
-pub const ControlFunction = *const fn (CallContext) void;
-pub const ControlDispose = *const fn (Index) void;
+pub const ControlFunction = *const fn (component_id: Index, data_id: ?Index) void;
+pub const ControlDispose = *const fn (data_id: ?Index) void;
 
 pub const ComponentControl = struct {
     pub usingnamespace api.Component.Trait(ComponentControl, .{
@@ -121,23 +121,18 @@ pub const ComponentControl = struct {
     name: ?String = null,
     groups: ?api.GroupKind = null,
 
-    control: ControlFunction,
+    f: ControlFunction,
+    data_id: ?Index = null,
     dispose: ?ControlDispose = null,
-    attributes: ?api.Attributes = null,
 
     pub fn destruct(self: *ComponentControl) void {
-        if (self.dispose) |df| df(self.id);
+        if (self.dispose) |df| df(self.data_id);
         self.groups = null;
     }
 
-    pub fn update(control_id: Index, c_id: Index) void {
-        if (ComponentControl.getWhenActiveById(control_id)) |c| {
-            c.control(.{
-                .parent_id = control_id,
-                .caller_id = c_id,
-                .attributes = c.attributes,
-            });
-        }
+    pub fn update(control_id: Index, component_id: Index) void {
+        if (ComponentControl.getWhenActiveById(control_id)) |c|
+            c.f(component_id, c.data_id);
     }
 };
 
@@ -145,8 +140,13 @@ pub fn ControlTypeTrait(comptime T: type, comptime ComponentType: type) type {
     return struct {
         pub const component_type = ComponentType;
         pub fn byName(name: String) ?*T {
-            const control_component_id = ComponentControl.idByName(name) orelse return null;
-            return ComponentControlType(T).stateByControlId(control_component_id);
+            const control = ComponentControl.byName(name) orelse return null;
+            return byId(control.data_id);
+        }
+
+        pub fn byId(data_id: ?Index) ?*T {
+            const id = data_id orelse return null;
+            return ComponentControlType(T).dataById(id);
         }
     };
 }
@@ -157,8 +157,6 @@ pub fn ComponentControlType(comptime T: type) type {
             @compileError("Expects component control type is a struct.");
         if (!@hasDecl(T, "update"))
             @compileError("Expects component control type to have function 'update(Index)'");
-        if (!@hasField(T, "name"))
-            @compileError("Expects component control type to have field 'name: String'");
         if (!@hasDecl(T, "component_type"))
             @compileError("Expects component control type to have var 'component_type: ComponentAspect'");
     }
@@ -166,35 +164,35 @@ pub fn ComponentControlType(comptime T: type) type {
     return struct {
         const Self = @This();
 
-        var register: utils.DynArray(T) = undefined;
+        var data: utils.DynArray(T) = undefined;
 
         pub fn init() void {
-            register = utils.DynArray(T).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 20);
+            data = utils.DynArray(T).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5);
         }
 
         pub fn deinit() void {
-            register.deinit();
+            data.deinit();
         }
 
-        pub fn stateByControlId(id: Index) ?*T {
-            return register.get(id);
+        pub fn dataById(id: Index) ?*T {
+            return data.get(id);
         }
 
         pub fn new(control_type: T) *ComponentControl {
-            const control = ComponentControl.new(.{
-                .name = control_type.name,
-                .control = T.update,
+            var control = ComponentControl.new(.{
+                .name = if (@hasField(T, "name")) control_type.name else null,
+                .f = T.update,
                 .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type).?,
                 .dispose = dispose,
             });
 
-            _ = register.set(control_type, control.id);
-
+            control.data_id = data.add(control_type);
             return control;
         }
 
-        fn dispose(id: Index) void {
-            register.delete(id);
+        fn dispose(id: ?Index) void {
+            if (id) |i|
+                data.delete(i);
         }
     };
 }

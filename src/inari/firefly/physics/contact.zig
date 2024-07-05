@@ -688,6 +688,40 @@ pub const ContactSystem = struct {
         }
     }
 
+    pub fn applyScanForConstraint(entity_id: Index, constraint: *ContactConstraint) bool {
+        var has_any_contact = false;
+
+        constraint.clear();
+
+        const t1 = graphics.ETransform.byId(entity_id).?;
+        const view_id = graphics.EView.byId(entity_id).?.view_id;
+        const world_contact_bounds = utils.RectF{
+            t1.position[0] + constraint.scan.bounds.rect[0],
+            t1.position[1] + constraint.scan.bounds.rect[1],
+            constraint.scan.bounds.rect[2],
+            constraint.scan.bounds.rect[3],
+        };
+
+        // apply scan on registered entity mappers
+        has_any_contact = has_any_contact or scanOnMappings(
+            entity_id,
+            constraint,
+            world_contact_bounds,
+            view_id,
+            constraint.layer_id,
+        );
+        // apply scan on active tile grids
+        has_any_contact = has_any_contact or scanOnTileGrids(
+            entity_id,
+            constraint,
+            world_contact_bounds,
+            view_id,
+            constraint.layer_id,
+        );
+
+        return has_any_contact;
+    }
+
     pub fn applyScan(e_scan: *EContactScan) void {
         var view_id: ?Index = null;
         var layer_id: ?Index = null;
@@ -714,7 +748,7 @@ pub const ContactSystem = struct {
 
             // apply scan on registered entity mappers
             has_any_contact = has_any_contact or scanOnMappings(
-                e_scan,
+                e_scan.id,
                 constraint,
                 world_contact_bounds,
                 view_id,
@@ -722,7 +756,7 @@ pub const ContactSystem = struct {
             );
             // apply scan on active tile grids
             has_any_contact = has_any_contact or scanOnTileGrids(
-                e_scan,
+                e_scan.id,
                 constraint,
                 world_contact_bounds,
                 view_id,
@@ -739,7 +773,7 @@ pub const ContactSystem = struct {
     }
 
     fn scanOnMappings(
-        e_scan: *EContactScan,
+        scan_entity_id: Index,
         constraint: *ContactConstraint,
         world_contact_bounds: utils.RectF,
         view_id: ?Index,
@@ -752,9 +786,9 @@ pub const ContactSystem = struct {
                 if (graphics.ViewLayerMapping.match(map.view_id, view_id, map.layer_id, layer_id)) {
                     if (map.getPotentialContactIds(world_contact_bounds)) |entity_ids| {
                         for (entity_ids) |entity_id| {
-                            if (entity_id == e_scan.id) continue;
+                            if (entity_id == scan_entity_id) continue;
                             has_any_contact = has_any_contact or constraint.scanEntity(
-                                e_scan.id,
+                                scan_entity_id,
                                 entity_id,
                                 null,
                             );
@@ -769,7 +803,7 @@ pub const ContactSystem = struct {
     }
 
     fn scanOnTileGrids(
-        e_scan: *EContactScan,
+        scan_entity_id: Index,
         constraint: *ContactConstraint,
         world_contact_bounds: utils.RectF,
         view_id: ?Index,
@@ -787,7 +821,7 @@ pub const ContactSystem = struct {
 
                 while (it.next()) |entity_id| {
                     const has_contact = constraint.scanEntity(
-                        e_scan.id,
+                        scan_entity_id,
                         entity_id,
                         it.rel_position + tile_grid.world_position,
                     );
