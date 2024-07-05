@@ -1,35 +1,19 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
-const DynArray = firefly.utils.DynArray;
-const DynIndexArray = firefly.utils.DynIndexArray;
-const AssetComponent = firefly.api.AssetComponent;
-const Asset = firefly.api.Asset;
-const String = firefly.utils.String;
-const Component = firefly.api.Component;
-const ComponentEvent = firefly.api.Component.ComponentEvent;
-const Texture = firefly.graphics.Texture;
-const EComponent = firefly.api.EComponent;
-const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
-const EntityTypeCondition = firefly.api.EntityTypeCondition;
-const EView = firefly.graphics.EView;
-const EMultiplier = firefly.api.EMultiplier;
-const ETransform = firefly.graphics.ETransform;
-const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
-const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
-const System = firefly.api.System;
-const BindingId = firefly.api.BindingId;
-const Index = firefly.utils.Index;
-const Float = firefly.utils.Float;
-const RectF = firefly.utils.RectF;
-const PosF = firefly.utils.PosF;
-const Vector2f = firefly.utils.Vector2f;
-const Color = firefly.utils.Color;
-const BlendMode = firefly.api.BlendMode;
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
 
-const NO_NAME = firefly.utils.NO_NAME;
-const NO_BINDING = firefly.api.NO_BINDING;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const String = utils.String;
+const BindingId = api.BindingId;
+const Index = utils.Index;
+const Float = utils.Float;
+const RectF = utils.RectF;
+const PosF = utils.PosF;
+const Vector2f = utils.Vector2f;
+const Color = utils.Color;
+const BlendMode = api.BlendMode;
 
 //////////////////////////////////////////////////////////////
 //// sprite init
@@ -42,12 +26,12 @@ pub fn init() !void {
         return;
 
     // init Assets types
-    Asset(SpriteSet).init();
+    api.Asset(SpriteSet).init();
     // init components and entities
-    Component.registerComponent(SpriteTemplate);
-    EComponent.registerEntityComponent(ESprite);
+    api.Component.registerComponent(SpriteTemplate);
+    api.EComponent.registerEntityComponent(ESprite);
     // init renderer
-    System(DefaultSpriteRenderer).createSystem(
+    api.System(DefaultSpriteRenderer).createSystem(
         firefly.Engine.DefaultRenderer.SPRITE,
         "Render Entities with ETransform and ESprite components",
         true,
@@ -60,9 +44,9 @@ pub fn deinit() void {
         return;
 
     // deinit asset types
-    Asset(SpriteSet).deinit();
+    api.Asset(SpriteSet).deinit();
     // deinit renderer
-    System(DefaultSpriteRenderer).disposeSystem();
+    api.System(DefaultSpriteRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -70,7 +54,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const SpriteTemplate = struct {
-    pub usingnamespace Component.Trait(
+    pub usingnamespace api.Component.Trait(
         @This(),
         .{
             .name = "SpriteTemplate",
@@ -79,11 +63,11 @@ pub const SpriteTemplate = struct {
         },
     );
 
-    id: Index = UNDEF_INDEX,
+    id: Index = utils.UNDEF_INDEX,
     name: ?String = null,
     texture_name: String,
     texture_bounds: RectF,
-    texture_binding: BindingId = NO_BINDING,
+    texture_binding: BindingId = api.NO_BINDING,
 
     _flippedX: bool = false,
     _flippedY: bool = false,
@@ -101,33 +85,33 @@ pub const SpriteTemplate = struct {
     }
 
     pub fn componentTypeInit() !void {
-        AssetComponent.subscribe(notifyAssetEvent);
+        api.AssetComponent.subscribe(notifyAssetEvent);
     }
 
     pub fn componentTypeDeinit() void {
-        AssetComponent.unsubscribe(notifyAssetEvent);
+        api.AssetComponent.unsubscribe(notifyAssetEvent);
     }
 
     pub fn construct(self: *SpriteTemplate) void {
-        if (Texture.resourceByName(self.texture_name)) |tex| {
+        if (graphics.Texture.resourceByName(self.texture_name)) |tex| {
             if (tex._binding) |b| {
                 self.texture_binding = b.id;
             }
         }
     }
 
-    fn notifyAssetEvent(e: ComponentEvent) void {
-        if (Texture.resourceByAssetId(e.c_id.?)) |t| {
+    fn notifyAssetEvent(e: api.ComponentEvent) void {
+        if (graphics.Texture.resourceByAssetId(e.c_id.?)) |t| {
             switch (e.event_type) {
-                ComponentEvent.Type.ACTIVATED => onTextureLoad(t),
-                ComponentEvent.Type.DEACTIVATING => onTextureUnload(t),
-                ComponentEvent.Type.DISPOSING => onTextureDispose(t),
+                api.ComponentEvent.Type.ACTIVATED => onTextureLoad(t),
+                api.ComponentEvent.Type.DEACTIVATING => onTextureUnload(t),
+                api.ComponentEvent.Type.DISPOSING => onTextureDispose(t),
                 else => {},
             }
         }
     }
 
-    fn onTextureLoad(texture: *Texture) void {
+    fn onTextureLoad(texture: *graphics.Texture) void {
         if (texture._binding) |b| {
             var next = SpriteTemplate.nextId(0);
             while (next) |id| {
@@ -140,18 +124,18 @@ pub const SpriteTemplate = struct {
         }
     }
 
-    fn onTextureUnload(texture: *Texture) void {
+    fn onTextureUnload(texture: *graphics.Texture) void {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
             if (firefly.utils.stringEquals(template.texture_name, texture.name))
-                template.texture_binding = NO_BINDING;
+                template.texture_binding = api.NO_BINDING;
 
             next = SpriteTemplate.nextId(id + 1);
         }
     }
 
-    fn onTextureDispose(texture: *Texture) void {
+    fn onTextureDispose(texture: *graphics.Texture) void {
         var next = SpriteTemplate.nextId(0);
         while (next) |id| {
             const template = SpriteTemplate.byId(id);
@@ -180,15 +164,15 @@ pub const SpriteTemplate = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ESprite = struct {
-    pub usingnamespace EComponent.Trait(@This(), "ESprite");
+    pub usingnamespace api.EComponent.Trait(@This(), "ESprite");
 
-    id: Index = UNDEF_INDEX,
-    template_id: Index = UNDEF_INDEX,
+    id: Index = utils.UNDEF_INDEX,
+    template_id: ?Index = null,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
 
     pub fn destruct(self: *ESprite) void {
-        self.template_id = UNDEF_INDEX;
+        self.template_id = utils.UNDEF_INDEX;
         self.tint_color = null;
         self.blend_mode = null;
     }
@@ -221,8 +205,8 @@ pub const SpriteStamp = struct {
 pub const SpriteSet = struct {
     pub usingnamespace firefly.api.AssetTrait(SpriteSet, "SpriteSet");
 
-    _stamps: DynArray(SpriteStamp) = undefined,
-    _loaded_sprite_template_refs: DynIndexArray = undefined,
+    _stamps: utils.DynArray(SpriteStamp) = undefined,
+    _loaded_sprite_template_refs: utils.DynIndexArray = undefined,
 
     name: String,
     texture_name: String,
@@ -230,8 +214,8 @@ pub const SpriteSet = struct {
     set_dimensions: ?Vector2f = null,
 
     pub fn construct(self: *SpriteSet) void {
-        self._stamps = DynArray(SpriteStamp).new(firefly.api.COMPONENT_ALLOC);
-        self._sprite_template_refs = DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 32);
+        self._stamps = utils.DynArray(SpriteStamp).new(firefly.api.COMPONENT_ALLOC);
+        self._sprite_template_refs = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 32);
     }
 
     pub fn destruct(self: *SpriteSet) void {
@@ -253,7 +237,7 @@ pub const SpriteSet = struct {
         }
     }
 
-    pub fn loadResource(component: *AssetComponent) void {
+    pub fn loadResource(component: *api.AssetComponent) void {
         if (SpriteSet.resourceById(component.resource_id)) |res| {
             if (res.set_dimensions) |dim| {
                 // in this case we interpret the texture as a grid-map of sprites and use default stamp
@@ -319,7 +303,7 @@ pub const SpriteSet = struct {
         }
     }
 
-    pub fn disposeResource(component: *AssetComponent) void {
+    pub fn disposeResource(component: *api.AssetComponent) void {
         if (SpriteSet.resourceById(component.resource_id)) |res| {
             for (res._loaded_sprite_template_refs.items) |index|
                 SpriteTemplate.disposeById(index);
@@ -343,13 +327,13 @@ pub const SpriteSet = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultSpriteRenderer = struct {
-    pub var entity_condition: EntityTypeCondition = undefined;
-    var sprite_refs: ViewLayerMapping = undefined;
+    pub var entity_condition: api.EntityTypeCondition = undefined;
+    var sprite_refs: graphics.ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
-        sprite_refs = ViewLayerMapping.new();
-        entity_condition = EntityTypeCondition{
-            .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, ESprite }),
+        sprite_refs = graphics.ViewLayerMapping.new();
+        entity_condition = api.EntityTypeCondition{
+            .accept_kind = api.EComponentAspectGroup.newKindOf(.{ graphics.ETransform, ESprite }),
         };
     }
 
@@ -361,34 +345,34 @@ const DefaultSpriteRenderer = struct {
 
     pub fn entityRegistration(id: Index, register: bool) void {
         if (register)
-            sprite_refs.addWithEView(EView.byId(id), id)
+            sprite_refs.addWithEView(graphics.EView.byId(id), id)
         else
-            sprite_refs.removeWithEView(EView.byId(id), id);
+            sprite_refs.removeWithEView(graphics.EView.byId(id), id);
     }
 
-    pub fn renderView(e: ViewRenderEvent) void {
+    pub fn renderView(e: graphics.ViewRenderEvent) void {
         if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |id| {
-                // render the sprite
-                const es: *ESprite = ESprite.byId(id).?;
-                const trans: *ETransform = ETransform.byId(id).?;
-                if (es.template_id != NO_BINDING) {
-                    const sprite_template: *SpriteTemplate = SpriteTemplate.byId(es.template_id);
-                    const multi = if (EMultiplier.byId(id)) |m| m.positions else null;
-                    firefly.api.rendering.renderSprite(
-                        sprite_template.texture_binding,
-                        sprite_template.texture_bounds,
-                        trans.position,
-                        trans.pivot,
-                        trans.scale,
-                        trans.rotation,
-                        es.tint_color,
-                        es.blend_mode,
-                        multi,
-                    );
-                }
                 i = all.nextSetBit(id + 1);
+                // render the sprite
+                const es: *ESprite = ESprite.byId(id) orelse continue;
+                const trans: *graphics.ETransform = graphics.ETransform.byId(id) orelse continue;
+                const template_id = es.template_id orelse continue;
+
+                const sprite_template: *SpriteTemplate = SpriteTemplate.byId(template_id);
+                const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
+                firefly.api.rendering.renderSprite(
+                    sprite_template.texture_binding,
+                    sprite_template.texture_bounds,
+                    trans.position,
+                    trans.pivot,
+                    trans.scale,
+                    trans.rotation,
+                    es.tint_color,
+                    es.blend_mode,
+                    multi,
+                );
             }
         }
     }

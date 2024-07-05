@@ -8,11 +8,11 @@ const view = @import("view.zig");
 const tile = @import("tile.zig");
 const text = @import("text.zig");
 
-const String = firefly.utils.String;
-const Float = firefly.utils.Float;
-const Vector2f = firefly.utils.Vector2f;
-const Vector3f = firefly.utils.Vector3f;
-const Vector4f = firefly.utils.Vector4f;
+const String = utils.String;
+const Float = utils.Float;
+const Vector2f = utils.Vector2f;
+const Vector3f = utils.Vector3f;
+const Vector4f = utils.Vector4f;
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations

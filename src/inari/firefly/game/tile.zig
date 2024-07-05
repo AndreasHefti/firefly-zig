@@ -5,17 +5,17 @@ const api = firefly.api;
 const physics = firefly.physics;
 const graphics = firefly.graphics;
 
-const Color = firefly.utils.Color;
-const String = firefly.utils.String;
-const Index = firefly.utils.Index;
-const Float = firefly.utils.Float;
-const RectF = firefly.utils.RectF;
-const ClipI = firefly.utils.ClipI;
-const CInt = firefly.utils.CInt;
-const PosF = firefly.utils.PosF;
-const Vector2f = firefly.utils.Vector2f;
-const BindingId = firefly.api.BindingId;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const Color = utils.Color;
+const String = utils.String;
+const Index = utils.Index;
+const Float = utils.Float;
+const RectF = utils.RectF;
+const ClipI = utils.ClipI;
+const CInt = utils.CInt;
+const PosF = utils.PosF;
+const Vector2f = utils.Vector2f;
+const BindingId = api.BindingId;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// game tile init

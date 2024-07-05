@@ -115,6 +115,8 @@ fn create_player(_: api.CallContext) void {
         .withComponent(physics.EMovement{
         .mass = 50,
         .max_velocity_south = 80,
+        .max_velocity_east = 50,
+        .max_velocity_west = 50,
         .integrator = physics.EulerIntegrator,
     })
     // .withComponent(physics.EContactScan{ .collision_resolver = physics.DebugCollisionResolver })

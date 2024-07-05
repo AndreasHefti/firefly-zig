@@ -1,5 +1,6 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
 
 const Allocator = std.mem.Allocator;
 const asset = @import("asset.zig");
@@ -8,20 +9,20 @@ const system = @import("System.zig");
 const timer = @import("Timer.zig");
 const entity = @import("entity.zig");
 const control = @import("control.zig");
-const EventDispatch = firefly.utils.EventDispatch;
-const String = firefly.utils.String;
-const CString = firefly.utils.CString;
-const Index = firefly.utils.Index;
-const CInt = firefly.utils.CInt;
+
+const String = utils.String;
+const CString = utils.CString;
+const Index = utils.Index;
+const CInt = utils.CInt;
 const CUInt = firefly.utils.CUInt;
-const Float = firefly.utils.Float;
-const PosF = firefly.utils.PosF;
-const RectF = firefly.utils.RectF;
-const Color = firefly.utils.Color;
-const Vector2f = firefly.utils.Vector2f;
-const Vector3f = firefly.utils.Vector3f;
-const Vector4f = firefly.utils.Vector4f;
-const StringBuffer = firefly.utils.StringBuffer;
+const Float = utils.Float;
+const PosF = utils.PosF;
+const RectF = utils.RectF;
+const Color = utils.Color;
+const Vector2f = utils.Vector2f;
+const Vector3f = utils.Vector3f;
+const Vector4f = utils.Vector4f;
+const StringBuffer = utils.StringBuffer;
 
 fn dummyDeinit() void {}
 
@@ -126,9 +127,9 @@ pub fn init(context: InitContext) !void {
     ENTITY_ALLOC = context.entity_allocator;
     ALLOC = context.allocator;
 
-    UPDATE_EVENT_DISPATCHER = EventDispatch(UpdateEvent).new(ALLOC);
-    RENDER_EVENT_DISPATCHER = EventDispatch(RenderEvent).new(ALLOC);
-    VIEW_RENDER_EVENT_DISPATCHER = EventDispatch(ViewRenderEvent).new(ALLOC);
+    UPDATE_EVENT_DISPATCHER = utils.EventDispatch(UpdateEvent).new(ALLOC);
+    RENDER_EVENT_DISPATCHER = utils.EventDispatch(RenderEvent).new(ALLOC);
+    VIEW_RENDER_EVENT_DISPATCHER = utils.EventDispatch(ViewRenderEvent).new(ALLOC);
 
     if (RUN_ON_SET == RUN_ON.RAYLIB) {
         rendering = try @import("raylib/rendering.zig").createRenderAPI();
@@ -429,9 +430,9 @@ pub fn allocVec2FArray(array: anytype) []const Vector2f {
 //// Update Event and Render Event declarations
 //////////////////////////////////////////////////////////////
 
-var UPDATE_EVENT_DISPATCHER: EventDispatch(UpdateEvent) = undefined;
-var RENDER_EVENT_DISPATCHER: EventDispatch(RenderEvent) = undefined;
-var VIEW_RENDER_EVENT_DISPATCHER: EventDispatch(ViewRenderEvent) = undefined;
+var UPDATE_EVENT_DISPATCHER: utils.EventDispatch(UpdateEvent) = undefined;
+var RENDER_EVENT_DISPATCHER: utils.EventDispatch(RenderEvent) = undefined;
+var VIEW_RENDER_EVENT_DISPATCHER: utils.EventDispatch(ViewRenderEvent) = undefined;
 
 pub const UpdateEvent = struct {};
 pub const UpdateListener = *const fn (UpdateEvent) void;

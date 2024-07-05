@@ -1,26 +1,19 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
 
-const System = firefly.api.System;
-const EComponentAspectGroup = firefly.api.EComponentAspectGroup;
-const EntityTypeCondition = firefly.api.EntityTypeCondition;
-const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
-const EView = firefly.graphics.EView;
-const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
-const Component = firefly.api.Component;
-const EComponent = firefly.api.EComponent;
-const AssetComponent = firefly.api.AssetComponent;
-const Asset = firefly.api.Asset;
-const Color = firefly.utils.Color;
-const BlendMode = firefly.api.BlendMode;
-const ETransform = firefly.graphics.ETransform;
-const Index = firefly.utils.Index;
-const Float = firefly.utils.Float;
-const String = firefly.utils.String;
-const CInt = firefly.utils.CInt;
-const CString = firefly.utils.CString;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
-const BindingId = firefly.api.BindingId;
+const utils = firefly.utils;
+const api = firefly.api;
+const graphics = firefly.graphics;
+
+const Color = utils.Color;
+const BlendMode = api.BlendMode;
+const Index = utils.Index;
+const Float = utils.Float;
+const String = utils.String;
+const CInt = utils.CInt;
+const CString = utils.CString;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
+const BindingId = api.BindingId;
 
 //////////////////////////////////////////////////////////////
 //// text init
@@ -33,12 +26,12 @@ pub fn init() !void {
         return;
 
     // init Asset types
-    Asset(Font).init();
+    api.Asset(Font).init();
     // init components and entities
-    EComponent.registerEntityComponent(EText);
+    api.EComponent.registerEntityComponent(EText);
 
     // init renderer
-    System(DefaultTextRenderer).createSystem(
+    api.System(DefaultTextRenderer).createSystem(
         firefly.Engine.DefaultRenderer.TEXT,
         "Render Entities with ETransform and EText components",
         true,
@@ -51,9 +44,9 @@ pub fn deinit() void {
         return;
 
     // deinit Asset types
-    Asset(Font).deinit();
+    api.Asset(Font).deinit();
     // deinit renderer
-    System(DefaultTextRenderer).disposeSystem();
+    api.System(DefaultTextRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -71,7 +64,7 @@ pub const Font = struct {
 
     _binding: ?BindingId = null,
 
-    pub fn loadResource(component: *AssetComponent) void {
+    pub fn loadResource(component: *api.AssetComponent) void {
         if (Font.resourceById(component.resource_id)) |res| {
             if (res._binding != null)
                 return; // already loaded
@@ -85,7 +78,7 @@ pub const Font = struct {
         }
     }
 
-    pub fn disposeResource(component: *AssetComponent) void {
+    pub fn disposeResource(component: *api.AssetComponent) void {
         if (Font.resourceById(component.resource_id)) |res| {
             if (res._binding) |b| {
                 firefly.api.rendering.disposeFont(b);
@@ -100,7 +93,7 @@ pub const Font = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EText = struct {
-    pub usingnamespace EComponent.Trait(@This(), "EText");
+    pub usingnamespace api.EComponent.Trait(@This(), "EText");
 
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
@@ -126,13 +119,13 @@ pub const EText = struct {
 //////////////////////////////////////////////////////////////
 
 const DefaultTextRenderer = struct {
-    pub var entity_condition: EntityTypeCondition = undefined;
-    var text_refs: ViewLayerMapping = undefined;
+    pub var entity_condition: api.EntityTypeCondition = undefined;
+    var text_refs: graphics.ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
-        text_refs = ViewLayerMapping.new();
-        entity_condition = EntityTypeCondition{
-            .accept_kind = EComponentAspectGroup.newKindOf(.{ ETransform, EText }),
+        text_refs = graphics.ViewLayerMapping.new();
+        entity_condition = api.EntityTypeCondition{
+            .accept_kind = api.EComponentAspectGroup.newKindOf(.{ graphics.ETransform, EText }),
         };
     }
 
@@ -143,18 +136,18 @@ const DefaultTextRenderer = struct {
 
     pub fn entityRegistration(id: Index, register: bool) void {
         if (register)
-            text_refs.addWithEView(EView.byId(id), id)
+            text_refs.addWithEView(graphics.EView.byId(id), id)
         else
-            text_refs.removeWithEView(EView.byId(id), id);
+            text_refs.removeWithEView(graphics.EView.byId(id), id);
     }
 
-    pub fn renderView(e: ViewRenderEvent) void {
+    pub fn renderView(e: graphics.ViewRenderEvent) void {
         if (text_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |id| {
                 // render the sprite
                 if (EText.byId(id)) |text| {
-                    const trans = ETransform.byId(id).?;
+                    const trans = graphics.ETransform.byId(id).?;
                     firefly.api.rendering.renderText(
                         text.font_id,
                         text.text,
