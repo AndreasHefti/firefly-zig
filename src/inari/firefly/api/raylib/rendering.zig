@@ -33,7 +33,6 @@ const CInt = firefly.utils.CInt;
 const CString = firefly.utils.CString;
 const Float = firefly.utils.Float;
 const WindowHandle = firefly.api.WindowHandle;
-const NO_BINDING = firefly.api.NO_BINDING;
 const EMPTY_STRING = firefly.utils.EMPTY_STRING;
 
 var singleton: ?IRenderAPI() = null;
@@ -238,13 +237,10 @@ const RaylibRenderAPI = struct {
     }
 
     fn disposeTexture(binding: BindingId) void {
-        if (binding == NO_BINDING)
-            return;
+        const tex = textures.get(binding) orelse return;
 
-        if (textures.get(binding)) |tex| {
-            rl.UnloadTexture(tex.*);
-            textures.delete(binding);
-        }
+        rl.UnloadTexture(tex.*);
+        textures.delete(binding);
     }
 
     fn loadImageFromTexture(texture_id: BindingId) ImageBinding {
@@ -309,10 +305,9 @@ const RaylibRenderAPI = struct {
     }
 
     fn disposeImage(image_id: BindingId) void {
-        if (images.get(image_id)) |img| {
-            rl.UnloadImage(img.*);
-            images.delete(image_id);
-        }
+        const img = images.get(image_id) orelse return;
+        rl.UnloadImage(img.*);
+        images.delete(image_id);
     }
 
     fn getImageColorAt(image_id: BindingId, x: CInt, y: CInt) ?Color {
@@ -339,13 +334,9 @@ const RaylibRenderAPI = struct {
     }
 
     fn disposeFont(binding: BindingId) void {
-        if (binding == NO_BINDING)
-            return;
-
-        if (fonts.get(binding)) |f| {
-            rl.UnloadFont(f.*);
-            fonts.delete(binding);
-        }
+        const f = fonts.get(binding) orelse return;
+        rl.UnloadFont(f.*);
+        fonts.delete(binding);
     }
 
     fn createRenderTexture(projection: *Projection) RenderTextureBinding {
@@ -362,13 +353,9 @@ const RaylibRenderAPI = struct {
     }
 
     fn disposeRenderTexture(id: BindingId) void {
-        if (id == NO_BINDING)
-            return;
-
-        if (render_textures.get(id)) |tex| {
-            rl.UnloadRenderTexture(tex.*);
-            render_textures.delete(id);
-        }
+        const tex = render_textures.get(id) orelse return;
+        rl.UnloadRenderTexture(tex.*);
+        render_textures.delete(id);
     }
 
     fn createShader(vertex_shader: ?String, fragment_shade: ?String, file: bool) ShaderBinding {
@@ -397,18 +384,14 @@ const RaylibRenderAPI = struct {
     }
 
     fn disposeShader(id: BindingId) void {
-        if (id == NO_BINDING)
-            return;
-
-        if (shaders.get(id)) |shader| {
-            rl.UnloadShader(shader.*);
-            shaders.delete(id);
-        }
+        const shader = shaders.get(id) orelse return;
+        rl.UnloadShader(shader.*);
+        shaders.delete(id);
     }
 
     fn setActiveShader(binding_id: BindingId) void {
         if (active_shader != null and active_shader.? != binding_id) {
-            if (active_shader == NO_BINDING) {
+            if (active_shader == null) {
                 rl.EndShaderMode();
             } else {
                 if (shaders.get(active_shader.?)) |shader| {

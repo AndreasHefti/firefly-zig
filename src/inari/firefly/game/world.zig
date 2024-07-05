@@ -13,7 +13,6 @@ const BlendMode = api.BlendMode;
 const RectF = utils.RectF;
 const CInt = utils.CInt;
 const BindingId = api.BindingId;
-const NO_BINDING = api.NO_BINDING;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////

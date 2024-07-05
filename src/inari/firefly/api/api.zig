@@ -101,7 +101,6 @@ pub const EState = control.EState;
 pub const StateCondition = control.StateCondition;
 
 pub const BindingId = usize;
-pub const NO_BINDING: BindingId = std.math.maxInt(usize);
 pub const Deinit = *const fn () void;
 
 pub fn activateSystem(name: String, active: bool) void {
@@ -612,7 +611,7 @@ pub const Projection = struct {
 };
 
 pub const TextureBinding = struct {
-    id: BindingId = NO_BINDING,
+    id: BindingId,
     width: CInt = 0,
     height: CInt = 0,
 
@@ -630,7 +629,7 @@ pub const TextureBinding = struct {
 };
 
 pub const RenderTextureBinding = struct {
-    id: BindingId = NO_BINDING,
+    id: BindingId,
     width: CInt = 0,
     height: CInt = 0,
 
@@ -648,7 +647,7 @@ pub const RenderTextureBinding = struct {
 };
 
 pub const ShaderBinding = struct {
-    id: BindingId = NO_BINDING,
+    id: BindingId,
 
     _set_uniform_float: *const fn (BindingId, CString, *Float) bool,
     _set_uniform_vec2: *const fn (BindingId, CString, *Vector2f) bool,
@@ -658,7 +657,7 @@ pub const ShaderBinding = struct {
 };
 
 pub const ImageBinding = struct {
-    id: BindingId = NO_BINDING,
+    id: BindingId,
     data: ?*anyopaque,
     width: CInt,
     height: CInt,

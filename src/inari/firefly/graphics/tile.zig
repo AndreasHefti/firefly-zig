@@ -25,7 +25,6 @@ const BlendMode = firefly.api.BlendMode;
 const RectF = firefly.utils.RectF;
 const CInt = firefly.utils.CInt;
 const BindingId = firefly.api.BindingId;
-const NO_BINDING = firefly.api.NO_BINDING;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
@@ -387,34 +386,35 @@ const DefaultTileGridRenderer = struct {
         if (tile_grid_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |grid_id| {
-                var tile_grid: *TileGrid = TileGrid.byId(grid_id);
-                firefly.api.rendering.addOffset(tile_grid.world_position);
-                var iterator = tile_grid.getIteratorForProjection(e.projection.?);
-                if (iterator) |*itr| {
-                    while (itr.next()) |entity_id| {
-                        if (entity_id == UNDEF_INDEX)
-                            continue;
-
-                        const tile = ETile.byId(entity_id).?;
-                        const trans = ETransform.byId(entity_id).?;
-                        if (tile.sprite_template_id != NO_BINDING) {
-                            const sprite_template: *SpriteTemplate = SpriteTemplate.byId(tile.sprite_template_id);
-                            firefly.api.rendering.renderSprite(
-                                sprite_template.texture_binding,
-                                sprite_template.texture_bounds,
-                                itr.rel_position + trans.position,
-                                trans.pivot,
-                                trans.scale,
-                                trans.rotation,
-                                tile.tint_color,
-                                tile.blend_mode,
-                                null,
-                            );
-                        }
-                    }
-                }
-                firefly.api.rendering.addOffset(tile_grid.world_position * firefly.utils.NEG_VEC2F);
                 i = all.nextSetBit(grid_id + 1);
+
+                var tile_grid: *TileGrid = TileGrid.byId(grid_id);
+                var iterator = tile_grid.getIteratorForProjection(e.projection.?) orelse continue;
+
+                firefly.api.rendering.addOffset(tile_grid.world_position);
+
+                while (iterator.next()) |entity_id| {
+                    if (entity_id == UNDEF_INDEX)
+                        continue;
+
+                    const tile = ETile.byId(entity_id) orelse continue;
+                    const trans = ETransform.byId(entity_id) orelse continue;
+                    const sprite_template: *SpriteTemplate = SpriteTemplate.byId(tile.sprite_template_id);
+                    const tex_id = sprite_template.texture_binding orelse continue;
+                    firefly.api.rendering.renderSprite(
+                        tex_id,
+                        sprite_template.texture_bounds,
+                        iterator.rel_position + trans.position,
+                        trans.pivot,
+                        trans.scale,
+                        trans.rotation,
+                        tile.tint_color,
+                        tile.blend_mode,
+                        null,
+                    );
+                }
+
+                firefly.api.rendering.addOffset(tile_grid.world_position * firefly.utils.NEG_VEC2F);
             }
         }
     }

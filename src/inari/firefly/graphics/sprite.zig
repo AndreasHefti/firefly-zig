@@ -67,7 +67,7 @@ pub const SpriteTemplate = struct {
     name: ?String = null,
     texture_name: String,
     texture_bounds: RectF,
-    texture_binding: BindingId = api.NO_BINDING,
+    texture_binding: ?BindingId = null,
 
     _flippedX: bool = false,
     _flippedY: bool = false,
@@ -129,7 +129,7 @@ pub const SpriteTemplate = struct {
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
             if (firefly.utils.stringEquals(template.texture_name, texture.name))
-                template.texture_binding = api.NO_BINDING;
+                template.texture_binding = null;
 
             next = SpriteTemplate.nextId(id + 1);
         }
@@ -363,7 +363,7 @@ const DefaultSpriteRenderer = struct {
                 const sprite_template: *SpriteTemplate = SpriteTemplate.byId(template_id);
                 const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
                 firefly.api.rendering.renderSprite(
-                    sprite_template.texture_binding,
+                    sprite_template.texture_binding.?,
                     sprite_template.texture_bounds,
                     trans.position,
                     trans.pivot,
