@@ -117,6 +117,23 @@ pub const DynIndexArray = struct {
     }
 };
 
+/// A dynamic growable array that uses register of defined register size to grow when all registers are full.
+/// DynArray owns the memory and allocates full memory for per register for each entry of the register.
+/// On deinit, DynArray frees the whole memory, means all existing register array. User has to be aware that
+/// referenced data that lives on an DynArray gets erased when the DynArray gets de-initialized.
+///
+/// A slot map indicates whether a certain entry on a specified index is set or not.
+/// A set operation copies the given data to the array on specified index and marks the slot at that index as set.
+/// A deletion operation just disables the slot position of this entry and do not apply any de-allocation.
+/// Usual iteration pattern for the list is:
+///
+/// var next = dynarray.nextSetBit(0);
+/// while (next) |i| {
+///     next = dynarray.nextSetBit(i + 1);
+///
+///     // do something with i or entry at i
+///     const entry = dynarray.get(i);
+/// }
 pub fn DynArray(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -154,9 +171,6 @@ pub fn DynArray(comptime T: type) type {
         }
 
         pub fn deinit(self: *Self) void {
-            // if (self.slots.nextSetBit(0) != null)
-            //     @panic("Dynarray still has data!");
-
             self.register.deinit();
             self.slots.deinit();
         }

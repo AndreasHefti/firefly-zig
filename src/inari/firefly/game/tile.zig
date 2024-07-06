@@ -507,7 +507,7 @@ pub const TileMapping = struct {
                     tile_set.tile_height,
                 },
             },
-            .c_material = material_type,
+            .material = material_type,
             .mask = tile_set.createContactMaskFromImage(tile_template),
         });
     }

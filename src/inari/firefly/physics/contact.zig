@@ -293,7 +293,7 @@ pub const ContactConstraint = struct {
         other_offset: ?Vector2f,
     ) bool {
         if (EContact.byId(other_entity)) |e_contact| {
-            if (!self.match(e_contact.c_type, e_contact.c_material))
+            if (!self.match(e_contact.type, e_contact.material))
                 return false;
 
             const t1 = graphics.ETransform.byId(self_entity).?;
@@ -319,8 +319,8 @@ pub const ContactConstraint = struct {
                     };
 
                     contact.entity_id = other_entity;
-                    contact.type = e_contact.c_type;
-                    contact.material = e_contact.c_material;
+                    contact.type = e_contact.type;
+                    contact.material = e_contact.material;
                     // stamp, either with the other entities mask or bound rect or circle
                     // if other has a bit-mask we need to apply the bit-mask, otherwise the bounded region
                     if (e_contact.mask) |other_mask| {
@@ -522,11 +522,17 @@ pub const EContact = struct {
     id: Index = UNDEF_INDEX,
 
     bounds: ContactBounds,
-    c_type: ?ContactTypeAspect = null,
-    c_material: ?ContactMaterialAspect = null,
+    type: ?ContactTypeAspect = null,
+    material: ?ContactMaterialAspect = null,
     mask: ?utils.BitMask = null,
 };
 
+pub const ContactCallbackFunction = *const fn (entity_id: Index, contacts: *ContactScan) void;
+pub const ContactCallback = struct {
+    type: ?ContactTypeAspect = null,
+    material: ?ContactMaterialAspect = null,
+    f: ContactCallbackFunction,
+};
 pub const EContactScan = struct {
     pub usingnamespace api.EComponent.Trait(EContactScan, "EContactScan");
 
@@ -534,6 +540,7 @@ pub const EContactScan = struct {
 
     collision_resolver: ?CollisionResolver = null,
     constraints: utils.BitSet = undefined,
+    callback: ?ContactCallback = null,
 
     pub fn construct(self: *EContactScan) void {
         self.constraints = utils.BitSet.new(firefly.api.ENTITY_ALLOC);
@@ -542,6 +549,7 @@ pub const EContactScan = struct {
     pub fn destruct(self: *EContactScan) void {
         self.collision_resolver = null;
         self.constraints.deinit();
+        self.constraints = undefined;
     }
 
     pub fn activation(self: *EContactScan, active: bool) void {
@@ -563,6 +571,14 @@ pub const EContactScan = struct {
         return self;
     }
 
+    pub fn withCallback(self: *EContactScan, callback: ContactCallback) *EContactScan {
+        if (self.callback != null)
+            utils.panic(api.ALLOC, "ContactScan: {?s} has already a callback.", .{api.Entity.byId(self.id).name});
+
+        self.callback = callback;
+        return self;
+    }
+
     pub fn hasAnyContact(self: *EContactScan) bool {
         var next = self.constraints.nextSetBit(0);
         while (next) |i| {
@@ -571,6 +587,30 @@ pub const EContactScan = struct {
             next = self.constraints.nextSetBit(i + 1);
         }
         return false;
+    }
+
+    pub fn firstContactOf(
+        self: *EContactScan,
+        c_type: ?ContactTypeAspect,
+        material: ?ContactMaterialAspect,
+    ) ?*ContactScan {
+        var next = self.constraints.nextSetBit(0);
+        while (next) |i| {
+            next = self.constraints.nextSetBit(i + 1);
+
+            const constraint = ContactConstraint.byId(i);
+            if (c_type) |t| {
+                if (constraint.scan.hasContactOfType(t))
+                    return &constraint.scan;
+            }
+            if (material) |m| {
+                if (constraint.scan.hasContactOfMaterial(m))
+                    return &constraint.scan;
+            }
+            if (c_type == null and material == null and constraint.scan.hasAnyContact())
+                return &constraint.scan;
+        }
+        return null;
     }
 };
 
@@ -688,40 +728,6 @@ pub const ContactSystem = struct {
         }
     }
 
-    pub fn applyScanForConstraint(entity_id: Index, constraint: *ContactConstraint) bool {
-        var has_any_contact = false;
-
-        constraint.clear();
-
-        const t1 = graphics.ETransform.byId(entity_id).?;
-        const view_id = graphics.EView.byId(entity_id).?.view_id;
-        const world_contact_bounds = utils.RectF{
-            t1.position[0] + constraint.scan.bounds.rect[0],
-            t1.position[1] + constraint.scan.bounds.rect[1],
-            constraint.scan.bounds.rect[2],
-            constraint.scan.bounds.rect[3],
-        };
-
-        // apply scan on registered entity mappers
-        has_any_contact = has_any_contact or scanOnMappings(
-            entity_id,
-            constraint,
-            world_contact_bounds,
-            view_id,
-            constraint.layer_id,
-        );
-        // apply scan on active tile grids
-        has_any_contact = has_any_contact or scanOnTileGrids(
-            entity_id,
-            constraint,
-            world_contact_bounds,
-            view_id,
-            constraint.layer_id,
-        );
-
-        return has_any_contact;
-    }
-
     pub fn applyScan(e_scan: *EContactScan) void {
         var view_id: ?Index = null;
         var layer_id: ?Index = null;
@@ -738,38 +744,53 @@ pub const ContactSystem = struct {
         var next_constraint = e_scan.constraints.nextSetBit(0);
         while (next_constraint) |i| {
             const constraint = ContactConstraint.byId(i);
-            const t1 = graphics.ETransform.byId(e_scan.id).?;
-            const world_contact_bounds = utils.RectF{
-                t1.position[0] + constraint.scan.bounds.rect[0],
-                t1.position[1] + constraint.scan.bounds.rect[1],
-                constraint.scan.bounds.rect[2],
-                constraint.scan.bounds.rect[3],
-            };
-
-            // apply scan on registered entity mappers
-            has_any_contact = has_any_contact or scanOnMappings(
-                e_scan.id,
-                constraint,
-                world_contact_bounds,
-                view_id,
-                layer_id,
-            );
-            // apply scan on active tile grids
-            has_any_contact = has_any_contact or scanOnTileGrids(
-                e_scan.id,
-                constraint,
-                world_contact_bounds,
-                view_id,
-                layer_id,
-            );
-
+            has_any_contact = applyScanForConstraint(e_scan.id, constraint);
             next_constraint = e_scan.constraints.nextSetBit(i + 1);
         }
 
         if (has_any_contact) {
             if (e_scan.collision_resolver) |*resolver|
                 resolver.resolve(e_scan.id);
+
+            if (e_scan.callback) |callback| {
+                if (e_scan.firstContactOf(callback.type, callback.material)) |contact_scan|
+                    callback.f(e_scan.id, contact_scan);
+            }
         }
+    }
+
+    pub fn applyScanForConstraint(entity_id: Index, constraint: *ContactConstraint) bool {
+        var has_any_contact = false;
+
+        constraint.clear();
+
+        const t1 = graphics.ETransform.byId(entity_id).?;
+        const view_id = graphics.EView.byId(entity_id).?.view_id;
+        const world_contact_bounds = utils.RectF{
+            t1.position[0] + constraint.scan.bounds.rect[0],
+            t1.position[1] + constraint.scan.bounds.rect[1],
+            constraint.scan.bounds.rect[2],
+            constraint.scan.bounds.rect[3],
+        };
+
+        // apply scan on registered entity mappers
+        has_any_contact = scanOnMappings(
+            entity_id,
+            constraint,
+            world_contact_bounds,
+            view_id,
+            constraint.layer_id,
+        ) or has_any_contact;
+        // apply scan on active tile grids
+        has_any_contact = scanOnTileGrids(
+            entity_id,
+            constraint,
+            world_contact_bounds,
+            view_id,
+            constraint.layer_id,
+        ) or has_any_contact;
+
+        return has_any_contact;
     }
 
     fn scanOnMappings(

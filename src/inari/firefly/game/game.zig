@@ -26,14 +26,14 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    api.ComponentControlType(SimplePivotCamera).init();
-
     // init sub packages
     tile.init();
     world.init();
     json.init();
     platformer.init();
     player.init();
+
+    api.ComponentControlType(SimplePivotCamera).init();
 }
 
 pub fn deinit() void {
@@ -41,14 +41,13 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    api.ComponentControlType(SimplePivotCamera).deinit();
     // deinit sub packages
     player.deinit();
     platformer.deinit();
     json.deinit();
     world.deinit();
     tile.deinit();
-
-    api.ComponentControlType(SimplePivotCamera).deinit();
 }
 
 //////////////////////////////////////////////////////////////

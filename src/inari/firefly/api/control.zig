@@ -172,6 +172,7 @@ pub fn ComponentControlType(comptime T: type) type {
 
         pub fn deinit() void {
             data.deinit();
+            data = undefined;
         }
 
         pub fn dataById(id: Index) ?*T {
@@ -179,6 +180,8 @@ pub fn ComponentControlType(comptime T: type) type {
         }
 
         pub fn new(control_type: T) *ComponentControl {
+            if (!initialized) @panic("Not Initialized");
+
             var control = ComponentControl.new(.{
                 .name = if (@hasField(T, "name")) control_type.name else null,
                 .f = T.update,
@@ -191,6 +194,7 @@ pub fn ComponentControlType(comptime T: type) type {
         }
 
         fn dispose(id: ?Index) void {
+            if (!initialized) return;
             if (id) |i|
                 data.delete(i);
         }
