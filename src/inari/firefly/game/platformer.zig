@@ -383,21 +383,23 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
             return;
 
         if (api.input.checkButtonPressed(self.button_left)) {
-            if (move.velocity[0] <= -move.max_velocity_west)
+            const max = move.max_velocity_west orelse 10000;
+            if (move.velocity[0] <= -max)
                 return;
 
             move.velocity[0] = if (move.velocity[0] > 0)
                 @max(0, move.velocity[0] - self.stop_velocity_step)
             else
-                @max(-move.max_velocity_west, move.velocity[0] - self.run_velocity_step);
+                @max(-max, move.velocity[0] - self.run_velocity_step);
         } else if (api.input.checkButtonPressed(self.button_right)) {
-            if (move.velocity[0] >= move.max_velocity_west)
+            const max = move.max_velocity_east orelse 10000;
+            if (move.velocity[0] >= max)
                 return;
 
             move.velocity[0] = if (move.velocity[0] < 0)
                 @min(0, move.velocity[0] + self.stop_velocity_step)
             else
-                @min(move.max_velocity_west, move.velocity[0] + self.run_velocity_step);
+                @min(max, move.velocity[0] + self.run_velocity_step);
         } else if (move.velocity[0] != 0) {
             move.velocity[0] = if (move.velocity[0] > 0)
                 @max(0, move.velocity[0] - self.stop_velocity_step)

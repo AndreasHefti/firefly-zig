@@ -4,28 +4,17 @@ const utils = firefly.utils;
 const api = firefly.api;
 const graphics = firefly.graphics;
 
-const AspectGroup = firefly.utils.AspectGroup;
-const System = firefly.api.System;
-const Entity = firefly.api.Entity;
-const EComponent = firefly.api.EComponent;
-const ViewRenderEvent = firefly.graphics.ViewRenderEvent;
-const ViewLayerMapping = firefly.graphics.ViewLayerMapping;
-const ETransform = firefly.graphics.ETransform;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
-const Component = firefly.api.Component;
-const Projection = firefly.api.Projection;
-const Direction = firefly.utils.Direction;
-const Vector4f = firefly.utils.Vector4f;
-const PosF = firefly.utils.PosF;
-const Index = firefly.utils.Index;
-const String = firefly.utils.String;
-const Float = firefly.utils.Float;
-const Color = firefly.utils.Color;
-const BlendMode = firefly.api.BlendMode;
-const RectF = firefly.utils.RectF;
-const CInt = firefly.utils.CInt;
-const BindingId = firefly.api.BindingId;
-const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const Vector4f = utils.Vector4f;
+const PosF = utils.PosF;
+const Index = utils.Index;
+const String = utils.String;
+const Float = utils.Float;
+const Color = utils.Color;
+const BlendMode = api.BlendMode;
+const RectF = utils.RectF;
+const CInt = utils.CInt;
+const BindingId = api.BindingId;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 
 //////////////////////////////////////////////////////////////
 //// tile init
@@ -38,10 +27,10 @@ pub fn init() !void {
         return;
 
     BasicTileTypes.UNDEFINED = TileTypeAspectGroup.getAspect("UNDEFINED");
-    Component.registerComponent(TileGrid);
-    EComponent.registerEntityComponent(ETile);
+    api.Component.registerComponent(TileGrid);
+    api.EComponent.registerEntityComponent(ETile);
     // init renderer
-    System(DefaultTileGridRenderer).createSystem(
+    api.System(DefaultTileGridRenderer).createSystem(
         firefly.Engine.DefaultRenderer.TILE,
         "Render Entities referenced in all active TileGrid",
         true,
@@ -54,7 +43,7 @@ pub fn deinit() void {
         return;
 
     // deinit renderer
-    System(DefaultTileGridRenderer).disposeSystem();
+    api.System(DefaultTileGridRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -62,7 +51,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 // Tile Type Aspects
-pub const TileTypeAspectGroup = AspectGroup(struct {
+pub const TileTypeAspectGroup = utils.AspectGroup(struct {
     pub const name = "TileType";
 });
 pub const TileTypeAspect = TileTypeAspectGroup.Aspect;
@@ -76,7 +65,7 @@ pub const BasicTileTypes = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETile = struct {
-    pub usingnamespace EComponent.Trait(@This(), "ETile");
+    pub usingnamespace api.EComponent.Trait(@This(), "ETile");
 
     id: Index = UNDEF_INDEX,
     sprite_template_id: Index = UNDEF_INDEX,
@@ -108,7 +97,7 @@ pub const ETile = struct {
 //////////////////////////////////////////////////////////////
 
 pub const TileGrid = struct {
-    pub usingnamespace Component.Trait(TileGrid, .{
+    pub usingnamespace api.Component.Trait(TileGrid, .{
         .name = "TileGrid",
     });
 
@@ -137,18 +126,18 @@ pub const TileGrid = struct {
             @as(Float, @floatFromInt(self.dimensions[3])),
         };
 
-        self._grid = firefly.api.COMPONENT_ALLOC.alloc([]Index, self.dimensions[1]) catch unreachable;
+        self._grid = api.COMPONENT_ALLOC.alloc([]Index, self.dimensions[1]) catch unreachable;
         for (0..self.dimensions[1]) |i| {
-            self._grid[i] = firefly.api.COMPONENT_ALLOC.alloc(Index, self.dimensions[0]) catch unreachable;
+            self._grid[i] = api.COMPONENT_ALLOC.alloc(Index, self.dimensions[0]) catch unreachable;
         }
         self.clear();
     }
 
     pub fn destruct(self: *TileGrid) void {
         for (0..self.dimensions[1]) |i| {
-            firefly.api.COMPONENT_ALLOC.free(self._grid[i]);
+            api.COMPONENT_ALLOC.free(self._grid[i]);
         }
-        firefly.api.COMPONENT_ALLOC.free(self._grid);
+        api.COMPONENT_ALLOC.free(self._grid);
     }
 
     pub fn clear(self: *TileGrid) void {
@@ -179,7 +168,7 @@ pub const TileGrid = struct {
     }
 
     pub fn setByName(self: *TileGrid, x: usize, y: usize, tile_name: String) void {
-        if (Entity.byName(tile_name)) |e| {
+        if (api.Entity.byName(tile_name)) |e| {
             set(self, x, y, e.id);
         }
     }
@@ -211,17 +200,17 @@ pub const TileGrid = struct {
         }
     }
 
-    pub fn getNeighbor(self: *TileGrid, x: usize, y: usize, direction: Direction, distance: usize) ?Index {
+    pub fn getNeighbor(self: *TileGrid, x: usize, y: usize, direction: utils.Direction, distance: usize) ?Index {
         return switch (direction) {
-            Direction.NORTH => self.get(x, y - distance),
-            Direction.NORTH_EAST => self.get(x + distance, y - distance),
-            Direction.EAST => self.get(x + distance, y),
-            Direction.SOUTH_EAST => self.get(x + distance, y + distance),
-            Direction.SOUTH => self.get(x, y + distance),
-            Direction.SOUTH_WEST => self.get(x - distance, y + distance),
-            Direction.WEST => self.get(x - distance, y),
-            Direction.NORTH_WEST => self.get(x - distance, y - distance),
-            Direction.NO_DIRECTION => self.get(x, y),
+            .NORTH => self.get(x, y - distance),
+            .NORTH_EAST => self.get(x + distance, y - distance),
+            .EAST => self.get(x + distance, y),
+            .SOUTH_EAST => self.get(x + distance, y + distance),
+            .SOUTH => self.get(x, y + distance),
+            .SOUTH_WEST => self.get(x - distance, y + distance),
+            .WEST => self.get(x - distance, y),
+            .NORTH_WEST => self.get(x - distance, y - distance),
+            .NO_DIRECTION => self.get(x, y),
         };
     }
 
@@ -237,7 +226,7 @@ pub const TileGrid = struct {
         return @truncate(pixel_y / self.dimensions[3]);
     }
 
-    pub inline fn getIteratorForProjection(self: *TileGrid, projection: *const Projection) ?Iterator {
+    pub inline fn getIteratorForProjection(self: *TileGrid, projection: *const api.Projection) ?Iterator {
         var offset: utils.Vector2f = projection.position;
         if (self.layer_id) |lid| {
             if (graphics.Layer.byId(lid).offset) |l_off| {
@@ -363,10 +352,10 @@ pub const TileGrid = struct {
 
 const DefaultTileGridRenderer = struct {
     pub const component_register_type = TileGrid;
-    var tile_grid_refs: ViewLayerMapping = undefined;
+    var tile_grid_refs: graphics.ViewLayerMapping = undefined;
 
     pub fn systemInit() void {
-        tile_grid_refs = ViewLayerMapping.new();
+        tile_grid_refs = graphics.ViewLayerMapping.new();
     }
 
     pub fn systemDeinit() void {
@@ -382,7 +371,7 @@ const DefaultTileGridRenderer = struct {
             tile_grid_refs.remove(tile_grid.view_id, tile_grid.layer_id, id);
     }
 
-    pub fn renderView(e: ViewRenderEvent) void {
+    pub fn renderView(e: graphics.ViewRenderEvent) void {
         if (tile_grid_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |grid_id| {
@@ -398,11 +387,10 @@ const DefaultTileGridRenderer = struct {
                         continue;
 
                     const tile = ETile.byId(entity_id) orelse continue;
-                    const trans = ETransform.byId(entity_id) orelse continue;
-                    const sprite_template: *SpriteTemplate = SpriteTemplate.byId(tile.sprite_template_id);
-                    const tex_id = sprite_template.texture_binding orelse continue;
-                    firefly.api.rendering.renderSprite(
-                        tex_id,
+                    const trans = graphics.ETransform.byId(entity_id) orelse continue;
+                    const sprite_template: *graphics.SpriteTemplate = graphics.SpriteTemplate.byId(tile.sprite_template_id);
+                    api.rendering.renderSprite(
+                        sprite_template.texture_binding,
                         sprite_template.texture_bounds,
                         iterator.rel_position + trans.position,
                         trans.pivot,
@@ -414,7 +402,7 @@ const DefaultTileGridRenderer = struct {
                     );
                 }
 
-                firefly.api.rendering.addOffset(tile_grid.world_position * firefly.utils.NEG_VEC2F);
+                api.rendering.addOffset(tile_grid.world_position * utils.NEG_VEC2F);
             }
         }
     }

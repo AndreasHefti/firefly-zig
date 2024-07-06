@@ -94,8 +94,8 @@ pub fn System(comptime T: type) type {
                     return;
 
                 switch (e.event_type) {
-                    api.ComponentEvent.Type.ACTIVATED => T.componentRegistration(id, true),
-                    api.ComponentEvent.Type.DEACTIVATING => T.componentRegistration(id, false),
+                    .ACTIVATED => T.componentRegistration(id, true),
+                    .DEACTIVATING => T.componentRegistration(id, false),
                     else => {},
                 }
             }
@@ -104,12 +104,12 @@ pub fn System(comptime T: type) type {
         fn notifyEntityChange(e: api.ComponentEvent) void {
             if (e.c_id) |id| {
                 switch (e.event_type) {
-                    api.ComponentEvent.Type.ACTIVATED => {
+                    .ACTIVATED => {
                         if (has_entity_condition and !T.entity_condition.check(id))
                             return;
                         T.entityRegistration(id, true);
                     },
-                    api.ComponentEvent.Type.DEACTIVATING => T.entityRegistration(id, false),
+                    .DEACTIVATING => T.entityRegistration(id, false),
                     else => {},
                 }
             }

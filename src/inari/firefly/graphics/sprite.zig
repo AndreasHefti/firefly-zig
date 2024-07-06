@@ -67,7 +67,7 @@ pub const SpriteTemplate = struct {
     name: ?String = null,
     texture_name: String,
     texture_bounds: RectF,
-    texture_binding: ?BindingId = null,
+    texture_binding: BindingId = utils.UNDEF_INDEX,
 
     _flippedX: bool = false,
     _flippedY: bool = false,
@@ -103,9 +103,9 @@ pub const SpriteTemplate = struct {
     fn notifyAssetEvent(e: api.ComponentEvent) void {
         if (graphics.Texture.resourceByAssetId(e.c_id.?)) |t| {
             switch (e.event_type) {
-                api.ComponentEvent.Type.ACTIVATED => onTextureLoad(t),
-                api.ComponentEvent.Type.DEACTIVATING => onTextureUnload(t),
-                api.ComponentEvent.Type.DISPOSING => onTextureDispose(t),
+                .ACTIVATED => onTextureLoad(t),
+                .DEACTIVATING => onTextureUnload(t),
+                .DISPOSING => onTextureDispose(t),
                 else => {},
             }
         }
@@ -129,7 +129,7 @@ pub const SpriteTemplate = struct {
         while (next) |id| {
             var template = SpriteTemplate.byId(id);
             if (firefly.utils.stringEquals(template.texture_name, texture.name))
-                template.texture_binding = null;
+                template.texture_binding = utils.UNDEF_INDEX;
 
             next = SpriteTemplate.nextId(id + 1);
         }
@@ -167,7 +167,7 @@ pub const ESprite = struct {
     pub usingnamespace api.EComponent.Trait(@This(), "ESprite");
 
     id: Index = utils.UNDEF_INDEX,
-    template_id: ?Index = null,
+    template_id: Index = utils.UNDEF_INDEX,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
 
@@ -354,16 +354,14 @@ const DefaultSpriteRenderer = struct {
         if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
             var i = all.nextSetBit(0);
             while (i) |id| {
-                i = all.nextSetBit(id + 1);
                 // render the sprite
-                const es: *ESprite = ESprite.byId(id) orelse continue;
-                const trans: *graphics.ETransform = graphics.ETransform.byId(id) orelse continue;
-                const template_id = es.template_id orelse continue;
+                const es: *ESprite = ESprite.byId(id).?;
+                const trans: *graphics.ETransform = graphics.ETransform.byId(id).?;
 
-                const sprite_template: *SpriteTemplate = SpriteTemplate.byId(template_id);
+                const sprite_template: *SpriteTemplate = SpriteTemplate.byId(es.template_id);
                 const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
                 firefly.api.rendering.renderSprite(
-                    sprite_template.texture_binding.?,
+                    sprite_template.texture_binding,
                     sprite_template.texture_bounds,
                     trans.position,
                     trans.pivot,
@@ -373,7 +371,36 @@ const DefaultSpriteRenderer = struct {
                     es.blend_mode,
                     multi,
                 );
+
+                i = all.nextSetBit(id + 1);
             }
         }
     }
+
+    // pub fn renderView(e: graphics.ViewRenderEvent) void {
+    //     if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
+    //         var i = all.nextSetBit(0);
+    //         while (i) |id| {
+    //             i = all.nextSetBit(id + 1);
+    //             // render the sprite
+    //             const es: *ESprite = ESprite.byId(id) orelse continue;
+    //             const trans: *graphics.ETransform = graphics.ETransform.byId(id) orelse continue;
+    //             const template_id = es.template_id orelse continue;
+
+    //             const sprite_template: *SpriteTemplate = SpriteTemplate.byId(template_id);
+    //             const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
+    //             firefly.api.rendering.renderSprite(
+    //                 sprite_template.texture_binding.?,
+    //                 sprite_template.texture_bounds,
+    //                 trans.position,
+    //                 trans.pivot,
+    //                 trans.scale,
+    //                 trans.rotation,
+    //                 es.tint_color,
+    //                 es.blend_mode,
+    //                 multi,
+    //             );
+    //         }
+    //     }
+    // }
 };

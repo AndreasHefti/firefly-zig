@@ -587,13 +587,13 @@ const RaylibRenderAPI = struct {
         }
 
         switch (shape_type) {
-            ShapeType.POINT => renderPoint(vertices, color),
-            ShapeType.LINE => renderLine(vertices, color),
-            ShapeType.RECTANGLE => renderRect(vertices, color, color1, color2, color3, fill, thickness),
-            ShapeType.TRIANGLE => renderTriangles(vertices, color, fill),
-            ShapeType.CIRCLE => renderCircle(vertices, color, color1, fill),
-            ShapeType.ARC => renderArc(vertices, color, fill),
-            ShapeType.ELLIPSE => renderEllipse(vertices, color, fill),
+            .POINT => renderPoint(vertices, color),
+            .LINE => renderLine(vertices, color),
+            .RECTANGLE => renderRect(vertices, color, color1, color2, color3, fill, thickness),
+            .TRIANGLE => renderTriangles(vertices, color, fill),
+            .CIRCLE => renderCircle(vertices, color, color1, fill),
+            .ARC => renderArc(vertices, color, fill),
+            .ELLIPSE => renderEllipse(vertices, color, fill),
         }
 
         // dispose translation functions if needed

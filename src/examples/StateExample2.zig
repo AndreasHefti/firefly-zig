@@ -70,7 +70,12 @@ fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
     const entity_id = Entity.new(.{})
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(ESprite{ .template_id = sprite_id })
-        .withComponent(EMovement{ .velocity = .{ vx, vy } })
+        .withComponent(EMovement{
+        .velocity = .{ vx, vy },
+        .mass = 0,
+        .adjust_max = false,
+        .adjust_ground = false,
+    })
         .withComponent(EState{ .state_engine_ref = state_engine.id })
         .activate().id;
 

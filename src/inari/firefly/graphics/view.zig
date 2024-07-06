@@ -297,8 +297,8 @@ pub const View = struct {
 
     fn onLayerAction(event: api.ComponentEvent) void {
         switch (event.event_type) {
-            api.ComponentEvent.Type.ACTIVATED => addLayerMapping(Layer.byId(event.c_id.?)),
-            api.ComponentEvent.Type.DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id.?)),
+            .ACTIVATED => addLayerMapping(Layer.byId(event.c_id.?)),
+            .DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id.?)),
             else => {},
         }
     }

@@ -114,7 +114,7 @@ pub const EMovement = struct {
     update_scheduler: ?api.UpdateScheduler = null,
 
     active: bool = true,
-    mass: Float = 80,
+    mass: Float = 0,
     mass_factor: Float = 1,
     force: Vector2f = Vector2f{ 0, 0 },
     acceleration: Vector2f = Vector2f{ 0, 0 },
@@ -123,10 +123,10 @@ pub const EMovement = struct {
 
     on_ground: bool = false,
 
-    max_velocity_north: Float = 10000000,
-    max_velocity_south: Float = 200,
-    max_velocity_east: Float = 80,
-    max_velocity_west: Float = 80,
+    max_velocity_north: ?Float = null,
+    max_velocity_east: ?Float = null,
+    max_velocity_south: ?Float = null,
+    max_velocity_west: ?Float = null,
 
     adjust_max: bool = true,
     adjust_ground: bool = true,
@@ -150,6 +150,11 @@ pub const EMovement = struct {
         self.gravity = Vector2f{ 0, firefly.physics.Gravity };
 
         self.on_ground = false;
+
+        self.max_velocity_north = null;
+        self.max_velocity_east = null;
+        self.max_velocity_south = null;
+        self.max_velocity_west = null;
 
         self.adjust_max = true;
         self.adjust_ground = true;
@@ -247,14 +252,14 @@ pub fn adjustVelocity(movement: *EMovement) void {
         movement.velocity[1] = 0;
 
     if (movement.adjust_max) {
-        if (movement.max_velocity_south > 0)
-            movement.velocity[1] = @min(movement.velocity[1], movement.max_velocity_south);
-        if (movement.max_velocity_east > 0)
-            movement.velocity[0] = @min(movement.velocity[0], movement.max_velocity_east);
-        if (movement.max_velocity_north > 0)
-            movement.velocity[1] = @max(movement.velocity[1], -movement.max_velocity_north);
-        if (movement.max_velocity_west > 0)
-            movement.velocity[0] = @max(movement.velocity[0], -movement.max_velocity_west);
+        if (movement.max_velocity_south) |max|
+            movement.velocity[1] = @min(movement.velocity[1], max);
+        if (movement.max_velocity_east) |max|
+            movement.velocity[0] = @min(movement.velocity[0], max);
+        if (movement.max_velocity_north) |max|
+            movement.velocity[1] = @max(movement.velocity[1], -max);
+        if (movement.max_velocity_west) |max|
+            movement.velocity[0] = @max(movement.velocity[0], -max);
     }
 
     //std.debug.print(" --> velocity: {d}\n", .{movement.velocity});
