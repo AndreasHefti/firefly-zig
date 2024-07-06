@@ -88,8 +88,7 @@ fn init() void {
     }
 }
 
-fn control(call_context: firefly.api.CallContext) void {
-    const entity_id = call_context.caller_id orelse return;
+fn control(entity_id: Index, _: ?Index) void {
     const scan = EContactScan.byId(entity_id) orelse return;
     const shape = EShape.byId(entity_id) orelse return;
 

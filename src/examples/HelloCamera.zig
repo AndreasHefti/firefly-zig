@@ -120,9 +120,7 @@ fn init() void {
 }
 
 const speed = 2;
-fn entity_control(context: firefly.api.CallContext) void {
-    const entity_id = context.caller_id orelse return;
-
+fn entity_control(entity_id: Index, _: ?Index) void {
     if (firefly.api.input.checkButtonPressed(InputButtonType.UP))
         ETransform.byId(entity_id).?.position[1] -= speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN))

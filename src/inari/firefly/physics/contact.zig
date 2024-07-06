@@ -730,11 +730,8 @@ pub const ContactSystem = struct {
 
     pub fn applyScan(e_scan: *EContactScan) void {
         var view_id: ?Index = null;
-        var layer_id: ?Index = null;
-        if (graphics.EView.byId(e_scan.id)) |view| {
+        if (graphics.EView.byId(e_scan.id)) |view|
             view_id = view.view_id;
-            layer_id = view.layer_id;
-        }
 
         // clear old scan data
         e_scan.clear();
@@ -744,7 +741,7 @@ pub const ContactSystem = struct {
         var next_constraint = e_scan.constraints.nextSetBit(0);
         while (next_constraint) |i| {
             const constraint = ContactConstraint.byId(i);
-            has_any_contact = applyScanForConstraint(e_scan.id, constraint);
+            has_any_contact = applyScanForConstraint(e_scan.id, view_id, constraint);
             next_constraint = e_scan.constraints.nextSetBit(i + 1);
         }
 
@@ -759,13 +756,12 @@ pub const ContactSystem = struct {
         }
     }
 
-    pub fn applyScanForConstraint(entity_id: Index, constraint: *ContactConstraint) bool {
+    pub fn applyScanForConstraint(entity_id: Index, view_id: ?Index, constraint: *ContactConstraint) bool {
         var has_any_contact = false;
 
         constraint.clear();
 
         const t1 = graphics.ETransform.byId(entity_id).?;
-        const view_id = graphics.EView.byId(entity_id).?.view_id;
         const world_contact_bounds = utils.RectF{
             t1.position[0] + constraint.scan.bounds.rect[0],
             t1.position[1] + constraint.scan.bounds.rect[1],
