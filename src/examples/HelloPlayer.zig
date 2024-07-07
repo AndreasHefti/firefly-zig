@@ -119,18 +119,12 @@ fn create_player(_: api.CallContext) void {
         .max_velocity_west = 50,
         .integrator = physics.EulerIntegrator,
     })
-    // .withComponent(physics.EContactScan{ .collision_resolver = physics.DebugCollisionResolver })
-    // .withConstraint(.{ .bounds = .{ .rect = .{ 4, 1, 8, 19 } }, .full_scan = true })
-    // .withComponent(graphics.EShape{ .shape_type = api.ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]utils.Float{ 4, 1, 8, 19 }), .color = .{ 0, 0, 255, 255 } })
         .withComponent(physics.EContactScan{
-        .collision_resolver = game.PlatformerCollisionResolver.new(terrain_constraint_name),
-    })
-        .withConstraint(.{
-        .name = terrain_constraint_name,
-        .layer_id = graphics.Layer.idByName(layer2),
-        .bounds = .{ .rect = .{ 4, 1, 8, 19 } },
-        .material_filter = physics.ContactMaterialKind.of(.{game.BaseMaterialType.TERRAIN}),
-        .full_scan = true,
+        .collision_resolver = game.PlatformerCollisionResolver.new(.{
+            .contact_bounds = .{ 4, 1, 8, 14 },
+            .view_id = graphics.View.idByName(view_name),
+            .layer_id = graphics.Layer.idByName(layer2),
+        }),
     })
         .entity()
         .withActiveControlOf(game.SimplePlatformerHorizontalMoveControl{

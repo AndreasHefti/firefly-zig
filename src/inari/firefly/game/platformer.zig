@@ -5,8 +5,10 @@ const utils = firefly.utils;
 const api = firefly.api;
 const physics = firefly.physics;
 const graphics = firefly.graphics;
+const game = firefly.game;
 
 const Vector2i = utils.Vector2i;
+const RectI = utils.RectI;
 const Float = utils.Float;
 const CInt = utils.CInt;
 const BitMask = utils.BitMask;
@@ -71,22 +73,24 @@ const Sensor = struct {
 };
 
 pub const PlatformerCollisionResolver = struct {
-    ground_addition: CInt,
-    scan_length: usize,
-    terrain_constraint_name: String,
+    view_id: ?Index,
+    layer_id: ?Index,
+    contact_bounds: RectI,
+    ground_addition: CInt = 5,
+    scan_length: usize = 5,
 
     _entity_id: Index = undefined,
     _view_id: ?Index = null,
     _transform: *graphics.ETransform = undefined,
     _movement: *physics.EMovement = undefined,
 
-    north: Sensor = undefined,
-    south: Sensor = undefined,
-    west: Sensor = undefined,
-    east: Sensor = undefined,
-    ground_offset: Vector2i = undefined,
-    ground_scan: BitMask = undefined,
-    terrain_constraint_ref: Index = undefined,
+    _north: Sensor = undefined,
+    _south: Sensor = undefined,
+    _west: Sensor = undefined,
+    _east: Sensor = undefined,
+    _ground_offset: Vector2i = undefined,
+    _ground_scan: BitMask = undefined,
+    _terrain_constraint_ref: *physics.ContactConstraint = undefined,
 
     var instances: utils.DynArray(PlatformerCollisionResolver) = undefined;
 
@@ -98,16 +102,16 @@ pub const PlatformerCollisionResolver = struct {
         var next = instances.slots.nextSetBit(0);
         while (next) |i| {
             if (instances.get(i)) |inst| {
-                inst.north.deinit();
-                inst.north = undefined;
-                inst.south.deinit();
-                inst.south = undefined;
-                inst.west.deinit();
-                inst.west = undefined;
-                inst.east.deinit();
-                inst.east = undefined;
-                inst.ground_scan.deinit();
-                inst.ground_scan = undefined;
+                inst._north.deinit();
+                inst._north = undefined;
+                inst._south.deinit();
+                inst._south = undefined;
+                inst._west.deinit();
+                inst._west = undefined;
+                inst._east.deinit();
+                inst._east = undefined;
+                inst._ground_scan.deinit();
+                inst._ground_scan = undefined;
             }
             next = instances.slots.nextSetBit(i + 1);
         }
@@ -125,13 +129,27 @@ pub const PlatformerCollisionResolver = struct {
         if (graphics.EView.byId(entity_id)) |v|
             inst._view_id = v.view_id;
 
-        const constraint = physics.ContactConstraint.byName(inst.terrain_constraint_name).?;
-        const x_half: CInt = utils.f32_cint(constraint.scan.bounds.rect[2] / 2);
-        const x_full: CInt = utils.f32_cint(constraint.scan.bounds.rect[2] - 3);
-        const y_half: CInt = utils.f32_cint(constraint.scan.bounds.rect[3] / 2) - inst.ground_addition;
-        const y_full: CInt = utils.f32_cint(constraint.scan.bounds.rect[3] - 3) - inst.ground_addition;
+        var contact_scan: *physics.EContactScan = physics.EContactScan.byId(entity_id).?;
+        _ = contact_scan.withConstraint(.{
+            .name = "PlatformerCollisionResolver",
+            .layer_id = inst.layer_id,
+            .bounds = .{ .rect = .{
+                utils.cint_float(inst.contact_bounds[0]),
+                utils.cint_float(inst.contact_bounds[1]),
+                utils.cint_float(inst.contact_bounds[2]),
+                utils.cint_float(inst.contact_bounds[3] + inst.ground_addition),
+            } },
+            .material_filter = physics.ContactMaterialKind.of(.{game.BaseMaterialType.TERRAIN}),
+            .full_scan = true,
+        });
 
-        inst.north = Sensor{
+        inst._terrain_constraint_ref = physics.ContactConstraint.byName("PlatformerCollisionResolver").?;
+        const x_half: CInt = @divFloor(inst.contact_bounds[2], 2);
+        const x_full: CInt = inst.contact_bounds[2] - 3;
+        const y_half: CInt = @divFloor(inst.contact_bounds[3], 2);
+        const y_full: CInt = inst.contact_bounds[3] - 3;
+
+        inst._north = Sensor{
             .pos1 = .{ 2, 0 },
             .pos2 = .{ x_half, 0 },
             .pos3 = .{ x_full, 0 },
@@ -139,7 +157,7 @@ pub const PlatformerCollisionResolver = struct {
             .s2 = BitMask.new(api.ALLOC, 1, inst.scan_length),
             .s3 = BitMask.new(api.ALLOC, 1, inst.scan_length),
         };
-        inst.south = Sensor{
+        inst._south = Sensor{
             .pos1 = .{ 2, y_full },
             .pos2 = .{ x_half, y_full },
             .pos3 = .{ x_full, y_full },
@@ -147,7 +165,7 @@ pub const PlatformerCollisionResolver = struct {
             .s2 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
             .s3 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
         };
-        inst.west = Sensor{
+        inst._west = Sensor{
             .pos1 = .{ 0, 2 },
             .pos2 = .{ 0, y_half },
             .pos3 = .{ 0, y_full },
@@ -155,7 +173,7 @@ pub const PlatformerCollisionResolver = struct {
             .s2 = BitMask.new(api.ALLOC, inst.scan_length, 1),
             .s3 = BitMask.new(api.ALLOC, inst.scan_length, 1),
         };
-        inst.east = Sensor{
+        inst._east = Sensor{
             .pos1 = .{ x_full, 2 },
             .pos2 = .{ x_full, y_half },
             .pos3 = .{ x_full, y_full },
@@ -163,38 +181,17 @@ pub const PlatformerCollisionResolver = struct {
             .s2 = BitMask.new(api.ALLOC, inst.scan_length, 1),
             .s3 = BitMask.new(api.ALLOC, inst.scan_length, 1),
         };
-        inst.ground_offset = .{ 2, utils.f32_cint(@ceil(constraint.scan.bounds.rect[3])) - inst.ground_addition };
-        inst.ground_scan = BitMask.new(
+        inst._ground_offset = .{ 2, inst.contact_bounds[3] };
+        inst._ground_scan = BitMask.new(
             api.ALLOC,
-            utils.f32_usize(@floor(constraint.scan.bounds.rect[2])) - 3,
+            utils.cint_usize(inst.contact_bounds[2] - 3),
             1,
         );
-        inst.terrain_constraint_ref = constraint.id;
     }
 
-    pub fn new(terrain_constraint_name: String) physics.CollisionResolver {
+    pub fn new(template: PlatformerCollisionResolver) physics.CollisionResolver {
         return physics.CollisionResolver{
-            ._instance_id = instances.add(.{
-                .ground_addition = 5,
-                .scan_length = 5,
-                .terrain_constraint_name = terrain_constraint_name,
-            }),
-            ._resolve = resolve,
-            ._init = initInstance,
-        };
-    }
-
-    fn newWith(
-        ground_addition: usize,
-        scan_length: usize,
-        terrain_constraint_name: String,
-    ) physics.CollisionResolver {
-        return physics.CollisionResolver{
-            ._instance_id = instances.add(.{
-                .ground_addition = utils.usize_cint(ground_addition),
-                .scan_length = scan_length,
-                .terrain_constraint_name = terrain_constraint_name,
-            }),
+            ._instance_id = instances.add(template),
             ._resolve = resolve,
             ._init = initInstance,
         };
@@ -202,40 +199,35 @@ pub const PlatformerCollisionResolver = struct {
 
     fn resolve(entity_id: Index, instance_id: ?Index) void {
         const data = instances.get(instance_id.?) orelse return;
-        var terr_scan: *physics.ContactConstraint = physics.ContactConstraint.byId(data.terrain_constraint_ref);
 
-        if (terr_scan.scan.hasAnyContact()) {
+        if (data._terrain_constraint_ref.scan.hasAnyContact()) {
             var move = physics.EMovement.byId(entity_id) orelse return;
             const pref_ground = move.on_ground;
             move.on_ground = false;
-            resolveTerrainContact(data, terr_scan, pref_ground);
+            resolveTerrainContact(data, pref_ground);
         }
     }
 
     fn resolveTerrainContact(
         self: *PlatformerCollisionResolver,
-        terr_scan: *physics.ContactConstraint,
         pref_ground: bool,
     ) void {
         //const transform = graphics.ETransform.byId(entity_id) orelse return;
-        takeFullLedgeScans(self, &terr_scan.scan);
+        takeFullLedgeScans(self);
 
-        resolveVertically(self, terr_scan);
-        resolveHorizontally(self, terr_scan);
+        resolveVertically(self);
+        resolveHorizontally(self);
 
         //std.debug.print("contact: {any}\n", .{terr_scan.scan.mask});
-        //std.debug.print("ground: {any}\n", .{self.ground_scan});
-        // std.debug.print("south1: {any}\n", .{self.south.s1});
-        // std.debug.print("south3: {any}\n", .{self.south.s3});
+        //std.debug.print("ground: {any}\n", .{self._ground_scan});
+        // std.debug.print("_south1: {any}\n", .{self._south.s1});
+        // std.debug.print("_south3: {any}\n", .{self._south.s3});
 
         self._movement.flag(MovFlags.GROUND_TOUCHED, !pref_ground and self._movement.on_ground);
         self._movement.flag(MovFlags.LOST_GROUND, pref_ground and !self._movement.on_ground);
     }
 
-    fn resolveVertically(
-        self: *PlatformerCollisionResolver,
-        terr_scan: *physics.ContactConstraint,
-    ) void {
+    fn resolveVertically(self: *PlatformerCollisionResolver) void {
         var refresh = false;
         var set_on_ground = false;
         self._movement.flagAll(.{
@@ -244,12 +236,12 @@ pub const PlatformerCollisionResolver = struct {
             MovFlags.BLOCK_NORTH,
         }, false);
 
-        const b1 = utils.usize_cint(self.south.s1.count());
-        const b3 = utils.usize_cint(self.south.s3.count());
+        const b1 = utils.usize_cint(self._south.s1.count());
+        const b3 = utils.usize_cint(self._south.s3.count());
         //std.debug.print("b1: {d} b3: {d}\n ", .{ b1, b3 });
 
         const on_slope = b1 != 0 and b3 != 0 and b1 != b3 and
-            self.ground_scan.count() < self.ground_scan.width;
+            self._ground_scan.count() < self._ground_scan.width;
 
         //std.debug.print("onSlope: {any}\n", .{on_slope});
 
@@ -268,7 +260,7 @@ pub const PlatformerCollisionResolver = struct {
                     self._movement.flag(MovFlags.ON_SLOPE_UP, !slope_o);
                 }
             } else {
-                //std.debug.print("slope south-west {d}\n", .{b3 - self.ground_addition});
+                //std.debug.print("slope _south-_west {d}\n", .{b3 - self.ground_addition});
                 const gap = b3 - self.ground_addition;
                 if (gap >= -1) {
                     self._transform.moveCInt(0, -gap);
@@ -282,18 +274,18 @@ pub const PlatformerCollisionResolver = struct {
                     self._movement.flag(MovFlags.ON_SLOPE_UP, !slope_o);
                 }
             }
-        } else if (self.south.max > self.ground_addition and self._movement.velocity[1] >= 0) {
-            //std.debug.print("adjust ground: {d} : {d} \n", .{ self.south.max - self.ground_addition, move.velocity[1] });
-            self._transform.moveCInt(0, -(self.south.max - self.ground_addition));
+        } else if (self._south.max > self.ground_addition and self._movement.velocity[1] >= 0) {
+            //std.debug.print("adjust ground: {d} : {d} \n", .{ self._south.max - self.ground_addition, move.velocity[1] });
+            self._transform.moveCInt(0, -(self._south.max - self.ground_addition));
             self._transform.position[1] = @ceil(self._transform.position[1]);
             self._movement.velocity[1] = 0;
             refresh = true;
             set_on_ground = true;
         }
 
-        if (self.north.max > 0) {
-            //std.debug.print("adjust top {d} \n", .{self.north.max});
-            self._transform.moveCInt(0, self.north.max);
+        if (self._north.max > 0) {
+            //std.debug.print("adjust top {d} \n", .{self._north.max});
+            self._transform.moveCInt(0, self._north.max);
             self._transform.position[1] = @floor(self._transform.position[1]);
             if (self._movement.velocity[1] < 0)
                 self._movement.velocity[1] = 0;
@@ -302,20 +294,17 @@ pub const PlatformerCollisionResolver = struct {
         }
 
         if (refresh) {
-            updateContacts(self, terr_scan);
-            takeFullLedgeScans(self, &terr_scan.scan);
+            updateContacts(self);
+            takeFullLedgeScans(self);
         }
 
-        std.debug.print("set_on_ground: {any} : {d} \n", .{ set_on_ground, self.ground_scan.count() });
-        self._movement.on_ground = set_on_ground or (self._movement.velocity[1] >= 0 and self.ground_scan.count() > 0);
+        std.debug.print("set_on_ground: {any} : {d} \n", .{ set_on_ground, self._ground_scan.count() });
+        self._movement.on_ground = set_on_ground or (self._movement.velocity[1] >= 0 and self._ground_scan.count() > 0);
         if (self._movement.on_ground)
             self._transform.position[1] = @ceil(self._transform.position[1]);
     }
 
-    fn resolveHorizontally(
-        self: *PlatformerCollisionResolver,
-        terr_scan: *physics.ContactConstraint,
-    ) void {
+    fn resolveHorizontally(self: *PlatformerCollisionResolver) void {
         var refresh = false;
         self._movement.flagAll(.{
             MovFlags.SLIP_LEFT,
@@ -324,9 +313,9 @@ pub const PlatformerCollisionResolver = struct {
             MovFlags.BLOCK_WEST,
         }, false);
 
-        if (self.west.max > 0) {
-            std.debug.print("adjust left: {any}\n", .{self.west.max});
-            self._transform.moveCInt(self.west.max, 0);
+        if (self._west.max > 0) {
+            std.debug.print("adjust left: {any}\n", .{self._west.max});
+            self._transform.moveCInt(self._west.max, 0);
             self._transform.position[0] = @floor(self._transform.position[0]);
             self._movement.flag(MovFlags.SLIP_RIGHT, self._movement.velocity[0] > -1);
             self._movement.flag(MovFlags.BLOCK_WEST, self._movement.velocity[0] <= 0);
@@ -334,9 +323,9 @@ pub const PlatformerCollisionResolver = struct {
             refresh = true;
         }
 
-        if (self.east.max > 0) {
-            std.debug.print("adjust right: {any}\n", .{-self.east.max});
-            self._transform.moveCInt(-self.east.max, 0);
+        if (self._east.max > 0) {
+            std.debug.print("adjust right: {any}\n", .{-self._east.max});
+            self._transform.moveCInt(-self._east.max, 0);
             self._transform.position[0] = @ceil(self._transform.position[0]);
             self._movement.flag(MovFlags.SLIP_RIGHT, self._movement.velocity[0] < -1);
             self._movement.flag(MovFlags.BLOCK_WEST, self._movement.velocity[0] >= 0);
@@ -345,27 +334,35 @@ pub const PlatformerCollisionResolver = struct {
         }
 
         if (refresh) {
-            updateContacts(self, terr_scan);
-            takeFullLedgeScans(self, &terr_scan.scan);
+            updateContacts(self);
+            takeFullLedgeScans(self);
         }
     }
 
-    fn updateContacts(self: *PlatformerCollisionResolver, terr_scan: *physics.ContactConstraint) void {
+    fn updateContacts(self: *PlatformerCollisionResolver) void {
         var contacts: *physics.EContactScan = physics.EContactScan.byId(self._entity_id) orelse return;
         if (!contacts.hasAnyContact())
             return;
 
-        _ = physics.ContactSystem.applyScanForConstraint(self._entity_id, self._view_id, terr_scan);
+        _ = physics.ContactSystem.applyScanForConstraint(
+            self._entity_id,
+            self._view_id,
+            self._terrain_constraint_ref,
+        );
     }
 
-    fn takeFullLedgeScans(self: *PlatformerCollisionResolver, contact: *physics.ContactScan) void {
-        self.north.scan(contact);
-        self.south.scan(contact);
-        self.west.scan(contact);
-        self.east.scan(contact);
+    fn takeFullLedgeScans(self: *PlatformerCollisionResolver) void {
+        self._north.scan(&self._terrain_constraint_ref.scan);
+        self._south.scan(&self._terrain_constraint_ref.scan);
+        self._west.scan(&self._terrain_constraint_ref.scan);
+        self._east.scan(&self._terrain_constraint_ref.scan);
 
-        self.ground_scan.clear();
-        self.ground_scan.setIntersection(contact.mask.?, -self.ground_offset, utils.bitOpOR);
+        self._ground_scan.clear();
+        self._ground_scan.setIntersection(
+            self._terrain_constraint_ref.scan.mask.?,
+            -self._ground_offset,
+            utils.bitOpOR,
+        );
     }
 };
 

@@ -555,7 +555,7 @@ pub const EContactScan = struct {
     pub fn activation(self: *EContactScan, active: bool) void {
         if (active)
             if (self.collision_resolver) |cr|
-                if (cr._init) |cinit| cinit(self.id, cr._instance_id.?);
+                if (cr._init) |c_init| c_init(self.id, cr._instance_id.?);
     }
 
     pub fn clear(self: *EContactScan) void {
