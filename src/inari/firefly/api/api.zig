@@ -4,9 +4,9 @@ const utils = firefly.utils;
 
 const Allocator = std.mem.Allocator;
 const asset = @import("asset.zig");
-const component = @import("Component.zig");
-const system = @import("System.zig");
-const timer = @import("Timer.zig");
+const component = @import("component.zig");
+const system = @import("system.zig");
+const timer = @import("timer.zig");
 const entity = @import("entity.zig");
 const control = @import("control.zig");
 
