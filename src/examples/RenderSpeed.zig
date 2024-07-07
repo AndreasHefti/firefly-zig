@@ -19,7 +19,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    firefly.api.rendering.setRenderBatch(1, 81920);
+    firefly.api.rendering.setRenderBatch(1, 181920);
 
     Texture.new(.{
         .name = "TestTexture",

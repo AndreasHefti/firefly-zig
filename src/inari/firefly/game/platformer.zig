@@ -43,88 +43,72 @@ pub fn deinit() void {
 //// Platformer Collision Resolver
 //////////////////////////////////////////////////////////////
 
+const Sensor = struct {
+    pos1: Vector2i,
+    pos2: Vector2i,
+    pos3: Vector2i,
+    s1: BitMask,
+    s2: BitMask,
+    s3: BitMask,
+    max: CInt = 0,
+
+    fn deinit(self: *Sensor) void {
+        self.s1.deinit();
+        self.s2.deinit();
+        self.s3.deinit();
+    }
+
+    fn scan(self: *Sensor, contact: *physics.ContactScan) void {
+        self.s1.clear();
+        self.s2.clear();
+        self.s3.clear();
+        self.max = 0;
+        self.s1.setIntersection(contact.mask.?, -self.pos1, utils.bitOpOR);
+        self.s2.setIntersection(contact.mask.?, -self.pos2, utils.bitOpOR);
+        self.s3.setIntersection(contact.mask.?, -self.pos3, utils.bitOpOR);
+        self.max = utils.usize_cint(@max(self.s1.count(), @max(self.s2.count(), self.s3.count())));
+    }
+};
+
 pub const PlatformerCollisionResolver = struct {
-    const Data = struct {
-        ground_addition: CInt,
-        scan_length: usize,
-        terrain_constraint_name: String,
+    ground_addition: CInt,
+    scan_length: usize,
+    terrain_constraint_name: String,
 
-        _entity_id: Index = undefined,
-        _view_id: ?Index = null,
-        _transform: *graphics.ETransform = undefined,
-        _movement: *physics.EMovement = undefined,
+    _entity_id: Index = undefined,
+    _view_id: ?Index = null,
+    _transform: *graphics.ETransform = undefined,
+    _movement: *physics.EMovement = undefined,
 
-        north: Sensor = undefined,
-        south: Sensor = undefined,
-        west: Sensor = undefined,
-        east: Sensor = undefined,
-        ground_offset: Vector2i = undefined,
-        ground_scan: BitMask = undefined,
-        terrain_constraint_ref: Index = undefined,
+    north: Sensor = undefined,
+    south: Sensor = undefined,
+    west: Sensor = undefined,
+    east: Sensor = undefined,
+    ground_offset: Vector2i = undefined,
+    ground_scan: BitMask = undefined,
+    terrain_constraint_ref: Index = undefined,
 
-        fn deinit(self: *Data) void {
-            self.north.deinit();
-            self.north = undefined;
-            self.south.deinit();
-            self.south = undefined;
-            self.west.deinit();
-            self.west = undefined;
-            self.east.deinit();
-            self.east = undefined;
-            self.ground_scan.deinit();
-            self.ground_scan = undefined;
-        }
-
-        fn new(terrain_constraint_name: String) Data {
-            return newWith(5, 5, terrain_constraint_name);
-        }
-
-        fn newWith(ground_addition: usize, scan_length: usize, terrain_constraint_name: String) Data {
-            return Data{
-                .ground_addition = utils.usize_cint(ground_addition),
-                .scan_length = scan_length,
-                .terrain_constraint_name = terrain_constraint_name,
-            };
-        }
-    };
-
-    const Sensor = struct {
-        pos1: Vector2i,
-        pos2: Vector2i,
-        pos3: Vector2i,
-        s1: BitMask,
-        s2: BitMask,
-        s3: BitMask,
-        max: CInt = 0,
-
-        fn deinit(self: *Sensor) void {
-            self.s1.deinit();
-            self.s2.deinit();
-            self.s3.deinit();
-        }
-
-        fn scan(self: *Sensor, contact: *physics.ContactScan) void {
-            self.s1.clear();
-            self.s2.clear();
-            self.s3.clear();
-            self.max = 0;
-            self.s1.setIntersection(contact.mask.?, -self.pos1, utils.bitOpOR);
-            self.s2.setIntersection(contact.mask.?, -self.pos2, utils.bitOpOR);
-            self.s3.setIntersection(contact.mask.?, -self.pos3, utils.bitOpOR);
-            self.max = utils.usize_cint(@max(self.s1.count(), @max(self.s2.count(), self.s3.count())));
-        }
-    };
-
-    var instances: utils.DynArray(Data) = undefined;
+    var instances: utils.DynArray(PlatformerCollisionResolver) = undefined;
 
     fn init() void {
-        instances = utils.DynArray(Data).newWithRegisterSize(api.COMPONENT_ALLOC, 5);
+        instances = utils.DynArray(PlatformerCollisionResolver).newWithRegisterSize(api.COMPONENT_ALLOC, 5);
     }
 
     fn deinit() void {
         var next = instances.slots.nextSetBit(0);
         while (next) |i| {
-            if (instances.get(i)) |inst| inst.deinit();
+            if (instances.get(i)) |inst| {
+                inst.north.deinit();
+                inst.north = undefined;
+                inst.south.deinit();
+                inst.south = undefined;
+                inst.west.deinit();
+                inst.west = undefined;
+                inst.east.deinit();
+                inst.east = undefined;
+                inst.ground_scan.deinit();
+                inst.ground_scan = undefined;
+            }
             next = instances.slots.nextSetBit(i + 1);
         }
 
@@ -132,67 +116,87 @@ pub const PlatformerCollisionResolver = struct {
         instances = undefined;
     }
 
-    fn initData(entity_id: Index, instance_id: Index) void {
-        var data = instances.get(instance_id).?;
-        data._entity_id = entity_id;
-        data._transform = graphics.ETransform.byId(entity_id).?;
-        data._movement = physics.EMovement.byId(entity_id).?;
+    fn initInstance(entity_id: Index, instance_id: Index) void {
+        var inst = instances.get(instance_id).?;
+        inst._entity_id = entity_id;
+        inst._transform = graphics.ETransform.byId(entity_id).?;
+        inst._movement = physics.EMovement.byId(entity_id).?;
 
         if (graphics.EView.byId(entity_id)) |v|
-            data._view_id = v.view_id;
+            inst._view_id = v.view_id;
 
-        const constraint = physics.ContactConstraint.byName(data.terrain_constraint_name).?;
+        const constraint = physics.ContactConstraint.byName(inst.terrain_constraint_name).?;
         const x_half: CInt = utils.f32_cint(constraint.scan.bounds.rect[2] / 2);
         const x_full: CInt = utils.f32_cint(constraint.scan.bounds.rect[2] - 3);
-        const y_half: CInt = utils.f32_cint(constraint.scan.bounds.rect[3] / 2) - data.ground_addition;
-        const y_full: CInt = utils.f32_cint(constraint.scan.bounds.rect[3] - 3) - data.ground_addition;
+        const y_half: CInt = utils.f32_cint(constraint.scan.bounds.rect[3] / 2) - inst.ground_addition;
+        const y_full: CInt = utils.f32_cint(constraint.scan.bounds.rect[3] - 3) - inst.ground_addition;
 
-        data.north = Sensor{
+        inst.north = Sensor{
             .pos1 = .{ 2, 0 },
             .pos2 = .{ x_half, 0 },
             .pos3 = .{ x_full, 0 },
-            .s1 = BitMask.new(api.ALLOC, 1, data.scan_length),
-            .s2 = BitMask.new(api.ALLOC, 1, data.scan_length),
-            .s3 = BitMask.new(api.ALLOC, 1, data.scan_length),
+            .s1 = BitMask.new(api.ALLOC, 1, inst.scan_length),
+            .s2 = BitMask.new(api.ALLOC, 1, inst.scan_length),
+            .s3 = BitMask.new(api.ALLOC, 1, inst.scan_length),
         };
-        data.south = Sensor{
+        inst.south = Sensor{
             .pos1 = .{ 2, y_full },
             .pos2 = .{ x_half, y_full },
             .pos3 = .{ x_full, y_full },
-            .s1 = BitMask.new(api.ALLOC, 1, data.scan_length + utils.cint_usize(data.ground_addition)),
-            .s2 = BitMask.new(api.ALLOC, 1, data.scan_length + utils.cint_usize(data.ground_addition)),
-            .s3 = BitMask.new(api.ALLOC, 1, data.scan_length + utils.cint_usize(data.ground_addition)),
+            .s1 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
+            .s2 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
+            .s3 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
         };
-        data.west = Sensor{
+        inst.west = Sensor{
             .pos1 = .{ 0, 2 },
             .pos2 = .{ 0, y_half },
             .pos3 = .{ 0, y_full },
-            .s1 = BitMask.new(api.ALLOC, data.scan_length, 1),
-            .s2 = BitMask.new(api.ALLOC, data.scan_length, 1),
-            .s3 = BitMask.new(api.ALLOC, data.scan_length, 1),
+            .s1 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s2 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s3 = BitMask.new(api.ALLOC, inst.scan_length, 1),
         };
-        data.east = Sensor{
+        inst.east = Sensor{
             .pos1 = .{ x_full, 2 },
             .pos2 = .{ x_full, y_half },
             .pos3 = .{ x_full, y_full },
-            .s1 = BitMask.new(api.ALLOC, data.scan_length, 1),
-            .s2 = BitMask.new(api.ALLOC, data.scan_length, 1),
-            .s3 = BitMask.new(api.ALLOC, data.scan_length, 1),
+            .s1 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s2 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s3 = BitMask.new(api.ALLOC, inst.scan_length, 1),
         };
-        data.ground_offset = .{ 2, utils.f32_cint(@ceil(constraint.scan.bounds.rect[3])) - data.ground_addition };
-        data.ground_scan = BitMask.new(
+        inst.ground_offset = .{ 2, utils.f32_cint(@ceil(constraint.scan.bounds.rect[3])) - inst.ground_addition };
+        inst.ground_scan = BitMask.new(
             api.ALLOC,
             utils.f32_usize(@floor(constraint.scan.bounds.rect[2])) - 3,
             1,
         );
-        data.terrain_constraint_ref = constraint.id;
+        inst.terrain_constraint_ref = constraint.id;
     }
 
     pub fn new(terrain_constraint_name: String) physics.CollisionResolver {
         return physics.CollisionResolver{
-            ._instance_id = instances.add(Data.new(terrain_constraint_name)),
+            ._instance_id = instances.add(.{
+                .ground_addition = 5,
+                .scan_length = 5,
+                .terrain_constraint_name = terrain_constraint_name,
+            }),
             ._resolve = resolve,
-            ._init = initData,
+            ._init = initInstance,
+        };
+    }
+
+    fn newWith(
+        ground_addition: usize,
+        scan_length: usize,
+        terrain_constraint_name: String,
+    ) physics.CollisionResolver {
+        return physics.CollisionResolver{
+            ._instance_id = instances.add(.{
+                .ground_addition = utils.usize_cint(ground_addition),
+                .scan_length = scan_length,
+                .terrain_constraint_name = terrain_constraint_name,
+            }),
+            ._resolve = resolve,
+            ._init = initInstance,
         };
     }
 
@@ -209,7 +213,7 @@ pub const PlatformerCollisionResolver = struct {
     }
 
     fn resolveTerrainContact(
-        self: *Data,
+        self: *PlatformerCollisionResolver,
         terr_scan: *physics.ContactConstraint,
         pref_ground: bool,
     ) void {
@@ -229,7 +233,7 @@ pub const PlatformerCollisionResolver = struct {
     }
 
     fn resolveVertically(
-        self: *Data,
+        self: *PlatformerCollisionResolver,
         terr_scan: *physics.ContactConstraint,
     ) void {
         var refresh = false;
@@ -309,7 +313,7 @@ pub const PlatformerCollisionResolver = struct {
     }
 
     fn resolveHorizontally(
-        self: *Data,
+        self: *PlatformerCollisionResolver,
         terr_scan: *physics.ContactConstraint,
     ) void {
         var refresh = false;
@@ -346,7 +350,7 @@ pub const PlatformerCollisionResolver = struct {
         }
     }
 
-    fn updateContacts(self: *Data, terr_scan: *physics.ContactConstraint) void {
+    fn updateContacts(self: *PlatformerCollisionResolver, terr_scan: *physics.ContactConstraint) void {
         var contacts: *physics.EContactScan = physics.EContactScan.byId(self._entity_id) orelse return;
         if (!contacts.hasAnyContact())
             return;
@@ -354,14 +358,14 @@ pub const PlatformerCollisionResolver = struct {
         _ = physics.ContactSystem.applyScanForConstraint(self._entity_id, self._view_id, terr_scan);
     }
 
-    fn takeFullLedgeScans(data: *Data, contact: *physics.ContactScan) void {
-        data.north.scan(contact);
-        data.south.scan(contact);
-        data.west.scan(contact);
-        data.east.scan(contact);
+    fn takeFullLedgeScans(self: *PlatformerCollisionResolver, contact: *physics.ContactScan) void {
+        self.north.scan(contact);
+        self.south.scan(contact);
+        self.west.scan(contact);
+        self.east.scan(contact);
 
-        data.ground_scan.clear();
-        data.ground_scan.setIntersection(contact.mask.?, -data.ground_offset, utils.bitOpOR);
+        self.ground_scan.clear();
+        self.ground_scan.setIntersection(contact.mask.?, -self.ground_offset, utils.bitOpOR);
     }
 };
 
