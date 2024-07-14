@@ -196,16 +196,25 @@ fn GroupingTrait(comptime T: type, comptime adapter: anytype, comptime _: Contex
             return c.groups;
         }
 
-        pub fn addToGroup(self: *T, group: GroupAspect) void {
-            if (self.groups == null)
-                self.groups = GroupAspectGroup.newKind(group)
-            else
-                self.groups.addAspect(group);
+        pub fn withGroupAspect(self: *T, aspect: GroupAspect) *T {
+            return addToGroup(self, aspect);
         }
 
-        pub fn removeFromGroup(self: *T, group: GroupAspect) void {
+        pub fn addToGroup(self: *T, aspect: GroupAspect) *T {
+            if (self.groups == null)
+                self.groups = GroupAspectGroup.newKind();
+
+            if (self.groups) |*g|
+                g.addAspect(aspect);
+
+            return self;
+        }
+
+        pub fn removeFromGroup(self: *T, group: GroupAspect) *T {
             if (self.groups) |g|
                 g.removeAspect(group);
+
+            return self;
         }
 
         pub fn isInGroup(self: *T, group: GroupAspect) bool {

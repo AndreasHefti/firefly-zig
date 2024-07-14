@@ -51,8 +51,8 @@ pub fn deinit() void {
 
 pub const CallContext = struct {
     parent_id: Index,
-    caller_id: ?Index,
-    attributes: ?api.Attributes = undefined,
+    caller_id: ?Index = null,
+    attributes: ?api.Attributes = null,
 
     pub fn deinit(self: *CallContext) void {
         if (self.attributes) |*p|
@@ -241,17 +241,19 @@ pub const Task = struct {
     pub fn runWith(
         self: *Task,
         caller_id: ?Index,
-        attributes: ?api.Attributes,
+        attributes: anytype,
     ) void {
         defer {
             if (self.run_once)
                 Task.disposeById(self.id);
         }
 
+        const attrs = api.Attributes.of(attributes);
+
         if (self.blocking) {
-            self._run(caller_id, attributes);
+            self._run(caller_id, attrs);
         } else {
-            _ = std.Thread.spawn(.{}, _run, .{ self, caller_id, attributes }) catch unreachable;
+            _ = std.Thread.spawn(.{}, _run, .{ self, caller_id, attrs }) catch unreachable;
         }
     }
 
@@ -259,14 +261,14 @@ pub const Task = struct {
         Task.byId(task_id).runWith(null, null);
     }
 
-    pub fn runTaskByIdWith(task_id: Index, caller_id: ?Index, attributes: ?api.Attributes) void {
+    pub fn runTaskByIdWith(task_id: Index, caller_id: ?Index, attributes: anytype) void {
         Task.byId(task_id).runWith(caller_id, attributes);
     }
     pub fn runTaskByName(task_name: String) void {
         if (Task.byName(task_name)) |t| t.runWith(null, null);
     }
 
-    pub fn runTaskByNameWith(task_name: String, caller_id: ?Index, attributes: ?api.Attributes) void {
+    pub fn runTaskByNameWith(task_name: String, caller_id: ?Index, attributes: anytype) void {
         if (Task.byName(task_name)) |t| t.runWith(caller_id, attributes);
     }
 

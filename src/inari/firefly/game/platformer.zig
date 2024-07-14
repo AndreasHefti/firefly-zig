@@ -79,6 +79,7 @@ pub const PlatformerCollisionResolver = struct {
     ground_addition: CInt = 5,
     scan_length: usize = 5,
 
+    _initialized: bool = false,
     _entity_id: Index = undefined,
     _view_id: ?Index = null,
     _transform: *graphics.ETransform = undefined,
@@ -122,6 +123,10 @@ pub const PlatformerCollisionResolver = struct {
 
     fn initInstance(entity_id: Index, instance_id: Index) void {
         var inst = instances.get(instance_id).?;
+        defer inst._initialized = true;
+        if (inst._initialized)
+            return;
+
         inst._entity_id = entity_id;
         inst._transform = graphics.ETransform.byId(entity_id).?;
         inst._movement = physics.EMovement.byId(entity_id).?;
@@ -230,11 +235,6 @@ pub const PlatformerCollisionResolver = struct {
     fn resolveVertically(self: *PlatformerCollisionResolver) void {
         var refresh = false;
         var set_on_ground = false;
-        self._movement.flagAll(.{
-            MovFlags.ON_SLOPE_DOWN,
-            MovFlags.ON_SLOPE_UP,
-            MovFlags.BLOCK_NORTH,
-        }, false);
 
         const b1 = utils.usize_cint(self._south.s1.count());
         const b3 = utils.usize_cint(self._south.s3.count());
@@ -264,7 +264,7 @@ pub const PlatformerCollisionResolver = struct {
                 const gap = b3 - self.ground_addition;
                 if (gap >= -1) {
                     self._transform.moveCInt(0, -gap);
-                    std.debug.print("move y {d} y: {d}\n", .{ -gap, self._transform.position[1] });
+                    //std.debug.print("move y {d} y: {d}\n", .{ -gap, self._transform.position[1] });
                     self._transform.position[1] = @ceil(self._transform.position[1]);
                     self._movement.velocity[1] = 0;
                     refresh = true;
@@ -298,7 +298,7 @@ pub const PlatformerCollisionResolver = struct {
             takeFullLedgeScans(self);
         }
 
-        std.debug.print("set_on_ground: {any} : {d} \n", .{ set_on_ground, self._ground_scan.count() });
+        //std.debug.print("set_on_ground: {any} : {d} \n", .{ set_on_ground, self._ground_scan.count() });
         self._movement.on_ground = set_on_ground or (self._movement.velocity[1] >= 0 and self._ground_scan.count() > 0);
         if (self._movement.on_ground)
             self._transform.position[1] = @ceil(self._transform.position[1]);
@@ -306,12 +306,6 @@ pub const PlatformerCollisionResolver = struct {
 
     fn resolveHorizontally(self: *PlatformerCollisionResolver) void {
         var refresh = false;
-        self._movement.flagAll(.{
-            MovFlags.SLIP_LEFT,
-            MovFlags.SLIP_RIGHT,
-            MovFlags.BLOCK_EAST,
-            MovFlags.BLOCK_WEST,
-        }, false);
 
         if (self._west.max > 0) {
             std.debug.print("adjust left: {any}\n", .{self._west.max});
@@ -327,7 +321,7 @@ pub const PlatformerCollisionResolver = struct {
             std.debug.print("adjust right: {any}\n", .{-self._east.max});
             self._transform.moveCInt(-self._east.max, 0);
             self._transform.position[0] = @ceil(self._transform.position[0]);
-            self._movement.flag(MovFlags.SLIP_RIGHT, self._movement.velocity[0] < -1);
+            self._movement.flag(MovFlags.SLIP_LEFT, self._movement.velocity[0] < 1);
             self._movement.flag(MovFlags.BLOCK_WEST, self._movement.velocity[0] >= 0);
             self._movement.velocity[0] = 0;
             refresh = true;
@@ -420,41 +414,47 @@ pub const SimplePlatformerJumpControl = struct {
     jump_button: api.InputButtonType = api.InputButtonType.FIRE_1,
     jump_impulse: Float = 1000,
     double_jump: bool = false,
-    jump_action_tolerance: u8 = 5,
+    jump_tolerance: u8 = 5,
+    double_jump_tolerance: u8 = 100,
 
-    _jump_action: u8 = 0,
-    _double_jump_on: bool = true,
+    _off_ground: u8 = 0,
 
     pub fn update(entity_id: Index, self_id: ?Index) void {
         const self = @This().byId(self_id) orelse return;
         var move = physics.EMovement.byId(entity_id) orelse return;
 
-        if (move.on_ground)
-            move.flagAll(.{ MovFlags.JUMP, MovFlags.DOUBLE_JUMP }, false);
+        // measure off ground time to achieve jump_tolerance and
+        if (move.on_ground) {
+            self._off_ground = 0;
+            move.kind.removeAspect(MovFlags.JUMP);
+            move.kind.removeAspect(MovFlags.DOUBLE_JUMP);
 
-        if (api.input.checkButtonTyped(self.jump_button)) {
-            if (move.on_ground) {
+            if (api.input.checkButtonTyped(self.jump_button) and self._off_ground < self.jump_tolerance) {
+                // jump
                 move.on_ground = false;
                 move.velocity[1] = -self.jump_impulse;
-                self._double_jump_on = false;
-                self._jump_action = 0;
                 move.flag(MovFlags.JUMP, true);
-            } else if (self.double_jump and !self._double_jump_on) {
+                return;
+            }
+        } else {
+            self._off_ground = @min(self._off_ground + 1, @max(self.jump_tolerance, self.double_jump_tolerance));
+        }
+
+        if (move.kind.hasAspect(MovFlags.JUMP)) {
+            if (move.on_ground) {
+                move.kind.removeAspect(MovFlags.JUMP);
+                return;
+            }
+
+            if (api.input.checkButtonTyped(self.jump_button) and self._off_ground < self.double_jump_tolerance) {
+                // double jump
                 move.velocity[1] = -self.jump_impulse;
-                self._double_jump_on = true;
-                self._jump_action = 0;
                 move.flag(MovFlags.JUMP, false);
                 move.flag(MovFlags.DOUBLE_JUMP, true);
-            } else {
-                self._jump_action = 1;
             }
-        } else if (move.on_ground and self._jump_action > 0 and self._jump_action < self.jump_action_tolerance) {
-            move.on_ground = false;
-            move.velocity[1] = -self.jump_impulse;
-            self._double_jump_on = false;
-            self._jump_action = 0;
-        } else if (self._jump_action > 0 and self._jump_action <= self.jump_action_tolerance) {
-            self._jump_action += 1;
         }
+
+        if (move.kind._mask != 0)
+            std.debug.print("move aspects: {any}\n", .{move.kind});
     }
 };

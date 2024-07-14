@@ -131,6 +131,7 @@ pub const EMovement = struct {
     adjust_max: bool = true,
     adjust_ground: bool = true,
     adjust_block: bool = false,
+    clear_per_frame_flags: bool = true,
 
     pub fn activation(self: *EMovement, active: bool) void {
         self.active = active;
@@ -246,6 +247,21 @@ pub fn adjustVelocity(movement: *EMovement) void {
             movement.velocity[1] = 0;
         if (movement.kind.hasAspect(MovFlags.BLOCK_WEST) and movement.velocity[0] < 0)
             movement.velocity[0] = 0;
+    }
+
+    if (movement.clear_per_frame_flags) {
+        movement.flagAll(.{
+            MovFlags.SLIP_LEFT,
+            MovFlags.SLIP_RIGHT,
+            MovFlags.BLOCK_EAST,
+            MovFlags.BLOCK_WEST,
+            MovFlags.BLOCK_NORTH,
+            MovFlags.BLOCK_SOUTH,
+            MovFlags.ON_SLOPE_UP,
+            MovFlags.ON_SLOPE_DOWN,
+            MovFlags.GROUND_TOUCHED,
+            MovFlags.LOST_GROUND,
+        }, false);
     }
 
     if (movement.adjust_ground and movement.on_ground)

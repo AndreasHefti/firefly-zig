@@ -246,7 +246,7 @@ pub fn AspectGroup(comptime T: type) type {
             }
 
             fn without(self: *Kind, index: u8) void {
-                self._mask &= ~index;
+                self._mask &= ~maskBit(index);
             }
 
             fn maskBit(index: u8) MaskInt {

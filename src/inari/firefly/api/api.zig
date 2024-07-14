@@ -268,15 +268,26 @@ pub const Attributes = struct {
         return .{ ._map = std.StringHashMap(String).init(ALLOC) };
     }
 
-    pub fn newWith(attributes: anytype) ?Attributes {
-        if (@typeInfo(@TypeOf(attributes)) != .Struct) return null;
+    pub fn of(attributes: anytype) ?Attributes {
+        if (@typeInfo(@TypeOf(attributes)) == .Optional)
+            if (attributes != null)
+                return @as(Attributes, attributes.?);
 
-        var result: Attributes = .{ ._map = std.StringHashMap(String).init(ALLOC) };
-        inline for (attributes) |v| {
-            result.set(v[0], v[1]);
+        if (@typeInfo(@TypeOf(attributes)) == .Struct) {
+            if (@hasField(@TypeOf(attributes), "_map")) {
+                return @as(Attributes, attributes);
+            } else {
+                var result: Attributes = .{ ._map = std.StringHashMap(String).init(ALLOC) };
+
+                inline for (attributes) |v| {
+                    result.set(v[0], v[1]);
+                }
+
+                return result;
+            }
         }
 
-        return result;
+        return null;
     }
 
     pub fn deinit(self: *Attributes) void {
@@ -319,6 +330,23 @@ pub const Attributes = struct {
             ALLOC.free(kv.key);
             ALLOC.free(kv.value);
         }
+    }
+
+    pub fn format(
+        self: Attributes,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "Attributes[ c_ref1:{any}, c_ref2:{any}, c_ref2:{any}, attrs: ",
+            .{ self.c_ref1, self.c_ref2, self.c_ref3 },
+        );
+        var it = self._map.iterator();
+        while (it.next()) |e| {
+            try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
+        }
+        try writer.print("]", .{});
     }
 };
 

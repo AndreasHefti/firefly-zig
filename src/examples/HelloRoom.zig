@@ -86,22 +86,22 @@ fn init() void {
         .scheduler = api.Timer.getScheduler(20),
     });
 
-    // create new Room from JSON file: resources/example_tilemap1.json with tile set: resources/example_tileset.json
-    var room = game.Room.new(.{
-        .name = "Test Room1",
-        .start_scene_ref = start_scene_name,
-        .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
-    })
-        .withLoadTaskByName(game.JSONTasks.LOAD_TILE_SET, .{
-        .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
-    })
-        .withLoadTaskByName(game.JSONTasks.LOAD_TILE_MAPPING, .{
-        .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
-        .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
-    });
+    // load room from file
+    api.Task.runTaskByNameWith(
+        game.JSONTasks.LOAD_ROOM,
+        null,
+        .{
+            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
+            .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
+        },
+    );
 
-    // and just start the Room
-    room.start();
+    // and just start the Room with no player
+    game.Room.startRoomWithPlayer("Room1", "no player", roomLoaded);
+}
+
+fn roomLoaded(_: ?*game.Room) void {
+    std.debug.print("Room running", .{});
 }
 
 // key input is moving the invisible pivot point of the camera when the Room is active

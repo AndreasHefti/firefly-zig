@@ -66,14 +66,13 @@ fn init() void {
         true,
     );
 
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_LEFT, api.InputButtonType.LEFT);
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_RIGHT, api.InputButtonType.RIGHT);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_A, api.InputButtonType.LEFT);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_D, api.InputButtonType.RIGHT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // create new Room
     var room = game.Room.new(.{
         .name = "Test Room1",
-        .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
     })
         .withLoadTaskByName(game.JSONTasks.LOAD_TILE_SET, .{
         .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
@@ -91,7 +90,7 @@ fn init() void {
         null,
     );
 
-    room.start();
+    room.start("Player", null);
 }
 
 var player_pos_ptr: *utils.PosF = undefined;
@@ -133,7 +132,8 @@ fn create_player(_: api.CallContext) void {
     })
         .withActiveControlOf(game.SimplePlatformerJumpControl{
         .jump_button = api.InputButtonType.FIRE_1,
-        .jump_impulse = 200,
+        .jump_impulse = 100,
+        .double_jump = true,
     })
         .activate();
 

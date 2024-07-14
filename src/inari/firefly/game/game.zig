@@ -7,7 +7,6 @@ const tile = @import("tile.zig");
 const json = @import("json.zig");
 const world = @import("world.zig");
 const platformer = @import("platformer.zig");
-const player = @import("player.zig");
 
 const Vector2f = firefly.utils.Vector2f;
 const RectF = firefly.utils.RectF;
@@ -26,12 +25,12 @@ pub fn init() !void {
     if (initialized)
         return;
 
+    BaseGroupAspect.PAUSEABLE = api.GroupAspectGroup.getAspect("PAUSEABLE");
     // init sub packages
     tile.init();
     world.init();
     json.init();
     platformer.init();
-    player.init();
 
     api.ComponentControlType(SimplePivotCamera).init();
 }
@@ -43,7 +42,6 @@ pub fn deinit() void {
 
     api.ComponentControlType(SimplePivotCamera).deinit();
     // deinit sub packages
-    player.deinit();
     platformer.deinit();
     json.deinit();
     world.deinit();
@@ -52,6 +50,41 @@ pub fn deinit() void {
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
+//////////////////////////////////////////////////////////////
+
+pub const BaseGroupAspect = struct {
+    pub var PAUSEABLE: api.GroupAspect = undefined;
+};
+
+//////////////////////////////////////////////////////////////
+//// Game Pausing API
+//////////////////////////////////////////////////////////////
+/// de/activate all Entities with BaseGroupAspect.GroupAspect
+/// set in Entity groups Kind
+///
+pub fn pauseGame() void {
+    pause(true);
+}
+
+pub fn resumeGame() void {
+    pause(false);
+}
+
+fn pause(p: bool) void {
+    var next = api.Entity.nextId(0);
+    while (next) |i| {
+        next = api.Entity.nextId(i + 1);
+        var entity = api.Entity.byId(i);
+        var groups = entity.groups orelse continue;
+        if (groups.hasAspect(BaseGroupAspect.PAUSEABLE)) {
+            std.debug.print("Pause Entity: {?s}\n", .{entity.name});
+            entity.activation(!p);
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////
+//// Conditions
 //////////////////////////////////////////////////////////////
 
 pub const GlobalConditions = struct {

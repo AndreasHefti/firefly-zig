@@ -1,5 +1,5 @@
 {
-    "name": "TileMapping",
+    "name": "TileMapRoom1",
     "tile_sets": [
         { "code_offset": 1, "resource": { "name": "TestTileSet" }}
     ],

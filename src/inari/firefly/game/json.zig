@@ -32,6 +32,11 @@ pub fn init() void {
         .name = JSONTasks.LOAD_TILE_MAPPING,
         .function = loadTileMappingFromJSON,
     });
+
+    _ = api.Task.new(.{
+        .name = JSONTasks.LOAD_ROOM,
+        .function = loadRoomFromJSON,
+    });
 }
 
 pub fn deinit() void {
@@ -40,6 +45,7 @@ pub fn deinit() void {
         return;
 
     // dispose tasks
+    api.Task.disposeByName(JSONTasks.LOAD_ROOM);
     api.Task.disposeByName(JSONTasks.LOAD_TILE_MAPPING);
     api.Task.disposeByName(JSONTasks.LOAD_TILE_SET);
 }
@@ -47,6 +53,11 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 //// API
 //////////////////////////////////////////////////////////////
+
+pub const JSONAttribute = struct {
+    name: String,
+    value: String,
+};
 
 pub const JSONResourceHandle = struct {
     json_resource: ?String,
@@ -74,8 +85,9 @@ pub const JSONResourceHandle = struct {
 };
 
 pub const JSONTasks = struct {
-    pub const LOAD_TILE_SET = "LOAD_TILE_SET";
-    pub const LOAD_TILE_MAPPING = "LOAD_TILE_MAPPING";
+    pub const LOAD_TILE_SET = "LOAD_TILE_SET_TASK";
+    pub const LOAD_TILE_MAPPING = "LOAD_TILE_MAPPING_TASK";
+    pub const LOAD_ROOM = "LOAD_ROOM_TASK";
 };
 
 //////////////////////////////////////////////////////////////
@@ -86,7 +98,7 @@ pub const JSONTasks = struct {
 /// Usually a load task shall check if the referenced component with "name" already exists.
 /// If so, and "update_task" is set too, update if given task.
 /// If component is not loaded yet, load the component with given load_task or default task
-pub const FileResource = struct {
+pub const Resource = struct {
     name: String,
     file: ?String = null,
     load_task: ?String = null,
@@ -125,7 +137,7 @@ pub const JSONTile = struct {
 
 pub const JSONTileSet = struct {
     name: String,
-    texture: FileResource,
+    texture: Resource,
     tile_width: Float,
     tile_height: Float,
     tiles: []const JSONTile,
@@ -145,6 +157,11 @@ fn loadTileSetFromJSON(context: api.CallContext) void {
         defer parsed.deinit();
 
         const jsonTileSet: JSONTileSet = parsed.value;
+
+        // check if tile set already exists. If so, do nothing
+        // TODO hot reload here?
+        if (game.TileSet.existsName(jsonTileSet.name))
+            return;
 
         // check texture and load or create if needed
         if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
@@ -274,7 +291,7 @@ fn loadTileSetFromJSON(context: api.CallContext) void {
 //////////////////////////////////////////////////////////////
 
 pub const TileSetDef = struct {
-    resource: FileResource,
+    resource: Resource,
     code_offset: ?Index = null,
 };
 
@@ -309,7 +326,6 @@ pub const JSONTileGrid = struct {
 fn loadTileMappingFromJSON(context: api.CallContext) void {
     const view_name = context.get(game.TaskAttributes.ATTR_VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
-
     var json_res_handle = JSONResourceHandle.new(context);
     defer json_res_handle.deinit();
 
@@ -323,6 +339,11 @@ fn loadTileMappingFromJSON(context: api.CallContext) void {
         defer parsed.deinit();
 
         const jsonTileMapping: JSONTileMapping = parsed.value;
+
+        // check if tile map with name already exits. If so, do nothing
+        // TODO hot reload here?
+        if (game.TileMapping.existsName(jsonTileMapping.name))
+            return;
 
         // prepare view
         var view_id: ?Index = null;
@@ -408,7 +429,7 @@ fn loadTileMappingFromJSON(context: api.CallContext) void {
             }
         }
 
-        // process tile grids TODO
+        // apply tile grids
         for (0..jsonTileMapping.tile_grids.len) |i| {
             const json_grid = jsonTileMapping.tile_grids[i];
             tile_mapping.addTileGridData(.{
@@ -432,4 +453,115 @@ fn loadTileMappingFromJSON(context: api.CallContext) void {
                 comp.addComponentReference(game.TileMapping.referenceById(tile_mapping.id, true));
         }
     }
+}
+
+//////////////////////////////////////////////////////////////
+//// Default Room JSON Binding
+//////////////////////////////////////////////////////////////
+/// {
+///     "name": "Room1",
+///     "start_scene": "scene1",
+///     "end_scene": "scene2",
+///     "tile_sets": [
+///         { "name": "TestTileSet", "file": "resources/example_tileset.json" }
+///     ],
+///     "tile_map": { "name": "TileMapRoom1", "file": "resources/example_tilemap1.json" },
+///     "objects": [
+///      {
+///        "name": "t1",
+///        "object_type": "room_transition",
+///        "build_task": "RoomTransitionBuilder",
+///        "layer": "Foreground",
+///        "position": "318,16",
+///        "attributes": [
+///            { "name": "condition", "value": "TransitionEast"},
+///            { "name": "orientation", "value": "EAST"},
+///            { "name": "target", "value": "Room2"},
+///            { "name": "bounds", "value": "318,16,4,16"},
+///            { "name": "rotation", "value": "0"},
+///            { "name": "scale", "value": "0,0"}
+///        ]
+///      },
+///      {
+///        "name": "t2",
+///        "object_type": "room_transition",
+///        "build_task": "RoomTransitionBuilder",
+///        "layer": "Foreground",
+///        "position": "256,157",
+///        "attributes": [
+///            { "name": "condition", "value": "TransitionSouth"},
+///            { "name": "orientation", "value": "SOUTH"},
+///            { "name": "target", "value": "Room3"},
+///            { "name": "bounds", "value": "256,157,48,12"},
+///            { "name": "rotation", "value": "0"},
+///            { "name": "scale", "value": "0,0"}
+///        ]
+///      }
+///    ]
+/// }
+//////////////////////////////////////////////////////////////
+
+pub const JSONRoom = struct {
+    name: String,
+    start_scene: ?String = null,
+    end_scene: ?String = null,
+    tile_sets: []const Resource,
+    tile_map: Resource,
+    objects: ?[]const JSONTileMapObject = null,
+};
+
+pub const JSONTileMapObject = struct {
+    name: ?String = null,
+    object_type: String,
+    build_task: String,
+    layer: ?String = null,
+    position: ?String = null,
+    attributes: ?[]const JSONAttribute = null,
+};
+
+fn loadRoomFromJSON(context: api.CallContext) void {
+    const view_name = context.get(game.TaskAttributes.ATTR_VIEW_NAME) orelse
+        @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
+
+    var json_res_handle = JSONResourceHandle.new(context);
+    defer json_res_handle.deinit();
+
+    const json = json_res_handle.json_resource orelse {
+        utils.panic(api.ALLOC, "Failed to load json from file: {any}", .{json_res_handle.json_resource});
+        return;
+    };
+
+    const parsed = std.json.parseFromSlice(
+        JSONRoom,
+        firefly.api.ALLOC,
+        json,
+        .{ .ignore_unknown_fields = true },
+    ) catch unreachable;
+    defer parsed.deinit();
+
+    const jsonTileMapping: JSONRoom = parsed.value;
+
+    // check if tile map with name already exits. If so, do nothing
+    // TODO hot reload here?
+    if (game.Room.byName(jsonTileMapping.name) != null)
+        return;
+
+    var room = game.Room.new(.{
+        .name = api.NamePool.alloc(jsonTileMapping.name).?,
+        .start_scene_ref = api.NamePool.alloc(jsonTileMapping.start_scene),
+        .end_scene_ref = api.NamePool.alloc(jsonTileMapping.end_scene),
+    });
+
+    for (0..jsonTileMapping.tile_sets.len) |i| {
+        _ = room.withLoadTaskByName(game.JSONTasks.LOAD_TILE_SET, .{
+            .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_sets[i].file.? },
+        });
+    }
+
+    _ = room.withLoadTaskByName(game.JSONTasks.LOAD_TILE_MAPPING, .{
+        .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_map.file.? },
+        .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
+    });
+
+    // TODO add objects as activation tasks
 }

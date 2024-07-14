@@ -3,6 +3,8 @@ const firefly = @import("../firefly.zig");
 
 const utils = firefly.utils;
 const api = firefly.api;
+const graphics = firefly.graphics;
+const game = firefly.game;
 
 const PosF = utils.PosF;
 const Index = utils.Index;
@@ -70,17 +72,19 @@ pub const RoomState = enum {
 pub const Room = struct {
     name: String,
     area_ref: ?String = null,
-    state: RoomState = RoomState.NONE,
-    bounds: utils.Vector4f,
 
+    state: RoomState = RoomState.NONE,
     start_scene_ref: ?String = null,
     end_scene_ref: ?String = null,
     composite_ref: Index = undefined,
+    player_ref: ?String = null, // if set, room is active (STARTING,RUNNING,PAUSED,STOPPING) for referenced player
+
+    _callback: ?*const fn (room: ?*Room) void = undefined,
+
+    var starting_room_ref: ?String = null;
+    var stopping_room_ref: ?String = null;
 
     var rooms: std.StringHashMap(Room) = undefined;
-
-    var active_room: ?String = null;
-    var next_room: ?String = null;
 
     fn init() void {
         rooms = std.StringHashMap(Room).init(api.COMPONENT_ALLOC);
@@ -111,7 +115,7 @@ pub const Room = struct {
             self.name,
             task_name,
             api.CompositeLifeCycle.LOAD,
-            api.Attributes.newWith(attributes),
+            attributes,
         );
 
         return self;
@@ -122,7 +126,7 @@ pub const Room = struct {
             self.name,
             task_Id,
             api.CompositeLifeCycle.LOAD,
-            api.Attributes.newWith(attributes),
+            attributes,
         );
 
         return self;
@@ -137,7 +141,7 @@ pub const Room = struct {
             self.name,
             task_name,
             api.CompositeLifeCycle.ACTIVATE,
-            api.Attributes.newWith(attributes),
+            attributes,
         );
 
         return self;
@@ -148,7 +152,7 @@ pub const Room = struct {
             self.name,
             task_Id,
             api.CompositeLifeCycle.ACTIVATE,
-            api.Attributes.newWith(attributes),
+            attributes,
         );
 
         return self;
@@ -175,120 +179,146 @@ pub const Room = struct {
 
     pub fn dispose(self: *Room) void {
         defer self.state = RoomState.CREATED;
-        if (self.state == RoomState.PAUSED or self.state == RoomState.RUNNING)
-            endActiveRoom();
+        if (self.state == RoomState.PAUSED or self.state == RoomState.RUNNING) {
+            endRoomWithPlayer(self.player_ref.?, disposeRoomCallback);
+        } else {
+            api.Composite.byId(self.composite_ref).dispose();
+        }
+    }
 
-        api.Composite.byId(self.composite_ref).dispose();
+    fn disposeRoomCallback(self: ?*Room) void {
+        if (self) |r| api.Composite.byId(r.composite_ref).dispose();
+    }
+
+    pub fn startRoomWithPlayer(room_name: String, player_ref: String, callback: ?*const fn (room: ?*Room) void) void {
+        if (byName(room_name)) |room| {
+            room.start(player_ref, callback);
+        } else {
+            if (callback) |c| c(null);
+        }
     }
 
     // 3. Start --> end active room when available,
-    //              runs activation tasks to create needed components and entities are created from in memory meta data,
+    //              runs activation tasks to create needed components and entities are created from in memory meta  data,
     //              and runs start scene if available
-    pub fn start(self: *Room) void {
-        // if start already running ignore call
-        if (self.state == RoomState.STARTING) return;
-        // load room is not already loaded --> but should be loaded before
+    pub fn start(self: *Room, player_ref: String, callback: ?*const fn (room: ?*Room) void) void {
+        // if this or another room is already starting, ignore call
+        if (starting_room_ref != null) {
+            if (callback) |c| c(null);
+            return;
+        }
+
+        // load if room is not already loaded --> but should be loaded before
         if (self.state == RoomState.CREATED) self.load();
         // ignore when room is in unexpected state
-        if (self.state != RoomState.LOADED) return;
-
-        // add self as next starting room.
-        // this lock also starting another room until self has fully started
-        next_room = self.name;
-
-        // end active room first if available
-        if (active_room) |_| {
-            // if next room is already defined and going to start soon, ignore start call
-            if (next_room != null or self.state == RoomState.STARTING) return;
-            Room.endActiveRoom();
+        if (self.state != RoomState.LOADED) {
+            std.debug.print("Room is in unexpected state to run: {any} still active!", .{self});
+            if (callback) |c| c(null);
             return;
         }
 
+        self.player_ref = player_ref;
         self.state = RoomState.STARTING;
-        // activate all room objects
-        api.Composite.activateByName(self.name, true);
-        pause();
+        starting_room_ref = self.name;
+        api.Composite.activateById(self.composite_ref, true);
+        game.pauseGame();
 
-        // run start scene if defined
+        // run start scene if defined. Callback gets invoked when scene finished
         if (self.start_scene_ref) |scene_name| {
-            if (firefly.graphics.Scene.byName(scene_name)) |scene| {
-                scene.callback = runNextRoomCallback;
+            if (graphics.Scene.byName(scene_name)) |scene| {
+                self._callback = callback;
+                scene.callback = runRoom;
                 scene.run();
             }
-            return;
-        } else runNextRoom();
-    }
-
-    fn runNextRoom() void {
-        if (next_room) |name| {
-            const room = Room.byName(name).?;
-            active_room = room.name;
-            next_room = null;
-            _resume();
-            room.state = RoomState.RUNNING;
+        } else {
+            // just run the Room immediately
+            game.resumeGame();
+            self.state = RoomState.RUNNING;
+            starting_room_ref = null;
+            if (callback) |c| c(self);
         }
     }
 
-    fn runNextRoomCallback(_: Index, _: api.ActionResult) void {
-        runNextRoom();
+    fn runRoom(_: Index, _: api.ActionResult) void {
+        var room = Room.byName(starting_room_ref.?).?;
+        room.state = RoomState.RUNNING;
+        game.resumeGame();
+        starting_room_ref = null;
+        if (room._callback) |c| c(room);
+        room._callback = null;
     }
-
-    pub fn pause() void {}
-
-    pub fn _resume() void {}
 
     // 6. End (Scene) --> stops the play and start end scene if available,
     //                    deactivates all registered component refs and run registered deactivation tasks.
-    pub fn endActiveRoom() void {
-        // ignore call when there is no active room
-        if (active_room == null) return;
-
-        if (Room.byName(active_room.?)) |room| {
-            // ignore when room is already stopping
-            if (room.state == RoomState.STOPPING) return;
-
-            room.state = RoomState.STOPPING;
-            // pause room
-            pause();
-            // if end scene defined run it and wait for callback
-            if (room.end_scene_ref) |scene_name| {
-                if (firefly.graphics.Scene.byName(scene_name)) |scene| {
-                    scene.callback = deactivateRoomCallback;
-                    scene.run();
-                }
-                return;
-            } else deactivateRoom();
+    pub fn endRoomWithPlayer(player_ref: String, callback: ?*const fn (room: ?*Room) void) void {
+        if (getActiveRoomForPlayer(player_ref)) |room| {
+            end(room, callback);
+        } else {
+            // ignore call when there is no active room
+            if (callback) |c| c(null);
         }
     }
 
-    fn deactivateRoom() void {
-        // deactivate all room objects
-        if (active_room) |name| {
-            api.Composite.activateByName(name, false);
-            if (Room.byName(name)) |room|
-                room.state = RoomState.LOADED;
+    pub fn end(self: *Room, callback: ?*const fn (room: ?*Room) void) void {
+        // ignore when room is not running
+        if (self.state != RoomState.RUNNING or stopping_room_ref != null) {
+            if (callback) |c| c(null);
+            return;
         }
 
-        active_room = null;
+        self.state = RoomState.STOPPING;
+        stopping_room_ref = self.name;
+        game.pauseGame();
 
-        if (next_room) |name| {
-            if (Room.byName(name)) |room|
-                room.start();
+        // if end scene defined run it and wait for callback
+        if (self.end_scene_ref) |scene_name| {
+            if (graphics.Scene.byName(scene_name)) |scene| {
+                self._callback = callback;
+                scene.callback = deactivateRoomCallback;
+                scene.run();
+            }
+        } else {
+            // just end the Room immediately
+            api.Composite.activateById(self.composite_ref, false);
+            self.state = RoomState.LOADED;
+            stopping_room_ref = null;
+            self.player_ref = null;
+            if (callback) |c| c(self);
         }
     }
 
     fn deactivateRoomCallback(_: Index, _: api.ActionResult) void {
-        deactivateRoom();
+        var room = Room.byName(stopping_room_ref.?).?;
+        api.Composite.activateByName(room.name, false);
+        room.state = RoomState.LOADED;
+        stopping_room_ref = null;
+        room.player_ref = null;
+        if (room._callback) |c| c(room);
+        room._callback = null;
+    }
+
+    pub fn getActiveRoomForPlayer(player_ref: String) ?*Room {
+        var it = rooms.valueIterator();
+        while (it.next()) |r| {
+            if (r.player_ref) |p|
+                if ((r.state == RoomState.RUNNING or r.state == RoomState.STARTING or r.state == RoomState.STOPPING) and
+                    utils.stringEquals(p, player_ref)) return r;
+        }
+
+        return null;
     }
 
     pub fn addTask(
         room_name: String,
         task: api.Task,
         life_cycle: api.CompositeLifeCycle,
-        attributes: ?api.Attributes,
+        attributes: anytype,
     ) void {
         checkInCreationState(room_name);
-        addInternalAttributes(room_name, attributes);
+
+        var attrs = api.Attributes.of(attributes);
+        if (attrs) |*a| a.set(firefly.game.TaskAttributes.OWNER_COMPOSITE, room_name);
+
         addTaskById(
             room_name,
             api.Task.new(task).id,
@@ -301,15 +331,18 @@ pub const Room = struct {
         room_name: String,
         task_id: Index,
         life_cycle: api.CompositeLifeCycle,
-        attributes: ?api.Attributes,
+        attributes: anytype,
     ) void {
         checkInCreationState(room_name);
-        addInternalAttributes(room_name, attributes);
+
+        var attrs = api.Attributes.of(attributes);
+        if (attrs) |*a| a.set(firefly.game.TaskAttributes.OWNER_COMPOSITE, room_name);
+
         if (api.Composite.byName(room_name)) |comp|
             _ = comp.withObject(.{
                 .task_ref = task_id,
                 .life_cycle = life_cycle,
-                .attributes = attributes,
+                .attributes = attrs,
             });
     }
 
@@ -317,23 +350,19 @@ pub const Room = struct {
         room_name: String,
         task_name: String,
         life_cycle: api.CompositeLifeCycle,
-        attributes: ?api.Attributes,
+        attributes: anytype,
     ) void {
         checkInCreationState(room_name);
-        addInternalAttributes(room_name, attributes);
+
+        var attrs = api.Attributes.of(attributes);
+        if (attrs) |*a| a.set(firefly.game.TaskAttributes.OWNER_COMPOSITE, room_name);
+
         if (api.Composite.byName(room_name)) |comp|
             _ = comp.withObject(.{
                 .task_name = task_name,
                 .life_cycle = life_cycle,
-                .attributes = attributes,
+                .attributes = attrs,
             });
-    }
-
-    fn addInternalAttributes(room_name: String, attributes: ?api.Attributes) void {
-        if (attributes) |a| {
-            var _a = a;
-            _a.set(firefly.game.TaskAttributes.OWNER_COMPOSITE, room_name);
-        }
     }
 
     fn checkInCreationState(room_name: String) void {
