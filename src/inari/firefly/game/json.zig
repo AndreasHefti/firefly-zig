@@ -63,7 +63,7 @@ pub const JSONResourceHandle = struct {
     json_resource: ?String,
     free_json_resource: bool,
 
-    pub fn new(context: api.CallContext) JSONResourceHandle {
+    pub fn new(context: api.TaskContext) JSONResourceHandle {
         if (context.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
             return .{
                 .json_resource = firefly.api.loadFromFile(file),
@@ -143,7 +143,7 @@ pub const JSONTileSet = struct {
     tiles: []const JSONTile,
 };
 
-fn loadTileSetFromJSON(context: api.CallContext) void {
+fn loadTileSetFromJSON(context: api.TaskContext) void {
     var json_res_handle = JSONResourceHandle.new(context);
     defer json_res_handle.deinit();
 
@@ -323,7 +323,7 @@ pub const JSONTileGrid = struct {
     codes: String,
 };
 
-fn loadTileMappingFromJSON(context: api.CallContext) void {
+fn loadTileMappingFromJSON(context: api.TaskContext) void {
     const view_name = context.get(game.TaskAttributes.ATTR_VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
     var json_res_handle = JSONResourceHandle.new(context);
@@ -503,6 +503,7 @@ fn loadTileMappingFromJSON(context: api.CallContext) void {
 
 pub const JSONRoom = struct {
     name: String,
+    bounds: String,
     start_scene: ?String = null,
     end_scene: ?String = null,
     tile_sets: []const Resource,
@@ -519,7 +520,7 @@ pub const JSONTileMapObject = struct {
     attributes: ?[]const JSONAttribute = null,
 };
 
-fn loadRoomFromJSON(context: api.CallContext) void {
+fn loadRoomFromJSON(context: api.TaskContext) void {
     const view_name = context.get(game.TaskAttributes.ATTR_VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
 
@@ -548,6 +549,7 @@ fn loadRoomFromJSON(context: api.CallContext) void {
 
     var room = game.Room.new(.{
         .name = api.NamePool.alloc(jsonTileMapping.name).?,
+        .bounds = utils.parseRectF(jsonTileMapping.bounds).?,
         .start_scene_ref = api.NamePool.alloc(jsonTileMapping.start_scene),
         .end_scene_ref = api.NamePool.alloc(jsonTileMapping.end_scene),
     });

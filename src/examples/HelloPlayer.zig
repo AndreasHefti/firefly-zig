@@ -73,6 +73,7 @@ fn init() void {
     // create new Room
     var room = game.Room.new(.{
         .name = "Test Room1",
+        .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
     })
         .withLoadTaskByName(game.JSONTasks.LOAD_TILE_SET, .{
         .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
@@ -94,7 +95,7 @@ fn init() void {
 }
 
 var player_pos_ptr: *utils.PosF = undefined;
-fn create_player(_: api.CallContext) void {
+fn create_player(_: api.TaskContext) void {
     const sprite_id = graphics.SpriteTemplate.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },

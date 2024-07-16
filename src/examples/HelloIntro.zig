@@ -30,7 +30,7 @@ pub fn init() void {
     intro_scene.run();
 }
 
-fn sceneInit(_: api.CallContext) void {
+fn sceneInit(_: api.TaskContext) void {
     graphics.Texture.new(.{
         .name = "IntroTexture",
         .resource = "resources/inari.png",

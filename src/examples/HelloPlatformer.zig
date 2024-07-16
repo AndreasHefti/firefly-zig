@@ -20,10 +20,6 @@ const zoom = 4;
 const scale = 1;
 const tile_width: usize = 16;
 const tile_height: usize = 16;
-const room_tile_width: usize = 20;
-const room_tile_height: usize = 10;
-const room_pixel_width: usize = tile_width * room_tile_width;
-const room_pixel_height: usize = tile_height * room_tile_height;
 const screen_width: usize = 600;
 const screen_height: usize = 400;
 const layer1: String = "Background";
@@ -65,7 +61,7 @@ fn init() void {
         game.SimplePivotCamera{
             .name = cam_name,
             .pixel_perfect = false,
-            .snap_to_bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
+            .snap_to_bounds = .{ 0, 0, 0, 0 },
             .velocity_relative_to_pivot = .{ 0.5, 0.5 },
             .enable_parallax = true,
         },
@@ -87,13 +83,13 @@ fn init() void {
         game.JSONTasks.LOAD_ROOM,
         null,
         .{
-            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
+            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room2.json" },
             .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
         },
     );
 
-    // add player
-    _ = game.Room.byName(room1_name).?.withActivationTask(
+    // add player and init cam for room
+    _ = game.Room.byName(room2_name).?.withActivationTask(
         api.Task{
             .name = "CreatePlayer",
             .run_once = true,
@@ -103,7 +99,7 @@ fn init() void {
     );
 
     // and just start the Room
-    game.Room.startRoomWithPlayer(room1_name, player_name, roomLoaded);
+    game.Room.startRoomWithPlayer(room2_name, player_name, roomLoaded);
 }
 
 fn roomLoaded(_: ?*game.Room) void {
@@ -111,7 +107,7 @@ fn roomLoaded(_: ?*game.Room) void {
 }
 
 var player_pos_ptr: *utils.PosF = undefined;
-fn createPlayer(_: api.CallContext) void {
+fn createPlayer(_: api.TaskContext) void {
     const sprite_id = graphics.SpriteTemplate.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },
@@ -133,7 +129,7 @@ fn createPlayer(_: api.CallContext) void {
         .withComponent(graphics.ESprite{ .template_id = sprite_id })
         .withComponent(physics.EMovement{
         .mass = 50,
-        .max_velocity_south = 80,
+        .max_velocity_south = 180,
         .max_velocity_east = 50,
         .max_velocity_west = 50,
         .integrator = physics.EulerIntegrator,
@@ -161,6 +157,8 @@ fn createPlayer(_: api.CallContext) void {
     var cam = game.SimplePivotCamera.byName(cam_name).?;
     player_pos_ptr = &graphics.ETransform.byName(player_name).?.position;
     cam.pivot = player_pos_ptr;
+    cam.snap_to_bounds = game.Room.byName(room2_name).?.bounds;
+    cam.adjust(graphics.View.idByName(view_name).?);
 }
 
 // rudimentary implementation of an action control for the start scene

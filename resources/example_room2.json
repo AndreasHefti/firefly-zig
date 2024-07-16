@@ -1,0 +1,28 @@
+{
+    "name": "Room2",
+    "bounds": "0,0,320,320",
+    "start_scene": "StartScene",
+    "end_scene": "EndScene",
+    "tile_sets": [
+        { "name": "TestTileSet", "file": "resources/example_tileset.json" }
+    ],
+    "tile_map": { "name": "TileMapRoom1", "file": "resources/example_tilemap2.json" },
+    "objects": [
+     {
+       "name": "t1",
+       "object_type": "room_transition",
+       "build_task": "RoomTransitionBuilder",
+       "layer": "Foreground",
+       "position": "-2,288",
+       "attributes": [
+           { "name": "condition", "value": "TransitionWest"},
+           { "name": "orientation", "value": "WEST"},
+           { "name": "target_room", "value": "Room1"},
+           { "name": "target_transition", "value": "t1"},
+           { "name": "bounds", "value": "-2,288,4,16"},
+           { "name": "rotation", "value": "0"},
+           { "name": "scale", "value": "0,0"}
+       ]
+     }
+   ]
+}

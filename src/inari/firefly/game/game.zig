@@ -56,6 +56,10 @@ pub const BaseGroupAspect = struct {
     pub var PAUSEABLE: api.GroupAspect = undefined;
 };
 
+pub const BasicTasks = struct {
+    pub const CREATE_ROOM_TRANSITION = "CREATE_ROOM_TRANSITION";
+};
+
 //////////////////////////////////////////////////////////////
 //// Game Pausing API
 //////////////////////////////////////////////////////////////

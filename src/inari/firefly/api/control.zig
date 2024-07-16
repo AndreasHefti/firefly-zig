@@ -13,8 +13,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Condition(*const fn (*const CallContext) bool).init();
-    api.Condition(*const fn (Index, ?*State) bool).init();
+    api.Component.registerComponent(Condition);
     api.Component.registerComponent(Task);
     api.Component.registerComponent(Trigger);
     api.Component.registerComponent(ComponentControl);
@@ -41,66 +40,49 @@ pub fn deinit() void {
 
     api.System(StateSystem).disposeSystem();
     api.System(EntityStateSystem).disposeSystem();
-    api.Condition(*const fn (*const CallContext) bool).deinit();
-    api.Condition(*const fn (Index, ?*State) bool).deinit();
 }
 
 //////////////////////////////////////////////////////////////////////////
-//// CallContext
+//// Condition Component
 //////////////////////////////////////////////////////////////////////////
 
-pub const CallContext = struct {
-    parent_id: Index,
-    caller_id: ?Index = null,
-    attributes: ?api.Attributes = null,
+pub const ConditionFunction = *const fn (caller_id: Index, comp1_id: ?Index, comp2_id: ?Index) bool;
 
-    pub fn deinit(self: *CallContext) void {
-        if (self.attributes) |*p|
-            p.deinit();
-        self.attributes = undefined;
+pub const Condition = struct {
+    pub usingnamespace api.Component.Trait(Condition, .{
+        .name = "Condition",
+        .activation = false,
+        .subscription = false,
+    });
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+    f: ConditionFunction,
+
+    pub fn functionById(id: Index) ConditionFunction {
+        return Condition.byId(id).f;
     }
 
-    pub fn set(self: *CallContext, name: String, value: String) void {
-        if (self.attributes == null)
-            self.attributes = api.Attributes.new();
-
-        self.attributes.?.set(name, value);
+    pub fn functionByName(name: String) ConditionFunction {
+        return Condition.byName(name).?.f;
     }
 
-    pub fn setAll(self: *CallContext, attributes: api.Attributes) void {
-        if (self.attributes == null)
-            self.attributes = api.Attributes.new();
+    pub fn createANDByIndex(c1_id: Index, c2_id: Index, name: ?String) *Condition {
+        const f: ConditionFunction = struct {
+            var c1 = c1_id;
+            var c2 = c2_id;
+            fn check(caller_id: Index, comp1_id: ?Index, comp2_id: ?Index) bool {
+                return Condition.byId(c1).f(caller_id, comp1_id, comp2_id) and
+                    Condition.byId(c2).f(caller_id, comp1_id, comp2_id);
+            }
+        }.check;
 
-        self.attributes.?.setAll(attributes);
-    }
-
-    pub fn get(self: CallContext, name: String) ?String {
-        if (self.attributes) |a| return a.get(name);
-        return null;
-    }
-
-    pub fn format(
-        self: CallContext,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print("CallContext[ parent_id: {d} caller_id: {?d}", .{ self.parent_id, self.caller_id });
-        if (self.attributes) |p| {
-            try writer.print(" attributes: ", .{});
-            var i = p._map.iterator();
-            while (i.next()) |e|
-                try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
-        }
-        try writer.print(" ]", .{});
+        return Condition.new(.{
+            .name = name,
+            .f = f,
+        });
     }
 };
-
-//////////////////////////////////////////////////////////////////////////
-//// Call Condition
-//////////////////////////////////////////////////////////////////////////
-
-pub const CallCondition = api.Condition(*const fn (*const CallContext) bool);
 
 //////////////////////////////////////////////////////////////////////////
 //// Component Control
@@ -214,8 +196,54 @@ pub const ActionResult = enum {
 pub const UpdateActionFunction = *const fn (Index) ActionResult;
 pub const UpdateActionCallback = *const fn (Index, ActionResult) void;
 
-pub const TaskFunction = *const fn (CallContext) void;
-pub const TaskCallback = *const fn (CallContext) void;
+pub const TaskFunction = *const fn (context: TaskContext) void;
+pub const TaskCallback = *const fn (context: TaskContext) void;
+pub const TaskContext = struct {
+    parent_id: Index,
+    caller_id: ?Index = null,
+    attributes: ?api.Attributes = null,
+
+    pub fn deinit(self: *TaskContext) void {
+        if (self.attributes) |*p|
+            p.deinit();
+        self.attributes = undefined;
+    }
+
+    pub fn set(self: *TaskContext, name: String, value: String) void {
+        if (self.attributes == null)
+            self.attributes = api.Attributes.new();
+
+        self.attributes.?.set(name, value);
+    }
+
+    pub fn setAll(self: *TaskContext, attributes: api.Attributes) void {
+        if (self.attributes == null)
+            self.attributes = api.Attributes.new();
+
+        self.attributes.?.setAll(attributes);
+    }
+
+    pub fn get(self: TaskContext, name: String) ?String {
+        if (self.attributes) |a| return a.get(name);
+        return null;
+    }
+
+    pub fn format(
+        self: TaskContext,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("TaskContext[ parent_id: {d} caller_id: {?d}", .{ self.parent_id, self.caller_id });
+        if (self.attributes) |p| {
+            try writer.print(" attributes: ", .{});
+            var i = p._map.iterator();
+            while (i.next()) |e|
+                try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
+        }
+        try writer.print(" ]", .{});
+    }
+};
 
 /// Task takes ownership over given attributes and free memory for attributes after use
 pub const Task = struct {
@@ -277,7 +305,7 @@ pub const Task = struct {
         caller_id: ?Index,
         attributes: ?api.Attributes,
     ) void {
-        const context: CallContext = .{
+        const context: TaskContext = .{
             .parent_id = self.id,
             .caller_id = caller_id,
             .attributes = attributes,
@@ -315,8 +343,10 @@ pub const Trigger = struct {
     name: ?String = null,
 
     task_ref: Index,
-    condition: CallCondition.Function,
-    context: CallContext = undefined,
+    c1_ref: ?Index,
+    c2_ref: ?Index,
+    attributes: ?api.Attributes,
+    condition: ConditionFunction,
 
     pub fn componentTypeInit() !void {
         firefly.api.subscribeUpdate(update);
@@ -326,20 +356,12 @@ pub const Trigger = struct {
         firefly.api.unsubscribeUpdate(update);
     }
 
-    pub fn construct(self: *Trigger) void {
-        self.context = .{ .parent_id = self.id };
-    }
-
-    pub fn destruct(self: *Trigger) void {
-        self.context.deinit();
-    }
-
     fn update(_: api.UpdateEvent) void {
         var next = Trigger.nextActiveId(0);
         while (next) |i| {
             const trigger = Trigger.byId(i);
-            if (trigger.condition(&trigger.context))
-                Task.byId(trigger.task_ref).runWith(trigger.id, trigger.context.attributes);
+            if (trigger.condition(trigger.id, trigger.c1_ref, trigger.c2_ref))
+                Task.byId(trigger.task_ref).runWith(trigger.id, trigger.attributes);
 
             next = Trigger.nextActiveId(i + 1);
         }
@@ -350,13 +372,10 @@ pub const Trigger = struct {
 //// State API
 //////////////////////////////////////////////////////////////
 
-pub const StateCondition = api.Condition(*const fn (Index, ?*State) bool);
-
 pub const State = struct {
     id: Index = UNDEF_INDEX,
     name: ?String,
-    // Note using StateConditionFunction here results in dependency loop detected error (don't know why)
-    condition: ?StateCondition.Function = null,
+    condition: ?ConditionFunction = null,
     init: ?*const fn (Index) void = null,
     dispose: ?*const fn (Index) void = null,
 
@@ -483,8 +502,9 @@ const StateSystem = struct {
         var next = state_engine.states.slots.nextSetBit(0);
         while (next) |i| {
             if (state_engine.states.get(i)) |state| {
-                if (state.condition) |condition| {
-                    if (condition(state_engine.id, state_engine.current_state)) {
+                if (state.condition) |cf| {
+                    const s_id = if (state_engine.current_state) |s| s.id else null;
+                    if (cf(state_engine.id, s_id, null)) {
                         state_engine.setNewState(state);
                         return;
                     }
@@ -524,26 +544,25 @@ const EntityStateSystem = struct {
         }
     }
 
-    inline fn processEntity(entity: *EState) void {
+    fn processEntity(entity: *EState) void {
         const state_engine = EntityStateEngine.byId(entity.state_engine_ref);
+        const current_state_id: ?Index = if (entity.current_state) |s| s.id else null;
         var next = state_engine.states.slots.nextSetBit(0);
         while (next) |i| {
+            next = state_engine.states.slots.nextSetBit(i + 1);
             if (state_engine.states.get(i)) |state| {
                 if (entity.current_state) |cs| {
-                    if (state == cs) {
-                        next = state_engine.states.slots.nextSetBit(i + 1);
+                    if (state == cs)
                         continue;
-                    }
                 }
 
-                if (state.condition) |condition| {
-                    if (condition(entity.id, entity.current_state)) {
+                if (state.condition) |cf| {
+                    if (cf(state_engine.id, entity.id, current_state_id)) {
                         EntityStateEngine.setNewState(entity, state);
                         return;
                     }
                 }
             }
-            next = state_engine.states.slots.nextSetBit(i + 1);
         }
     }
 };

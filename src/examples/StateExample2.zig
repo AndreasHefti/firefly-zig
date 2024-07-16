@@ -1,6 +1,7 @@
 const std = @import("std");
 const firefly = @import("../inari/firefly/firefly.zig");
 const utils = firefly.utils;
+const api = firefly.api;
 const Texture = firefly.graphics.Texture;
 const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const Entity = firefly.api.Entity;
@@ -47,16 +48,16 @@ fn init() void {
     }).id;
 
     // This is just to test registering conditions works as expected (can also be assigned directly below)
-    firefly.api.StateCondition.register("right down", rightDown);
-    firefly.api.StateCondition.register("right up", rightUp);
-    firefly.api.StateCondition.register("left down", leftDown);
-    firefly.api.StateCondition.register("left up", leftUp);
+    _ = api.Condition.new(.{ .name = "right down", .f = rightDown });
+    _ = api.Condition.new(.{ .name = "right up", .f = rightUp });
+    _ = api.Condition.new(.{ .name = "left down", .f = leftDown });
+    _ = api.Condition.new(.{ .name = "left up", .f = leftUp });
 
     const state_engine = EntityStateEngine.new(.{ .name = "MoveX" })
-        .withState(.{ .id = 1, .name = "right down", .condition = firefly.api.StateCondition.get("right down").? })
-        .withState(.{ .id = 2, .name = "right up", .condition = firefly.api.StateCondition.get("right up").? })
-        .withState(.{ .id = 3, .name = "left down", .condition = firefly.api.StateCondition.get("left down").? })
-        .withState(.{ .id = 4, .name = "left up", .condition = firefly.api.StateCondition.get("left up").? })
+        .withState(.{ .id = 1, .name = "right down", .condition = api.Condition.functionByName("right down") })
+        .withState(.{ .id = 2, .name = "right up", .condition = api.Condition.functionByName("right up") })
+        .withState(.{ .id = 3, .name = "left down", .condition = api.Condition.functionByName("left down") })
+        .withState(.{ .id = 4, .name = "left up", .condition = api.Condition.functionByName("left up") })
         .activate();
 
     for (0..10000) |_| {
@@ -97,45 +98,49 @@ inline fn changeY(entity_id: Index) void {
 }
 
 // 1
-fn rightDown(entity_id: Index, current: ?*State) bool {
-    const c_id = current.?.id;
-    const trans = ETransform.byId(entity_id).?;
+fn rightDown(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
+    const e_id = entity_id orelse return false;
+    const c_id = current_sid orelse return false;
+    const trans = ETransform.byId(e_id) orelse return false;
     if ((trans.position[0] < min_x and c_id == 3) or (trans.position[1] < min_y and c_id == 2)) {
-        if (c_id == 3) changeX(entity_id) else changeY(entity_id);
+        if (c_id == 3) changeX(e_id) else changeY(e_id);
         return true;
     }
     return false;
 }
 
 // 2
-fn rightUp(entity_id: Index, current: ?*State) bool {
-    const c_id = current.?.id;
-    const trans = ETransform.byId(entity_id).?;
+fn rightUp(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
+    const e_id = entity_id orelse return false;
+    const c_id = current_sid orelse return false;
+    const trans = ETransform.byId(e_id) orelse return false;
     if ((trans.position[0] < min_x and c_id == 4) or (trans.position[1] > max_y and c_id == 1)) {
-        if (c_id == 4) changeX(entity_id) else changeY(entity_id);
+        if (c_id == 4) changeX(e_id) else changeY(e_id);
         return true;
     }
     return false;
 }
 
 // 3
-fn leftDown(entity_id: Index, current: ?*State) bool {
-    const trans = ETransform.byId(entity_id).?;
-    const c_id = current.?.id;
+fn leftDown(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
+    const e_id = entity_id orelse return false;
+    const trans = ETransform.byId(e_id) orelse return false;
+    const c_id = current_sid orelse return false;
     //std.debug.print("c_id: {any}\n", .{(trans.position[0] > max_x and c_id == 1)});
     if ((trans.position[0] > max_x and c_id == 1) or (trans.position[1] < min_y and c_id == 4)) {
-        if (c_id == 1) changeX(entity_id) else changeY(entity_id);
+        if (c_id == 1) changeX(e_id) else changeY(e_id);
         return true;
     }
     return false;
 }
 
 // 4
-fn leftUp(entity_id: Index, current: ?*State) bool {
-    const c_id = current.?.id;
-    const trans = ETransform.byId(entity_id).?;
+fn leftUp(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
+    const e_id = entity_id orelse return false;
+    const c_id = current_sid orelse return false;
+    const trans = ETransform.byId(e_id) orelse return false;
     if ((trans.position[0] > max_x and c_id == 2) or (trans.position[1] > max_y and c_id == 3)) {
-        if (c_id == 2) changeX(entity_id) else changeY(entity_id);
+        if (c_id == 2) changeX(e_id) else changeY(e_id);
         return true;
     }
     return false;

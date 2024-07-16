@@ -72,6 +72,7 @@ pub const RoomState = enum {
 pub const Room = struct {
     name: String,
     area_ref: ?String = null,
+    bounds: RectF,
 
     state: RoomState = RoomState.NONE,
     start_scene_ref: ?String = null,

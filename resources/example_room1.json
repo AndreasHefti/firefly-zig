@@ -1,5 +1,6 @@
 {
     "name": "Room1",
+    "bounds": "0,0,320,160",
     "start_scene": "StartScene",
     "end_scene": "EndScene",
     "tile_sets": [
@@ -10,7 +11,7 @@
      {
        "name": "t1",
        "object_type": "room_transition",
-       "build_task": "RoomTransitionBuilder",
+       "build_task": "CREATE_ROOM_TRANSITION",
        "layer": "Foreground",
        "position": "318,16",
        "attributes": [
@@ -25,7 +26,7 @@
      {
        "name": "t2",
        "object_type": "room_transition",
-       "build_task": "RoomTransitionBuilder",
+       "build_task": "CREATE_ROOM_TRANSITION",
        "layer": "Foreground",
        "position": "256,157",
        "attributes": [
