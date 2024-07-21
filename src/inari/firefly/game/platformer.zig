@@ -29,6 +29,7 @@ pub fn init() void {
     PlatformerCollisionResolver.init();
     api.ComponentControlType(SimplePlatformerHorizontalMoveControl).init();
     api.ComponentControlType(SimplePlatformerJumpControl).init();
+    Player.init();
 }
 
 pub fn deinit() void {
@@ -36,10 +37,30 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    Player.deinit();
     api.ComponentControlType(SimplePlatformerJumpControl).deinit();
     api.ComponentControlType(SimplePlatformerHorizontalMoveControl).deinit();
     PlatformerCollisionResolver.deinit();
 }
+
+//////////////////////////////////////////////////////////////
+//// Player data and composite
+//////////////////////////////////////////////////////////////
+
+pub const Player = struct {
+    pub usingnamespace api.CompositeTrait(Player);
+
+    name: String,
+
+    _composite_ref: Index = undefined,
+    _player_entity_id: Index = undefined,
+    _player_transform: *graphics.ETransform = undefined,
+    _player_move: *physics.EMovement = undefined,
+
+    pub fn new(player: Player) *Player {
+        return @This().register(player);
+    }
+};
 
 //////////////////////////////////////////////////////////////
 //// Platformer Collision Resolver
@@ -144,7 +165,7 @@ pub const PlatformerCollisionResolver = struct {
                 utils.cint_float(inst.contact_bounds[2]),
                 utils.cint_float(inst.contact_bounds[3] + inst.ground_addition),
             } },
-            .material_filter = physics.ContactMaterialKind.of(.{game.BaseMaterialType.TERRAIN}),
+            .material_filter = physics.ContactMaterialKind.of(.{game.MaterialTypes.TERRAIN}),
             .full_scan = true,
         });
 

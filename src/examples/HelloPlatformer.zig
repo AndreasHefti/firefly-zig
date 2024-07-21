@@ -80,11 +80,11 @@ fn init() void {
 
     // load room from file
     api.Task.runTaskByNameWith(
-        game.JSONTasks.LOAD_ROOM,
+        game.Tasks.JSON_LOAD_ROOM,
         null,
         .{
             .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room2.json" },
-            .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
+            .{ game.TaskAttributes.VIEW_NAME, view_name },
         },
     );
 
@@ -99,7 +99,7 @@ fn init() void {
     );
 
     // and just start the Room
-    game.Room.startRoomWithPlayer(room2_name, player_name, roomLoaded);
+    game.Room.startRoom(room2_name, player_name, roomLoaded);
 }
 
 fn roomLoaded(_: ?*game.Room) void {
@@ -117,7 +117,7 @@ fn createPlayer(_: api.TaskContext) void {
     _ = api.Entity.new(.{
         .name = player_name,
     })
-        .withGroupAspect(game.BaseGroupAspect.PAUSEABLE)
+        .withGroupAspect(game.Groups.PAUSEABLE)
         .withComponent(graphics.ETransform{
         .position = .{ 32, 32 },
         .pivot = .{ 0, 0 },

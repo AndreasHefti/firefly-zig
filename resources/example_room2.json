@@ -15,13 +15,10 @@
        "layer": "Foreground",
        "position": "-2,288",
        "attributes": [
-           { "name": "condition", "value": "TransitionWest"},
            { "name": "orientation", "value": "WEST"},
-           { "name": "target_room", "value": "Room1"},
-           { "name": "target_transition", "value": "t1"},
-           { "name": "bounds", "value": "-2,288,4,16"},
-           { "name": "rotation", "value": "0"},
-           { "name": "scale", "value": "0,0"}
+           { "name": "room", "value": "Room1"},
+           { "name": "target", "value": "t1"},
+           { "name": "bounds", "value": "-2,288,4,16"}
        ]
      }
    ]

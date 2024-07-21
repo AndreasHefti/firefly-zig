@@ -110,7 +110,7 @@ fn init() void {
     View.activateById(viewId, true);
 
     firefly.api.Task.runTaskByNameWith(
-        firefly.game.JSONTasks.LOAD_TILE_SET,
+        firefly.game.Tasks.JSON_LOAD_TILE_SET,
         null,
         firefly.api.Attributes.of(.{
             .{ firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET },

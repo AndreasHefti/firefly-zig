@@ -372,7 +372,7 @@ pub const ContactScan = struct {
             .bounds = bounds,
             .types = ContactTypeAspectGroup.newKind(),
             .materials = ContactMaterialAspectGroup.newKind(),
-            .entities = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
+            .entities = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 3),
         };
     }
 
@@ -381,8 +381,8 @@ pub const ContactScan = struct {
             .bounds = bounds,
             .types = ContactTypeAspectGroup.newKind(),
             .materials = ContactMaterialAspectGroup.newKind(),
-            .entities = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
-            .contacts = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10),
+            .entities = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 3),
+            .contacts = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 3),
             .mask = utils.BitMask.new(
                 firefly.api.COMPONENT_ALLOC,
                 @intFromFloat(bounds.rect[2]),
@@ -540,7 +540,7 @@ pub const EContactScan = struct {
 
     collision_resolver: ?CollisionResolver = null,
     constraints: utils.BitSet = undefined,
-    callback: ?ContactCallback = null,
+    callback: []ContactCallback = &.{},
 
     pub fn construct(self: *EContactScan) void {
         self.constraints = utils.BitSet.new(firefly.api.ENTITY_ALLOC);
@@ -550,6 +550,7 @@ pub const EContactScan = struct {
         self.collision_resolver = null;
         self.constraints.deinit();
         self.constraints = undefined;
+        api.COMPONENT_ALLOC.free(self.callback);
     }
 
     pub fn activation(self: *EContactScan, active: bool) void {
@@ -572,10 +573,8 @@ pub const EContactScan = struct {
     }
 
     pub fn withCallback(self: *EContactScan, callback: ContactCallback) *EContactScan {
-        if (self.callback != null)
-            utils.panic(api.ALLOC, "ContactScan: {?s} has already a callback.", .{api.Entity.byId(self.id).name});
-
-        self.callback = callback;
+        self.callback = api.COMPONENT_ALLOC.realloc(self.callback, self.callback.len + 1) catch unreachable;
+        self.callback[self.callback.len - 1] = callback;
         return self;
     }
 
@@ -749,9 +748,10 @@ pub const ContactSystem = struct {
             if (e_scan.collision_resolver) |*resolver|
                 resolver.resolve(e_scan.id);
 
-            if (e_scan.callback) |callback| {
-                if (e_scan.firstContactOf(callback.type, callback.material)) |contact_scan|
-                    callback.f(e_scan.id, contact_scan);
+            for (0..e_scan.callback.len) |i| {
+                const c = e_scan.callback[i];
+                if (e_scan.firstContactOf(c.type, c.material)) |contact_scan|
+                    c.f(e_scan.id, contact_scan);
             }
         }
     }

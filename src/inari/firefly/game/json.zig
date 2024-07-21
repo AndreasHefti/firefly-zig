@@ -24,17 +24,17 @@ pub fn init() void {
         return;
 
     _ = api.Task.new(.{
-        .name = JSONTasks.LOAD_TILE_SET,
+        .name = game.Tasks.JSON_LOAD_TILE_SET,
         .function = loadTileSetFromJSON,
     });
 
     _ = api.Task.new(.{
-        .name = JSONTasks.LOAD_TILE_MAPPING,
+        .name = game.Tasks.JSON_LOAD_TILE_MAPPING,
         .function = loadTileMappingFromJSON,
     });
 
     _ = api.Task.new(.{
-        .name = JSONTasks.LOAD_ROOM,
+        .name = game.Tasks.JSON_LOAD_ROOM,
         .function = loadRoomFromJSON,
     });
 }
@@ -45,9 +45,9 @@ pub fn deinit() void {
         return;
 
     // dispose tasks
-    api.Task.disposeByName(JSONTasks.LOAD_ROOM);
-    api.Task.disposeByName(JSONTasks.LOAD_TILE_MAPPING);
-    api.Task.disposeByName(JSONTasks.LOAD_TILE_SET);
+    api.Task.disposeByName(game.Tasks.JSON_LOAD_ROOM);
+    api.Task.disposeByName(game.Tasks.JSON_LOAD_TILE_MAPPING);
+    api.Task.disposeByName(game.Tasks.JSON_LOAD_TILE_SET);
 }
 
 //////////////////////////////////////////////////////////////
@@ -82,12 +82,6 @@ pub const JSONResourceHandle = struct {
             if (self.json_resource) |r| firefly.api.ALLOC.free(r);
         }
     }
-};
-
-pub const JSONTasks = struct {
-    pub const LOAD_TILE_SET = "LOAD_TILE_SET_TASK";
-    pub const LOAD_TILE_MAPPING = "LOAD_TILE_MAPPING_TASK";
-    pub const LOAD_ROOM = "LOAD_ROOM_TASK";
 };
 
 //////////////////////////////////////////////////////////////
@@ -229,7 +223,7 @@ fn loadTileSetFromJSON(context: api.TaskContext) void {
         }
 
         // add tile set as owned reference if requested
-        if (context.get(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
+        if (context.get(api.OWNER_COMPOSITE_TASK_ATTRIBUTE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
                 comp.addComponentReference(game.TileSet.referenceById(tile_set.id, true));
         }
@@ -324,7 +318,7 @@ pub const JSONTileGrid = struct {
 };
 
 fn loadTileMappingFromJSON(context: api.TaskContext) void {
-    const view_name = context.get(game.TaskAttributes.ATTR_VIEW_NAME) orelse
+    const view_name = context.get(game.TaskAttributes.VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
     var json_res_handle = JSONResourceHandle.new(context);
     defer json_res_handle.deinit();
@@ -376,7 +370,7 @@ fn loadTileMappingFromJSON(context: api.TaskContext) void {
                 defer tile_set_attrs.deinit();
                 tile_set_attrs.set(game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.?);
                 api.Task.runTaskByNameWith(
-                    if (tile_set_def.resource.load_task) |load_task| load_task else game.JSONTasks.LOAD_TILE_SET,
+                    if (tile_set_def.resource.load_task) |load_task| load_task else game.Tasks.JSON_LOAD_TILE_SET,
                     context.caller_id,
                     tile_set_attrs,
                 );
@@ -448,7 +442,7 @@ fn loadTileMappingFromJSON(context: api.TaskContext) void {
         }
 
         // add tile set as owned reference if requested
-        if (context.get(game.TaskAttributes.OWNER_COMPOSITE)) |owner_name| {
+        if (context.get(api.OWNER_COMPOSITE_TASK_ATTRIBUTE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
                 comp.addComponentReference(game.TileMapping.referenceById(tile_mapping.id, true));
         }
@@ -521,7 +515,7 @@ pub const JSONTileMapObject = struct {
 };
 
 fn loadRoomFromJSON(context: api.TaskContext) void {
-    const view_name = context.get(game.TaskAttributes.ATTR_VIEW_NAME) orelse
+    const view_name = context.get(game.TaskAttributes.VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
 
     var json_res_handle = JSONResourceHandle.new(context);
@@ -555,14 +549,14 @@ fn loadRoomFromJSON(context: api.TaskContext) void {
     });
 
     for (0..jsonTileMapping.tile_sets.len) |i| {
-        _ = room.withLoadTaskByName(game.JSONTasks.LOAD_TILE_SET, .{
+        _ = room.withLoadTaskByName(game.Tasks.JSON_LOAD_TILE_SET, .{
             .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_sets[i].file.? },
         });
     }
 
-    _ = room.withLoadTaskByName(game.JSONTasks.LOAD_TILE_MAPPING, .{
+    _ = room.withLoadTaskByName(game.Tasks.JSON_LOAD_TILE_MAPPING, .{
         .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_map.file.? },
-        .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
+        .{ game.TaskAttributes.VIEW_NAME, view_name },
     });
 
     // TODO add objects as activation tasks

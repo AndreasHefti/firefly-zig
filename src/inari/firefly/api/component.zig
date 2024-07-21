@@ -651,6 +651,10 @@ pub fn ComponentPool(comptime T: type) type {
 //// Composite Component
 //////////////////////////////////////////////////////////////////////////
 
+/// Name of the owner composite. If this is set, task should get the
+/// composite referenced to and add all created components as owner to the composite
+pub const OWNER_COMPOSITE_TASK_ATTRIBUTE = "OWNER_COMPOSITE";
+
 pub const CompositeLifeCycle = enum {
     LOAD,
     ACTIVATE,
@@ -791,3 +795,164 @@ pub const Composite = struct {
         }
     }
 };
+
+pub fn CompositeTrait(comptime T: type) type {
+    comptime {
+        if (@typeInfo(T) != .Struct)
+            @compileError("Expects component type is a struct.");
+        if (!@hasField(T, "_composite_ref"))
+            @compileError("Expects component type to have field: _composite_ref: Index, that holds the id-reference of the composite");
+    }
+
+    return struct {
+        var references: std.StringHashMap(T) = undefined;
+
+        pub fn init() void {
+            references = std.StringHashMap(T).init(api.COMPONENT_ALLOC);
+        }
+
+        pub fn deinit() void {
+            var it = references.iterator();
+            while (it.next()) |r|
+                r.value_ptr.deconstruct();
+
+            references.deinit();
+            references = undefined;
+        }
+
+        pub fn register(composite: T) *T {
+            var result = references.getOrPut(composite.name) catch unreachable;
+            if (result.found_existing)
+                utils.panic(api.ALLOC, "Composite with name already exists: {any}", .{composite.name});
+
+            result.value_ptr.* = composite;
+            result.value_ptr._composite_ref = api.Composite.new(.{ .name = composite.name }).id;
+            return result.value_ptr;
+        }
+
+        pub fn referenceIterator() std.StringHashMap(T).ValueIterator {
+            return references.valueIterator();
+        }
+
+        pub fn withLoadTaskByName(self: *T, task_name: String, attributes: anytype) *T {
+            T.addTaskByName(
+                self.name,
+                task_name,
+                CompositeLifeCycle.LOAD,
+                attributes,
+            );
+
+            return self;
+        }
+
+        pub fn withLoadTaskById(self: *T, task_Id: Index, attributes: anytype) *T {
+            T.addTaskById(
+                self.name,
+                task_Id,
+                CompositeLifeCycle.LOAD,
+                attributes,
+            );
+
+            return self;
+        }
+
+        pub fn withActivationTask(self: *T, task: api.Task, attributes: anytype) *T {
+            return withActivationTaskById(self, api.Task.new(task).id, attributes);
+        }
+
+        pub fn withActivationTaskByName(self: *T, task_name: String, attributes: anytype) *T {
+            T.addTaskByName(
+                self.name,
+                task_name,
+                CompositeLifeCycle.ACTIVATE,
+                attributes,
+            );
+
+            return self;
+        }
+
+        pub fn withActivationTaskById(self: *T, task_Id: Index, attributes: anytype) *T {
+            T.addTaskById(
+                self.name,
+                task_Id,
+                CompositeLifeCycle.ACTIVATE,
+                attributes,
+            );
+
+            return self;
+        }
+
+        pub fn deconstruct(self: *T) void {
+            api.Composite.disposeById(self._composite_ref);
+            _ = references.remove(self.name);
+        }
+
+        pub fn byName(name: String) ?*T {
+            return references.getPtr(name);
+        }
+
+        pub fn addTask(
+            name: String,
+            task: api.Task,
+            life_cycle: CompositeLifeCycle,
+            attributes: anytype,
+        ) void {
+            checkInCreationState(name);
+
+            var attrs = api.Attributes.of(attributes);
+            if (attrs) |*a| a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, name);
+
+            addTaskById(
+                name,
+                api.Task.new(task).id,
+                life_cycle,
+                attributes,
+            );
+        }
+
+        pub fn addTaskById(
+            name: String,
+            task_id: Index,
+            life_cycle: api.CompositeLifeCycle,
+            attributes: anytype,
+        ) void {
+            checkInCreationState(name);
+
+            var attrs = api.Attributes.of(attributes);
+            if (attrs) |*a| a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, name);
+
+            if (api.Composite.byName(name)) |comp|
+                _ = comp.withObject(.{
+                    .task_ref = task_id,
+                    .life_cycle = life_cycle,
+                    .attributes = attrs,
+                });
+        }
+
+        pub fn addTaskByName(
+            name: String,
+            task_name: String,
+            life_cycle: api.CompositeLifeCycle,
+            attributes: anytype,
+        ) void {
+            checkInCreationState(name);
+
+            var attrs = api.Attributes.of(attributes);
+            if (attrs) |*a| a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, name);
+
+            if (api.Composite.byName(name)) |comp|
+                _ = comp.withObject(.{
+                    .task_name = task_name,
+                    .life_cycle = life_cycle,
+                    .attributes = attrs,
+                });
+        }
+
+        fn checkInCreationState(name: String) void {
+            if (byName(name)) |r| {
+                if (Composite.byId(r._composite_ref).loaded)
+                    utils.panic(api.ALLOC, "Composite is already loaded: {s}", .{name});
+            }
+        }
+    };
+}

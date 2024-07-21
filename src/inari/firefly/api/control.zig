@@ -46,7 +46,7 @@ pub fn deinit() void {
 //// Condition Component
 //////////////////////////////////////////////////////////////////////////
 
-pub const ConditionFunction = *const fn (caller_id: Index, comp1_id: ?Index, comp2_id: ?Index) bool;
+pub const ConditionFunction = *const fn (comp1_id: Index, comp2_id: Index, comp3_id: Index) bool;
 
 pub const Condition = struct {
     pub usingnamespace api.Component.Trait(Condition, .{
@@ -67,20 +67,22 @@ pub const Condition = struct {
         return Condition.byName(name).?.f;
     }
 
-    pub fn createANDByIndex(c1_id: Index, c2_id: Index, name: ?String) *Condition {
-        const f: ConditionFunction = struct {
-            var c1 = c1_id;
-            var c2 = c2_id;
-            fn check(caller_id: Index, comp1_id: ?Index, comp2_id: ?Index) bool {
-                return Condition.byId(c1).f(caller_id, comp1_id, comp2_id) and
-                    Condition.byId(c2).f(caller_id, comp1_id, comp2_id);
+    pub fn createAND(comptime f1: ConditionFunction, comptime f2: ConditionFunction) ConditionFunction {
+        return struct {
+            fn check(caller_id: Index, comp1_id: Index, comp2_id: Index) bool {
+                return f1(caller_id, comp1_id, comp2_id) and
+                    f2(caller_id, comp1_id, comp2_id);
             }
         }.check;
+    }
 
-        return Condition.new(.{
-            .name = name,
-            .f = f,
-        });
+    pub fn createOR(comptime f1: ConditionFunction, comptime f2: ConditionFunction) ConditionFunction {
+        return struct {
+            fn check(caller_id: Index, comp1_id: Index, comp2_id: Index) bool {
+                return f1(caller_id, comp1_id, comp2_id) or
+                    f2(caller_id, comp1_id, comp2_id);
+            }
+        }.check;
     }
 };
 
@@ -343,8 +345,9 @@ pub const Trigger = struct {
     name: ?String = null,
 
     task_ref: Index,
-    c1_ref: ?Index,
-    c2_ref: ?Index,
+    c1_ref: Index = UNDEF_INDEX,
+    c2_ref: Index = UNDEF_INDEX,
+    c3_ref: Index = UNDEF_INDEX,
     attributes: ?api.Attributes,
     condition: ConditionFunction,
 
@@ -360,7 +363,7 @@ pub const Trigger = struct {
         var next = Trigger.nextActiveId(0);
         while (next) |i| {
             const trigger = Trigger.byId(i);
-            if (trigger.condition(trigger.id, trigger.c1_ref, trigger.c2_ref))
+            if (trigger.condition(trigger.c1_ref, trigger.c2_ref, trigger.c3_ref))
                 Task.byId(trigger.task_ref).runWith(trigger.id, trigger.attributes);
 
             next = Trigger.nextActiveId(i + 1);
@@ -503,8 +506,8 @@ const StateSystem = struct {
         while (next) |i| {
             if (state_engine.states.get(i)) |state| {
                 if (state.condition) |cf| {
-                    const s_id = if (state_engine.current_state) |s| s.id else null;
-                    if (cf(state_engine.id, s_id, null)) {
+                    const s_id = if (state_engine.current_state) |s| s.id else UNDEF_INDEX;
+                    if (cf(state_engine.id, s_id, state.id)) {
                         state_engine.setNewState(state);
                         return;
                     }
@@ -537,6 +540,7 @@ const EntityStateSystem = struct {
     }
 
     pub fn update(_: api.UpdateEvent) void {
+        // TODO try to ged rid of ifs for better performance
         var next = entities.nextSetBit(0);
         while (next) |i| {
             if (EState.byId(i)) |e| processEntity(e);
@@ -546,15 +550,15 @@ const EntityStateSystem = struct {
 
     fn processEntity(entity: *EState) void {
         const state_engine = EntityStateEngine.byId(entity.state_engine_ref);
-        const current_state_id: ?Index = if (entity.current_state) |s| s.id else null;
+        const current_state_id: Index = if (entity.current_state) |s| s.id else UNDEF_INDEX;
         var next = state_engine.states.slots.nextSetBit(0);
         while (next) |i| {
             next = state_engine.states.slots.nextSetBit(i + 1);
             if (state_engine.states.get(i)) |state| {
-                if (entity.current_state) |cs| {
-                    if (state == cs)
-                        continue;
-                }
+                // if (entity.current_state) |cs| {
+                //     if (state == cs)
+                //         continue;
+                // }
 
                 if (state.condition) |cf| {
                     if (cf(state_engine.id, entity.id, current_state_id)) {

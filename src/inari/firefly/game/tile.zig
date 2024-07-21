@@ -27,14 +27,6 @@ pub fn init() void {
     if (initialized)
         return;
 
-    BaseMaterialType.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
-    BaseMaterialType.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");
-    BaseMaterialType.PROJECTILE = physics.ContactMaterialAspectGroup.getAspect("PROJECTILE");
-    BaseMaterialType.WATER = physics.ContactMaterialAspectGroup.getAspect("WATER");
-    BaseMaterialType.LADDER = physics.ContactMaterialAspectGroup.getAspect("LADDER");
-    BaseMaterialType.ROPE = physics.ContactMaterialAspectGroup.getAspect("ROPE");
-    BaseMaterialType.INTERACTIVE = physics.ContactMaterialAspectGroup.getAspect("INTERACTIVE");
-
     api.Component.registerComponent(TileSet);
     api.Component.registerComponent(TileMapping);
 }
@@ -53,16 +45,6 @@ pub const TileDimensionType = enum {
     EIGHT,
     SIXTEEN,
     THIRTY_TWO,
-};
-
-pub const BaseMaterialType = struct {
-    pub var NONE: physics.ContactMaterialAspect = undefined;
-    pub var TERRAIN: physics.ContactMaterialAspect = undefined;
-    pub var PROJECTILE: physics.ContactMaterialAspect = undefined;
-    pub var WATER: physics.ContactMaterialAspect = undefined;
-    pub var LADDER: physics.ContactMaterialAspect = undefined;
-    pub var ROPE: physics.ContactMaterialAspect = undefined;
-    pub var INTERACTIVE: physics.ContactMaterialAspect = undefined;
 };
 
 //////////////////////////////////////////////////////////////

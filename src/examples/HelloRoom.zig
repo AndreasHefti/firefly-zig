@@ -88,16 +88,16 @@ fn init() void {
 
     // load room from file
     api.Task.runTaskByNameWith(
-        game.JSONTasks.LOAD_ROOM,
+        game.Tasks.JSON_LOAD_ROOM,
         null,
         .{
             .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
-            .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
+            .{ game.TaskAttributes.VIEW_NAME, view_name },
         },
     );
 
     // and just start the Room with no player
-    game.Room.startRoomWithPlayer("Room1", "no player", roomLoaded);
+    game.Room.startRoom("Room1", "no player", roomLoaded);
 }
 
 fn roomLoaded(_: ?*game.Room) void {

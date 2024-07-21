@@ -75,12 +75,12 @@ fn init() void {
         .name = "Test Room1",
         .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
     })
-        .withLoadTaskByName(game.JSONTasks.LOAD_TILE_SET, .{
+        .withLoadTaskByName(game.Tasks.JSON_LOAD_TILE_SET, .{
         .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
     })
-        .withLoadTaskByName(game.JSONTasks.LOAD_TILE_MAPPING, .{
+        .withLoadTaskByName(game.Tasks.JSON_LOAD_TILE_MAPPING, .{
         .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
-        .{ game.TaskAttributes.ATTR_VIEW_NAME, view_name },
+        .{ game.TaskAttributes.VIEW_NAME, view_name },
     })
         .withActivationTask(
         api.Task{

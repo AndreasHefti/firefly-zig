@@ -1,7 +1,9 @@
 const std = @import("std");
 const firefly = @import("../firefly.zig");
+const utils = firefly.utils;
 const api = firefly.api;
 const graphics = firefly.graphics;
+const physics = firefly.physics;
 
 const tile = @import("tile.zig");
 const json = @import("json.zig");
@@ -25,14 +27,50 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    BaseGroupAspect.PAUSEABLE = api.GroupAspectGroup.getAspect("PAUSEABLE");
+    Groups.PAUSEABLE = api.GroupAspectGroup.getAspect("PAUSEABLE");
     // init sub packages
     tile.init();
     world.init();
     json.init();
     platformer.init();
+    GlobalStack.init();
 
     api.ComponentControlType(SimplePivotCamera).init();
+
+    MaterialTypes.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
+    MaterialTypes.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");
+    MaterialTypes.PROJECTILE = physics.ContactMaterialAspectGroup.getAspect("PROJECTILE");
+    MaterialTypes.WATER = physics.ContactMaterialAspectGroup.getAspect("WATER");
+    MaterialTypes.LADDER = physics.ContactMaterialAspectGroup.getAspect("LADDER");
+    MaterialTypes.ROPE = physics.ContactMaterialAspectGroup.getAspect("ROPE");
+    MaterialTypes.INTERACTIVE = physics.ContactMaterialAspectGroup.getAspect("INTERACTIVE");
+
+    ContactTypes.FULL_CONTACT = physics.ContactTypeAspectGroup.getAspect("FULL_CONTACT");
+    ContactTypes.ROOM_TRANSITION = physics.ContactTypeAspectGroup.getAspect("ROOM_TRANSITION");
+
+    // conditions
+    _ = api.Condition.new(.{ .name = Conditions.GOES_WEST, .f = goesEast });
+    _ = api.Condition.new(.{ .name = Conditions.GOES_EAST, .f = goesWest });
+    _ = api.Condition.new(.{ .name = Conditions.GOES_NORTH, .f = goesNorth });
+    _ = api.Condition.new(.{ .name = Conditions.GOES_SOUTH, .f = goesSouth });
+
+    // _ = api.Condition.new(.{ .name = Conditions.PLAYER_ROOM_TRANSITION_SCAN, .f = isRoomTransition });
+    // _ = api.Condition.new(.{
+    //     .name = Conditions.PLAYER_ROOM_TRANSITION_EAST,
+    //     .f = api.Condition.createAND(isRoomTransition, goesEast),
+    // });
+    // _ = api.Condition.new(.{
+    //     .name = Conditions.PLAYER_ROOM_TRANSITION_WEST,
+    //     .f = api.Condition.createAND(isRoomTransition, goesWest),
+    // });
+    // _ = api.Condition.new(.{
+    //     .name = Conditions.PLAYER_ROOM_TRANSITION_NORTH,
+    //     .f = api.Condition.createAND(isRoomTransition, goesNorth),
+    // });
+    // _ = api.Condition.new(.{
+    //     .name = Conditions.PLAYER_ROOM_TRANSITION_SOUTH,
+    //     .f = api.Condition.createAND(isRoomTransition, goesSouth),
+    // });
 }
 
 pub fn deinit() void {
@@ -46,19 +84,135 @@ pub fn deinit() void {
     json.deinit();
     world.deinit();
     tile.deinit();
+    GlobalStack.deinit();
 }
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const BaseGroupAspect = struct {
+pub const GlobalStack = struct {
+    var index_stack: std.ArrayList(Index) = undefined;
+    var name_stack: std.ArrayList(String) = undefined;
+
+    fn init() void {
+        index_stack = std.ArrayList(Index).init(api.ALLOC);
+        name_stack = std.ArrayList(String).init(api.ALLOC);
+    }
+
+    fn deinit() void {
+        index_stack.deinit();
+        name_stack.deinit();
+    }
+
+    pub fn putIndex(index: Index) void {
+        index_stack.append(index) catch unreachable;
+    }
+
+    pub fn popIndex() Index {
+        if (index_stack.items.len == 0)
+            @panic("Stack is empty");
+
+        return index_stack.swapRemove(index_stack.items.len - 1);
+    }
+
+    pub fn putName(name: String) void {
+        name_stack.append(name) catch unreachable;
+    }
+
+    pub fn popName() String {
+        if (name_stack.items.len == 0)
+            @panic("Stack is empty");
+
+        return name_stack.swapRemove(name_stack.items.len - 1);
+    }
+};
+
+pub const Groups = struct {
     pub var PAUSEABLE: api.GroupAspect = undefined;
 };
 
-pub const BasicTasks = struct {
-    pub const CREATE_ROOM_TRANSITION = "CREATE_ROOM_TRANSITION";
+pub const TaskAttributes = struct {
+    /// Name of the involved View
+    pub const VIEW_NAME = "VIEW_NAME";
+    /// Name of involved Layer
+    pub const LAYER_NAME = "LAYER_NAME";
+    /// File resource name. If this is set, a task shall try to load the data from referenced file
+    pub const FILE_RESOURCE = "FILE_RESOURCE";
+    /// JSON String resource reference. If this is set, a task shall interpret this as JSON Sting
+    /// and try to load defined components from JSON
+    pub const JSON_RESOURCE = "JSON_RESOURCE";
+    // The room name within the context
+    pub const ROOM_NAME = "ROOM_NAME";
+    pub const ROOM_TRANSITION_NAME = "ROOM_TRANSITION_NAME";
+    pub const ROOM_TRANSITION_CONDITION = "ROOM_TRANSITION_CONDITION";
+    pub const ROOM_TRANSITION_BOUNDS = "ROOM_TRANSITION_BOUNDS";
+    pub const ROOM_TRANSITION_ORIENTATION = "ROOM_TRANSITION_ORIENTATION";
+    pub const ROOM_TRANSITION_TARGET_ROOM = "ROOM_TRANSITION_TARGET_ROOM";
+    pub const ROOM_TRANSITION_TARGET_TRANSITION = "ROOM_TRANSITION_TARGET_TRANSITION";
 };
+
+pub const Tasks = struct {
+    pub const JSON_LOAD_TILE_SET = "JSON_LOAD_TILE_SET_TASK";
+    pub const JSON_LOAD_TILE_MAPPING = "JSON_LOAD_TILE_MAPPING_TASK";
+    pub const JSON_LOAD_ROOM = "JSON_LOAD_ROOM_TASK";
+
+    pub const ROOM_TRANSITION_BUILDER = "ROOM_TRANSITION_BUILDER";
+    pub const ROOM_TRANSITION = "ROOM_TRANSITION";
+};
+
+pub const MaterialTypes = struct {
+    pub var NONE: physics.ContactMaterialAspect = undefined;
+    pub var TERRAIN: physics.ContactMaterialAspect = undefined;
+    pub var PROJECTILE: physics.ContactMaterialAspect = undefined;
+    pub var WATER: physics.ContactMaterialAspect = undefined;
+    pub var LADDER: physics.ContactMaterialAspect = undefined;
+    pub var ROPE: physics.ContactMaterialAspect = undefined;
+
+    pub var INTERACTIVE: physics.ContactMaterialAspect = undefined;
+};
+
+pub const ContactTypes = struct {
+    pub var FULL_CONTACT: physics.ContactTypeAspect = undefined;
+    pub var ROOM_TRANSITION: physics.ContactTypeAspect = undefined;
+};
+
+pub const Conditions = struct {
+    pub const GOES_EAST = "GOES_EAST";
+    pub const GOES_WEST = "GOES_WEST";
+    pub const GOES_NORTH = "GOES_NORTH";
+    pub const GOES_SOUTH = "GOES_SOUTH";
+
+    // pub const PLAYER_ROOM_TRANSITION_SCAN = "PLAYER_ROOM_TRANSITION_SCAN";
+    // pub const PLAYER_ROOM_TRANSITION_EAST = "PLAYER_ROOM_TRANSITION_EAST";
+    // pub const PLAYER_ROOM_TRANSITION_WEST = "PLAYER_ROOM_TRANSITION_WEST";
+    // pub const PLAYER_ROOM_TRANSITION_NORTH = "PLAYER_ROOM_TRANSITION_NORTH";
+    // pub const PLAYER_ROOM_TRANSITION_SOUTH = "PLAYER_ROOM_TRANSITION_SOUTH";
+};
+
+fn goesEast(entity_id: Index, _: Index, _: Index) bool {
+    return if (physics.EMovement.byId(entity_id)) |m| m.velocity[0] > 0 else false;
+}
+
+fn goesWest(entity_id: Index, _: Index, _: Index) bool {
+    return if (physics.EMovement.byId(entity_id)) |m| m.velocity[0] < 0 else false;
+}
+
+fn goesNorth(entity_id: Index, _: Index, _: Index) bool {
+    return if (physics.EMovement.byId(entity_id)) |m| m.velocity[1] < 0 else false;
+}
+
+fn goesSouth(entity_id: Index, _: Index, _: Index) bool {
+    return if (physics.EMovement.byId(entity_id)) |m| m.velocity[1] > 0 else false;
+}
+
+// fn isRoomTransition(entity_id: Index, _: Index, _: Index) bool {
+//     if (physics.EContactScan.byId(entity_id)) |scan| {
+//         if (scan.firstContactOf(ContactTypes.ROOM_TRANSITION, null)) |contact|
+//             return contact.mask.?.count() > 8;
+//     }
+//     return false;
+// }
 
 //////////////////////////////////////////////////////////////
 //// Game Pausing API
@@ -80,94 +234,14 @@ fn pause(p: bool) void {
         next = api.Entity.nextId(i + 1);
         var entity = api.Entity.byId(i);
         var groups = entity.groups orelse continue;
-        if (groups.hasAspect(BaseGroupAspect.PAUSEABLE)) {
-            std.debug.print("Pause Entity: {?s}\n", .{entity.name});
+        if (groups.hasAspect(Groups.PAUSEABLE)) {
+            std.debug.print("{s} Entity: {?s}\n", .{ if (p) "Pause" else "Resume", entity.name });
             entity.activation(!p);
         }
     }
 }
 
-//////////////////////////////////////////////////////////////
-//// Conditions
-//////////////////////////////////////////////////////////////
-
-pub const GlobalConditions = struct {
-    const ENTITY_MOVES = "ENTITY_MOVES";
-    const ENTITY_MOVES_UP = "ENTITY_MOVES_UP";
-    const ENTITY_MOVES_DOWN = "ENTITY_MOVES_DOWN";
-    const ENTITY_MOVES_RIGHT = "ENTITY_MOVES_RIGHT";
-    const ENTITY_MOVES_LEFT = "ENTITY_MOVES_LEFT";
-
-    var loaded = false;
-
-    pub fn load() void {
-        defer loaded = true;
-        if (loaded) return;
-
-        _ = api.CCondition.new(.{ .name = ENTITY_MOVES, .condition = .{ .f = entityMoves } });
-        _ = api.CCondition.new(.{ .name = ENTITY_MOVES_UP, .condition = .{ .f = entityMovesUp } });
-        _ = api.CCondition.new(.{ .name = ENTITY_MOVES_DOWN, .condition = .{ .f = entityMovesDown } });
-        _ = api.CCondition.new(.{ .name = ENTITY_MOVES_RIGHT, .condition = .{ .f = entityMovesRight } });
-        _ = api.CCondition.new(.{ .name = ENTITY_MOVES_LEFT, .condition = .{ .f = entityMovesLeft } });
-    }
-
-    pub fn dispose() void {
-        defer loaded = false;
-        if (!loaded) return;
-
-        api.CCondition.disposeByName(ENTITY_MOVES);
-        api.CCondition.disposeByName(ENTITY_MOVES_UP);
-        api.CCondition.disposeByName(ENTITY_MOVES_DOWN);
-        api.CCondition.disposeByName(ENTITY_MOVES_RIGHT);
-        api.CCondition.disposeByName(ENTITY_MOVES_LEFT);
-    }
-
-    fn entityMoves(index: ?Index, _: ?api.Attributes) bool {
-        if (index) |i|
-            if (api.EMovement.byId(i)) |m| return m.velocity[0] != 0 or m.velocity[1] != 0;
-        return false;
-    }
-
-    fn entityMovesUp(index: ?Index, _: ?api.Attributes) bool {
-        if (index) |i|
-            if (api.EMovement.byId(i)) |m| return m.velocity[1] < 0;
-        return false;
-    }
-
-    fn entityMovesDown(index: ?Index, _: ?api.Attributes) bool {
-        if (index) |i|
-            if (api.EMovement.byId(i)) |m| return m.velocity[1] > 0;
-        return false;
-    }
-
-    fn entityMovesRight(index: ?Index, _: ?api.Attributes) bool {
-        if (index) |i|
-            if (api.EMovement.byId(i)) |m| return m.velocity[0] > 0;
-        return false;
-    }
-
-    fn entityMovesLeft(index: ?Index, _: ?api.Attributes) bool {
-        if (index) |i|
-            if (api.EMovement.byId(i)) |m| return m.velocity[0] < 0;
-        return false;
-    }
-};
-
-pub const TaskAttributes = struct {
-    /// Name of the current view
-    pub const ATTR_VIEW_NAME = "VIEW_NAME";
-    /// File resource name. If this is set, a task shall try to load the data from referenced file
-    pub const FILE_RESOURCE = "file_name";
-    /// JSON String resource reference. If this is set, a task shall interpret this as JSON Sting
-    /// and try to load defined components from JSON
-    pub const JSON_RESOURCE = "json_resource";
-    /// Name of the owner composite. If this is set, task should get the
-    /// composite referenced to and add all created components as owner to the composite
-    pub const OWNER_COMPOSITE = "owner_composite";
-};
-
 pub const TileDimensionType = tile.TileDimensionType;
-pub const BaseMaterialType = tile.BaseMaterialType;
 pub const TileAnimationFrame = tile.TileAnimationFrame;
 pub const TileSet = tile.TileSet;
 pub const SpriteData = tile.SpriteData;
@@ -176,7 +250,6 @@ pub const TileMapping = tile.TileMapping;
 pub const TileSetMapping = tile.TileSetMapping;
 pub const TileLayerData = tile.TileLayerData;
 
-pub const JSONTasks = json.JSONTasks;
 pub const JSONTile = json.JSONTile;
 pub const JSONTileSet = json.JSONTileSet;
 

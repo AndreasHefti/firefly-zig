@@ -98,21 +98,17 @@ inline fn changeY(entity_id: Index) void {
 }
 
 // 1
-fn rightDown(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
-    const e_id = entity_id orelse return false;
-    const c_id = current_sid orelse return false;
-    const trans = ETransform.byId(e_id) orelse return false;
-    if ((trans.position[0] < min_x and c_id == 3) or (trans.position[1] < min_y and c_id == 2)) {
-        if (c_id == 3) changeX(e_id) else changeY(e_id);
+fn rightDown(_: Index, entity_id: Index, current_sid: Index) bool {
+    const trans = ETransform.byId(entity_id) orelse return false;
+    if ((trans.position[0] < min_x and current_sid == 3) or (trans.position[1] < min_y and current_sid == 2)) {
+        if (current_sid == 3) changeX(entity_id) else changeY(entity_id);
         return true;
     }
     return false;
 }
 
 // 2
-fn rightUp(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
-    const e_id = entity_id orelse return false;
-    const c_id = current_sid orelse return false;
+fn rightUp(_: Index, e_id: Index, c_id: Index) bool {
     const trans = ETransform.byId(e_id) orelse return false;
     if ((trans.position[0] < min_x and c_id == 4) or (trans.position[1] > max_y and c_id == 1)) {
         if (c_id == 4) changeX(e_id) else changeY(e_id);
@@ -122,10 +118,8 @@ fn rightUp(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
 }
 
 // 3
-fn leftDown(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
-    const e_id = entity_id orelse return false;
+fn leftDown(_: Index, e_id: Index, c_id: Index) bool {
     const trans = ETransform.byId(e_id) orelse return false;
-    const c_id = current_sid orelse return false;
     //std.debug.print("c_id: {any}\n", .{(trans.position[0] > max_x and c_id == 1)});
     if ((trans.position[0] > max_x and c_id == 1) or (trans.position[1] < min_y and c_id == 4)) {
         if (c_id == 1) changeX(e_id) else changeY(e_id);
@@ -135,9 +129,7 @@ fn leftDown(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
 }
 
 // 4
-fn leftUp(_: Index, entity_id: ?Index, current_sid: ?Index) bool {
-    const e_id = entity_id orelse return false;
-    const c_id = current_sid orelse return false;
+fn leftUp(_: Index, e_id: Index, c_id: Index) bool {
     const trans = ETransform.byId(e_id) orelse return false;
     if ((trans.position[0] > max_x and c_id == 2) or (trans.position[1] > max_y and c_id == 3)) {
         if (c_id == 2) changeX(e_id) else changeY(e_id);

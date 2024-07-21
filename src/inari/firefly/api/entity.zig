@@ -24,6 +24,8 @@ pub const Entity = struct {
         if (@This().isInitialized())
             return;
 
+        std.debug.print("**** Size Of Entity: {d}\n", .{@sizeOf(Entity)});
+
         try EComponent.init();
     }
 
@@ -160,6 +162,7 @@ pub const EComponent = struct {
         return struct {
             // component type fields
             pub const COMPONENT_TYPE_NAME = type_name;
+            // TODO use AutoHashMap or ArrayHashMap here??
             pub const pool = EComponentPool(T);
             // component type pool function references
             pub var aspect: EComponentAspect = undefined;
@@ -285,7 +288,7 @@ pub fn EComponentPool(comptime T: type) type {
         const Self = @This();
         // ensure type based singleton
         var initialized = false;
-        // internal state
+        // TODO use AutoHashMap here
         var items: utils.DynArray(T) = undefined;
 
         pub fn init() void {

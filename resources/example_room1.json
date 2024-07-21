@@ -15,12 +15,10 @@
        "layer": "Foreground",
        "position": "318,16",
        "attributes": [
-           { "name": "condition", "value": "TransitionEast"},
            { "name": "orientation", "value": "EAST"},
-           { "name": "target", "value": "Room2"},
-           { "name": "bounds", "value": "318,16,4,16"},
-           { "name": "rotation", "value": "0"},
-           { "name": "scale", "value": "0,0"}
+           { "name": "room", "value": "Room2"},
+           { "name": "target", "value": "t1"},
+           { "name": "bounds", "value": "318,16,4,16"}
        ]
      },
      {
@@ -30,12 +28,10 @@
        "layer": "Foreground",
        "position": "256,157",
        "attributes": [
-           { "name": "condition", "value": "TransitionSouth"},
            { "name": "orientation", "value": "SOUTH"},
-           { "name": "target", "value": "Room3"},
-           { "name": "bounds", "value": "256,157,48,12"},
-           { "name": "rotation", "value": "0"},
-           { "name": "scale", "value": "0,0"}
+           { "name": "room", "value": "Room3"},
+           { "name": "target", "value": "t1"},
+           { "name": "bounds", "value": "256,157,48,12"}
        ]
      }
    ]

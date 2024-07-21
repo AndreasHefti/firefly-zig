@@ -357,7 +357,28 @@ pub inline fn hasColor(color: ?Color) bool {
     return false;
 }
 
-pub const Orientation = enum { NONE, NORTH, EAST, SOUTH, WEST };
+pub const Orientation = enum {
+    NONE,
+    NORTH,
+    EAST,
+    SOUTH,
+    WEST,
+
+    pub fn byName(name: ?String) Orientation {
+        if (name) |n| {
+            if (utils.stringEquals("NORTH", n)) {
+                return Orientation.NORTH;
+            } else if (utils.stringEquals("EAST", n)) {
+                return Orientation.EAST;
+            } else if (utils.stringEquals("SOUTH", n)) {
+                return Orientation.SOUTH;
+            } else if (utils.stringEquals("WEST", n)) {
+                return Orientation.WEST;
+            }
+        }
+        return .NONE;
+    }
+};
 
 pub const Direction = struct {
     /// horizontal direction component

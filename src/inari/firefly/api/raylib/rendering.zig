@@ -220,7 +220,9 @@ const RaylibRenderAPI = struct {
         filter: TextureFilter,
         wrap: TextureWrap,
     ) TextureBinding {
-        var tex = rl.LoadTexture(NamePool.getCName(resource).?);
+        const res = NamePool.getCName(resource) orelse
+            @panic("null not expected here");
+        var tex = rl.LoadTexture(res);
         defer NamePool.freeCNames();
         if (is_mipmap) {
             rl.GenTextureMipmaps(&tex);
