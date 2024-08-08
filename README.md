@@ -17,7 +17,12 @@ TODO:
       - [x] State Engine
       - [x] TileMap
       - [x] WorldMap
+      - [ ] Global index/id register (per component?) 
+      - [ ] Global name register (per component?) 
       - [ ] ...
+
+TODO Refactoring:
+    - [ ] All control functions should use global register if possible
 
  
  ## Code Example:

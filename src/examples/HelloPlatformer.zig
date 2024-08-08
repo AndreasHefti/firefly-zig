@@ -45,7 +45,7 @@ var pivot: utils.PosF = .{ 0, 0 };
 
 fn init() void {
 
-    // view with two layer
+    // create view with two layer
     var view = graphics.View.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
@@ -57,6 +57,7 @@ fn init() void {
         },
     });
 
+    // create camera control (apply player pivot and room bounds later)
     _ = view.withControlOf(
         game.SimplePivotCamera{
             .name = cam_name,
@@ -67,18 +68,16 @@ fn init() void {
         },
         true,
     );
+
+    // create key control
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_A, api.InputButtonType.LEFT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_D, api.InputButtonType.RIGHT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
-    // crate start scene
-    _ = graphics.Scene.new(.{
-        .name = start_scene_name,
-        .update_action = startSceneAction,
-        .scheduler = api.Timer.getScheduler(20),
-    });
+    // crate transition scene
+    game.SimpleRoomTransitionScene.init(screen_width, screen_height, view_name, layer2);
 
-    // load room from file
+    // load first (entry) room from file
     api.Task.runTaskByNameWith(
         game.Tasks.JSON_LOAD_ROOM,
         null,
@@ -159,78 +158,4 @@ fn createPlayer(_: api.TaskContext) void {
     cam.pivot = player_pos_ptr;
     cam.snap_to_bounds = game.Room.byName(room2_name).?.bounds;
     cam.adjust(graphics.View.idByName(view_name).?);
-}
-
-// rudimentary implementation of an action control for the start scene
-// just creates a rectangle shape entity that overlaps the while screen
-// with initial black color, fading alpha to 0 with ALPHA blend of the background
-// Room view will appear from black screen. When alpha is 0, action successfully  ends
-// and pivot control is been activated.
-var scene_init = false;
-var color: *utils.Color = undefined;
-fn startSceneAction(_: Index) api.ActionResult {
-    if (!scene_init) {
-        // create overlay entity
-        const entity = api.Entity.new(.{ .name = "StartSceneEntity" })
-            .withComponent(graphics.ETransform{
-            .scale = .{ screen_width, screen_height },
-        })
-            .withComponent(graphics.EView{
-            .view_id = graphics.View.idByName(view_name).?,
-            .layer_id = graphics.Layer.idByName(layer2).?,
-        })
-            .withComponent(graphics.EShape{
-            .blend_mode = api.BlendMode.ALPHA,
-            .color = .{ 0, 0, 0, 255 },
-            .shape_type = api.ShapeType.RECTANGLE,
-            .fill = true,
-            .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
-        }).activate();
-        color = &graphics.EShape.byId(entity.id).?.color;
-        scene_init = true;
-    }
-
-    color[3] -= @min(5, color[3]);
-
-    if (color[3] <= 0) {
-        api.Entity.disposeByName("StartSceneEntity");
-        api.ComponentControl.activateByName("KeyControl", true);
-        scene_init = false;
-        return api.ActionResult.Success;
-    }
-
-    return api.ActionResult.Running;
-}
-fn endSceneAction(_: Index) api.ActionResult {
-    if (!scene_init) {
-        // create overlay entity
-        const entity = api.Entity.new(.{ .name = "StartSceneEntity" })
-            .withComponent(graphics.ETransform{
-            .scale = .{ screen_width, screen_height },
-        })
-            .withComponent(graphics.EView{
-            .view_id = graphics.View.idByName(view_name).?,
-            .layer_id = graphics.Layer.idByName(layer2).?,
-        })
-            .withComponent(graphics.EShape{
-            .blend_mode = api.BlendMode.ALPHA,
-            .color = .{ 0, 0, 0, 255 },
-            .shape_type = api.ShapeType.RECTANGLE,
-            .fill = true,
-            .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
-        }).activate();
-        color = &graphics.EShape.byId(entity.id).?.color;
-        scene_init = true;
-    }
-
-    color[3] -= @min(5, color[3]);
-
-    if (color[3] <= 0) {
-        api.Entity.disposeByName("StartSceneEntity");
-        api.ComponentControl.activateByName("KeyControl", true);
-        scene_init = false;
-        return api.ActionResult.Success;
-    }
-
-    return api.ActionResult.Running;
 }

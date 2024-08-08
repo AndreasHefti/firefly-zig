@@ -531,8 +531,9 @@ pub const ContactCallbackFunction = *const fn (entity_id: Index, contacts: *Cont
 pub const ContactCallback = struct {
     type: ?ContactTypeAspect = null,
     material: ?ContactMaterialAspect = null,
-    f: ContactCallbackFunction,
+    function: ContactCallbackFunction,
 };
+
 pub const EContactScan = struct {
     pub usingnamespace api.EComponent.Trait(EContactScan, "EContactScan");
 
@@ -751,7 +752,7 @@ pub const ContactSystem = struct {
             for (0..e_scan.callback.len) |i| {
                 const c = e_scan.callback[i];
                 if (e_scan.firstContactOf(c.type, c.material)) |contact_scan|
-                    c.f(e_scan.id, contact_scan);
+                    c.function(e_scan.id, contact_scan);
             }
         }
     }

@@ -481,8 +481,8 @@ pub const Scene = struct {
 
     scheduler: ?*api.UpdateScheduler = null,
 
-    init_task: ?Index = null,
-    dispose_task: ?Index = null,
+    init_function: ?api.ControlFunction = null,
+    dispose_function: ?api.ControlFunction = null,
     update_action: api.UpdateActionFunction,
     callback: ?api.UpdateActionCallback = null,
     attributes: api.Attributes = undefined,
@@ -502,20 +502,8 @@ pub const Scene = struct {
     }
 
     pub fn destruct(self: *Scene) void {
-        dispose(self);
         self.attributes.deinit();
         self.attributes = undefined;
-    }
-
-    pub fn withInitTask(self: *Scene, task: firefly.api.Task) *Scene {
-        const t = firefly.api.Task.new(task);
-        self.init_task_ref = t.id;
-        return self;
-    }
-
-    pub fn withInitTaskByName(self: *Scene, task_name: String) *Scene {
-        self.init_task_ref = firefly.api.Task.idByName(task_name);
-        return self;
     }
 
     pub fn withUpdateAction(self: *Scene, action: api.UpdateActionFunction) *Scene {
@@ -533,23 +521,23 @@ pub const Scene = struct {
         return self;
     }
 
-    pub fn load(self: *Scene) void {
-        defer self._loaded = true;
-        if (self._loaded)
-            return;
+    pub fn activation(self: *Scene, active: bool) void {
+        if (active) {
+            defer self._loaded = true;
+            if (self._loaded)
+                return;
 
-        if (self.init_task) |task_id|
-            firefly.api.Task.runTaskByIdWith(task_id, self.id, null);
-    }
+            if (self.init_function) |f|
+                f(self.id, UNDEF_INDEX);
+        } else {
+            stop(self);
+            defer self._loaded = false;
+            if (!self._loaded)
+                return;
 
-    pub fn dispose(self: *Scene) void {
-        stop(self);
-        defer self._loaded = false;
-        if (!self._loaded)
-            return;
-
-        if (self.dispose_task) |task_id|
-            firefly.api.Task.runTaskByIdWith(task_id, self.id, null);
+            if (self.dispose_function) |f|
+                f(self.id, UNDEF_INDEX);
+        }
     }
 
     pub fn run(self: *Scene) void {
@@ -561,32 +549,28 @@ pub const Scene = struct {
     }
 
     pub fn reset(self: *Scene) void {
-        dispose(self);
-        load(self);
+        activation(self, false);
+        activation(self, true);
     }
 
     pub fn resetAndRun(self: *Scene) void {
-        dispose(self);
-        load(self);
+        reset();
         run(self);
     }
 
     fn update(_: api.UpdateEvent) void {
         var next = Scene.nextActiveId(0);
         while (next) |i| {
+            next = Scene.nextActiveId(i + 1);
             var scene = Scene.byId(i);
             if (scene.scheduler) |s| {
-                if (!s.needs_update) {
-                    next = Scene.nextActiveId(i + 1);
+                if (!s.needs_update)
                     continue;
-                }
             }
 
             const result = scene.update_action(scene.id);
-            if (result == .Running) {
-                next = Scene.nextActiveId(i + 1);
+            if (result == .Running)
                 continue;
-            }
 
             scene.stop();
             if (scene.callback) |call|
@@ -594,8 +578,6 @@ pub const Scene = struct {
 
             if (scene.delete_after_run)
                 Scene.disposeById(scene.id);
-
-            next = Scene.nextActiveId(i + 1);
         }
     }
 };

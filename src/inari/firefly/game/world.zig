@@ -29,6 +29,15 @@ pub fn init() void {
         return;
 
     Room.init();
+
+    _ = api.Task.new(.{
+        .name = game.Tasks.ROOM_TRANSITION_BUILDER,
+        .function = createRoomTransition,
+    });
+    TransitionContactCallback = physics.ContactCallback{
+        .type = game.ContactTypes.ROOM_TRANSITION,
+        .function = applyRoomTransition,
+    };
 }
 
 pub fn deinit() void {
@@ -36,8 +45,11 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    api.Task.disposeByName(game.Tasks.ROOM_TRANSITION_BUILDER);
     Room.deinit();
 }
+
+pub var TransitionContactCallback: physics.ContactCallback = undefined;
 
 //////////////////////////////////////////////////////////////
 //// Area
@@ -184,7 +196,7 @@ pub const Room = struct {
         callback: ?RoomCallback,
     ) void {
         if (getActiveRoomForPlayer(player_ref)) |room|
-            stop(room, callback);
+            stop(room, player_ref, callback);
     }
 
     pub fn stop(
@@ -267,9 +279,9 @@ fn createRoomTransition(context: api.TaskContext) void {
     const target_room_name = context.get(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM).?;
     const target_transition_name = context.get(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION).?;
     const orientation_name = context.get(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
-    const bounds = utils.parseRectF(context.get(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?);
-    const view_id = graphics.View.idByName(context.get(game.TaskAttributes.VIEW_NAME).?);
-    const layer_id = graphics.Layer.idByName(context.get(game.TaskAttributes.LAYER_NAME).?);
+    const bounds = utils.parseRectF(context.get(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?).?;
+    const view_id = graphics.View.idByName(context.get(game.TaskAttributes.VIEW_NAME).?).?;
+    const layer_id = graphics.Layer.idByName(context.get(game.TaskAttributes.LAYER_NAME).?).?;
 
     _ = api.Entity.new(.{ .name = transition_name })
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
@@ -295,6 +307,7 @@ fn applyRoomTransition(player_id: Index, contact: *physics.ContactScan) void {
     const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return;
     const transition_id = c.entity_id;
     const player = api.Entity.byId(player_id);
+    const player_name = player.name orelse return;
     const move = physics.EMovement.byId(player_id) orelse return;
     const transition = ERoomTransition.byId(transition_id) orelse return;
 
@@ -313,12 +326,12 @@ fn applyRoomTransition(player_id: Index, contact: *physics.ContactScan) void {
     // Stack Name: target_room, target_transition,player_name
     game.GlobalStack.putName(transition.target_room);
     game.GlobalStack.putName(transition.target_transition);
-    game.GlobalStack.putName(player.name);
+    game.GlobalStack.putName(player_name);
 
-    game.Room.stopRoom(player.name, stoppedRoomCallback);
+    game.Room.stopRoom(player_name, transitionRoomCallback);
 }
 
-fn stoppedRoomCallback(_: *Room) void {
+fn transitionRoomCallback(_: *Room) void {
     // Stack Index: transition_id player_id
     const source_transition_id = game.GlobalStack.popIndex();
     const player_id = game.GlobalStack.popIndex();
@@ -355,3 +368,93 @@ fn stoppedRoomCallback(_: *Room) void {
 
     target_room.start(player_name, null);
 }
+
+//////////////////////////////////////////////////////////////
+//// Simple Room Transition Scene
+//////////////////////////////////////////////////////////////
+// rudimentary implementation of an action control for the start and end scene
+// just creates a rectangle shape entity that overlays the whole screen
+// with initial black color, fading alpha to 0 with ALPHA blend of the background
+
+pub const SimpleRoomTransitionScene = struct {
+    pub const entry_scene_name = "SimpleTransitionSceneEntry";
+    pub const exit_scene_name = "SimpleTransitionSceneExit";
+    const entity_name = "SimpleTransitionSceneEntity";
+    var color: *utils.Color = undefined;
+
+    var _screen_width: Float = undefined;
+    var _screen_height: Float = undefined;
+    var _view_name: String = undefined;
+    var _layer_name: String = undefined;
+
+    pub fn init(screen_width: Float, screen_height: Float, view_name: String, layer_name: String) void {
+        _screen_width = screen_width;
+        _screen_height = screen_height;
+        _view_name = view_name;
+        _layer_name = layer_name;
+
+        // create Scenes
+        if (!graphics.Scene.existsName(entry_scene_name)) {
+            _ = graphics.Scene.new(.{
+                .name = entry_scene_name,
+                .init_function = entryInit,
+                .dispose_function = disposeEntity,
+                .update_action = entryAction,
+            });
+        }
+        if (!graphics.Scene.existsName(exit_scene_name)) {
+            _ = graphics.Scene.new(.{
+                .name = exit_scene_name,
+                .init_function = exitInit,
+                .dispose_function = disposeEntity,
+                .update_action = exitAction,
+            });
+        }
+    }
+
+    fn entityInit(entry: bool) void {
+        // create new overlay entity
+        _ = api.Entity.new(.{ .name = entity_name })
+            .withComponent(graphics.ETransform{
+            .scale = .{ _screen_width, _screen_height },
+        })
+            .withComponent(graphics.EView{
+            .view_id = graphics.View.idByName(_view_name).?,
+            .layer_id = graphics.Layer.idByName(_layer_name).?,
+        })
+            .withComponent(graphics.EShape{
+            .blend_mode = api.BlendMode.ALPHA,
+            .color = .{ 0, 0, 0, if (entry) 255 else 0 },
+            .shape_type = api.ShapeType.RECTANGLE,
+            .fill = true,
+            .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
+        }).activate();
+        color = &graphics.EShape.byName(entity_name).?.color;
+    }
+
+    fn entryInit(_: Index, _: ?Index) void {
+        entityInit(true);
+    }
+
+    fn exitInit(_: Index, _: ?Index) void {
+        entityInit(false);
+    }
+
+    fn disposeEntity(_: Index, _: ?Index) void {
+        api.Entity.disposeByName(entity_name);
+    }
+
+    fn entryAction(_: Index) api.ActionResult {
+        color[3] -= @min(5, color[3]);
+        if (color[3] <= 0)
+            return api.ActionResult.Success;
+        return api.ActionResult.Running;
+    }
+
+    fn exitAction(_: Index) api.ActionResult {
+        color[3] -= @min(5, color[3]);
+        if (color[3] <= 0)
+            return api.ActionResult.Success;
+        return api.ActionResult.Running;
+    }
+};

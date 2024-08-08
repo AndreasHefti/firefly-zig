@@ -48,6 +48,7 @@ pub const EShape = struct {
     id: Index = UNDEF_INDEX,
 
     shape_type: ShapeType,
+    // TODO allocation handling is now not optimal
     vertices: []Float,
     fill: bool = true,
     thickness: ?Float = null,

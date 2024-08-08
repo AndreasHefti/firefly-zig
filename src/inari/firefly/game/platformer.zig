@@ -429,6 +429,10 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
     }
 };
 
+//////////////////////////////////////////////////////////////
+//// Simple Platformer Player Jump Control
+//////////////////////////////////////////////////////////////
+
 pub const SimplePlatformerJumpControl = struct {
     pub usingnamespace api.ControlTypeTrait(SimplePlatformerJumpControl, api.Entity);
 

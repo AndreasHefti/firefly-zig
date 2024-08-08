@@ -182,12 +182,6 @@ pub const Conditions = struct {
     pub const GOES_WEST = "GOES_WEST";
     pub const GOES_NORTH = "GOES_NORTH";
     pub const GOES_SOUTH = "GOES_SOUTH";
-
-    // pub const PLAYER_ROOM_TRANSITION_SCAN = "PLAYER_ROOM_TRANSITION_SCAN";
-    // pub const PLAYER_ROOM_TRANSITION_EAST = "PLAYER_ROOM_TRANSITION_EAST";
-    // pub const PLAYER_ROOM_TRANSITION_WEST = "PLAYER_ROOM_TRANSITION_WEST";
-    // pub const PLAYER_ROOM_TRANSITION_NORTH = "PLAYER_ROOM_TRANSITION_NORTH";
-    // pub const PLAYER_ROOM_TRANSITION_SOUTH = "PLAYER_ROOM_TRANSITION_SOUTH";
 };
 
 fn goesEast(entity_id: Index, _: Index, _: Index) bool {
@@ -206,13 +200,7 @@ fn goesSouth(entity_id: Index, _: Index, _: Index) bool {
     return if (physics.EMovement.byId(entity_id)) |m| m.velocity[1] > 0 else false;
 }
 
-// fn isRoomTransition(entity_id: Index, _: Index, _: Index) bool {
-//     if (physics.EContactScan.byId(entity_id)) |scan| {
-//         if (scan.firstContactOf(ContactTypes.ROOM_TRANSITION, null)) |contact|
-//             return contact.mask.?.count() > 8;
-//     }
-//     return false;
-// }
+pub const SimpleRoomTransitionScene = world.SimpleRoomTransitionScene;
 
 //////////////////////////////////////////////////////////////
 //// Game Pausing API
