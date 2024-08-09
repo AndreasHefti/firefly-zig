@@ -23,6 +23,8 @@ TODO:
 
 TODO Refactoring:
     - [ ] All control functions should use global register if possible
+    - [ ] Use HashMap(Index, T) for additional data stores instead of DynArray(T) where possible
+    - [ ] SimpleRoomTransitionScene rename to SimpleFadeInOutScene and shall be a composite with additional data that one can instantiate
 
  
  ## Code Example:
