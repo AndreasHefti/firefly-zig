@@ -16,7 +16,8 @@ pub fn init() void {
     api.Component.registerComponent(Condition);
     api.Component.registerComponent(Task);
     api.Component.registerComponent(Trigger);
-    api.Component.registerComponent(ComponentControl);
+    api.Component.registerComponent(Control);
+    Control.registerSubtype(VoidControl);
     api.Component.registerComponent(StateEngine);
     api.Component.registerComponent(EntityStateEngine);
     api.EComponent.registerEntityComponent(EState);
@@ -90,100 +91,61 @@ pub const Condition = struct {
 //// Component Control
 //////////////////////////////////////////////////////////////////////////
 
-pub const ControlFunction = *const fn (component_id: Index, data_id: ?Index) void;
-pub const ControlDispose = *const fn (data_id: ?Index) void;
+pub const ControlFunction = *const fn (component_id: Index, data_id: Index) void;
+//pub const ControlDispose = *const fn (data_id: ?Index) void;
 
-pub const ComponentControl = struct {
-    pub usingnamespace api.Component.Trait(ComponentControl, .{
-        .name = "ComponentControl",
+pub const Control = struct {
+    pub usingnamespace api.Component.Trait(Control, .{
+        .name = "Control",
         .grouping = true,
-        .subscription = false,
+        .subtypes = true,
     });
 
-    component_type: api.ComponentAspect,
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     groups: ?api.GroupKind = null,
 
+    controlled_component_type: api.ComponentAspect,
     f: ControlFunction,
     data_id: ?Index = null,
-    dispose: ?ControlDispose = null,
 
-    pub fn destruct(self: *ComponentControl) void {
-        if (self.dispose) |df| df(self.data_id);
+    pub fn destruct(self: *Control) void {
         self.groups = null;
     }
 
     pub fn update(control_id: Index, component_id: Index) void {
-        if (ComponentControl.getWhenActiveById(control_id)) |c|
-            c.f(component_id, c.data_id);
+        Control.byId(control_id).f(component_id, control_id);
     }
 };
 
-pub fn ControlTypeTrait(comptime T: type, comptime ComponentType: type) type {
+pub fn ControlSubTypeTrait(comptime T: type, comptime ControlledType: type) type {
     return struct {
-        pub const component_type = ComponentType;
-        pub fn byName(name: String) ?*T {
-            const control = ComponentControl.byName(name) orelse return null;
-            return byId(control.data_id);
-        }
+        pub const component_type = ControlledType;
+        pub usingnamespace firefly.api.SubTypeTrait(Control, T);
 
-        pub fn byId(data_id: ?Index) ?*T {
-            const id = data_id orelse return null;
-            return ComponentControlType(T).dataById(id);
-        }
-    };
-}
-
-pub fn ComponentControlType(comptime T: type) type {
-    comptime {
-        if (@typeInfo(T) != .Struct)
-            @compileError("Expects component control type is a struct.");
-        if (!@hasDecl(T, "update"))
-            @compileError("Expects component control type to have function 'update(Index)'");
-        if (!@hasDecl(T, "component_type"))
-            @compileError("Expects component control type to have var 'component_type: ComponentAspect'");
-    }
-
-    return struct {
-        const Self = @This();
-
-        var data: utils.DynArray(T) = undefined;
-
-        pub fn init() void {
-            data = utils.DynArray(T).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5);
-        }
-
-        pub fn deinit() void {
-            data.deinit();
-            data = undefined;
-        }
-
-        pub fn dataById(id: Index) ?*T {
-            return data.get(id);
-        }
-
-        pub fn new(control_type: T) *ComponentControl {
+        pub fn new(subtype: T, update: ControlFunction) *T {
             if (!initialized) @panic("Not Initialized");
 
-            var control = ComponentControl.new(.{
-                .name = if (@hasField(T, "name")) control_type.name else null,
-                .f = T.update,
-                .component_type = firefly.api.ComponentAspectGroup.getAspectFromAnytype(T.component_type).?,
-                .dispose = dispose,
-            });
-
-            control.data_id = data.add(control_type);
-            return control;
-        }
-
-        fn dispose(id: ?Index) void {
-            if (!initialized) return;
-            if (id) |i|
-                data.delete(i);
+            return @This().newSubType(
+                Control{
+                    .name = if (@hasField(T, "name")) subtype.name else null,
+                    .f = update,
+                    .controlled_component_type = if (@hasDecl(ControlledType, "aspect"))
+                        ControlledType.aspect
+                    else
+                        api.ComponentAspectGroup.getAspect("VoidControl"),
+                },
+                subtype,
+            );
         }
     };
 }
+
+pub const VoidControl = struct {
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+    pub usingnamespace ControlSubTypeTrait(VoidControl, VoidControl);
+};
 
 //////////////////////////////////////////////////////////////////////////
 //// Action, Task and Trigger

@@ -422,44 +422,40 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
 
 fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
-        pub fn withActiveControl(self: *T, control: api.ControlFunction, name: ?String) *T {
-            return withControl(self, control, name, true);
+        pub fn withActiveControl(self: *T, update: api.ControlFunction, name: ?String) *T {
+            return withControl(self, update, name, true);
         }
 
-        pub fn withControl(self: *T, control: api.ControlFunction, name: ?String, active: bool) *T {
+        pub fn withControl(self: *T, update: api.ControlFunction, name: ?String, active: bool) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                const c = api.ComponentControl.new(.{
-                    .name = name,
-                    .component_type = T.aspect,
-                    .f = control,
-                });
-                cm.map(self.id, c.id);
-                api.ComponentControl.activateById(c.id, active);
+                const c_sub = api.VoidControl.new(.{ .name = name }, update);
+                cm.map(self.id, c_sub.id);
+                api.Control.activateById(c_sub.id, active);
             }
             return self;
         }
 
-        pub fn withActiveControlOf(self: *T, control_type: anytype) *T {
-            return withControlOf(self, control_type, true);
+        pub fn withActiveControlOf(self: *T, subtype: anytype) *T {
+            return withControlOf(self, subtype, true);
         }
 
-        pub fn withControlOf(self: *T, control_type: anytype, active: bool) *T {
+        pub fn withControlOf(self: *T, subtype: anytype, active: bool) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                const ct = @TypeOf(control_type);
-                const control = api.ComponentControlType(ct).new(control_type);
-                cm.map(self.id, control.id);
+                const c_subtype_type = @TypeOf(subtype);
+                const c_subtype = c_subtype_type.new(subtype, c_subtype_type.update);
+                cm.map(self.id, c_subtype.id);
 
-                if (@hasDecl(ct, "initForComponent"))
-                    control_type.initForComponent(self.id);
+                if (@hasDecl(c_subtype_type, "initForComponent"))
+                    c_subtype_type.initForComponent(self.id);
 
-                api.ComponentControl.activateById(control.id, active);
+                api.Control.activateById(c_subtype.id, active);
             }
             return self;
         }
 
-        pub fn withControlById(self: *T, control_id: Index) *T {
+        pub fn applyControlById(self: *T, control_id: Index) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                const c = api.ComponentControl.byId(control_id);
+                const c = api.Control.byId(control_id);
                 if (c.component_type == T.aspect)
                     cm.map(self.id, c.id);
             }
@@ -467,9 +463,9 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
             return self;
         }
 
-        pub fn withControlByName(self: *T, name: String) *T {
+        pub fn applyControlByName(self: *T, name: String) *T {
             if (adapter.pool.control_mapping) |*cm| {
-                if (api.ComponentControl.byName(name)) |c| {
+                if (api.Control.byName(name)) |c| {
                     if (c.component_type == T.aspect)
                         cm.map(self.id, c.id);
                 }
@@ -600,7 +596,7 @@ fn ComponentPool(comptime T: type) type {
                         if (!am.isSet(c_id)) continue;
 
                     for (0..e.value_ptr.size_pointer) |i|
-                        api.ComponentControl.update(e.value_ptr.items[i], c_id);
+                        api.Control.update(e.value_ptr.items[i], c_id);
                 }
             }
         }

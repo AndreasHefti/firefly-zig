@@ -14,6 +14,7 @@ const Vector2f = firefly.utils.Vector2f;
 const RectF = firefly.utils.RectF;
 const PosF = firefly.utils.PosF;
 const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const String = firefly.utils.String;
 
 //////////////////////////////////////////////////////////////
@@ -35,7 +36,7 @@ pub fn init() !void {
     platformer.init();
     GlobalStack.init();
 
-    api.ComponentControlType(SimplePivotCamera).init();
+    api.Control.registerSubtype(SimplePivotCamera);
 
     MaterialTypes.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
     MaterialTypes.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");
@@ -60,7 +61,6 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    api.ComponentControlType(SimplePivotCamera).deinit();
     // deinit sub packages
     platformer.deinit();
     json.deinit();
@@ -236,8 +236,9 @@ pub const SimplePlatformerJumpControl = platformer.SimplePlatformerJumpControl;
 //////////////////////////////////////////////////////////////
 
 pub const SimplePivotCamera = struct {
-    pub usingnamespace api.ControlTypeTrait(SimplePivotCamera, graphics.View);
+    pub usingnamespace api.ControlSubTypeTrait(SimplePivotCamera, graphics.View);
 
+    id: Index = UNDEF_INDEX,
     name: String,
     pixel_perfect: bool = false,
     snap_to_bounds: ?RectF,
@@ -261,8 +262,8 @@ pub const SimplePivotCamera = struct {
         );
     }
 
-    pub fn update(view_id: Index, cam_id: ?Index) void {
-        const self = @This().byId(cam_id) orelse return;
+    pub fn update(view_id: Index, cam_id: Index) void {
+        const self = @This().byId(cam_id);
         var view = graphics.View.byId(view_id);
         const move = getMove(self, view);
 

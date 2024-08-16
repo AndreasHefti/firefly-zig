@@ -26,7 +26,7 @@ pub fn init() void {
     intro_scene.run();
 }
 
-fn sceneInit(_: Index, _: ?Index) void {
+fn sceneInit(_: Index, _: Index) void {
     graphics.Texture.new(.{
         .name = "IntroTexture",
         .resource = "resources/inari.png",

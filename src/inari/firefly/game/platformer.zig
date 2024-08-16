@@ -13,6 +13,7 @@ const Float = utils.Float;
 const CInt = utils.CInt;
 const BitMask = utils.BitMask;
 const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const String = firefly.utils.String;
 const MovFlags = physics.MovFlags;
 
@@ -27,8 +28,8 @@ pub fn init() void {
         return;
 
     PlatformerCollisionResolver.init();
-    api.ComponentControlType(SimplePlatformerHorizontalMoveControl).init();
-    api.ComponentControlType(SimplePlatformerJumpControl).init();
+    api.Control.registerSubtype(SimplePlatformerHorizontalMoveControl);
+    api.Control.registerSubtype(SimplePlatformerJumpControl);
     Player.init();
 }
 
@@ -38,8 +39,6 @@ pub fn deinit() void {
         return;
 
     Player.deinit();
-    api.ComponentControlType(SimplePlatformerJumpControl).deinit();
-    api.ComponentControlType(SimplePlatformerHorizontalMoveControl).deinit();
     PlatformerCollisionResolver.deinit();
 }
 
@@ -386,8 +385,9 @@ pub const PlatformerCollisionResolver = struct {
 //////////////////////////////////////////////////////////////
 
 pub const SimplePlatformerHorizontalMoveControl = struct {
-    pub usingnamespace api.ControlTypeTrait(SimplePlatformerHorizontalMoveControl, api.Entity);
+    pub usingnamespace api.ControlSubTypeTrait(SimplePlatformerHorizontalMoveControl, api.Entity);
 
+    id: Index = UNDEF_INDEX,
     run_velocity_step: Float = 5,
     stop_velocity_step: Float = 10,
     move_on_air: bool = true,
@@ -395,8 +395,8 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
     button_left: api.InputButtonType = api.InputButtonType.LEFT,
     button_right: api.InputButtonType = api.InputButtonType.RIGHT,
 
-    pub fn update(entity_id: Index, self_id: ?Index) void {
-        const self = @This().byId(self_id) orelse return;
+    pub fn update(entity_id: Index, self_id: Index) void {
+        const self = @This().byId(self_id);
         var move = physics.EMovement.byId(entity_id) orelse return;
 
         if (!self.move_on_air and !move.on_ground)
@@ -434,8 +434,9 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
 //////////////////////////////////////////////////////////////
 
 pub const SimplePlatformerJumpControl = struct {
-    pub usingnamespace api.ControlTypeTrait(SimplePlatformerJumpControl, api.Entity);
+    pub usingnamespace api.ControlSubTypeTrait(SimplePlatformerJumpControl, api.Entity);
 
+    id: Index = UNDEF_INDEX,
     jump_button: api.InputButtonType = api.InputButtonType.FIRE_1,
     jump_impulse: Float = 1000,
     double_jump: bool = false,
@@ -444,8 +445,8 @@ pub const SimplePlatformerJumpControl = struct {
 
     _off_ground: u8 = 0,
 
-    pub fn update(entity_id: Index, self_id: ?Index) void {
-        const self = @This().byId(self_id) orelse return;
+    pub fn update(entity_id: Index, self_id: Index) void {
+        const self = @This().byId(self_id);
         var move = physics.EMovement.byId(entity_id) orelse return;
 
         // measure off ground time to achieve jump_tolerance and

@@ -88,7 +88,7 @@ fn init() void {
     }
 }
 
-fn control(entity_id: Index, _: ?Index) void {
+fn control(entity_id: Index, _: Index) void {
     const scan = EContactScan.byId(entity_id) orelse return;
     const shape = EShape.byId(entity_id) orelse return;
 

@@ -432,15 +432,15 @@ pub const SimpleRoomTransitionScene = struct {
         color = &graphics.EShape.byName(entity_name).?.color;
     }
 
-    fn entryInit(_: Index, _: ?Index) void {
+    fn entryInit(_: Index, _: Index) void {
         entityInit(true);
     }
 
-    fn exitInit(_: Index, _: ?Index) void {
+    fn exitInit(_: Index, _: Index) void {
         entityInit(false);
     }
 
-    fn disposeEntity(_: Index, _: ?Index) void {
+    fn disposeEntity(_: Index, _: Index) void {
         api.Entity.disposeByName(entity_name);
     }
 

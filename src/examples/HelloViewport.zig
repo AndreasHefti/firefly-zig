@@ -71,7 +71,7 @@ fn loadWithView() void {
         .activate();
 }
 
-fn view_control(view_id: Index, _: ?Index) void {
+fn view_control(view_id: Index, _: Index) void {
     var view = View.byId(view_id);
     view.projection.position[0] -= 0.1;
     view.projection.position[1] -= 0.1;
