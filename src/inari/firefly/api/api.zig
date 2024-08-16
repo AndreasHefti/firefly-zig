@@ -48,11 +48,11 @@ pub var window: IWindowAPI() = undefined;
 pub var input: IInputAPI() = undefined;
 pub var audio: IAudioAPI() = undefined;
 
+//pub const Asset = asset.Asset;
 pub const Asset = asset.Asset;
 pub const AssetAspectGroup = asset.AssetAspectGroup;
 pub const AssetKind = AssetAspectGroup.Kind;
 pub const AssetAspect = AssetAspectGroup.Aspect;
-pub const AssetComponent = asset.AssetComponent;
 pub const AssetTrait = asset.AssetTrait;
 
 pub const Component = component;
@@ -65,6 +65,7 @@ pub const ComponentListener = component.ComponentListener;
 pub const GroupAspect = component.GroupAspect;
 pub const GroupKind = component.GroupKind;
 pub const GroupAspectGroup = component.GroupAspectGroup;
+pub const SubTypeTrait = component.SubTypeTrait;
 
 pub const Condition = control.Condition;
 pub const ConditionFunction = control.ConditionFunction;

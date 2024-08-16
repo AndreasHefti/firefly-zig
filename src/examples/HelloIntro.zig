@@ -17,20 +17,16 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 
 pub fn init() void {
     var intro_scene = graphics.Scene.new(.{
-        .init_task = api.Task.new(.{
-            .name = "IntroScene",
-            .function = sceneInit,
-            .run_once = true,
-        }).id,
+        .init_function = sceneInit,
         .delete_after_run = true,
         .callback = sceneEnd,
         .update_action = sceneRun,
     });
-    intro_scene.load();
+    //intro_scene.activate();
     intro_scene.run();
 }
 
-fn sceneInit(_: api.TaskContext) void {
+fn sceneInit(_: Index, _: ?Index) void {
     graphics.Texture.new(.{
         .name = "IntroTexture",
         .resource = "resources/inari.png",

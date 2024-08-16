@@ -8,6 +8,8 @@ const view = @import("view.zig");
 const tile = @import("tile.zig");
 const text = @import("text.zig");
 
+const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const String = utils.String;
 const Float = utils.Float;
 const Vector2f = utils.Vector2f;
@@ -57,9 +59,9 @@ pub fn init(_: firefly.api.InitContext) !void {
     if (initialized)
         return;
 
-    // init Assets types
-    api.Asset(Texture).init();
-    api.Asset(Shader).init();
+    // register Assets sub types
+    api.Asset.registerSubtype(Texture);
+    api.Asset.registerSubtype(Shader);
 
     // init sub packages
     try view.init();
@@ -73,10 +75,6 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    // deinit Assets types
-    api.Asset(Texture).deinit();
-    api.Asset(Shader).deinit();
 
     // deinit sub packages
     text.deinit();
@@ -99,6 +97,7 @@ pub fn deinit() void {
 pub const Shader = struct {
     pub usingnamespace firefly.api.AssetTrait(Shader, "Shader");
 
+    id: Index = UNDEF_INDEX,
     name: String,
     vertex_shader_resource: ?String = null,
     fragment_shader_resource: ?String = null,
@@ -106,24 +105,20 @@ pub const Shader = struct {
 
     _binding: ?api.ShaderBinding = null,
 
-    pub fn loadResource(component: *api.AssetComponent) void {
-        if (Shader.resourceById(component.resource_id)) |res| {
-            if (res._binding != null)
+    pub fn activation(self: *Shader, active: bool) void {
+        if (active) {
+            if (self._binding != null)
                 return; // already loaded
 
-            res._binding = firefly.api.rendering.createShader(
-                res.vertex_shader_resource,
-                res.fragment_shader_resource,
-                res.file_resource,
+            self._binding = firefly.api.rendering.createShader(
+                self.vertex_shader_resource,
+                self.fragment_shader_resource,
+                self.file_resource,
             );
-        }
-    }
-
-    pub fn disposeResource(component: *api.AssetComponent) void {
-        if (Shader.resourceById(component.resource_id)) |res| {
-            if (res._binding) |b| {
+        } else {
+            if (self._binding) |b| {
                 firefly.api.rendering.disposeShader(b.id);
-                res._binding = null;
+                self._binding = null;
             }
         }
     }
@@ -183,6 +178,7 @@ pub const Shader = struct {
 pub const Texture = struct {
     pub usingnamespace firefly.api.AssetTrait(Texture, "Texture");
 
+    id: Index = UNDEF_INDEX,
     name: String,
     resource: String,
     is_mipmap: bool = false,
@@ -191,25 +187,21 @@ pub const Texture = struct {
 
     _binding: ?api.TextureBinding = null,
 
-    pub fn loadResource(component: *api.AssetComponent) void {
-        if (Texture.resourceById(component.resource_id)) |res| {
-            if (res._binding != null)
+    pub fn activation(self: *Texture, active: bool) void {
+        if (active) {
+            if (self._binding != null)
                 return; // already loaded
 
-            res._binding = firefly.api.rendering.loadTexture(
-                res.resource,
-                res.is_mipmap,
-                res.filter,
-                res.wrap,
+            self._binding = firefly.api.rendering.loadTexture(
+                self.resource,
+                self.is_mipmap,
+                self.filter,
+                self.wrap,
             );
-        }
-    }
-
-    pub fn disposeResource(component: *api.AssetComponent) void {
-        if (Texture.resourceById(component.resource_id)) |res| {
-            if (res._binding) |b| {
+        } else {
+            if (self._binding) |b| {
                 firefly.api.rendering.disposeTexture(b.id);
-                res._binding = null;
+                self._binding = null;
             }
         }
     }

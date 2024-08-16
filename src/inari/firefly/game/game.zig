@@ -53,24 +53,6 @@ pub fn init() !void {
     _ = api.Condition.new(.{ .name = Conditions.GOES_EAST, .f = goesWest });
     _ = api.Condition.new(.{ .name = Conditions.GOES_NORTH, .f = goesNorth });
     _ = api.Condition.new(.{ .name = Conditions.GOES_SOUTH, .f = goesSouth });
-
-    // _ = api.Condition.new(.{ .name = Conditions.PLAYER_ROOM_TRANSITION_SCAN, .f = isRoomTransition });
-    // _ = api.Condition.new(.{
-    //     .name = Conditions.PLAYER_ROOM_TRANSITION_EAST,
-    //     .f = api.Condition.createAND(isRoomTransition, goesEast),
-    // });
-    // _ = api.Condition.new(.{
-    //     .name = Conditions.PLAYER_ROOM_TRANSITION_WEST,
-    //     .f = api.Condition.createAND(isRoomTransition, goesWest),
-    // });
-    // _ = api.Condition.new(.{
-    //     .name = Conditions.PLAYER_ROOM_TRANSITION_NORTH,
-    //     .f = api.Condition.createAND(isRoomTransition, goesNorth),
-    // });
-    // _ = api.Condition.new(.{
-    //     .name = Conditions.PLAYER_ROOM_TRANSITION_SOUTH,
-    //     .f = api.Condition.createAND(isRoomTransition, goesSouth),
-    // });
 }
 
 pub fn deinit() void {

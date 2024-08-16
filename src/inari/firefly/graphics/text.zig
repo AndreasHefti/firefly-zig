@@ -25,8 +25,8 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    // init Asset types
-    api.Asset(Font).init();
+    // register Assets sub types
+    api.Asset.registerSubtype(Font);
     // init components and entities
     api.EComponent.registerEntityComponent(EText);
 
@@ -43,8 +43,6 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    // deinit Asset types
-    api.Asset(Font).deinit();
     // deinit renderer
     api.System(DefaultTextRenderer).disposeSystem();
 }
@@ -56,6 +54,7 @@ pub fn deinit() void {
 pub const Font = struct {
     pub usingnamespace firefly.api.AssetTrait(Font, "Font");
 
+    id: Index = UNDEF_INDEX,
     name: ?String = null,
     resource: String,
     size: ?CInt = null,
@@ -64,25 +63,21 @@ pub const Font = struct {
 
     _binding: ?BindingId = null,
 
-    pub fn loadResource(component: *api.AssetComponent) void {
-        if (Font.resourceById(component.resource_id)) |res| {
-            if (res._binding != null)
+    pub fn activation(self: *Font, active: bool) void {
+        if (active) {
+            if (self._binding != null)
                 return; // already loaded
 
-            res._binding = firefly.api.rendering.loadFont(
-                res.resource,
-                res.size,
-                res.char_num,
-                res.code_points,
+            self._binding = firefly.api.rendering.loadFont(
+                self.resource,
+                self.size,
+                self.char_num,
+                self.code_points,
             );
-        }
-    }
-
-    pub fn disposeResource(component: *api.AssetComponent) void {
-        if (Font.resourceById(component.resource_id)) |res| {
-            if (res._binding) |b| {
+        } else {
+            if (self._binding) |b| {
                 firefly.api.rendering.disposeFont(b);
-                res._binding = null;
+                self._binding = null;
             }
         }
     }

@@ -63,5 +63,5 @@ fn init() void {
     );
 
     // activate
-    game.TileMapping.activateByName("TileMapping", true);
+    game.TileMapping.activateByName("TileMapRoom1", true);
 }

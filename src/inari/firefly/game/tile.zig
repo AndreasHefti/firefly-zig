@@ -158,8 +158,8 @@ pub const TileSet = struct {
 
         // create contact mask from image data and cache it
         // make sure involved texture is loaded into GPU
-        graphics.Texture.loadByName(self.texture_name);
-        if (graphics.Texture.resourceByName(self.texture_name)) |tex| {
+        graphics.Texture.byName(self.texture_name).?.load();
+        if (graphics.Texture.byName(self.texture_name)) |tex| {
             // load image of texture to CPU
             const st = graphics.SpriteTemplate.byId(tile_template._sprite_template_id.?);
             var image: api.ImageBinding = firefly.api.rendering.loadImageRegionFromTexture(
@@ -243,7 +243,7 @@ pub const TileSet = struct {
         }
 
         // load texture asset for sprites
-        graphics.Texture.loadByName(self.texture_name);
+        graphics.Texture.byName(self.texture_name).?.load();
     }
 
     fn _deactivate(self: *TileSet) void {

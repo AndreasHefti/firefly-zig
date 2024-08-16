@@ -367,16 +367,12 @@ pub const Layer = struct {
     }
 
     pub fn withShader(self: *Layer, id: Index) void {
-        const shader_asset: *api.api.AssetComponent = api.api.AssetComponent.byId(id);
-        if (api.Asset(graphics.Shader).resourceById(shader_asset.resource_id)) |res|
-            self.shader_binding = res.binding;
+        self.shader_binding = graphics.Shader.byId(id).binding;
     }
 
     pub fn withShaderByName(self: *Layer, name: String) void {
-        if (api.api.AssetComponent.byName(name)) |a| {
-            if (api.Asset(graphics.Shader).resourceById(a.resource_id)) |res|
-                self.shader_binding = res.binding;
-        }
+        if (graphics.Shader.byName(name)) |shader|
+            self.shader_binding = shader.binding;
     }
 };
 

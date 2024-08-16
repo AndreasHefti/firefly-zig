@@ -5,6 +5,7 @@ const utils = firefly.utils;
 
 const String = firefly.utils.String;
 const Index = firefly.utils.Index;
+const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 const Float = firefly.utils.Float;
 
 //////////////////////////////////////////////////////////////
@@ -18,17 +19,14 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Asset(Sound).init();
-    api.Asset(Music).init();
+    api.Asset.registerSubtype(Sound);
+    api.Asset.registerSubtype(Music);
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    api.Asset(Sound).deinit();
-    api.Asset(Music).deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -144,6 +142,7 @@ pub const AudioPlayer = struct {
 pub const Sound = struct {
     pub usingnamespace firefly.api.AssetTrait(Sound, "Sound");
 
+    id: Index = UNDEF_INDEX,
     name: String,
     resource: String,
     volume: Float = 1,
@@ -153,20 +152,16 @@ pub const Sound = struct {
 
     _binding: ?api.SoundBinding = null,
 
-    pub fn loadResource(component: *api.AssetComponent) void {
-        if (Sound.resourceById(component.resource_id)) |res| {
-            if (res._binding != null)
+    pub fn activation(self: *Sound, active: bool) void {
+        if (active) {
+            if (self._binding != null)
                 return; // already loaded
 
-            res._binding = firefly.api.audio.loadSound(res.resource, res.channels);
-        }
-    }
-
-    pub fn disposeResource(component: *api.AssetComponent) void {
-        if (Sound.resourceById(component.resource_id)) |res| {
-            if (res._binding) |b| {
+            self._binding = firefly.api.audio.loadSound(self.resource, self.channels);
+        } else {
+            if (self._binding) |b| {
                 firefly.api.audio.disposeSound(b);
-                res._binding = null;
+                self._binding = null;
             }
         }
     }
@@ -179,6 +174,7 @@ pub const Sound = struct {
 pub const Music = struct {
     pub usingnamespace firefly.api.AssetTrait(Music, "Music");
 
+    id: Index = UNDEF_INDEX,
     name: String,
     resource: String,
     volume: Float = 1,
@@ -187,20 +183,16 @@ pub const Music = struct {
 
     _binding: ?api.BindingId = null,
 
-    pub fn loadResource(component: *api.AssetComponent) void {
-        if (Music.resourceById(component.resource_id)) |res| {
-            if (res._binding != null)
+    pub fn activation(self: *Music, active: bool) void {
+        if (active) {
+            if (self._binding != null)
                 return; // already loaded
 
-            res._binding = firefly.api.audio.loadMusic(res.resource);
-        }
-    }
-
-    pub fn disposeResource(component: *api.AssetComponent) void {
-        if (Music.resourceById(component.resource_id)) |res| {
-            if (res._binding) |b| {
+            self._binding = firefly.api.audio.loadMusic(self.resource);
+        } else {
+            if (self._binding) |b| {
                 firefly.api.audio.disposeMusic(b);
-                res._binding = null;
+                self._binding = null;
             }
         }
     }

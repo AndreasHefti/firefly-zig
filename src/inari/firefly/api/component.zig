@@ -16,7 +16,8 @@ pub fn init() void {
     if (INIT)
         return;
 
-    COMPONENT_INTERFACE_TABLE = utils.DynArray(ComponentTypeInterface).new(api.COMPONENT_ALLOC);
+    COMPONENT_INTERFACE_TABLE = utils.DynArray(ComponentTypeInterface).newWithRegisterSize(api.COMPONENT_ALLOC, 20);
+    SUB_COMPONENT_INTERFACE_TABLE = utils.DynArray(SubComponentTypeInterface).newWithRegisterSize(api.COMPONENT_ALLOC, 20);
     registerComponent(Composite);
 }
 
@@ -36,6 +37,17 @@ pub fn deinit() void {
     }
     COMPONENT_INTERFACE_TABLE.deinit();
     COMPONENT_INTERFACE_TABLE = undefined;
+    // deinit all registered sub-component types
+    next = SUB_COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    while (next) |i| {
+        if (SUB_COMPONENT_INTERFACE_TABLE.get(i)) |interface| {
+            interface.deinit();
+            SUB_COMPONENT_INTERFACE_TABLE.delete(i);
+        }
+        next = SUB_COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+    }
+    SUB_COMPONENT_INTERFACE_TABLE.deinit();
+    SUB_COMPONENT_INTERFACE_TABLE = undefined;
 }
 
 //////////////////////////////////////////////////////////////
@@ -68,15 +80,16 @@ pub const Context = struct {
     subscription: bool = true, // TODO make default false
     control: bool = false,
     grouping: bool = false,
+    subtypes: bool = false,
 };
 
 pub fn registerComponent(comptime T: type) void {
     ComponentPool(T).init();
 }
 
-pub fn deinitComponent(comptime T: type) void {
-    ComponentPool(T).deinit();
-}
+// pub fn deinitComponent(comptime T: type) void {
+//     ComponentPool(T).deinit();
+// }
 
 pub const CReference = struct {
     type: ComponentAspect,
@@ -123,11 +136,14 @@ pub const ComponentEvent = struct {
 
 pub fn Trait(comptime T: type, comptime context: Context) type {
     return struct {
-
-        // component type fields
         pub const COMPONENT_TYPE_NAME = context.name;
-        pub const pool = ComponentPool(T);
         pub var aspect: ComponentAspect = undefined;
+
+        const pool = ComponentPool(T);
+
+        pub fn allowSubtypes() bool {
+            return context.subtypes;
+        }
 
         pub fn isInitialized() bool {
             return pool._type_init;
@@ -138,6 +154,13 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
         }
 
         pub fn new(t: T) *T {
+            if (context.subtypes)
+                @panic("Use new on specific subtype");
+
+            return pool.register(t);
+        }
+
+        pub fn reg(t: T) *T {
             return pool.register(t);
         }
 
@@ -179,9 +202,29 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
         const empty_struct = struct {};
         pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This(), context) else empty_struct;
         pub usingnamespace if (context.activation) ActivationTrait(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.subscription) SubscriptionTrait(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.subscription or context.subtypes) SubscriptionTrait(T, @This(), context) else empty_struct;
         pub usingnamespace if (context.control) ControlTrait(T, @This(), context) else empty_struct;
         pub usingnamespace if (context.grouping) GroupingTrait(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.subtypes) ComponentSubTypingTrait(T, @This(), context) else empty_struct;
+    };
+}
+
+fn ComponentSubTypingTrait(comptime T: type, comptime _: anytype, comptime context: Context) type {
+    return struct {
+        pub fn registerSubtype(comptime SubType: type) void {
+            ComponentSubType(T, SubType).init();
+        }
+
+        pub fn dataById(id: Index, comptime SubType: type) ?@TypeOf(SubType) {
+            return SubType.dataById(id);
+        }
+
+        pub fn dataByName(name: String, comptime SubType: type) ?@TypeOf(SubType) {
+            if (!context.name_mapping)
+                return null;
+
+            return SubType.dataByName(name);
+        }
     };
 }
 
@@ -288,6 +331,7 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime contex
             }
             return null;
         }
+
         pub fn disposeByName(name: String) void {
             if (adapter.pool.name_mapping) |*nm| {
                 if (nm.get(name)) |id| adapter.pool.clear(id);
@@ -439,7 +483,7 @@ fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context
 //// Component Pooling
 //////////////////////////////////////////////////////////////
 
-pub fn ComponentPool(comptime T: type) type {
+fn ComponentPool(comptime T: type) type {
 
     // component type constraints and function references
     const has_subscribe: bool = @hasDecl(T, "subscribe");
@@ -500,7 +544,7 @@ pub fn ComponentPool(comptime T: type) type {
             if (has_active_mapping)
                 active_mapping = utils.BitSet.newEmpty(api.COMPONENT_ALLOC, 64);
 
-            if (has_subscribe)
+            if (has_subscribe or T.allowSubtypes())
                 eventDispatch = utils.EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
 
             if (has_name_mapping)
@@ -648,6 +692,119 @@ pub fn ComponentPool(comptime T: type) type {
 }
 
 //////////////////////////////////////////////////////////////////////////
+//// Component Subtype
+//////////////////////////////////////////////////////////////////////////
+
+pub fn SubTypeTrait(comptime T: type, comptime SubType: type) type {
+    comptime {
+        if (!T.allowSubtypes())
+            @compileError("Component of type does not support subtypes");
+    }
+    return struct {
+        const subtype = ComponentSubType(T, SubType);
+
+        pub fn newSubType(t: T, st: SubType) *SubType {
+            const id = T.reg(t).id;
+            const result = subtype.data.getOrPut(id) catch unreachable;
+            if (result.found_existing)
+                utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{id});
+
+            result.value_ptr.* = st;
+            result.value_ptr.*.id = id;
+
+            if (@hasDecl(SubType, "construct"))
+                st.construct();
+
+            return result.value_ptr;
+        }
+
+        pub fn activate(self: *SubType) void {
+            T.activateById(self.id, true);
+        }
+
+        pub fn deactivate(self: *SubType) void {
+            T.activateById(self.id, false);
+        }
+
+        pub fn byId(id: Index) *SubType {
+            return subtype.data.getPtr(id).?;
+        }
+
+        pub fn existsByName(name: String) bool {
+            return T.existsName(name);
+        }
+
+        pub fn byName(name: String) ?*SubType {
+            if (T.byName(name)) |c|
+                return subtype.data.getPtr(c.id);
+
+            return null;
+        }
+    };
+}
+
+const SubComponentTypeInterface = struct {
+    deinit: api.Deinit,
+};
+var SUB_COMPONENT_INTERFACE_TABLE: utils.DynArray(SubComponentTypeInterface) = undefined;
+
+fn ComponentSubType(comptime T: type, comptime SubType: type) type {
+    comptime {
+        if (@typeInfo(SubType) != .Struct)
+            @compileError("Expects component sub type is a struct.");
+        if (!@hasField(SubType, "id"))
+            @compileError("Expects component sub type to have field: id: Index, that holds the index-id of the component");
+    }
+    return struct {
+        pub var data: std.AutoHashMap(Index, SubType) = undefined;
+        fn init() void {
+            data = std.AutoHashMap(Index, SubType).init(api.COMPONENT_ALLOC);
+            // subscribe to T and dispatch activation and dispose
+            T.subscribe(notifyComponentChange);
+            // create and register SubComponentTypeInterface
+            _ = SUB_COMPONENT_INTERFACE_TABLE.add(.{
+                .deinit = _deinit,
+            });
+        }
+
+        fn _deinit() void {
+            // unsubscribe from base Component events
+            T.unsubscribe(notifyComponentChange);
+            // destruct and clear subtype data
+            if (@hasDecl(SubType, "deconstruct")) {
+                var it = data.iterator();
+                while (it.next()) |r|
+                    r.value_ptr.deconstruct();
+            }
+
+            data.deinit();
+            data = undefined;
+        }
+
+        fn notifyComponentChange(event: ComponentEvent) void {
+            const sub_type: *SubType = data.getPtr(event.c_id.?) orelse return;
+            switch (event.event_type) {
+                .ACTIVATED => {
+                    if (@hasDecl(SubType, "activation"))
+                        sub_type.activation(true);
+                },
+                .DEACTIVATING => {
+                    if (@hasDecl(SubType, "activation"))
+                        sub_type.activation(false);
+                },
+                .DISPOSING => {
+                    if (@hasDecl(SubType, "deconstruct"))
+                        sub_type.deconstruct();
+
+                    _ = data.remove(event.c_id.?);
+                },
+                else => {},
+            }
+        }
+    };
+}
+
+//////////////////////////////////////////////////////////////////////////
 //// Composite Component
 //////////////////////////////////////////////////////////////////////////
 
@@ -672,6 +829,7 @@ pub const CompositeObject = struct {
 pub const Composite = struct {
     pub usingnamespace Trait(Composite, .{
         .name = "Composite",
+        //.subtypes = true,
     });
 
     id: Index = UNDEF_INDEX,
@@ -812,9 +970,11 @@ pub fn CompositeTrait(comptime T: type) type {
         }
 
         pub fn deinit() void {
-            var it = references.iterator();
-            while (it.next()) |r|
-                r.value_ptr.deconstruct();
+            if (@hasDecl(T, "deconstruct")) {
+                var it = references.iterator();
+                while (it.next()) |r|
+                    r.value_ptr.deconstruct();
+            }
 
             references.deinit();
             references = undefined;

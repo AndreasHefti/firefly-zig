@@ -21,8 +21,8 @@ const screen_width: usize = 600;
 const screen_height: usize = 400;
 const layer1: String = "Background";
 const layer2: String = "Foreground";
-const start_scene_name = "StartScene";
-const end_scene_name = "EndScene";
+const start_scene_name = "SimpleTransitionSceneEntry";
+const end_scene_name = "SimpleTransitionSceneExit";
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
