@@ -95,7 +95,6 @@ pub const Room = struct {
     end_scene_ref: ?String = null,
     player_ref: ?String = null, // if set, room is active (STARTING,RUNNING,PAUSED,STOPPING) for referenced player
 
-    //_composite_ref: Index = undefined,
     _callback: ?RoomCallback = undefined,
 
     var starting_room_ref: ?String = null;
@@ -238,7 +237,6 @@ pub const Room = struct {
     // 7. Dispose --> Dispose also meta data and delete the room object
     pub fn dispose(self: *Room) void {
         defer self.state = .CREATED;
-        //       api.Composite.byId(self.id).dispose();
     }
 
     fn deactivateRoomCallback(_: Index, _: api.ActionResult) void {

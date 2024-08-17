@@ -106,16 +106,16 @@ pub const Control = struct {
     groups: ?api.GroupKind = null,
 
     controlled_component_type: api.ComponentAspect,
-    f: ControlFunction,
+    update: ControlFunction,
     data_id: ?Index = null,
 
     pub fn destruct(self: *Control) void {
         self.groups = null;
     }
 
-    pub fn update(control_id: Index, component_id: Index) void {
-        Control.byId(control_id).f(component_id, control_id);
-    }
+    // pub inline fn update(control_id: Index, component_id: Index) void {
+    //     Control.byId(control_id).update(component_id, control_id);
+    // }
 };
 
 pub fn ControlSubTypeTrait(comptime T: type, comptime ControlledType: type) type {
@@ -129,7 +129,7 @@ pub fn ControlSubTypeTrait(comptime T: type, comptime ControlledType: type) type
             return @This().newSubType(
                 Control{
                     .name = if (@hasField(T, "name")) subtype.name else null,
-                    .f = update,
+                    .update = update,
                     .controlled_component_type = if (@hasDecl(ControlledType, "aspect"))
                         ControlledType.aspect
                     else

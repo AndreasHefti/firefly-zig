@@ -140,6 +140,14 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
 
         const pool = ComponentPool(T);
 
+        pub var id_register: [5]Index = .{
+            UNDEF_INDEX,
+            UNDEF_INDEX,
+            UNDEF_INDEX,
+            UNDEF_INDEX,
+            UNDEF_INDEX,
+        };
+
         pub fn allowSubtypes() bool {
             return context.subtypes;
         }
@@ -594,8 +602,10 @@ fn ComponentPool(comptime T: type) type {
                     if (active_mapping) |am|
                         if (!am.isSet(c_id)) continue;
 
-                    for (0..e.value_ptr.size_pointer) |i|
-                        api.Control.update(e.value_ptr.items[i], c_id);
+                    for (0..e.value_ptr.size_pointer) |i| {
+                        const control_id = e.value_ptr.items[i];
+                        api.Control.byId(control_id).update(c_id, control_id);
+                    }
                 }
             }
         }
