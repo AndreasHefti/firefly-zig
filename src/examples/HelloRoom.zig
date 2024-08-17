@@ -100,7 +100,7 @@ fn init() void {
     game.Room.startRoom("Room1", "no player", roomLoaded);
 }
 
-fn roomLoaded(_: ?*game.Room) void {
+fn roomLoaded(_: Index) void {
     std.debug.print("Room running", .{});
 }
 

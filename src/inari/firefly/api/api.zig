@@ -5,6 +5,7 @@ const utils = firefly.utils;
 const Allocator = std.mem.Allocator;
 const asset = @import("asset.zig");
 const component = @import("component.zig");
+const composite = @import("composite.zig");
 const system = @import("system.zig");
 const timer = @import("timer.zig");
 const entity = @import("entity.zig");
@@ -91,11 +92,11 @@ pub const Trigger = control.Trigger;
 pub const Control = control.Control;
 pub const ControlSubTypeTrait = control.ControlSubTypeTrait;
 pub const VoidControl = control.VoidControl;
-pub const Composite = component.Composite;
-pub const CompositeLifeCycle = component.CompositeLifeCycle;
-pub const CompositeTrait = component.CompositeTrait;
-pub const OWNER_COMPOSITE_TASK_ATTRIBUTE = component.OWNER_COMPOSITE_TASK_ATTRIBUTE;
-pub const CompositeObject = component.CompositeObject;
+pub const Composite = composite.Composite;
+pub const CompositeLifeCycle = composite.CompositeLifeCycle;
+pub const CompositeTrait = composite.CompositeTrait;
+pub const OWNER_COMPOSITE_TASK_ATTRIBUTE = composite.OWNER_COMPOSITE_TASK_ATTRIBUTE;
+pub const CompositeObject = composite.CompositeObject;
 pub const State = control.State;
 pub const StateEngine = control.StateEngine;
 pub const EntityStateEngine = control.EntityStateEngine;
@@ -145,6 +146,7 @@ pub fn init(context: InitContext) !void {
 
     NamePool.init();
     Component.init();
+    composite.init();
     Timer.init();
     system.init();
 
@@ -164,6 +166,7 @@ pub fn deinit() void {
     asset.deinit();
     control.deinit();
     system.deinit();
+    composite.deinit();
     Component.deinit();
     rendering.deinit();
     rendering = undefined;

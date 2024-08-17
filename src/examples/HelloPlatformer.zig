@@ -88,12 +88,13 @@ fn init() void {
     );
 
     // add player and init cam for room
-    _ = game.Room.byName(room2_name).?.withActivationTask(
+    _ = game.Room.byName(room2_name).?.withTask(
         api.Task{
             .name = "CreatePlayer",
             .run_once = true,
             .function = createPlayer,
         },
+        api.CompositeLifeCycle.ACTIVATE,
         null,
     );
 
@@ -101,7 +102,7 @@ fn init() void {
     game.Room.startRoom(room2_name, player_name, roomLoaded);
 }
 
-fn roomLoaded(_: ?*game.Room) void {
+fn roomLoaded(_: Index) void {
     std.debug.print("Room running!!!\n", .{});
 }
 

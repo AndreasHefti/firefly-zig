@@ -75,19 +75,28 @@ fn init() void {
         .name = "Test Room1",
         .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
     })
-        .withLoadTaskByName(game.Tasks.JSON_LOAD_TILE_SET, .{
-        .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
-    })
-        .withLoadTaskByName(game.Tasks.JSON_LOAD_TILE_MAPPING, .{
-        .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
-        .{ game.TaskAttributes.VIEW_NAME, view_name },
-    })
-        .withActivationTask(
+        .addTaskByName(
+        game.Tasks.JSON_LOAD_TILE_SET,
+        api.CompositeLifeCycle.LOAD,
+        .{
+            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
+        },
+    )
+        .addTaskByName(
+        game.Tasks.JSON_LOAD_TILE_MAPPING,
+        api.CompositeLifeCycle.LOAD,
+        .{
+            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
+            .{ game.TaskAttributes.VIEW_NAME, view_name },
+        },
+    )
+        .withTask(
         api.Task{
             .name = "CreatePlayer",
             .run_once = true,
             .function = create_player,
         },
+        api.CompositeLifeCycle.ACTIVATE,
         null,
     );
 

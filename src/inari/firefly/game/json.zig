@@ -541,7 +541,7 @@ fn loadRoomFromJSON(context: api.TaskContext) void {
     if (game.Room.byName(jsonTileMapping.name) != null)
         return;
 
-    var room = game.Room.new(.{
+    const room = game.Room.new(.{
         .name = api.NamePool.alloc(jsonTileMapping.name).?,
         .bounds = utils.parseRectF(jsonTileMapping.bounds).?,
         .start_scene_ref = api.NamePool.alloc(jsonTileMapping.start_scene),
@@ -549,15 +549,23 @@ fn loadRoomFromJSON(context: api.TaskContext) void {
     });
 
     for (0..jsonTileMapping.tile_sets.len) |i| {
-        _ = room.withLoadTaskByName(game.Tasks.JSON_LOAD_TILE_SET, .{
-            .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_sets[i].file.? },
-        });
+        _ = room.addTaskByName(
+            game.Tasks.JSON_LOAD_TILE_SET,
+            api.CompositeLifeCycle.LOAD,
+            .{
+                .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_sets[i].file.? },
+            },
+        );
     }
 
-    _ = room.withLoadTaskByName(game.Tasks.JSON_LOAD_TILE_MAPPING, .{
-        .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_map.file.? },
-        .{ game.TaskAttributes.VIEW_NAME, view_name },
-    });
+    _ = room.addTaskByName(
+        game.Tasks.JSON_LOAD_TILE_MAPPING,
+        api.CompositeLifeCycle.LOAD,
+        .{
+            .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_map.file.? },
+            .{ game.TaskAttributes.VIEW_NAME, view_name },
+        },
+    );
 
     // TODO add objects as activation tasks
 }

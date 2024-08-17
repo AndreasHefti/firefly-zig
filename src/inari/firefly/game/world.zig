@@ -28,7 +28,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    Room.init();
+    api.Composite.registerSubtype(Room);
 
     _ = api.Task.new(.{
         .name = game.Tasks.ROOM_TRANSITION_BUILDER,
@@ -46,7 +46,6 @@ pub fn deinit() void {
         return;
 
     api.Task.disposeByName(game.Tasks.ROOM_TRANSITION_BUILDER);
-    Room.deinit();
 }
 
 pub var TransitionContactCallback: physics.ContactCallback = undefined;
@@ -81,11 +80,12 @@ pub const RoomState = enum {
     STOPPING,
 };
 
-pub const RoomCallback = *const fn (room: *Room) void;
+pub const RoomCallback = *const fn (room_id: Index) void;
 
 pub const Room = struct {
     pub usingnamespace api.CompositeTrait(Room);
 
+    id: Index = UNDEF_INDEX,
     name: String,
     area_ref: ?String = null,
     bounds: RectF,
@@ -95,14 +95,19 @@ pub const Room = struct {
     end_scene_ref: ?String = null,
     player_ref: ?String = null, // if set, room is active (STARTING,RUNNING,PAUSED,STOPPING) for referenced player
 
-    _composite_ref: Index = undefined,
+    //_composite_ref: Index = undefined,
     _callback: ?RoomCallback = undefined,
 
     var starting_room_ref: ?String = null;
     var stopping_room_ref: ?String = null;
 
     pub fn new(room: Room) *Room {
-        var result = Room.register(room);
+        var result = @This().newSubType(
+            api.Composite{
+                .name = room.name,
+            },
+            room,
+        );
         result.state = .CREATED;
         return result;
     }
@@ -112,7 +117,7 @@ pub const Room = struct {
         if (self.state != .CREATED) return;
         defer self.state = .LOADED;
 
-        api.Composite.byId(self._composite_ref).load();
+        api.Composite.byId(self.id).load();
     }
 
     // 3. Activate  runs activation tasks to create needed components and entities are created from in memory meta  data,
@@ -124,7 +129,7 @@ pub const Room = struct {
             return;
         }
 
-        api.Composite.activateById(self._composite_ref, true);
+        api.Composite.activateById(self.id, true);
         self.state = .ACTIVATED;
         game.pauseGame();
     }
@@ -176,7 +181,7 @@ pub const Room = struct {
             game.resumeGame();
             self.state = .RUNNING;
             starting_room_ref = null;
-            if (callback) |c| c(self);
+            if (callback) |c| c(self.id);
         }
     }
 
@@ -185,7 +190,7 @@ pub const Room = struct {
         room.state = .RUNNING;
         game.resumeGame();
         starting_room_ref = null;
-        if (room._callback) |c| c(room);
+        if (room._callback) |c| c(room.id);
         room._callback = null;
     }
 
@@ -221,11 +226,11 @@ pub const Room = struct {
             }
         } else {
             // just end the Room immediately
-            api.Composite.activateById(self._composite_ref, false);
+            api.Composite.activateById(self.id, false);
             self.state = .LOADED;
             stopping_room_ref = null;
             self.player_ref = player_ref;
-            if (callback) |c| c(self);
+            if (callback) |c| c(self.id);
             self.player_ref = null;
         }
     }
@@ -233,7 +238,7 @@ pub const Room = struct {
     // 7. Dispose --> Dispose also meta data and delete the room object
     pub fn dispose(self: *Room) void {
         defer self.state = .CREATED;
-        api.Composite.byId(self._composite_ref).dispose();
+        //       api.Composite.byId(self.id).dispose();
     }
 
     fn deactivateRoomCallback(_: Index, _: api.ActionResult) void {
@@ -242,16 +247,17 @@ pub const Room = struct {
         room.state = .LOADED;
         stopping_room_ref = null;
         room.player_ref = null;
-        if (room._callback) |c| c(room);
+        if (room._callback) |c| c(room.id);
         room._callback = null;
     }
 
     pub fn getActiveRoomForPlayer(player_ref: String) ?*Room {
-        var it = Room.referenceIterator();
-        while (it.next()) |r| {
-            if (r.player_ref) |p|
-                if ((r.state == RoomState.RUNNING or r.state == RoomState.STARTING or r.state == RoomState.STOPPING) and
-                    utils.stringEquals(p, player_ref)) return r;
+        var it = Room.idIterator();
+        while (it.next()) |r_id| {
+            const room = Room.byId(r_id.*);
+            if (room.player_ref) |p|
+                if ((room.state == RoomState.RUNNING or room.state == RoomState.STARTING or room.state == RoomState.STOPPING) and
+                    utils.stringEquals(p, player_ref)) return room;
         }
 
         return null;
@@ -331,7 +337,7 @@ fn applyRoomTransition(player_id: Index, contact: *physics.ContactScan) void {
     game.Room.stopRoom(player_name, transitionRoomCallback);
 }
 
-fn transitionRoomCallback(_: *Room) void {
+fn transitionRoomCallback(_: Index) void {
     // Stack Index: transition_id player_id
     const source_transition_id = game.GlobalStack.popIndex();
     const player_id = game.GlobalStack.popIndex();

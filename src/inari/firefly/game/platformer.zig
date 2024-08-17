@@ -30,7 +30,7 @@ pub fn init() void {
     PlatformerCollisionResolver.init();
     api.Control.registerSubtype(SimplePlatformerHorizontalMoveControl);
     api.Control.registerSubtype(SimplePlatformerJumpControl);
-    Player.init();
+    api.Composite.registerSubtype(Player);
 }
 
 pub fn deinit() void {
@@ -38,7 +38,6 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    Player.deinit();
     PlatformerCollisionResolver.deinit();
 }
 
@@ -49,15 +48,20 @@ pub fn deinit() void {
 pub const Player = struct {
     pub usingnamespace api.CompositeTrait(Player);
 
+    id: Index = UNDEF_INDEX,
     name: String,
 
-    _composite_ref: Index = undefined,
     _player_entity_id: Index = undefined,
     _player_transform: *graphics.ETransform = undefined,
     _player_move: *physics.EMovement = undefined,
 
     pub fn new(player: Player) *Player {
-        return @This().register(player);
+        return @This().newSubType(
+            api.Composite{
+                .name = player.name,
+            },
+            player,
+        );
     }
 };
 
