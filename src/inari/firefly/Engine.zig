@@ -178,7 +178,7 @@ pub fn registerQuitKey(quit_key: firefly.api.KeyboardKey) void {
 }
 
 pub fn update(_: firefly.api.UpdateEvent) void {
-    if (firefly.api.input.checkButtonPressed(firefly.api.InputButtonType.QUIT)) {
+    if (firefly.api.input.checkButtonTyped(firefly.api.InputButtonType.QUIT)) {
         firefly.api.unsubscribeUpdate(update);
         firefly.Engine.stop();
     }

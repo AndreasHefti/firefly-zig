@@ -26,7 +26,7 @@ pub fn init() void {
     intro_scene.run();
 }
 
-fn sceneInit(_: Index, _: Index) void {
+fn sceneInit(_: api.CallReg) void {
     graphics.Texture.new(.{
         .name = "IntroTexture",
         .resource = "resources/inari.png",
@@ -64,7 +64,7 @@ fn sceneInit(_: Index, _: Index) void {
     ).activate();
 }
 
-fn sceneRun(_: Index) api.ActionResult {
+fn sceneRun(_: api.CallReg) api.ActionResult {
     if (graphics.ESprite.byName("IntroSprite")) |sprite| {
         if (sprite.tint_color.?[3] >= 254)
             return api.ActionResult.Success
@@ -75,6 +75,6 @@ fn sceneRun(_: Index) api.ActionResult {
     return api.ActionResult.Failed;
 }
 
-fn sceneEnd(_: Index, _: api.ActionResult) void {
+fn sceneEnd(_: api.CallReg, _: api.ActionResult) void {
     firefly.Engine.registerQuitKey(firefly.api.KeyboardKey.KEY_SPACE);
 }

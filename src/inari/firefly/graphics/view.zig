@@ -477,10 +477,11 @@ pub const Scene = struct {
 
     scheduler: ?*api.UpdateScheduler = null,
 
-    init_function: ?api.ControlFunction = null,
-    dispose_function: ?api.ControlFunction = null,
-    update_action: api.UpdateActionFunction,
-    callback: ?api.UpdateActionCallback = null,
+    init_function: ?api.RegFunction = null,
+    dispose_function: ?api.RegFunction = null,
+    update_action: api.ActionFunction,
+    callback: ?api.ActionCallback = null,
+    registry: api.CallReg = api.CallReg{},
     attributes: api.Attributes = undefined,
 
     _loaded: bool = false,
@@ -495,6 +496,7 @@ pub const Scene = struct {
 
     pub fn construct(self: *Scene) void {
         self.attributes = api.Attributes.new();
+        self.registry.caller_id = self.id;
     }
 
     pub fn destruct(self: *Scene) void {
@@ -502,12 +504,12 @@ pub const Scene = struct {
         self.attributes = undefined;
     }
 
-    pub fn withUpdateAction(self: *Scene, action: api.UpdateActionFunction) *Scene {
+    pub fn withUpdateAction(self: *Scene, action: api.ActionFunction) *Scene {
         self.update_action = action;
         return self;
     }
 
-    pub fn withCallback(self: *Scene, callback: api.UpdateActionCallback) *Scene {
+    pub fn withCallback(self: *Scene, callback: api.ActionCallback) *Scene {
         self.callback = callback;
         return self;
     }
@@ -524,7 +526,7 @@ pub const Scene = struct {
                 return;
 
             if (self.init_function) |f|
-                f(self.id, UNDEF_INDEX);
+                f(self.registry);
         } else {
             stop(self);
             defer self._loaded = false;
@@ -532,7 +534,7 @@ pub const Scene = struct {
                 return;
 
             if (self.dispose_function) |f|
-                f(self.id, UNDEF_INDEX);
+                f(self.registry);
         }
     }
 
@@ -564,13 +566,13 @@ pub const Scene = struct {
                     continue;
             }
 
-            const result = scene.update_action(scene.id);
+            const result = scene.update_action(scene.registry);
             if (result == .Running)
                 continue;
 
             scene.stop();
             if (scene.callback) |call|
-                call(scene.id, result);
+                call(scene.registry, result);
 
             if (scene.delete_after_run)
                 Scene.disposeById(scene.id);

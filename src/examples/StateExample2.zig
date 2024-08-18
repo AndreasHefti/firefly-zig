@@ -48,10 +48,10 @@ fn init() void {
     }).id;
 
     // This is just to test registering conditions works as expected (can also be assigned directly below)
-    _ = api.Condition.new(.{ .name = "right down", .f = rightDown });
-    _ = api.Condition.new(.{ .name = "right up", .f = rightUp });
-    _ = api.Condition.new(.{ .name = "left down", .f = leftDown });
-    _ = api.Condition.new(.{ .name = "left up", .f = leftUp });
+    _ = api.Condition.new(.{ .name = "right down", .check = rightDown });
+    _ = api.Condition.new(.{ .name = "right up", .check = rightUp });
+    _ = api.Condition.new(.{ .name = "left down", .check = leftDown });
+    _ = api.Condition.new(.{ .name = "left up", .check = leftUp });
 
     const state_engine = EntityStateEngine.new(.{ .name = "MoveX" })
         .withState(.{ .id = 1, .name = "right down", .condition = api.Condition.functionByName("right down") })
@@ -98,18 +98,24 @@ inline fn changeY(entity_id: Index) void {
 }
 
 // 1
-fn rightDown(_: Index, entity_id: Index, current_sid: Index) bool {
-    const trans = ETransform.byId(entity_id) orelse return false;
-    if ((trans.position[0] < min_x and current_sid == 3) or (trans.position[1] < min_y and current_sid == 2)) {
-        if (current_sid == 3) changeX(entity_id) else changeY(entity_id);
+fn rightDown(reg: api.CallReg) bool {
+    const e_id = reg.id_1;
+    const c_id = reg.id_2;
+    const trans = ETransform.byId(e_id) orelse return false;
+    //std.debug.print("c_id: {any}  trans: {any}\n", .{ current_sid, trans });
+    if ((trans.position[0] < min_x and c_id == 3) or (trans.position[1] < min_y and c_id == 2)) {
+        if (c_id == 3) changeX(e_id) else changeY(e_id);
         return true;
     }
     return false;
 }
 
 // 2
-fn rightUp(_: Index, e_id: Index, c_id: Index) bool {
+fn rightUp(reg: api.CallReg) bool {
+    const e_id = reg.id_1;
+    const c_id = reg.id_2;
     const trans = ETransform.byId(e_id) orelse return false;
+    //std.debug.print("c_id: {any}  trans: {any}\n", .{ c_id, trans });
     if ((trans.position[0] < min_x and c_id == 4) or (trans.position[1] > max_y and c_id == 1)) {
         if (c_id == 4) changeX(e_id) else changeY(e_id);
         return true;
@@ -118,9 +124,11 @@ fn rightUp(_: Index, e_id: Index, c_id: Index) bool {
 }
 
 // 3
-fn leftDown(_: Index, e_id: Index, c_id: Index) bool {
+fn leftDown(reg: api.CallReg) bool {
+    const e_id = reg.id_1;
+    const c_id = reg.id_2;
     const trans = ETransform.byId(e_id) orelse return false;
-    //std.debug.print("c_id: {any}\n", .{(trans.position[0] > max_x and c_id == 1)});
+    //std.debug.print("c_id: {any}  trans: {any}\n", .{ c_id, trans });
     if ((trans.position[0] > max_x and c_id == 1) or (trans.position[1] < min_y and c_id == 4)) {
         if (c_id == 1) changeX(e_id) else changeY(e_id);
         return true;
@@ -129,8 +137,11 @@ fn leftDown(_: Index, e_id: Index, c_id: Index) bool {
 }
 
 // 4
-fn leftUp(_: Index, e_id: Index, c_id: Index) bool {
+fn leftUp(reg: api.CallReg) bool {
+    const e_id = reg.id_1;
+    const c_id = reg.id_2;
     const trans = ETransform.byId(e_id) orelse return false;
+    //std.debug.print("c_id: {any}  trans: {any}\n", .{ c_id, trans });
     if ((trans.position[0] > max_x and c_id == 2) or (trans.position[1] > max_y and c_id == 3)) {
         if (c_id == 2) changeX(e_id) else changeY(e_id);
         return true;

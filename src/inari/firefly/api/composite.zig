@@ -88,7 +88,7 @@ pub const Composite = struct {
         self: *Composite,
         task: api.Task,
         life_cycle: CompositeLifeCycle,
-        attributes: ?api.CallContext,
+        attributes: ?api.Attributes,
     ) *Composite {
         const _task = api.Task.new(task);
         _ = self.objects.add(CompositeObject{
@@ -183,9 +183,6 @@ pub fn CompositeTrait(comptime T: type) type {
             attributes: anytype,
         ) *T {
             checkInCreationState(self);
-
-            var attrs = api.Attributes.of(attributes);
-            if (attrs) |*a| a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
 
             _ = self.addTaskById(
                 api.Task.new(task).id,

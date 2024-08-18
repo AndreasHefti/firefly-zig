@@ -184,7 +184,7 @@ pub const Room = struct {
         }
     }
 
-    fn runRoom(_: Index, _: api.ActionResult) void {
+    fn runRoom(_: api.CallReg, _: api.ActionResult) void {
         var room = Room.byName(starting_room_ref.?).?;
         room.state = .RUNNING;
         game.resumeGame();
@@ -239,7 +239,7 @@ pub const Room = struct {
         defer self.state = .CREATED;
     }
 
-    fn deactivateRoomCallback(_: Index, _: api.ActionResult) void {
+    fn deactivateRoomCallback(_: api.CallReg, _: api.ActionResult) void {
         var room = Room.byName(stopping_room_ref.?).?;
         api.Composite.activateByName(room.name, false);
         room.state = .LOADED;
@@ -270,22 +270,22 @@ pub const ERoomTransition = struct {
     pub usingnamespace api.EComponent.Trait(ERoomTransition, "ERoomTransition");
 
     id: Index = UNDEF_INDEX,
-    condition: ?api.ConditionFunction = null,
+    condition: ?api.RegPredicate = null,
     target_room: String,
     target_transition: String,
     orientation: utils.Orientation,
 };
 
-fn createRoomTransition(context: api.TaskContext) void {
+fn createRoomTransition(reg: api.CallAttributes) void {
     // create the room transition entity
-    const condition_name = context.get(game.TaskAttributes.ROOM_TRANSITION_CONDITION).?;
-    const transition_name = context.get(game.TaskAttributes.ROOM_TRANSITION_NAME).?;
-    const target_room_name = context.get(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM).?;
-    const target_transition_name = context.get(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION).?;
-    const orientation_name = context.get(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
-    const bounds = utils.parseRectF(context.get(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?).?;
-    const view_id = graphics.View.idByName(context.get(game.TaskAttributes.VIEW_NAME).?).?;
-    const layer_id = graphics.Layer.idByName(context.get(game.TaskAttributes.LAYER_NAME).?).?;
+    const condition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_CONDITION).?;
+    const transition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_NAME).?;
+    const target_room_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM).?;
+    const target_transition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION).?;
+    const orientation_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
+    const bounds = utils.parseRectF(reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?).?;
+    const view_id = graphics.View.idByName(reg.getAttribute(game.TaskAttributes.VIEW_NAME).?).?;
+    const layer_id = graphics.Layer.idByName(reg.getAttribute(game.TaskAttributes.LAYER_NAME).?).?;
 
     _ = api.Entity.new(.{ .name = transition_name })
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
@@ -303,7 +303,7 @@ fn createRoomTransition(context: api.TaskContext) void {
         .activate();
 }
 
-// ContactCallback used to apply to player to get called on players transition contact constraint
+// ContactCallback used to apply to player to get called on players transition c ontact constraint
 fn applyRoomTransition(player_id: Index, contact: *physics.ContactScan) void {
     // check transition condition
     if (contact.mask.?.count() <= 8) return;
@@ -436,26 +436,26 @@ pub const SimpleRoomTransitionScene = struct {
         color = &graphics.EShape.byName(entity_name).?.color;
     }
 
-    fn entryInit(_: Index, _: Index) void {
+    fn entryInit(_: api.CallReg) void {
         entityInit(true);
     }
 
-    fn exitInit(_: Index, _: Index) void {
+    fn exitInit(_: api.CallReg) void {
         entityInit(false);
     }
 
-    fn disposeEntity(_: Index, _: Index) void {
+    fn disposeEntity(_: api.CallReg) void {
         api.Entity.disposeByName(entity_name);
     }
 
-    fn entryAction(_: Index) api.ActionResult {
+    fn entryAction(_: api.CallReg) api.ActionResult {
         color[3] -= @min(5, color[3]);
         if (color[3] <= 0)
             return api.ActionResult.Success;
         return api.ActionResult.Running;
     }
 
-    fn exitAction(_: Index) api.ActionResult {
+    fn exitAction(_: api.CallReg) api.ActionResult {
         color[3] -= @min(5, color[3]);
         if (color[3] <= 0)
             return api.ActionResult.Success;

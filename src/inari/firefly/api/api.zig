@@ -14,6 +14,7 @@ const control = @import("control.zig");
 const String = utils.String;
 const CString = utils.CString;
 const Index = utils.Index;
+const UNDEF_INDEX = utils.UNDEF_INDEX;
 const CInt = utils.CInt;
 const CUInt = firefly.utils.CUInt;
 const Float = utils.Float;
@@ -69,7 +70,6 @@ pub const GroupAspectGroup = component.GroupAspectGroup;
 pub const SubTypeTrait = component.SubTypeTrait;
 
 pub const Condition = control.Condition;
-pub const ConditionFunction = control.ConditionFunction;
 pub const System = system.System;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
@@ -81,13 +81,7 @@ pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const ControlFunction = control.ControlFunction;
-pub const ActionResult = control.ActionResult;
-pub const UpdateActionFunction = control.UpdateActionFunction;
-pub const UpdateActionCallback = control.UpdateActionCallback;
 pub const Task = control.Task;
-pub const TaskContext = control.TaskContext;
-pub const TaskFunction = control.TaskFunction;
-pub const TaskCallback = control.TaskCallback;
 pub const Trigger = control.Trigger;
 pub const Control = control.Control;
 pub const ControlSubTypeTrait = control.ControlSubTypeTrait;
@@ -263,9 +257,6 @@ pub const NamePool = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Attributes = struct {
-    c_ref1: ?Index = null,
-    c_ref2: ?Index = null,
-    c_ref3: ?Index = null,
     _map: std.StringHashMap(String),
 
     pub fn new() Attributes {
@@ -342,10 +333,7 @@ pub const Attributes = struct {
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.print(
-            "Attributes[ c_ref1:{any}, c_ref2:{any}, c_ref2:{any}, attrs: ",
-            .{ self.c_ref1, self.c_ref2, self.c_ref3 },
-        );
+        try writer.print("Attributes[ ", .{});
         var it = self._map.iterator();
         while (it.next()) |e| {
             try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
@@ -353,6 +341,127 @@ pub const Attributes = struct {
         try writer.print("]", .{});
     }
 };
+
+//////////////////////////////////////////////////////////////
+//// Call Register
+//////////////////////////////////////////////////////////////
+/// Arbitrary id and name register to be used with
+/// generic API function calls
+///
+pub const CallReg = struct {
+    // set by the caller and points back to the caller or owner of the registry
+    caller_id: Index = UNDEF_INDEX,
+
+    id_1: Index = UNDEF_INDEX,
+    id_2: Index = UNDEF_INDEX,
+    id_3: Index = UNDEF_INDEX,
+    id_4: Index = UNDEF_INDEX,
+    id_5: Index = UNDEF_INDEX,
+
+    name_1: ?String = null,
+    name_2: ?String = null,
+    name_3: ?String = null,
+    name_4: ?String = null,
+    name_5: ?String = null,
+
+    pub fn clear(self: *CallReg) void {
+        self.id_1 = UNDEF_INDEX;
+        self.id_2 = UNDEF_INDEX;
+        self.id_3 = UNDEF_INDEX;
+        self.id_4 = UNDEF_INDEX;
+        self.id_5 = UNDEF_INDEX;
+        self.name_1 = null;
+        self.name_2 = null;
+        self.name_3 = null;
+        self.name_4 = null;
+        self.name_5 = null;
+    }
+
+    pub fn format(
+        self: CallReg,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "CallReg[ caller_id:{d}, id_1:{d}, id_2:{d}, id_3:{d}, id_4:{d}, id_5:{d}][ name_1:{?s}, name_2:{?s}, name_3:{?s}, name_4:{?s}, name_5:{?s},]  ",
+            .{ self.caller_id, self.id_1, self.id_2, self.id_3, self.id_4, self.id_5, self.name_1, self.name_2, self.name_3, self.name_4, self.name_5 },
+        );
+    }
+};
+
+pub const CallAttributes = struct {
+    // set by the caller and points back to the caller or owner of the registry
+    caller_id: Index = UNDEF_INDEX,
+
+    id_1: Index = UNDEF_INDEX,
+    id_2: Index = UNDEF_INDEX,
+    id_3: Index = UNDEF_INDEX,
+    id_4: Index = UNDEF_INDEX,
+    id_5: Index = UNDEF_INDEX,
+
+    attributes: ?Attributes = null,
+
+    pub fn deinit(self: *CallAttributes) void {
+        if (self.attributes) |*p|
+            p.deinit();
+        self.attributes = undefined;
+    }
+
+    pub fn setAttribute(self: *CallAttributes, name: String, value: String) void {
+        if (self.attributes == null)
+            self.attributes = Attributes.new();
+
+        self.attributes.?.set(name, value);
+    }
+
+    pub fn setAttributes(self: *CallAttributes, attributes: Attributes) void {
+        if (self.attributes == null)
+            self.attributes = Attributes.new();
+
+        self.attributes.?.setAll(attributes);
+    }
+
+    pub fn getAttribute(self: CallAttributes, name: String) ?String {
+        if (self.attributes) |a| return a.get(name);
+        return null;
+    }
+
+    pub fn format(
+        self: CallAttributes,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "CallAttributes[ caller_id:{d}, id_1:{d}, id_2:{d}, id_3:{d}, id_4:{d}, id_5:{d}, ",
+            .{ self.caller_id, self.id_1, self.id_2, self.id_3, self.id_4, self.id_5 },
+        );
+        if (self.attributes) |p| {
+            try writer.print(" attributes: ", .{});
+            var i = p._map.iterator();
+            while (i.next()) |e|
+                try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
+        }
+        try writer.print(" ]", .{});
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Convenient Function Declarations
+//////////////////////////////////////////////////////////////
+
+pub const ActionResult = enum {
+    Running,
+    Success,
+    Failed,
+};
+
+pub const RegFunction = *const fn (CallReg) void;
+pub const RegPredicate = *const fn (CallReg) bool;
+pub const ActionFunction = *const fn (CallReg) ActionResult;
+pub const ActionCallback = *const fn (CallReg, ActionResult) void;
+pub const AttributedFunction = *const fn (CallAttributes) void;
 
 //////////////////////////////////////////////////////////////
 //// Convenient Functions

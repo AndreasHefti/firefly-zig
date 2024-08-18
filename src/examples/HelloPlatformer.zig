@@ -107,7 +107,7 @@ fn roomLoaded(_: Index) void {
 }
 
 var player_pos_ptr: *utils.PosF = undefined;
-fn createPlayer(_: api.TaskContext) void {
+fn createPlayer(_: api.CallAttributes) void {
     const sprite_id = graphics.SpriteTemplate.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },

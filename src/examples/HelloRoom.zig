@@ -123,7 +123,7 @@ fn pivot_control(_: Index, _: Index) void {
 // and pivot control is been activated.
 var start_scene_init = false;
 var color: *utils.Color = undefined;
-fn startSceneAction(_: Index) api.ActionResult {
+fn startSceneAction(_: api.CallReg) api.ActionResult {
     if (!start_scene_init) {
         // create overlay entity
         const entity = api.Entity.new(.{ .name = "StartSceneEntity" })

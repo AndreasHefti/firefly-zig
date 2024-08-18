@@ -50,10 +50,10 @@ pub fn init() !void {
     ContactTypes.ROOM_TRANSITION = physics.ContactTypeAspectGroup.getAspect("ROOM_TRANSITION");
 
     // conditions
-    _ = api.Condition.new(.{ .name = Conditions.GOES_WEST, .f = goesEast });
-    _ = api.Condition.new(.{ .name = Conditions.GOES_EAST, .f = goesWest });
-    _ = api.Condition.new(.{ .name = Conditions.GOES_NORTH, .f = goesNorth });
-    _ = api.Condition.new(.{ .name = Conditions.GOES_SOUTH, .f = goesSouth });
+    _ = api.Condition.new(.{ .name = Conditions.GOES_WEST, .check = goesEast });
+    _ = api.Condition.new(.{ .name = Conditions.GOES_EAST, .check = goesWest });
+    _ = api.Condition.new(.{ .name = Conditions.GOES_NORTH, .check = goesNorth });
+    _ = api.Condition.new(.{ .name = Conditions.GOES_SOUTH, .check = goesSouth });
 }
 
 pub fn deinit() void {
@@ -166,20 +166,20 @@ pub const Conditions = struct {
     pub const GOES_SOUTH = "GOES_SOUTH";
 };
 
-fn goesEast(entity_id: Index, _: Index, _: Index) bool {
-    return if (physics.EMovement.byId(entity_id)) |m| m.velocity[0] > 0 else false;
+fn goesEast(reg: api.CallReg) bool {
+    return if (physics.EMovement.byId(reg.id_1)) |m| m.velocity[0] > 0 else false;
 }
 
-fn goesWest(entity_id: Index, _: Index, _: Index) bool {
-    return if (physics.EMovement.byId(entity_id)) |m| m.velocity[0] < 0 else false;
+fn goesWest(reg: api.CallReg) bool {
+    return if (physics.EMovement.byId(reg.id_1)) |m| m.velocity[0] < 0 else false;
 }
 
-fn goesNorth(entity_id: Index, _: Index, _: Index) bool {
-    return if (physics.EMovement.byId(entity_id)) |m| m.velocity[1] < 0 else false;
+fn goesNorth(reg: api.CallReg) bool {
+    return if (physics.EMovement.byId(reg.id_1)) |m| m.velocity[1] < 0 else false;
 }
 
-fn goesSouth(entity_id: Index, _: Index, _: Index) bool {
-    return if (physics.EMovement.byId(entity_id)) |m| m.velocity[1] > 0 else false;
+fn goesSouth(reg: api.CallReg) bool {
+    return if (physics.EMovement.byId(reg.id_1)) |m| m.velocity[1] > 0 else false;
 }
 
 pub const SimpleRoomTransitionScene = world.SimpleRoomTransitionScene;

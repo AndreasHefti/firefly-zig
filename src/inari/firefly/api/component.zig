@@ -140,14 +140,6 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
 
         const pool = ComponentPool(T);
 
-        pub var id_register: [5]Index = .{
-            UNDEF_INDEX,
-            UNDEF_INDEX,
-            UNDEF_INDEX,
-            UNDEF_INDEX,
-            UNDEF_INDEX,
-        };
-
         pub fn allowSubtypes() bool {
             return context.subtypes;
         }
