@@ -11,14 +11,15 @@
      {
        "name": "t1",
        "object_type": "room_transition",
-       "build_task": "RoomTransitionBuilder",
+       "build_task": "ROOM_TRANSITION_BUILDER",
        "layer": "Foreground",
        "position": "-2,288",
        "attributes": [
-           { "name": "orientation", "value": "WEST"},
-           { "name": "room", "value": "Room1"},
-           { "name": "target", "value": "t1"},
-           { "name": "bounds", "value": "-2,288,4,16"}
+           { "name": "ROOM_TRANSITION_ORIENTATION", "value": "WEST"},
+           { "name": "ROOM_TRANSITION_CONDITION", "value": "GOES_WEST"},
+           { "name": "ROOM_TRANSITION_TARGET_ROOM", "value": "Room1"},
+           { "name": "ROOM_TRANSITION_TARGET_TRANSITION", "value": "t1"},
+           { "name": "ROOM_TRANSITION_BOUNDS", "value": "-2,288,4,16"}
        ]
      }
    ]

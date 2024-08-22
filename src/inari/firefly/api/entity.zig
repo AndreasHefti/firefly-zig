@@ -104,17 +104,22 @@ pub const EntityTypeCondition = struct {
 
     pub fn check(self: *EntityTypeCondition, id: Index) bool {
         const e_kind = Entity.byId(id).kind;
-        if (self.accept_kind) |*ak| {
-            if (self.accept_full_only) {
-                if (!ak.*.isPartOf(e_kind))
+        if (self.accept_kind) |ak| {
+            if (self.dismiss_kind) |dk| {
+                if (e_kind.hasAnyAspect(dk)) {
                     return false;
-            } else {
-                if (!e_kind.hasAnyAspect(ak.*))
-                    return false;
+                }
             }
+
+            if (self.accept_full_only) {
+                return ak.isPartOf(e_kind);
+            } else if (e_kind.hasAnyAspect(ak)) {
+                return true;
+            }
+            return false;
         }
-        if (self.dismiss_kind) |*dk| {
-            if (!dk.isNotPartOf(e_kind))
+        if (self.dismiss_kind) |dk| {
+            if (e_kind.hasAnyAspect(dk))
                 return false;
         }
 

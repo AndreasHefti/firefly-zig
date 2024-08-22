@@ -53,6 +53,9 @@ pub fn System(comptime T: type) type {
         var type_init = false;
         var component_ref: ?*SystemComponent = null;
 
+        // TODO make normal init with registration here.
+        //      name and info shall be mandatory vars on T
+        //      crate and use SystemTrait for T with context init like Component (activation, )
         pub fn createSystem(name: String, info: String, active: bool) void {
             defer type_init = true;
             if (type_init)
@@ -103,12 +106,10 @@ pub fn System(comptime T: type) type {
 
         fn notifyEntityChange(e: api.ComponentEvent) void {
             if (e.c_id) |id| {
+                if (has_entity_condition and !T.entity_condition.check(id))
+                    return;
                 switch (e.event_type) {
-                    .ACTIVATED => {
-                        if (has_entity_condition and !T.entity_condition.check(id))
-                            return;
-                        T.entityRegistration(id, true);
-                    },
+                    .ACTIVATED => T.entityRegistration(id, true),
                     .DEACTIVATING => T.entityRegistration(id, false),
                     else => {},
                 }

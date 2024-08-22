@@ -44,6 +44,8 @@ const speed = 1;
 var pivot: utils.PosF = .{ 0, 0 };
 
 fn init() void {
+    firefly.Engine.CoreSystems.ContactSystem.activate();
+    defer firefly.Engine.CoreSystems.ContactSystem.deactivate();
 
     // create view with two layer
     var view = graphics.View.new(.{
@@ -134,12 +136,20 @@ fn createPlayer(_: api.CallAttributes) void {
         .max_velocity_west = 50,
         .integrator = physics.EulerIntegrator,
     })
-        .withComponent(physics.EContactScan{
-        .collision_resolver = game.PlatformerCollisionResolver.new(.{
+        .withComponent(physics.EContactScan{ .collision_resolver = game.PlatformerCollisionResolver.new(
+        .{
             .contact_bounds = .{ 4, 1, 8, 14 },
             .view_id = graphics.View.idByName(view_name),
             .layer_id = graphics.Layer.idByName(layer2),
-        }),
+        },
+    ) })
+        .withConstraint(.{
+        .name = "Room_Transition",
+        .layer_id = graphics.Layer.idByName(layer2),
+        .bounds = .{ .rect = .{ 4, 1, 8, 19 } },
+        .type_filter = physics.ContactTypeKind.of(.{game.ContactTypes.ROOM_TRANSITION}),
+        .full_scan = true,
+        .callback = game.TransitionContactCallback,
     })
         .entity()
         .withActiveControlOf(game.SimplePlatformerHorizontalMoveControl{

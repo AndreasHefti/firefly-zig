@@ -225,7 +225,7 @@ pub const Contact = struct {
 //////////////////////////////////////////////////////////////
 //// Contact Constraint Component
 //////////////////////////////////////////////////////////////
-
+pub const ContactCallbackFunction = *const fn (entity_id: Index, contacts: *ContactScan) bool;
 pub const ContactConstraint = struct {
     pub usingnamespace api.Component.Trait(ContactConstraint, .{ .name = "ContactConstraint" });
 
@@ -244,6 +244,9 @@ pub const ContactConstraint = struct {
     /// Indicates if the engine shall make and store a full scan
     /// with individual Contacts data for each detected contact
     full_scan: bool = false,
+    // A contact callback, if defined, system calls the callback when this scan has any contact
+    // right after scan is done. System will stop proceeding with the scan if callback returns false
+    callback: ?ContactCallbackFunction = null,
     /// The concrete contact scan result that will be updated on every loop cycle related to this constraint
     scan: ContactScan = undefined,
 
@@ -253,7 +256,7 @@ pub const ContactConstraint = struct {
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.print("ContactConstraint({d}|{?s})[ bounds: {any} layer: {?d} type_filter: {?any} material_filter: {?any} full: {any} ]\n {any}", self);
+        try writer.print("ContactConstraint({d}|{?s})[ bounds: {any} layer: {?d} type_filter: {?any} material_filter: {?any} full: {any}, callback: {any} ]\n {any}", self);
     }
 
     pub fn construct(self: *ContactConstraint) void {
@@ -274,16 +277,18 @@ pub const ContactConstraint = struct {
     }
 
     pub fn match(self: *ContactConstraint, c_type: ?ContactTypeAspect, c_material: ?ContactMaterialAspect) bool {
-        if (c_type) |t| {
-            if (self.type_filter) |tf|
-                if (!tf.hasAspect(t)) return false;
+        if (self.type_filter) |tf| {
+            if (c_type) |t|
+                if (tf.hasAspect(t))
+                    return true;
         }
-        if (c_material) |m| {
-            if (self.material_filter) |mf|
-                if (!mf.hasAspect(m)) return false;
+        if (self.material_filter) |mf| {
+            if (c_material) |m|
+                if (mf.hasAspect(m))
+                    return true;
         }
 
-        return true;
+        return self.type_filter == null and self.material_filter == null and c_type == null and c_material == null;
     }
 
     pub fn scanEntity(
@@ -527,13 +532,6 @@ pub const EContact = struct {
     mask: ?utils.BitMask = null,
 };
 
-pub const ContactCallbackFunction = *const fn (entity_id: Index, contacts: *ContactScan) void;
-pub const ContactCallback = struct {
-    type: ?ContactTypeAspect = null,
-    material: ?ContactMaterialAspect = null,
-    function: ContactCallbackFunction,
-};
-
 pub const EContactScan = struct {
     pub usingnamespace api.EComponent.Trait(EContactScan, "EContactScan");
 
@@ -541,7 +539,6 @@ pub const EContactScan = struct {
 
     collision_resolver: ?CollisionResolver = null,
     constraints: utils.BitSet = undefined,
-    callback: []ContactCallback = &.{},
 
     pub fn construct(self: *EContactScan) void {
         self.constraints = utils.BitSet.new(firefly.api.ENTITY_ALLOC);
@@ -551,7 +548,6 @@ pub const EContactScan = struct {
         self.collision_resolver = null;
         self.constraints.deinit();
         self.constraints = undefined;
-        api.COMPONENT_ALLOC.free(self.callback);
     }
 
     pub fn activation(self: *EContactScan, active: bool) void {
@@ -570,12 +566,6 @@ pub const EContactScan = struct {
 
     pub fn withConstraint(self: *EContactScan, constraint: ContactConstraint) *EContactScan {
         self.constraints.set(ContactConstraint.new(constraint).id);
-        return self;
-    }
-
-    pub fn withCallback(self: *EContactScan, callback: ContactCallback) *EContactScan {
-        self.callback = api.COMPONENT_ALLOC.realloc(self.callback, self.callback.len + 1) catch unreachable;
-        self.callback[self.callback.len - 1] = callback;
         return self;
     }
 
@@ -741,19 +731,22 @@ pub const ContactSystem = struct {
         var next_constraint = e_scan.constraints.nextSetBit(0);
         while (next_constraint) |i| {
             const constraint = ContactConstraint.byId(i);
-            has_any_contact = applyScanForConstraint(e_scan.id, view_id, constraint);
+            const has_contact = applyScanForConstraint(e_scan.id, view_id, constraint);
+            if (has_contact) {
+                if (constraint.callback) |callback| {
+                    if (callback(e_scan.id, &constraint.scan))
+                        return;
+                }
+            }
+            has_any_contact = has_contact or has_any_contact;
             next_constraint = e_scan.constraints.nextSetBit(i + 1);
         }
+
+        std.debug.print("e_scan.hasAnyContact: {any} \n", .{e_scan.hasAnyContact()});
 
         if (has_any_contact) {
             if (e_scan.collision_resolver) |*resolver|
                 resolver.resolve(e_scan.id);
-
-            for (0..e_scan.callback.len) |i| {
-                const c = e_scan.callback[i];
-                if (e_scan.firstContactOf(c.type, c.material)) |contact_scan|
-                    c.function(e_scan.id, contact_scan);
-            }
         }
     }
 

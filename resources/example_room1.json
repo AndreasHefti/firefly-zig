@@ -11,27 +11,27 @@
      {
        "name": "t1",
        "object_type": "room_transition",
-       "build_task": "CREATE_ROOM_TRANSITION",
+       "build_task": "ROOM_TRANSITION_BUILDER",
        "layer": "Foreground",
        "position": "318,16",
        "attributes": [
-           { "name": "orientation", "value": "EAST"},
-           { "name": "room", "value": "Room2"},
-           { "name": "target", "value": "t1"},
-           { "name": "bounds", "value": "318,16,4,16"}
+          { "name": "ROOM_TRANSITION_ORIENTATION", "value": "EAST"},
+          { "name": "ROOM_TRANSITION_TARGET_ROOM", "value": "Room2"},
+          { "name": "ROOM_TRANSITION_TARGET_TRANSITION", "value": "t1"},
+          { "name": "ROOM_TRANSITION_BOUNDS", "value": "318,16,4,16"}
        ]
      },
      {
        "name": "t2",
        "object_type": "room_transition",
-       "build_task": "CREATE_ROOM_TRANSITION",
+       "build_task": "ROOM_TRANSITION_BUILDER",
        "layer": "Foreground",
        "position": "256,157",
        "attributes": [
-           { "name": "orientation", "value": "SOUTH"},
-           { "name": "room", "value": "Room3"},
-           { "name": "target", "value": "t1"},
-           { "name": "bounds", "value": "256,157,48,12"}
+          { "name": "ROOM_TRANSITION_ORIENTATION", "value": "SOUTH"},
+          { "name": "ROOM_TRANSITION_TARGET_ROOM", "value": "Room3"},
+          { "name": "ROOM_TRANSITION_TARGET_TRANSITION", "value": "t1"},
+          { "name": "ROOM_TRANSITION_BOUNDS", "value": "256,157,48,12"}
        ]
      }
    ]

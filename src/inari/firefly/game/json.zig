@@ -502,11 +502,11 @@ pub const JSONRoom = struct {
     end_scene: ?String = null,
     tile_sets: []const Resource,
     tile_map: Resource,
-    objects: ?[]const JSONTileMapObject = null,
+    objects: ?[]const JSONRoomObject = null,
 };
 
-pub const JSONTileMapObject = struct {
-    name: ?String = null,
+pub const JSONRoomObject = struct {
+    name: String,
     object_type: String,
     build_task: String,
     layer: ?String = null,
@@ -568,4 +568,27 @@ fn loadRoomFromJSON(attrs: api.CallAttributes) void {
     );
 
     // TODO add objects as activation tasks
+    if (jsonTileMapping.objects) |objects| {
+        for (0..objects.len) |i| {
+            var attributes = api.Attributes.new();
+
+            attributes.set(game.TaskAttributes.NAME, objects[i].name);
+            attributes.set(game.TaskAttributes.VIEW_NAME, view_name);
+            if (objects[i].layer) |layer|
+                attributes.set(game.TaskAttributes.LAYER_NAME, layer);
+            if (objects[i].position) |position|
+                attributes.set(game.TaskAttributes.POSITION, position);
+            if (objects[i].attributes) |attr| {
+                for (0..attr.len) |ai| {
+                    attributes.set(attr[ai].name, attr[ai].value);
+                }
+            }
+
+            _ = room.addTaskByName(
+                api.NamePool.alloc(objects[i].build_task).?,
+                api.CompositeLifeCycle.LOAD,
+                attributes,
+            );
+        }
+    }
 }

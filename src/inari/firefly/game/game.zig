@@ -34,7 +34,7 @@ pub fn init() !void {
     world.init();
     json.init();
     platformer.init();
-    GlobalStack.init();
+    //  GlobalStack.init();
 
     api.Control.registerSubtype(SimplePivotCamera);
 
@@ -66,59 +66,25 @@ pub fn deinit() void {
     json.deinit();
     world.deinit();
     tile.deinit();
-    GlobalStack.deinit();
+    //   GlobalStack.deinit();
 }
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const GlobalStack = struct {
-    var index_stack: std.ArrayList(Index) = undefined;
-    var name_stack: std.ArrayList(String) = undefined;
-
-    fn init() void {
-        index_stack = std.ArrayList(Index).init(api.ALLOC);
-        name_stack = std.ArrayList(String).init(api.ALLOC);
-    }
-
-    fn deinit() void {
-        index_stack.deinit();
-        name_stack.deinit();
-    }
-
-    pub fn putIndex(index: Index) void {
-        index_stack.append(index) catch unreachable;
-    }
-
-    pub fn popIndex() Index {
-        if (index_stack.items.len == 0)
-            @panic("Stack is empty");
-
-        return index_stack.swapRemove(index_stack.items.len - 1);
-    }
-
-    pub fn putName(name: String) void {
-        name_stack.append(name) catch unreachable;
-    }
-
-    pub fn popName() String {
-        if (name_stack.items.len == 0)
-            @panic("Stack is empty");
-
-        return name_stack.swapRemove(name_stack.items.len - 1);
-    }
-};
-
 pub const Groups = struct {
     pub var PAUSEABLE: api.GroupAspect = undefined;
 };
 
 pub const TaskAttributes = struct {
+    pub const NAME = "NAME";
     /// Name of the involved View
     pub const VIEW_NAME = "VIEW_NAME";
     /// Name of involved Layer
     pub const LAYER_NAME = "LAYER_NAME";
+    /// Position of involved object. Format ("x,y")
+    pub const POSITION = "POSITION";
     /// File resource name. If this is set, a task shall try to load the data from referenced file
     pub const FILE_RESOURCE = "FILE_RESOURCE";
     /// JSON String resource reference. If this is set, a task shall interpret this as JSON Sting
@@ -126,7 +92,6 @@ pub const TaskAttributes = struct {
     pub const JSON_RESOURCE = "JSON_RESOURCE";
     // The room name within the context
     pub const ROOM_NAME = "ROOM_NAME";
-    pub const ROOM_TRANSITION_NAME = "ROOM_TRANSITION_NAME";
     pub const ROOM_TRANSITION_CONDITION = "ROOM_TRANSITION_CONDITION";
     pub const ROOM_TRANSITION_BOUNDS = "ROOM_TRANSITION_BOUNDS";
     pub const ROOM_TRANSITION_ORIENTATION = "ROOM_TRANSITION_ORIENTATION";
@@ -226,6 +191,7 @@ pub const JSONTileSet = json.JSONTileSet;
 pub const Room = world.Room;
 pub const RoomState = world.RoomState;
 pub const Area = world.Area;
+pub const TransitionContactCallback = world.TransitionContactCallback;
 
 pub const PlatformerCollisionResolver = platformer.PlatformerCollisionResolver;
 pub const SimplePlatformerHorizontalMoveControl = platformer.SimplePlatformerHorizontalMoveControl;

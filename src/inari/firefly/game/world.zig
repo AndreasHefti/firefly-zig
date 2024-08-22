@@ -29,15 +29,12 @@ pub fn init() void {
         return;
 
     api.Composite.registerSubtype(Room);
+    api.EComponent.registerEntityComponent(ERoomTransition);
 
     _ = api.Task.new(.{
         .name = game.Tasks.ROOM_TRANSITION_BUILDER,
         .function = createRoomTransition,
     });
-    TransitionContactCallback = physics.ContactCallback{
-        .type = game.ContactTypes.ROOM_TRANSITION,
-        .function = applyRoomTransition,
-    };
 }
 
 pub fn deinit() void {
@@ -47,8 +44,6 @@ pub fn deinit() void {
 
     api.Task.disposeByName(game.Tasks.ROOM_TRANSITION_BUILDER);
 }
-
-pub var TransitionContactCallback: physics.ContactCallback = undefined;
 
 //////////////////////////////////////////////////////////////
 //// Area
@@ -266,6 +261,8 @@ pub const Room = struct {
 //// Room Transition
 //////////////////////////////////////////////////////////////
 
+var room_transition_registry = api.CallReg{};
+
 pub const ERoomTransition = struct {
     pub usingnamespace api.EComponent.Trait(ERoomTransition, "ERoomTransition");
 
@@ -278,11 +275,20 @@ pub const ERoomTransition = struct {
 
 fn createRoomTransition(reg: api.CallAttributes) void {
     // create the room transition entity
-    const condition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_CONDITION).?;
-    const transition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_NAME).?;
+    const orientation_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
+    const orientation = utils.Orientation.byName(orientation_name);
+    const condition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_CONDITION) orelse
+        switch (orientation) {
+        .EAST => game.Conditions.GOES_EAST,
+        .WEST => game.Conditions.GOES_WEST,
+        .NORTH => game.Conditions.GOES_NORTH,
+        .SOUTH => game.Conditions.GOES_SOUTH,
+        else => "NONE",
+    };
+    const transition_name = reg.getAttribute(game.TaskAttributes.NAME).?;
     const target_room_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM).?;
     const target_transition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION).?;
-    const orientation_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
+
     const bounds = utils.parseRectF(reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?).?;
     const view_id = graphics.View.idByName(reg.getAttribute(game.TaskAttributes.VIEW_NAME).?).?;
     const layer_id = graphics.Layer.idByName(reg.getAttribute(game.TaskAttributes.LAYER_NAME).?).?;
@@ -291,58 +297,55 @@ fn createRoomTransition(reg: api.CallAttributes) void {
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
         .withComponent(graphics.EView{ .view_id = view_id, .layer_id = layer_id })
         .withComponent(physics.EContact{
-        .bounds = .{ .rect = bounds },
+        .bounds = .{ .rect = .{ 0, 0, bounds[2], bounds[3] } },
         .type = game.ContactTypes.ROOM_TRANSITION,
     })
         .withComponent(ERoomTransition{
         .condition = api.Condition.functionByName(condition_name),
         .target_room = target_room_name,
         .target_transition = target_transition_name,
-        .orientation = utils.Orientation.byName(orientation_name),
+        .orientation = orientation,
     })
         .activate();
 }
 
-// ContactCallback used to apply to player to get called on players transition c ontact constraint
-fn applyRoomTransition(player_id: Index, contact: *physics.ContactScan) void {
+// ContactCallback used to apply to player to get called on players transition contact constraint
+pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan) bool {
     // check transition condition
-    if (contact.mask.?.count() <= 8) return;
+    if (contact.mask.?.count() <= 8) return false;
 
-    const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return;
+    const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return false;
     const transition_id = c.entity_id;
     const player = api.Entity.byId(player_id);
-    const player_name = player.name orelse return;
-    const move = physics.EMovement.byId(player_id) orelse return;
-    const transition = ERoomTransition.byId(transition_id) orelse return;
+    const player_name = player.name orelse return false;
+    const move = physics.EMovement.byId(player_id) orelse return false;
+    const transition = ERoomTransition.byId(transition_id) orelse return false;
 
     switch (transition.orientation) {
-        .EAST => if (move.velocity[0] <= 0) return,
-        .WEST => if (move.velocity[0] >= 0) return,
-        .NORTH => if (move.velocity[1] >= 0) return,
-        .SOUTH => if (move.velocity[1] <= 0) return,
-        else => return,
+        .EAST => if (move.velocity[0] <= 0) return false,
+        .WEST => if (move.velocity[0] >= 0) return false,
+        .NORTH => if (move.velocity[1] >= 0) return false,
+        .SOUTH => if (move.velocity[1] <= 0) return false,
+        else => return false,
     }
 
     // stop current room with callback
-    // Stack Index: player_id, transition_id
-    game.GlobalStack.putIndex(player_id);
-    game.GlobalStack.putIndex(transition_id);
-    // Stack Name: target_room, target_transition,player_name
-    game.GlobalStack.putName(transition.target_room);
-    game.GlobalStack.putName(transition.target_transition);
-    game.GlobalStack.putName(player_name);
+    room_transition_registry.id_1 = player_id;
+    room_transition_registry.id_2 = transition_id;
+    room_transition_registry.name_1 = player_name;
+    room_transition_registry.name_2 = transition.target_room;
+    room_transition_registry.name_3 = transition.target_transition;
 
-    game.Room.stopRoom(player_name, transitionRoomCallback);
+    game.Room.stopRoom(player_name, roomStoppedCallback);
+    return true;
 }
 
-fn transitionRoomCallback(_: Index) void {
-    // Stack Index: transition_id player_id
-    const source_transition_id = game.GlobalStack.popIndex();
-    const player_id = game.GlobalStack.popIndex();
-    // Stack Name: target_transition, target_room
-    const target_transition = game.GlobalStack.popName();
-    const target_room_name = game.GlobalStack.popName();
-    const player_name = game.GlobalStack.popName();
+fn roomStoppedCallback(_: Index) void {
+    const player_id = room_transition_registry.id_1;
+    const source_transition_id = room_transition_registry.id_2;
+    const player_name = room_transition_registry.name_1.?;
+    const target_room_name = room_transition_registry.name_2.?;
+    const target_transition = room_transition_registry.name_3.?;
 
     // activate new room also load room if not loaded
     const target_room = Room.byName(target_room_name) orelse return;
@@ -370,6 +373,7 @@ fn transitionRoomCallback(_: Index) void {
         else => {},
     }
 
+    // start new room
     target_room.start(player_name, null);
 }
 

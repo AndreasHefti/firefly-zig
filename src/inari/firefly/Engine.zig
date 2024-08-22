@@ -18,6 +18,7 @@ var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 var running = false;
 
+// TODO remove this after System refactoring. Use Traits instead
 pub const CoreSystems = struct {
     pub const StateSystem = struct {
         pub const name = "StateSystem";
