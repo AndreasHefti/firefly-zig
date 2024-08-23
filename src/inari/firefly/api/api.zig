@@ -214,9 +214,10 @@ pub const NamePool = struct {
 
     pub fn concat(s1: String, s2: String, delimiter: ?String) String {
         const c = if (delimiter) |d|
-            std.fmt.allocPrint(ALLOC, "{s}{s}{s}", .{ s1, s2, d }) catch unreachable
+            std.fmt.allocPrint(ALLOC, "{s}{s}{s}", .{ s1, d, s2 }) catch unreachable
         else
             std.fmt.allocPrint(ALLOC, "{s}{s}", .{ s1, s2 }) catch unreachable;
+
         defer ALLOC.free(c);
         return alloc(c).?;
     }
