@@ -51,7 +51,6 @@ pub const ContactSystem = contact.ContactSystem;
 pub const CollisionResolverFunction = contact.CollisionResolverFunction;
 pub const CollisionResolver = contact.CollisionResolver;
 pub const ContactConstraint = contact.ContactConstraint;
-pub const ContactCallback = contact.ContactCallback;
 pub const ContactCallbackFunction = contact.ContactCallbackFunction;
 pub const IContactMap = contact.IContactMap;
 pub const ContactTypeAspectGroup = contact.ContactTypeAspectGroup;
@@ -61,7 +60,6 @@ pub const ContactMaterialAspectGroup = contact.ContactMaterialAspectGroup;
 pub const ContactMaterialAspect = contact.ContactMaterialAspect;
 pub const ContactMaterialKind = contact.ContactMaterialKind;
 pub const DebugCollisionResolver = contact.DebugCollisionResolver;
-pub const addDummyContactMap = contact.addDummyContactMap;
 
 //////////////////////////////////////////////////////////////
 //// module init

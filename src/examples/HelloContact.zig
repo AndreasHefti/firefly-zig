@@ -29,7 +29,6 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 
     firefly.Engine.CoreSystems.ContactSystem.activate();
     firefly.Engine.CoreSystems.EntityControlSystem.activate();
-    firefly.physics.addDummyContactMap(null, null);
     firefly.Engine.startWindow(.{
         .width = 800,
         .height = 600,

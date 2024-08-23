@@ -609,12 +609,9 @@ pub const EContactScan = struct {
 //////////////////////////////////////////////////////////////
 
 pub const IContactMap = struct {
-    view_id: ?Index = null,
-    layer_id: ?Index = null,
-
     entityRegistration: *const fn (Index, register: bool) void = undefined,
     update: *const fn () void = undefined,
-    getPotentialContactIds: *const fn (region: utils.RectF) ?[]Index = undefined,
+    getPotentialContactIds: *const fn (region: utils.RectF, view_id: ?Index, layer_id: ?Index) ?utils.BitSet = undefined,
     deinit: api.Deinit = undefined,
 
     fn init(initImpl: *const fn (*IContactMap) void) IContactMap {
@@ -624,51 +621,6 @@ pub const IContactMap = struct {
     }
 };
 
-pub inline fn addDummyContactMap(view_id: ?Index, layer_id: ?Index) void {
-    const contact_map = IContactMap.init(DummyContactMap(view_id, layer_id).initImpl);
-    _ = ContactSystem.contact_maps.add(contact_map);
-}
-
-pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
-    return struct {
-        const Self = @This();
-        var initialized = false;
-
-        var entity_ids: utils.DynIndexArray = undefined;
-
-        fn initImpl(interface: *IContactMap) void {
-            defer Self.initialized = true;
-            if (Self.initialized)
-                return;
-
-            entity_ids = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 50);
-
-            interface.view_id = view_id;
-            interface.layer_id = layer_id;
-            interface.deinit = Self.deinit;
-            interface.entityRegistration = Self.entityRegistration;
-            interface.update = Self.update;
-            interface.getPotentialContactIds = Self.getPotentialContactIds;
-        }
-
-        fn deinit() void {
-            entity_ids.deinit();
-        }
-
-        fn entityRegistration(entity_id: Index, register: bool) void {
-            if (register) entity_ids.add(entity_id) else entity_ids.removeFirst(entity_id);
-        }
-
-        fn update() void {
-            // does nothing since DummyContactMap is just an ordinary list
-        }
-
-        fn getPotentialContactIds(_: utils.RectF) ?[]Index {
-            return entity_ids.items[0..entity_ids.size_pointer];
-        }
-    };
-}
-
 //////////////////////////////////////////////////////////////
 //// Contact System
 //////////////////////////////////////////////////////////////
@@ -676,36 +628,30 @@ pub fn DummyContactMap(view_id: ?Index, layer_id: ?Index) type {
 pub const ContactSystem = struct {
     pub var entity_condition: api.EntityTypeCondition = undefined;
 
-    var contact_maps: utils.DynArray(IContactMap) = undefined;
+    var simple_mapping: utils.BitSet = undefined;
+    var contact_map: ?IContactMap = null;
 
     pub fn systemInit() void {
+        simple_mapping = utils.BitSet.new(api.ALLOC);
         entity_condition = api.EntityTypeCondition{
             .accept_kind = api.EComponentAspectGroup.newKindOf(.{EContact}),
             .dismiss_kind = api.EComponentAspectGroup.newKindOf(.{graphics.ETile}),
         };
-        contact_maps = utils.DynArray(IContactMap).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 5);
         firefly.physics.subscribeMovement(processMoved);
     }
 
     pub fn systemDeinit() void {
+        simple_mapping.deinit();
+        simple_mapping = undefined;
         firefly.physics.unsubscribeMovement(processMoved);
         entity_condition = undefined;
-        var next = contact_maps.slots.nextSetBit(0);
-        while (next) |i| {
-            if (contact_maps.get(i)) |map|
-                map.deinit();
-            next = contact_maps.slots.nextSetBit(i + 1);
-        }
-        contact_maps.deinit();
-        contact_maps = undefined;
     }
 
     pub fn entityRegistration(id: Index, register: bool) void {
-        var next = contact_maps.slots.nextSetBit(0);
-        while (next) |i| {
-            if (contact_maps.get(i)) |map|
-                map.entityRegistration(id, register);
-            next = contact_maps.slots.nextSetBit(i + 1);
+        if (contact_map) |cm| {
+            cm.entityRegistration(id, register);
+        } else {
+            simple_mapping.setValue(id, register);
         }
     }
 
@@ -791,23 +737,24 @@ pub const ContactSystem = struct {
         layer_id: ?Index,
     ) bool {
         var has_any_contact = false;
-        var next = contact_maps.slots.nextSetBit(0);
+        const entities = if (contact_map != null)
+            contact_map.?.getPotentialContactIds(
+                world_contact_bounds,
+                view_id,
+                layer_id,
+            ) orelse simple_mapping
+        else
+            simple_mapping;
+
+        var next = entities.nextSetBit(0);
         while (next) |i| {
-            if (contact_maps.get(i)) |map| {
-                if (graphics.ViewLayerMapping.match(map.view_id, view_id, map.layer_id, layer_id)) {
-                    if (map.getPotentialContactIds(world_contact_bounds)) |entity_ids| {
-                        for (entity_ids) |entity_id| {
-                            if (entity_id == scan_entity_id) continue;
-                            has_any_contact = has_any_contact or constraint.scanEntity(
-                                scan_entity_id,
-                                entity_id,
-                                null,
-                            );
-                        }
-                    }
-                }
-            }
-            next = contact_maps.slots.nextSetBit(i + 1);
+            next = entities.nextSetBit(i + 1);
+            if (i == scan_entity_id) continue;
+            has_any_contact = has_any_contact or constraint.scanEntity(
+                scan_entity_id,
+                i,
+                null,
+            );
         }
 
         return has_any_contact;
