@@ -321,6 +321,10 @@ pub const Attributes = struct {
         return self._map.get(name);
     }
 
+    pub fn getCopy(self: Attributes, name: String) ?String {
+        return NamePool.alloc(self._map.get(name));
+    }
+
     pub fn remove(self: *Attributes, name: String) void {
         if (self._map.fetchRemove(name)) |kv| {
             ALLOC.free(kv.key);
@@ -425,6 +429,11 @@ pub const CallAttributes = struct {
 
     pub fn getAttribute(self: CallAttributes, name: String) ?String {
         if (self.attributes) |a| return a.get(name);
+        return null;
+    }
+
+    pub fn getAttributeCopy(self: CallAttributes, name: String) ?String {
+        if (self.attributes) |a| return a.getCopy(name);
         return null;
     }
 

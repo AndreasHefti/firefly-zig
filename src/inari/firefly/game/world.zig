@@ -285,9 +285,9 @@ fn createRoomTransition(reg: api.CallAttributes) void {
         .SOUTH => game.Conditions.GOES_SOUTH,
         else => "NONE",
     };
-    const transition_name = reg.getAttribute(game.TaskAttributes.NAME).?;
-    const target_room_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM).?;
-    const target_transition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION).?;
+    const transition_name = reg.getAttributeCopy(game.TaskAttributes.NAME).?;
+    const target_room_name = reg.getAttributeCopy(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM).?;
+    const target_transition_name = reg.getAttributeCopy(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION).?;
 
     const bounds = utils.parseRectF(reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?).?;
     const view_id = graphics.View.idByName(reg.getAttribute(game.TaskAttributes.VIEW_NAME).?).?;
