@@ -41,9 +41,6 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    // deinit renderer
-    api.System(DefaultTileGridRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////

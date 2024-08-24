@@ -42,9 +42,6 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    // deinit renderer
-    api.System(DefaultTextRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////

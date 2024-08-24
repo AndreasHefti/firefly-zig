@@ -43,7 +43,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    api.System(ViewRenderer).disposeSystem();
+    //api.System(ViewRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////

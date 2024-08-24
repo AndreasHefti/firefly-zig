@@ -38,9 +38,6 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    api.System(StateSystem).disposeSystem();
-    api.System(EntityStateSystem).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////////////////

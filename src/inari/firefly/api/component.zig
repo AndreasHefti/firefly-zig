@@ -186,7 +186,8 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
         }
 
         pub fn disposeById(id: Index) void {
-            pool.clear(id);
+            if (id != UNDEF_INDEX)
+                pool.clear(id);
         }
 
         pub fn processBitSet(indices: *utils.BitSet, f: *const fn (*T) void) void {
@@ -644,6 +645,9 @@ fn ComponentPool(comptime T: type) type {
         }
 
         fn clear(id: Index) void {
+            if (id == UNDEF_INDEX)
+                return;
+
             if (active_mapping) |*am| {
                 if (am.isSet(id))
                     activate(id, false);

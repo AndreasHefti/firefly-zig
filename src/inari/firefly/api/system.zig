@@ -50,15 +50,13 @@ pub fn System(comptime T: type) type {
     return struct {
         const Self = @This();
 
-        var type_init = false;
-        var component_ref: ?*SystemComponent = null;
+        var component_ref: ?Index = null;
 
         // TODO make normal init with registration here.
         //      name and info shall be mandatory vars on T
         //      crate and use SystemTrait for T with context init like Component (activation, )
         pub fn createSystem(name: String, info: String, active: bool) void {
-            defer type_init = true;
-            if (type_init)
+            if (component_ref != null)
                 return;
 
             component_ref = SystemComponent.new(.{
@@ -66,7 +64,7 @@ pub fn System(comptime T: type) type {
                 .info = info,
                 .onActivation = activation,
                 .onDestruct = destruct,
-            });
+            }).id;
 
             if (has_init)
                 T.systemInit();
@@ -76,19 +74,18 @@ pub fn System(comptime T: type) type {
         }
 
         pub fn disposeSystem() void {
-            defer type_init = false;
-            if (!type_init)
-                return;
-
-            if (component_ref) |ref| {
+            if (component_ref) |id| {
                 defer component_ref = null;
-                SystemComponent.disposeById(ref.id);
+                SystemComponent.disposeById(id);
             }
         }
 
         fn destruct() void {
-            if (has_deinit)
-                T.systemDeinit();
+            if (component_ref != null) {
+                if (has_deinit)
+                    T.systemDeinit();
+            }
+            component_ref = null;
         }
 
         fn notifyComponentChange(e: api.ComponentEvent) void {

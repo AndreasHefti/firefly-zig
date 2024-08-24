@@ -43,9 +43,6 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    // deinit renderer
-    api.System(DefaultSpriteRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -382,31 +379,4 @@ const DefaultSpriteRenderer = struct {
             }
         }
     }
-
-    // pub fn renderView(e: graphics.ViewRenderEvent) void {
-    //     if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
-    //         var i = all.nextSetBit(0);
-    //         while (i) |id| {
-    //             i = all.nextSetBit(id + 1);
-    //             // render the sprite
-    //             const es: *ESprite = ESprite.byId(id) orelse continue;
-    //             const trans: *graphics.ETransform = graphics.ETransform.byId(id) orelse continue;
-    //             const template_id = es.template_id orelse continue;
-
-    //             const sprite_template: *SpriteTemplate = SpriteTemplate.byId(template_id);
-    //             const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
-    //             firefly.api.rendering.renderSprite(
-    //                 sprite_template.texture_binding.?,
-    //                 sprite_template.texture_bounds,
-    //                 trans.position,
-    //                 trans.pivot,
-    //                 trans.scale,
-    //                 trans.rotation,
-    //                 es.tint_color,
-    //                 es.blend_mode,
-    //                 multi,
-    //             );
-    //         }
-    //     }
-    // }
 };

@@ -47,8 +47,6 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    api.System(MovementSystem).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
