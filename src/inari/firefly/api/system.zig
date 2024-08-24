@@ -26,7 +26,6 @@ pub const System = struct {
     // struct fields of a System
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    info: ?String = null,
     onActivation: ?*const fn (bool) void = null,
     onDestruct: *const fn () void,
 
@@ -47,8 +46,8 @@ pub const System = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "{?s}[ id:{d}, info:{?s} ]",
-            .{ self.name, self.id, self.info },
+            "{?s}[ id:{d} ]",
+            .{ self.name, self.id },
         );
     }
 };
@@ -84,16 +83,12 @@ pub fn SystemTrait(comptime T: type) type {
 
         var component_ref: ?Index = null;
 
-        // TODO make normal init with registration here.
-        //      name and info shall be mandatory vars on T
-        //      crate and use SystemTrait for T with context init like Component (activation, )
-        pub fn createSystem(name: String, info: String) void {
+        pub fn init() void {
             if (component_ref != null)
                 return;
 
             component_ref = System.new(.{
-                .name = name,
-                .info = info,
+                .name = @typeName(T),
                 .onActivation = activation,
                 .onDestruct = destruct,
             }).id;
@@ -107,6 +102,14 @@ pub fn SystemTrait(comptime T: type) type {
                 defer component_ref = null;
                 System.disposeById(id);
             }
+        }
+
+        pub fn activate() void {
+            System.activateById(component_ref.?, true);
+        }
+
+        pub fn deactivate() void {
+            System.activateById(component_ref.?, false);
         }
 
         fn destruct() void {

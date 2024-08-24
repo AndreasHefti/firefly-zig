@@ -21,10 +21,7 @@ pub fn init() void {
         return;
 
     api.EComponent.registerEntityComponent(EMovement);
-    api.SystemTrait(MovementSystem).createSystem(
-        "MovementSystem",
-        "Processes the movement for all Entities with EMovement component",
-    );
+    MovementSystem.init();
 
     MovFlags.ON_SLOPE_UP = MovementAspectGroup.getAspect("ON_SLOPE_UP");
     MovFlags.ON_SLOPE_DOWN = MovementAspectGroup.getAspect("ON_SLOPE_DOWN");
@@ -282,7 +279,8 @@ pub fn adjustVelocity(movement: *EMovement) void {
 //// Move System
 //////////////////////////////////////////////////////////////
 
-const MovementSystem = struct {
+pub const MovementSystem = struct {
+    pub usingnamespace api.SystemTrait(MovementSystem);
     pub var entity_condition: api.EntityTypeCondition = undefined;
 
     var movements: utils.BitSet = undefined;

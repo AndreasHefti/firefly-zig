@@ -21,15 +21,8 @@ pub fn init() void {
     api.Component.registerComponent(StateEngine);
     api.Component.registerComponent(EntityStateEngine);
     api.EComponent.registerEntityComponent(EState);
-
-    api.SystemTrait(StateSystem).createSystem(
-        "StateSystem",
-        "Updates all active StateEngine components, and change state on conditions",
-    );
-    api.SystemTrait(EntityStateSystem).createSystem(
-        "EntityStateSystem",
-        "Updates all active Entities with EState components, and change state on conditions",
-    );
+    StateSystem.init();
+    EntityStateSystem.init();
 }
 
 pub fn deinit() void {
@@ -383,7 +376,9 @@ pub const EState = struct {
 //// State Systems
 //////////////////////////////////////////////////////////////
 
-const StateSystem = struct {
+pub const StateSystem = struct {
+    pub usingnamespace api.SystemTrait(StateSystem);
+
     pub fn update(_: api.UpdateEvent) void {
         StateEngine.processActive(processEngine);
     }
@@ -410,7 +405,9 @@ const StateSystem = struct {
     }
 };
 
-const EntityStateSystem = struct {
+pub const EntityStateSystem = struct {
+    pub usingnamespace api.SystemTrait(EntityStateSystem);
+
     pub var entity_condition: api.EntityTypeCondition = undefined;
 
     var entities: utils.BitSet = undefined;

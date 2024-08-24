@@ -25,16 +25,9 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    // register Assets sub types
     api.Asset.registerSubtype(Font);
-    // init components and entities
     api.EComponent.registerEntityComponent(EText);
-
-    // init renderer
-    api.SystemTrait(DefaultTextRenderer).createSystem(
-        "DefaultTextRenderer",
-        "Render Entities with ETransform and EText components",
-    );
+    DefaultTextRenderer.init();
 }
 
 pub fn deinit() void {
@@ -109,7 +102,8 @@ pub const EText = struct {
 //// Default Text Renderer System
 //////////////////////////////////////////////////////////////
 
-const DefaultTextRenderer = struct {
+pub const DefaultTextRenderer = struct {
+    pub usingnamespace api.SystemTrait(DefaultTextRenderer);
     pub var entity_condition: api.EntityTypeCondition = undefined;
     var text_refs: graphics.ViewLayerMapping = undefined;
 

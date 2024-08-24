@@ -22,10 +22,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.SystemTrait(AnimationSystem).createSystem(
-        "AnimationSystem",
-        "Updates all active animations",
-    );
+    AnimationSystem.init();
     AnimationSystem.registerAnimationType(EasedValueIntegration);
     AnimationSystem.registerAnimationType(EasedColorIntegration);
     AnimationSystem.registerAnimationType(IndexFrameIntegration);
@@ -319,6 +316,7 @@ pub const EAnimation = struct {
 //////////////////////////////////////////////////////////////
 
 pub const AnimationSystem = struct {
+    pub usingnamespace api.SystemTrait(AnimationSystem);
     var animation_type_refs: utils.DynArray(AnimationTypeReference) = undefined;
     var animation_refs: utils.DynArray(IAnimation) = undefined;
 

@@ -26,10 +26,7 @@ pub fn init() void {
     api.Component.registerComponent(ContactConstraint);
     api.EComponent.registerEntityComponent(EContact);
     api.EComponent.registerEntityComponent(EContactScan);
-    api.SystemTrait(ContactSystem).createSystem(
-        "ContactSystem",
-        "Processes contact scans for all moved entities per frame",
-    );
+    ContactSystem.init();
 }
 
 pub fn deinit() void {
@@ -623,6 +620,7 @@ pub const IContactMap = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ContactSystem = struct {
+    pub usingnamespace api.SystemTrait(ContactSystem);
     pub var entity_condition: api.EntityTypeCondition = undefined;
 
     var simple_mapping: utils.BitSet = undefined;

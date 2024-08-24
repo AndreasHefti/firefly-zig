@@ -21,11 +21,7 @@ pub fn init() !void {
         return;
 
     api.EComponent.registerEntityComponent(EShape);
-    // init renderer
-    api.SystemTrait(DefaultShapeRenderer).createSystem(
-        "DefaultShapeRenderer",
-        "Default renderer for shape based entities",
-    );
+    DefaultShapeRenderer.init();
 }
 
 pub fn deinit() void {
@@ -71,7 +67,8 @@ pub const EShape = struct {
 //// Default Shape Renderer
 //////////////////////////////////////////////////////////////
 
-const DefaultShapeRenderer = struct {
+pub const DefaultShapeRenderer = struct {
+    pub usingnamespace api.SystemTrait(DefaultShapeRenderer);
     pub var entity_condition: api.EntityTypeCondition = undefined;
     var shape_refs: graphics.ViewLayerMapping = undefined;
 

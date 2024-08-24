@@ -26,23 +26,18 @@ pub fn init() !void {
     if (initialized)
         return;
 
+    ViewRenderer.init();
     api.Component.registerComponent(Layer);
     api.Component.registerComponent(View);
     api.Component.registerComponent(Scene);
     api.EComponent.registerEntityComponent(EView);
     api.EComponent.registerEntityComponent(ETransform);
-    api.SystemTrait(ViewRenderer).createSystem(
-        "ViewRenderer",
-        "Emits api.ViewRenderEvent in order of active Views and its Layers",
-    );
 }
 
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    //api.System(ViewRenderer).disposeSystem();
 }
 
 //////////////////////////////////////////////////////////////
@@ -584,6 +579,7 @@ pub const Scene = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ViewRenderer = struct {
+    pub usingnamespace api.SystemTrait(ViewRenderer);
     var VIEW_RENDER_EVENT = api.ViewRenderEvent{};
     pub const render_order = 0;
 

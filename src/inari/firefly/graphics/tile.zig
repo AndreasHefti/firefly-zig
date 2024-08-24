@@ -29,11 +29,7 @@ pub fn init() !void {
     BasicTileTypes.UNDEFINED = TileTypeAspectGroup.getAspect("UNDEFINED");
     api.Component.registerComponent(TileGrid);
     api.EComponent.registerEntityComponent(ETile);
-    // init renderer
-    api.SystemTrait(DefaultTileGridRenderer).createSystem(
-        "DefaultTileGridRenderer",
-        "Render Entities referenced in all active TileGrid",
-    );
+    DefaultTileGridRenderer.init();
 }
 
 pub fn deinit() void {
@@ -346,7 +342,8 @@ pub const TileGrid = struct {
 //// Default Tile Grid Renderer
 //////////////////////////////////////////////////////////////
 
-const DefaultTileGridRenderer = struct {
+pub const DefaultTileGridRenderer = struct {
+    pub usingnamespace api.SystemTrait(DefaultTileGridRenderer);
     pub const component_register_type = TileGrid;
     var tile_grid_refs: graphics.ViewLayerMapping = undefined;
 

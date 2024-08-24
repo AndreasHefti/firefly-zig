@@ -33,6 +33,7 @@ pub const MovementAspectGroup = movement.MovementAspectGroup;
 pub const MovementAspect = movement.MovementAspect;
 pub const MovementKind = movement.MovementKind;
 pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: Float) bool;
+pub const MovementSystem = movement.MovementSystem;
 
 pub const SimpleStepIntegrator = movement.SimpleStepIntegrator;
 pub const VerletIntegrator = movement.VerletIntegrator;
@@ -76,8 +77,6 @@ pub fn init(_: firefly.api.InitContext) !void {
     movement.init();
     audio.init();
     contact.init();
-    // TODO
-
 }
 
 pub fn deinit() void {
@@ -89,5 +88,4 @@ pub fn deinit() void {
     movement.deinit();
     audio.deinit();
     contact.deinit();
-    // TODO
 }

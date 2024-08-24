@@ -1,5 +1,6 @@
 const std = @import("std");
 const firefly = @import("firefly.zig");
+const api = firefly.api;
 
 const System = firefly.api.System;
 const UpdateEvent = firefly.api.UpdateEvent;
@@ -20,17 +21,17 @@ var running = false;
 
 // TODO remove this after System refactoring. Use Traits instead
 pub const CoreSystems = struct {
-    pub const STATE = "StateSystem";
-    pub const ENTITY_STATE = "EntityStateSystem";
-    pub const ANIMATION = "AnimationSystem";
-    pub const MOVEMENT = "MovementSystem";
-    pub const CONTACT = "ContactSystem";
+    pub const STATE = @typeName(api.StateSystem);
+    pub const ENTITY_STATE = @typeName(api.EntityStateSystem);
+    pub const ANIMATION = @typeName(firefly.physics.AnimationSystem);
+    pub const MOVEMENT = @typeName(firefly.physics.MovementSystem);
+    pub const CONTACT = @typeName(firefly.physics.ContactSystem);
 
-    pub const VIEW_RENDERER = "ViewRenderer";
-    pub const TILE_RENDERER = "DefaultTileGridRenderer";
-    pub const SPRITE_RENDERER = "DefaultSpriteRenderer";
-    pub const SHAPE_RENDERER = "DefaultShapeRenderer";
-    pub const TEXT_RENDERER = "DefaultTextRenderer";
+    pub const VIEW_RENDERER = @typeName(firefly.graphics.ViewRenderer);
+    pub const TILE_RENDERER = @typeName(firefly.graphics.DefaultTileGridRenderer);
+    pub const SPRITE_RENDERER = @typeName(firefly.graphics.DefaultSpriteRenderer);
+    pub const SHAPE_RENDERER = @typeName(firefly.graphics.DefaultShapeRenderer);
+    pub const TEXT_RENDERER = @typeName(firefly.graphics.DefaultTextRenderer);
 
     pub const DEFAULT_SYSTEM_ORDER = [_]String{
         CoreSystems.ENTITY_STATE,

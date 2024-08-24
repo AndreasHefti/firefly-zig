@@ -26,16 +26,10 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    // register Assets sub types
     api.Asset.registerSubtype(SpriteSet);
-    // init components and entities
     api.Component.registerComponent(SpriteTemplate);
     api.EComponent.registerEntityComponent(ESprite);
-    // init renderer
-    api.SystemTrait(DefaultSpriteRenderer).createSystem(
-        "DefaultSpriteRenderer",
-        "Render Entities with ETransform and ESprite components",
-    );
+    DefaultSpriteRenderer.init();
 }
 
 pub fn deinit() void {
@@ -328,7 +322,8 @@ pub const SpriteSet = struct {
 //// Default Sprite Renderer System
 //////////////////////////////////////////////////////////////
 
-const DefaultSpriteRenderer = struct {
+pub const DefaultSpriteRenderer = struct {
+    pub usingnamespace api.SystemTrait(DefaultSpriteRenderer);
     pub var entity_condition: api.EntityTypeCondition = undefined;
     var sprite_refs: graphics.ViewLayerMapping = undefined;
 

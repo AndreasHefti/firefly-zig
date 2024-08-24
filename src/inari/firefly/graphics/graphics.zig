@@ -23,6 +23,7 @@ const Vector4f = utils.Vector4f;
 pub const SpriteTemplate = sprite.SpriteTemplate;
 pub const ESprite = sprite.ESprite;
 pub const SpriteSet = sprite.SpriteSet;
+pub const DefaultSpriteRenderer = sprite.DefaultSpriteRenderer;
 
 pub const ETile = tile.ETile;
 pub const TileGrid = tile.TileGrid;
@@ -30,10 +31,13 @@ pub const TileTypeAspect = tile.TileTypeAspect;
 pub const TileTypeAspectGroup = tile.TileTypeAspectGroup;
 pub const TileTypeKind = tile.TileTypeKind;
 pub const BasicTileTypes = tile.BasicTileTypes;
+pub const DefaultTileGridRenderer = tile.DefaultTileGridRenderer;
 
 pub const EShape = shape.EShape;
+pub const DefaultShapeRenderer = shape.DefaultShapeRenderer;
 pub const EText = text.EText;
 pub const Font = text.Font;
+pub const DefaultTextRenderer = text.DefaultTextRenderer;
 
 pub const View = view.View;
 pub const ViewChangeListener = view.ViewChangeListener;

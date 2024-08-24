@@ -96,6 +96,8 @@ pub const State = control.State;
 pub const StateEngine = control.StateEngine;
 pub const EntityStateEngine = control.EntityStateEngine;
 pub const EState = control.EState;
+pub const StateSystem = control.StateSystem;
+pub const EntityStateSystem = control.EntityStateSystem;
 
 pub const BindingId = usize;
 pub const Deinit = *const fn () void;
