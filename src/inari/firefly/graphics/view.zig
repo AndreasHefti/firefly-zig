@@ -31,10 +31,9 @@ pub fn init() !void {
     api.Component.registerComponent(Scene);
     api.EComponent.registerEntityComponent(EView);
     api.EComponent.registerEntityComponent(ETransform);
-    api.System(ViewRenderer).createSystem(
+    api.SystemTrait(ViewRenderer).createSystem(
         "ViewRenderer",
         "Emits api.ViewRenderEvent in order of active Views and its Layers",
-        true,
     );
 }
 

@@ -22,10 +22,9 @@ pub fn init() !void {
 
     api.EComponent.registerEntityComponent(EShape);
     // init renderer
-    api.System(DefaultShapeRenderer).createSystem(
-        firefly.Engine.DefaultRenderer.SHAPE,
+    api.SystemTrait(DefaultShapeRenderer).createSystem(
+        "DefaultShapeRenderer",
         "Default renderer for shape based entities",
-        true,
     );
 }
 

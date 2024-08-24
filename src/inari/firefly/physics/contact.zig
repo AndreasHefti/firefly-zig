@@ -26,10 +26,9 @@ pub fn init() void {
     api.Component.registerComponent(ContactConstraint);
     api.EComponent.registerEntityComponent(EContact);
     api.EComponent.registerEntityComponent(EContactScan);
-    api.System(ContactSystem).createSystem(
-        firefly.Engine.CoreSystems.ContactSystem.name,
+    api.SystemTrait(ContactSystem).createSystem(
+        "ContactSystem",
         "Processes contact scans for all moved entities per frame",
-        false,
     );
 }
 
@@ -635,14 +634,20 @@ pub const ContactSystem = struct {
             .accept_kind = api.EComponentAspectGroup.newKindOf(.{EContact}),
             .dismiss_kind = api.EComponentAspectGroup.newKindOf(.{graphics.ETile}),
         };
-        firefly.physics.subscribeMovement(processMoved);
     }
 
     pub fn systemDeinit() void {
         simple_mapping.deinit();
         simple_mapping = undefined;
-        firefly.physics.unsubscribeMovement(processMoved);
         entity_condition = undefined;
+    }
+
+    pub fn systemActivation(active: bool) void {
+        if (active) {
+            firefly.physics.subscribeMovement(processMoved);
+        } else {
+            firefly.physics.unsubscribeMovement(processMoved);
+        }
     }
 
     pub fn entityRegistration(id: Index, register: bool) void {
@@ -685,8 +690,6 @@ pub const ContactSystem = struct {
             has_any_contact = has_contact or has_any_contact;
             next_constraint = e_scan.constraints.nextSetBit(i + 1);
         }
-
-        std.debug.print("e_scan.hasAnyContact: {any} \n", .{e_scan.hasAnyContact()});
 
         if (has_any_contact) {
             if (e_scan.collision_resolver) |*resolver|

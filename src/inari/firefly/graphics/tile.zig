@@ -30,10 +30,9 @@ pub fn init() !void {
     api.Component.registerComponent(TileGrid);
     api.EComponent.registerEntityComponent(ETile);
     // init renderer
-    api.System(DefaultTileGridRenderer).createSystem(
-        firefly.Engine.DefaultRenderer.TILE,
+    api.SystemTrait(DefaultTileGridRenderer).createSystem(
+        "DefaultTileGridRenderer",
         "Render Entities referenced in all active TileGrid",
-        true,
     );
 }
 

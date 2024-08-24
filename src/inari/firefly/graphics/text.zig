@@ -31,10 +31,9 @@ pub fn init() !void {
     api.EComponent.registerEntityComponent(EText);
 
     // init renderer
-    api.System(DefaultTextRenderer).createSystem(
-        firefly.Engine.DefaultRenderer.TEXT,
+    api.SystemTrait(DefaultTextRenderer).createSystem(
+        "DefaultTextRenderer",
         "Render Entities with ETransform and EText components",
-        true,
     );
 }
 

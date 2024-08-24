@@ -119,8 +119,9 @@ pub const EntityTypeCondition = struct {
             return false;
         }
         if (self.dismiss_kind) |dk| {
-            if (e_kind.hasAnyAspect(dk))
+            if (e_kind.hasAnyAspect(dk)) {
                 return false;
+            }
         }
 
         return true;

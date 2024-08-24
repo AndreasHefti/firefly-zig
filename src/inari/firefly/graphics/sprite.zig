@@ -32,10 +32,9 @@ pub fn init() !void {
     api.Component.registerComponent(SpriteTemplate);
     api.EComponent.registerEntityComponent(ESprite);
     // init renderer
-    api.System(DefaultSpriteRenderer).createSystem(
-        firefly.Engine.DefaultRenderer.SPRITE,
+    api.SystemTrait(DefaultSpriteRenderer).createSystem(
+        "DefaultSpriteRenderer",
         "Render Entities with ETransform and ESprite components",
-        true,
     );
 }
 

@@ -44,8 +44,7 @@ const speed = 1;
 var pivot: utils.PosF = .{ 0, 0 };
 
 fn init() void {
-    firefly.Engine.CoreSystems.ContactSystem.activate();
-    defer firefly.Engine.CoreSystems.ContactSystem.deactivate();
+    firefly.api.System.activateByName("ContactSystem", true);
 
     // create view with two layer
     var view = graphics.View.new(.{

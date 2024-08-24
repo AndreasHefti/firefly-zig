@@ -27,8 +27,6 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
-    firefly.Engine.CoreSystems.ContactSystem.activate();
-    firefly.Engine.CoreSystems.EntityControlSystem.activate();
     firefly.Engine.startWindow(.{
         .width = 800,
         .height = 600,
@@ -39,6 +37,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
+    firefly.api.System.activateByName("ContactSystem", true);
     Texture.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

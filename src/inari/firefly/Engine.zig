@@ -20,117 +20,39 @@ var running = false;
 
 // TODO remove this after System refactoring. Use Traits instead
 pub const CoreSystems = struct {
-    pub const StateSystem = struct {
-        pub const name = "StateSystem";
-        pub fn isActive() bool {
-            return isSystemActive(name);
-        }
-        pub fn activate() void {
-            activateSystem(name, true);
-        }
-        pub fn deactivate() void {
-            activateSystem(name, false);
-        }
-    };
+    pub const STATE = "StateSystem";
+    pub const ENTITY_STATE = "EntityStateSystem";
+    pub const ANIMATION = "AnimationSystem";
+    pub const MOVEMENT = "MovementSystem";
+    pub const CONTACT = "ContactSystem";
 
-    pub const EntityStateSystem = struct {
-        pub const name = "EntityStateSystem";
-        pub fn isActive() bool {
-            return isSystemActive(name);
-        }
-        pub fn activate() void {
-            activateSystem(name, true);
-        }
-        pub fn deactivate() void {
-            activateSystem(name, false);
-        }
-    };
+    pub const VIEW_RENDERER = "ViewRenderer";
+    pub const TILE_RENDERER = "DefaultTileGridRenderer";
+    pub const SPRITE_RENDERER = "DefaultSpriteRenderer";
+    pub const SHAPE_RENDERER = "DefaultShapeRenderer";
+    pub const TEXT_RENDERER = "DefaultTextRenderer";
 
-    pub const AnimationSystem = struct {
-        pub const name = "AnimationSystem";
-        pub fn isActive() bool {
-            return isSystemActive(name);
-        }
-        pub fn activate() void {
-            activateSystem(name, true);
-        }
-        pub fn deactivate() void {
-            activateSystem(name, false);
-        }
-    };
+    pub const DEFAULT_SYSTEM_ORDER = [_]String{
+        CoreSystems.ENTITY_STATE,
+        CoreSystems.ANIMATION,
+        CoreSystems.MOVEMENT,
 
-    pub const MovementSystem = struct {
-        pub const name = "MovementSystem";
-        pub fn isActive() bool {
-            return isSystemActive(name);
-        }
-        pub fn activate() void {
-            activateSystem(name, true);
-        }
-        pub fn deactivate() void {
-            activateSystem(name, false);
-        }
-    };
-
-    pub const EntityControlSystem = struct {
-        pub const name = "EntityControlSystem";
-        pub fn isActive() bool {
-            return isSystemActive(name);
-        }
-        pub fn activate() void {
-            activateSystem(name, true);
-        }
-        pub fn deactivate() void {
-            activateSystem(name, false);
-        }
-    };
-
-    pub const ContactSystem = struct {
-        pub const name = "ContactSystem";
-        pub fn isActive() bool {
-            return isSystemActive(name);
-        }
-        pub fn activate() void {
-            activateSystem(name, true);
-        }
-        pub fn deactivate() void {
-            activateSystem(name, false);
-        }
+        CoreSystems.VIEW_RENDERER,
+        CoreSystems.TILE_RENDERER,
+        CoreSystems.SPRITE_RENDERER,
+        CoreSystems.SHAPE_RENDERER,
+        CoreSystems.TEXT_RENDERER,
     };
 };
 
-pub fn isSystemActive(name: String) bool {
-    return System.isActiveByName(name);
-}
-
-pub fn activateSystem(name: String, active: bool) void {
-    firefly.api.activateSystem(name, active);
-}
-
-pub const DefaultRenderer = struct {
-    pub const TILE = "DefaultTileGridRenderer";
-    pub const SPRITE = "DefaultSpriteRenderer";
-    pub const SHAPE = "DefaultShapeRenderer";
-    pub const TEXT = "DefaultTextRenderer";
-
-    pub const DEFAULT_RENDER_ORDER = [_]String{
-        DefaultRenderer.TILE,
-        DefaultRenderer.SPRITE,
-        DefaultRenderer.SHAPE,
-        DefaultRenderer.TEXT,
-    };
-};
-
-pub fn activateRenderer(name: String, active: bool) void {
-    firefly.api.activateSystem(name, active);
-}
-
-pub fn reorderRenderer(new_order: []const String) void {
-    for (new_order) |renderer_name| {
-        firefly.api.activateSystem(renderer_name, false);
+pub fn reorderSystems(new_order: []const String) void {
+    var next = firefly.api.System.nextActiveId(0);
+    while (next) |id| {
+        firefly.api.System.activateById(id, false);
+        next = firefly.api.System.nextActiveId(id + 1);
     }
-    for (new_order) |renderer_name| {
-        firefly.api.activateSystem(renderer_name, true);
+    for (new_order) |name| {
+        firefly.api.System.activateByName(name, true);
     }
 }
 
@@ -151,7 +73,7 @@ pub fn startWindow(
     window: WindowData,
     init_callback: ?*const fn () void,
 ) void {
-    reorderRenderer(&DefaultRenderer.DEFAULT_RENDER_ORDER);
+    reorderSystems(&CoreSystems.DEFAULT_SYSTEM_ORDER);
 
     firefly.api.window.openWindow(window);
 

@@ -71,6 +71,7 @@ pub const SubTypeTrait = component.SubTypeTrait;
 
 pub const Condition = control.Condition;
 pub const System = system.System;
+pub const SystemTrait = system.SystemTrait;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
@@ -98,14 +99,6 @@ pub const EState = control.EState;
 
 pub const BindingId = usize;
 pub const Deinit = *const fn () void;
-
-pub fn activateSystem(name: String, active: bool) void {
-    system.activateSystem(name, active);
-}
-
-pub fn isSystemActive(name: String) bool {
-    return system.isSystemActive(name);
-}
 
 //////////////////////////////////////////////////////////////
 //// Initialization

@@ -22,10 +22,9 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.System(AnimationSystem).createSystem(
-        firefly.Engine.CoreSystems.AnimationSystem.name,
+    api.SystemTrait(AnimationSystem).createSystem(
+        "AnimationSystem",
         "Updates all active animations",
-        true,
     );
     AnimationSystem.registerAnimationType(EasedValueIntegration);
     AnimationSystem.registerAnimationType(EasedColorIntegration);

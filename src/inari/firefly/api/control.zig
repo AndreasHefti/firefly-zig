@@ -22,15 +22,13 @@ pub fn init() void {
     api.Component.registerComponent(EntityStateEngine);
     api.EComponent.registerEntityComponent(EState);
 
-    api.System(StateSystem).createSystem(
-        firefly.Engine.CoreSystems.StateSystem.name,
+    api.SystemTrait(StateSystem).createSystem(
+        "StateSystem",
         "Updates all active StateEngine components, and change state on conditions",
-        false,
     );
-    api.System(EntityStateSystem).createSystem(
-        firefly.Engine.CoreSystems.EntityStateSystem.name,
+    api.SystemTrait(EntityStateSystem).createSystem(
+        "EntityStateSystem",
         "Updates all active Entities with EState components, and change state on conditions",
-        false,
     );
 }
 

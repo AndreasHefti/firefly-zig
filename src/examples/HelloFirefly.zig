@@ -8,6 +8,8 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
+    firefly.Engine.reorderSystems(&firefly.Engine.CoreSystems.DEFAULT_SYSTEM_ORDER);
+
     var string_buffer = StringBuffer.init(firefly.api.ALLOC);
     defer string_buffer.deinit();
 

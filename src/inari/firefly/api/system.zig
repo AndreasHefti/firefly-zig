@@ -12,7 +12,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(SystemComponent);
+    api.Component.registerComponent(System);
 }
 
 pub fn deinit() void {
@@ -21,7 +21,39 @@ pub fn deinit() void {
         return;
 }
 
-pub fn System(comptime T: type) type {
+pub const System = struct {
+    pub usingnamespace api.Component.Trait(System, .{ .name = "System", .subscription = false });
+    // struct fields of a System
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+    info: ?String = null,
+    onActivation: ?*const fn (bool) void = null,
+    onDestruct: *const fn () void,
+
+    pub fn activation(self: *System, active: bool) void {
+        if (self.onActivation) |onActivation| {
+            onActivation(active);
+        }
+    }
+
+    pub fn destruct(self: *System) void {
+        self.onDestruct();
+    }
+
+    pub fn format(
+        self: System,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "{?s}[ id:{d}, info:{?s} ]",
+            .{ self.name, self.id, self.info },
+        );
+    }
+};
+
+pub fn SystemTrait(comptime T: type) type {
     const has_init: bool = @hasDecl(T, "systemInit");
     const has_activation: bool = @hasDecl(T, "systemActivation");
     const has_deinit: bool = @hasDecl(T, "systemDeinit");
@@ -55,11 +87,11 @@ pub fn System(comptime T: type) type {
         // TODO make normal init with registration here.
         //      name and info shall be mandatory vars on T
         //      crate and use SystemTrait for T with context init like Component (activation, )
-        pub fn createSystem(name: String, info: String, active: bool) void {
+        pub fn createSystem(name: String, info: String) void {
             if (component_ref != null)
                 return;
 
-            component_ref = SystemComponent.new(.{
+            component_ref = System.new(.{
                 .name = name,
                 .info = info,
                 .onActivation = activation,
@@ -68,15 +100,12 @@ pub fn System(comptime T: type) type {
 
             if (has_init)
                 T.systemInit();
-
-            if (active)
-                SystemComponent.activateByName(name, true);
         }
 
         pub fn disposeSystem() void {
             if (component_ref) |id| {
                 defer component_ref = null;
-                SystemComponent.disposeById(id);
+                System.disposeById(id);
             }
         }
 
@@ -103,6 +132,10 @@ pub fn System(comptime T: type) type {
 
         fn notifyEntityChange(e: api.ComponentEvent) void {
             if (e.c_id) |id| {
+                // std.debug.print("********** System: {?s} notifyEntityChange {any}\n", .{
+                //     System.byId(component_ref.?).name,
+                //     api.Entity.byId(id),
+                // });
                 if (has_entity_condition and !T.entity_condition.check(id))
                     return;
                 switch (e.event_type) {
@@ -115,6 +148,9 @@ pub fn System(comptime T: type) type {
 
         fn activation(active: bool) void {
             if (active) {
+                std.debug.print("********** activate System: {?s}\n", .{
+                    System.byId(component_ref.?).name,
+                });
                 if (has_entity_registration) {
                     api.Entity.subscribe(notifyEntityChange);
                 }
@@ -143,6 +179,9 @@ pub fn System(comptime T: type) type {
                     }
                 }
             } else {
+                std.debug.print("********** deactivate System: {?s}\n", .{
+                    System.byId(component_ref.?).name,
+                });
                 if (has_entity_registration) {
                     api.Entity.unsubscribe(notifyEntityChange);
                 }
@@ -165,43 +204,3 @@ pub fn System(comptime T: type) type {
         }
     };
 }
-
-pub fn activateSystem(name: String, active: bool) void {
-    SystemComponent.activateByName(name, active);
-}
-
-pub fn isSystemActive(name: String) bool {
-    SystemComponent.isActiveByName(name);
-}
-
-const SystemComponent = struct {
-    pub usingnamespace api.Component.Trait(SystemComponent, .{ .name = "System", .subscription = false });
-    // struct fields of a System
-    id: Index = UNDEF_INDEX,
-    name: ?String = null,
-    info: ?String = null,
-    onActivation: ?*const fn (bool) void = null,
-    onDestruct: *const fn () void,
-
-    pub fn activation(self: *SystemComponent, active: bool) void {
-        if (self.onActivation) |onActivation| {
-            onActivation(active);
-        }
-    }
-
-    pub fn destruct(self: *SystemComponent) void {
-        self.onDestruct();
-    }
-
-    pub fn format(
-        self: SystemComponent,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "{?s}[ id:{d}, info:{?s} ]",
-            .{ self.name, self.id, self.info },
-        );
-    }
-};

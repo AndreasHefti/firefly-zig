@@ -21,10 +21,9 @@ pub fn init() void {
         return;
 
     api.EComponent.registerEntityComponent(EMovement);
-    api.System(MovementSystem).createSystem(
-        firefly.Engine.CoreSystems.MovementSystem.name,
+    api.SystemTrait(MovementSystem).createSystem(
+        "MovementSystem",
         "Processes the movement for all Entities with EMovement component",
-        true,
     );
 
     MovFlags.ON_SLOPE_UP = MovementAspectGroup.getAspect("ON_SLOPE_UP");
