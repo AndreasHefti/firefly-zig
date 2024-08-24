@@ -46,6 +46,15 @@ pub const CoreSystems = struct {
 };
 
 pub fn reorderSystems(new_order: []const String) void {
+    for (new_order) |name| {
+        firefly.api.System.activateByName(name, false);
+    }
+    for (new_order) |name| {
+        firefly.api.System.activateByName(name, true);
+    }
+}
+
+pub fn reorderAllSystems(new_order: []const String) void {
     var next = firefly.api.System.nextActiveId(0);
     while (next) |id| {
         firefly.api.System.activateById(id, false);
@@ -73,7 +82,7 @@ pub fn startWindow(
     window: WindowData,
     init_callback: ?*const fn () void,
 ) void {
-    reorderSystems(&CoreSystems.DEFAULT_SYSTEM_ORDER);
+    reorderAllSystems(&CoreSystems.DEFAULT_SYSTEM_ORDER);
 
     firefly.api.window.openWindow(window);
 

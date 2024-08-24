@@ -28,7 +28,13 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 
 fn example() void {
     // change rendering order
-    //Engine.reorderRenderer(&[2]String{ Engine.DefaultRenderer.SHAPE, Engine.DefaultRenderer.SPRITE });
+    Engine.reorderSystems(&[_]String{
+        Engine.CoreSystems.VIEW_RENDERER,
+        Engine.CoreSystems.TILE_RENDERER,
+        Engine.CoreSystems.SHAPE_RENDERER,
+        Engine.CoreSystems.TEXT_RENDERER,
+        Engine.CoreSystems.SPRITE_RENDERER,
+    });
 
     _ = Entity.new(.{ .name = "TestEntity4" })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
