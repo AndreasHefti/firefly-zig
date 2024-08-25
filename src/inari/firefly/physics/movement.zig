@@ -281,45 +281,32 @@ pub fn adjustVelocity(movement: *EMovement) void {
 
 pub const MovementSystem = struct {
     pub usingnamespace api.SystemTrait(MovementSystem);
-    pub var entity_condition: api.EntityTypeCondition = undefined;
+    pub usingnamespace api.EntityUpdateTrait(MovementSystem);
 
-    var movements: utils.BitSet = undefined;
+    pub const accept = .{EMovement};
+
     var moved: utils.BitSet = undefined;
     var event_dispatch: utils.EventDispatch(MovementEvent) = undefined;
     var event: MovementEvent = MovementEvent{};
 
     pub fn systemInit() void {
-        entity_condition = api.EntityTypeCondition{
-            .accept_kind = api.EComponentAspectGroup.newKindOf(.{EMovement}),
-        };
-        movements = utils.BitSet.new(firefly.api.COMPONENT_ALLOC);
         moved = utils.BitSet.new(firefly.api.COMPONENT_ALLOC);
         event.moved = &moved;
         event_dispatch = utils.EventDispatch(MovementEvent).new(firefly.api.COMPONENT_ALLOC);
     }
 
     pub fn systemDeinit() void {
-        movements.deinit();
-        movements = undefined;
         moved.deinit();
         moved = undefined;
         event.moved = undefined;
         event_dispatch.deinit();
         event_dispatch = undefined;
-        entity_condition = undefined;
     }
 
-    pub fn entityRegistration(id: Index, register: bool) void {
-        if (register)
-            movements.set(id)
-        else
-            movements.unset(id);
-    }
-
-    pub fn update(_: api.UpdateEvent) void {
+    pub fn updateEntities(components: *utils.BitSet) void {
         const dt: Float = @min(@as(Float, @floatFromInt(api.Timer.d_time)) / 1000, 0.5);
         moved.clear();
-        var next = movements.nextSetBit(0);
+        var next = components.nextSetBit(0);
         while (next) |i| {
             if (EMovement.byId(i)) |m| {
                 if (m.active) {
@@ -334,7 +321,7 @@ pub const MovementSystem = struct {
                     }
                 }
             }
-            next = movements.nextSetBit(i + 1);
+            next = components.nextSetBit(i + 1);
         }
         if (moved.count() > 0)
             event_dispatch.notify(event);

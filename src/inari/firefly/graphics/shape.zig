@@ -69,54 +69,33 @@ pub const EShape = struct {
 
 pub const DefaultShapeRenderer = struct {
     pub usingnamespace api.SystemTrait(DefaultShapeRenderer);
-    pub var entity_condition: api.EntityTypeCondition = undefined;
-    var shape_refs: graphics.ViewLayerMapping = undefined;
+    pub usingnamespace graphics.EntityRendererTrait(DefaultShapeRenderer);
 
-    pub fn systemInit() void {
-        shape_refs = graphics.ViewLayerMapping.new();
-        entity_condition = api.EntityTypeCondition{
-            .accept_kind = api.EComponentAspectGroup.newKindOf(.{ graphics.ETransform, EShape }),
-        };
-    }
+    pub const accept = .{ graphics.ETransform, EShape };
 
-    pub fn systemDeinit() void {
-        entity_condition = undefined;
-        shape_refs.deinit();
-        shape_refs = undefined;
-    }
+    pub fn renderEntities(entities: *firefly.utils.BitSet, _: graphics.ViewRenderEvent) void {
+        var i = entities.nextSetBit(0);
+        while (i) |id| {
+            // render the shape
+            const es = EShape.byId(id).?;
+            const trans = graphics.ETransform.byId(id).?;
+            firefly.api.rendering.renderShape(
+                es.shape_type,
+                es.vertices,
+                es.fill,
+                es.thickness,
+                trans.position,
+                es.color,
+                es.blend_mode,
+                trans.pivot,
+                trans.scale,
+                trans.rotation,
+                es.color1,
+                es.color2,
+                es.color3,
+            );
 
-    pub fn entityRegistration(id: Index, register: bool) void {
-        if (register)
-            shape_refs.addWithEView(graphics.EView.byId(id), id)
-        else
-            shape_refs.removeWithEView(graphics.EView.byId(id), id);
-    }
-
-    pub fn renderView(e: graphics.ViewRenderEvent) void {
-        if (shape_refs.get(e.view_id, e.layer_id)) |all| {
-            var i = all.nextSetBit(0);
-            while (i) |id| {
-                // render the shape
-                const es = EShape.byId(id).?;
-                const trans = graphics.ETransform.byId(id).?;
-                firefly.api.rendering.renderShape(
-                    es.shape_type,
-                    es.vertices,
-                    es.fill,
-                    es.thickness,
-                    trans.position,
-                    es.color,
-                    es.blend_mode,
-                    trans.pivot,
-                    trans.scale,
-                    trans.rotation,
-                    es.color1,
-                    es.color2,
-                    es.color3,
-                );
-
-                i = all.nextSetBit(id + 1);
-            }
+            i = entities.nextSetBit(id + 1);
         }
     }
 };

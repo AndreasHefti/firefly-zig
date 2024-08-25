@@ -324,53 +324,32 @@ pub const SpriteSet = struct {
 
 pub const DefaultSpriteRenderer = struct {
     pub usingnamespace api.SystemTrait(DefaultSpriteRenderer);
-    pub var entity_condition: api.EntityTypeCondition = undefined;
-    var sprite_refs: graphics.ViewLayerMapping = undefined;
+    pub usingnamespace graphics.EntityRendererTrait(DefaultSpriteRenderer);
 
-    pub fn systemInit() void {
-        sprite_refs = graphics.ViewLayerMapping.new();
-        entity_condition = api.EntityTypeCondition{
-            .accept_kind = api.EComponentAspectGroup.newKindOf(.{ graphics.ETransform, ESprite }),
-        };
-    }
+    pub const accept = .{ graphics.ETransform, ESprite };
 
-    pub fn systemDeinit() void {
-        entity_condition = undefined;
-        sprite_refs.deinit();
-        sprite_refs = undefined;
-    }
+    pub fn renderEntities(entities: *firefly.utils.BitSet, _: graphics.ViewRenderEvent) void {
+        var i = entities.nextSetBit(0);
+        while (i) |id| {
+            // render the sprite
+            const es: *ESprite = ESprite.byId(id).?;
+            const trans: *graphics.ETransform = graphics.ETransform.byId(id).?;
 
-    pub fn entityRegistration(id: Index, register: bool) void {
-        if (register)
-            sprite_refs.addWithEView(graphics.EView.byId(id), id)
-        else
-            sprite_refs.removeWithEView(graphics.EView.byId(id), id);
-    }
+            const sprite_template: *SpriteTemplate = SpriteTemplate.byId(es.template_id);
+            const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
+            firefly.api.rendering.renderSprite(
+                sprite_template.texture_binding,
+                sprite_template.texture_bounds,
+                trans.position,
+                trans.pivot,
+                trans.scale,
+                trans.rotation,
+                es.tint_color,
+                es.blend_mode,
+                multi,
+            );
 
-    pub fn renderView(e: graphics.ViewRenderEvent) void {
-        if (sprite_refs.get(e.view_id, e.layer_id)) |all| {
-            var i = all.nextSetBit(0);
-            while (i) |id| {
-                // render the sprite
-                const es: *ESprite = ESprite.byId(id).?;
-                const trans: *graphics.ETransform = graphics.ETransform.byId(id).?;
-
-                const sprite_template: *SpriteTemplate = SpriteTemplate.byId(es.template_id);
-                const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
-                firefly.api.rendering.renderSprite(
-                    sprite_template.texture_binding,
-                    sprite_template.texture_bounds,
-                    trans.position,
-                    trans.pivot,
-                    trans.scale,
-                    trans.rotation,
-                    es.tint_color,
-                    es.blend_mode,
-                    multi,
-                );
-
-                i = all.nextSetBit(id + 1);
-            }
+            i = entities.nextSetBit(id + 1);
         }
     }
 };

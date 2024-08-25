@@ -104,51 +104,31 @@ pub const EText = struct {
 
 pub const DefaultTextRenderer = struct {
     pub usingnamespace api.SystemTrait(DefaultTextRenderer);
-    pub var entity_condition: api.EntityTypeCondition = undefined;
-    var text_refs: graphics.ViewLayerMapping = undefined;
+    pub usingnamespace graphics.EntityRendererTrait(DefaultTextRenderer);
 
-    pub fn systemInit() void {
-        text_refs = graphics.ViewLayerMapping.new();
-        entity_condition = api.EntityTypeCondition{
-            .accept_kind = api.EComponentAspectGroup.newKindOf(.{ graphics.ETransform, EText }),
-        };
-    }
+    pub const accept = .{ graphics.ETransform, EText };
 
-    pub fn systemDeinit() void {
-        text_refs.deinit();
-        text_refs = undefined;
-    }
-
-    pub fn entityRegistration(id: Index, register: bool) void {
-        if (register)
-            text_refs.addWithEView(graphics.EView.byId(id), id)
-        else
-            text_refs.removeWithEView(graphics.EView.byId(id), id);
-    }
-
-    pub fn renderView(e: graphics.ViewRenderEvent) void {
-        if (text_refs.get(e.view_id, e.layer_id)) |all| {
-            var i = all.nextSetBit(0);
-            while (i) |id| {
-                // render the sprite
-                if (EText.byId(id)) |text| {
-                    const trans = graphics.ETransform.byId(id).?;
-                    firefly.api.rendering.renderText(
-                        text.font_id,
-                        text.text,
-                        trans.position,
-                        trans.pivot,
-                        trans.rotation,
-                        text.size,
-                        text.char_spacing,
-                        text.line_spacing,
-                        text.tint_color,
-                        text.blend_mode,
-                    );
-                }
-
-                i = all.nextSetBit(id + 1);
+    pub fn renderEntities(entities: *firefly.utils.BitSet, _: graphics.ViewRenderEvent) void {
+        var i = entities.nextSetBit(0);
+        while (i) |id| {
+            // render the sprite
+            if (EText.byId(id)) |text| {
+                const trans = graphics.ETransform.byId(id).?;
+                firefly.api.rendering.renderText(
+                    text.font_id,
+                    text.text,
+                    trans.position,
+                    trans.pivot,
+                    trans.rotation,
+                    text.size,
+                    text.char_spacing,
+                    text.line_spacing,
+                    text.tint_color,
+                    text.blend_mode,
+                );
             }
+
+            i = entities.nextSetBit(id + 1);
         }
     }
 };

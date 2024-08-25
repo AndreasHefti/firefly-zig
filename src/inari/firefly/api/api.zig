@@ -72,6 +72,7 @@ pub const SubTypeTrait = component.SubTypeTrait;
 pub const Condition = control.Condition;
 pub const System = system.System;
 pub const SystemTrait = system.SystemTrait;
+pub const EntityUpdateTrait = system.EntityUpdateTrait;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;

@@ -52,11 +52,53 @@ pub const System = struct {
     }
 };
 
-pub fn SystemTrait(comptime T: type) type {
-    const has_init: bool = @hasDecl(T, "systemInit");
-    const has_activation: bool = @hasDecl(T, "systemActivation");
-    const has_deinit: bool = @hasDecl(T, "systemDeinit");
+pub fn EntityUpdateTrait(comptime T: type) type {
+    return struct {
+        comptime {
+            if (@typeInfo(T) != .Struct)
+                @compileError("Expects component type is a struct.");
+            if (!@hasDecl(T, "updateEntities"))
+                @compileError("Expects type has fn: updateEntities(*utils.BitSet)");
+        }
 
+        pub var entity_condition: api.EntityTypeCondition = undefined;
+        pub var entities: firefly.utils.BitSet = undefined;
+
+        pub fn systemTraitInit() void {
+            entities = firefly.utils.BitSet.new(api.ALLOC);
+            if (@hasDecl(T, "accept") or @hasDecl(T, "dismiss")) {
+                entity_condition = api.EntityTypeCondition{
+                    .accept_kind = if (@hasDecl(T, "accept")) api.EComponentAspectGroup.newKindOf(T.accept) else null,
+                    .accept_full_only = if (@hasDecl(T, "accept_full_only")) T.accept_full_only else true,
+                    .dismiss_kind = if (@hasDecl(T, "dismiss")) api.EComponentAspectGroup.newKindOf(T.dismiss) else null,
+                };
+            }
+        }
+
+        pub fn systemTraitDeinit() void {
+            entity_condition = undefined;
+            entities.deinit();
+            entities = undefined;
+        }
+
+        pub fn entityRegistration(id: Index, register: bool) void {
+            if (!entity_condition.check(id))
+                return;
+
+            entities.setValue(id, register);
+        }
+
+        pub fn update(_: api.UpdateEvent) void {
+            T.updateEntities(&entities);
+        }
+    };
+}
+
+// pub fn ComponentUpdateTrait(comptime T: type, comptime CType: type) type {
+
+// }
+
+pub fn SystemTrait(comptime T: type) type {
     const has_render_order: bool = @hasDecl(T, "render_order");
     const has_view_render_order: bool = @hasDecl(T, "view_render_order");
     const has_update_order: bool = @hasDecl(T, "update_order");
@@ -93,7 +135,9 @@ pub fn SystemTrait(comptime T: type) type {
                 .onDestruct = destruct,
             }).id;
 
-            if (has_init)
+            if (@hasDecl(T, "systemTraitInit"))
+                T.systemTraitInit();
+            if (@hasDecl(T, "systemInit"))
                 T.systemInit();
         }
 
@@ -114,8 +158,10 @@ pub fn SystemTrait(comptime T: type) type {
 
         fn destruct() void {
             if (component_ref != null) {
-                if (has_deinit)
+                if (@hasDecl(T, "systemDeinit"))
                     T.systemDeinit();
+                if (@hasDecl(T, "systemTraitDeinit"))
+                    T.systemTraitDeinit();
             }
             component_ref = null;
         }
@@ -139,8 +185,18 @@ pub fn SystemTrait(comptime T: type) type {
                 //     System.byId(component_ref.?).name,
                 //     api.Entity.byId(id),
                 // });
-                if (has_entity_condition and !T.entity_condition.check(id))
-                    return;
+                if (has_entity_condition) {
+                    if (@typeInfo(@TypeOf(T.entity_condition)) == .Optional) {
+                        if (T.entity_condition) |*ec| {
+                            if (!ec.check(id))
+                                return;
+                        }
+                    } else {
+                        if (!T.entity_condition.check(id))
+                            return;
+                    }
+                }
+
                 switch (e.event_type) {
                     .ACTIVATED => T.entityRegistration(id, true),
                     .DEACTIVATING => T.entityRegistration(id, false),
@@ -202,7 +258,7 @@ pub fn SystemTrait(comptime T: type) type {
                 }
             }
 
-            if (has_activation)
+            if (@hasDecl(T, "systemActivation"))
                 T.systemActivation(active);
         }
     };

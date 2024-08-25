@@ -95,6 +95,95 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////
+//// EntityRendererTrait useful for entity renderer systems
+//////////////////////////////////////////////////////////////
+
+pub fn EntityRendererTrait(comptime T: type) type {
+    return struct {
+        comptime {
+            if (@typeInfo(T) != .Struct)
+                @compileError("Expects component type is a struct.");
+            if (!@hasDecl(T, "renderEntities"))
+                @compileError("Expects type has fn: renderEntities(*utils.BitSet)");
+        }
+
+        pub var entity_condition: ?api.EntityTypeCondition = null;
+        pub var entities: ViewLayerMapping = undefined;
+
+        pub fn systemTraitInit() void {
+            entities = ViewLayerMapping.new();
+            if (@hasDecl(T, "accept") or @hasDecl(T, "dismiss")) {
+                entity_condition = api.EntityTypeCondition{
+                    .accept_kind = if (@hasDecl(T, "accept")) api.EComponentAspectGroup.newKindOf(T.accept) else null,
+                    .accept_full_only = if (@hasDecl(T, "accept_full_only")) T.accept_full_only else true,
+                    .dismiss_kind = if (@hasDecl(T, "dismiss")) api.EComponentAspectGroup.newKindOf(T.dismiss) else null,
+                };
+            }
+        }
+
+        pub fn systemTraitDeinit() void {
+            entity_condition = undefined;
+            entities.deinit();
+            entities = undefined;
+        }
+
+        pub fn entityRegistration(id: Index, register: bool) void {
+            if (register)
+                entities.addWithEView(EView.byId(id), id)
+            else
+                entities.removeWithEView(EView.byId(id), id);
+        }
+
+        pub fn renderView(e: ViewRenderEvent) void {
+            if (entities.get(e.view_id, e.layer_id)) |all| {
+                T.renderEntities(all, e);
+            }
+        }
+    };
+}
+
+//////////////////////////////////////////////////////////////
+//// ComponentRendererTrait useful for component renderer systems
+//////////////////////////////////////////////////////////////
+
+pub fn ViewLayerComponentRendererTrait(comptime T: type, comptime CType: type) type {
+    return struct {
+        comptime {
+            if (@typeInfo(T) != .Struct)
+                @compileError("Expects component type is a struct.");
+            if (!@hasDecl(T, "renderComponents"))
+                @compileError("Expects type has fn: renderComponents(*utils.BitSet)");
+        }
+
+        pub const component_register_type = CType;
+        pub var components: ViewLayerMapping = undefined;
+
+        pub fn systemTraitInit() void {
+            components = ViewLayerMapping.new();
+        }
+
+        pub fn systemTraitDeinit() void {
+            components.deinit();
+            components = undefined;
+        }
+
+        pub fn componentRegistration(id: Index, register: bool) void {
+            const comp = CType.byId(id);
+            if (register)
+                components.add(comp.view_id, comp.layer_id, id)
+            else
+                components.remove(comp.view_id, comp.layer_id, id);
+        }
+
+        pub fn renderView(e: ViewRenderEvent) void {
+            if (components.get(e.view_id, e.layer_id)) |all| {
+                T.renderComponents(all, e);
+            }
+        }
+    };
+}
+
+//////////////////////////////////////////////////////////////
 //// ShaderAsset
 //////////////////////////////////////////////////////////////
 

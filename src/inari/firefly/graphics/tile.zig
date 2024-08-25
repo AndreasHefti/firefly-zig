@@ -344,59 +344,39 @@ pub const TileGrid = struct {
 
 pub const DefaultTileGridRenderer = struct {
     pub usingnamespace api.SystemTrait(DefaultTileGridRenderer);
-    pub const component_register_type = TileGrid;
-    var tile_grid_refs: graphics.ViewLayerMapping = undefined;
+    pub usingnamespace graphics.ViewLayerComponentRendererTrait(DefaultTileGridRenderer, TileGrid);
 
-    pub fn systemInit() void {
-        tile_grid_refs = graphics.ViewLayerMapping.new();
-    }
+    pub fn renderComponents(components: *firefly.utils.BitSet, event: graphics.ViewRenderEvent) void {
+        var i = components.nextSetBit(0);
+        while (i) |grid_id| {
+            i = components.nextSetBit(grid_id + 1);
 
-    pub fn systemDeinit() void {
-        tile_grid_refs.deinit();
-        tile_grid_refs = undefined;
-    }
+            var tile_grid: *TileGrid = TileGrid.byId(grid_id);
+            var iterator = tile_grid.getIteratorForProjection(event.projection.?) orelse continue;
 
-    pub fn componentRegistration(id: Index, register: bool) void {
-        const tile_grid = TileGrid.byId(id);
-        if (register)
-            tile_grid_refs.add(tile_grid.view_id, tile_grid.layer_id, id)
-        else
-            tile_grid_refs.remove(tile_grid.view_id, tile_grid.layer_id, id);
-    }
+            firefly.api.rendering.addOffset(tile_grid.world_position);
 
-    pub fn renderView(e: graphics.ViewRenderEvent) void {
-        if (tile_grid_refs.get(e.view_id, e.layer_id)) |all| {
-            var i = all.nextSetBit(0);
-            while (i) |grid_id| {
-                i = all.nextSetBit(grid_id + 1);
+            while (iterator.next()) |entity_id| {
+                if (entity_id == UNDEF_INDEX)
+                    continue;
 
-                var tile_grid: *TileGrid = TileGrid.byId(grid_id);
-                var iterator = tile_grid.getIteratorForProjection(e.projection.?) orelse continue;
-
-                firefly.api.rendering.addOffset(tile_grid.world_position);
-
-                while (iterator.next()) |entity_id| {
-                    if (entity_id == UNDEF_INDEX)
-                        continue;
-
-                    const tile = ETile.byId(entity_id) orelse continue;
-                    const trans = graphics.ETransform.byId(entity_id) orelse continue;
-                    const sprite_template: *graphics.SpriteTemplate = graphics.SpriteTemplate.byId(tile.sprite_template_id);
-                    api.rendering.renderSprite(
-                        sprite_template.texture_binding,
-                        sprite_template.texture_bounds,
-                        iterator.rel_position + trans.position,
-                        trans.pivot,
-                        trans.scale,
-                        trans.rotation,
-                        tile.tint_color,
-                        tile.blend_mode,
-                        null,
-                    );
-                }
-
-                api.rendering.addOffset(tile_grid.world_position * utils.NEG_VEC2F);
+                const tile = ETile.byId(entity_id) orelse continue;
+                const trans = graphics.ETransform.byId(entity_id) orelse continue;
+                const sprite_template: *graphics.SpriteTemplate = graphics.SpriteTemplate.byId(tile.sprite_template_id);
+                api.rendering.renderSprite(
+                    sprite_template.texture_binding,
+                    sprite_template.texture_bounds,
+                    iterator.rel_position + trans.position,
+                    trans.pivot,
+                    trans.scale,
+                    trans.rotation,
+                    tile.tint_color,
+                    tile.blend_mode,
+                    null,
+                );
             }
+
+            api.rendering.addOffset(tile_grid.world_position * utils.NEG_VEC2F);
         }
     }
 };

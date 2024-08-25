@@ -407,38 +407,18 @@ pub const StateSystem = struct {
 
 pub const EntityStateSystem = struct {
     pub usingnamespace api.SystemTrait(EntityStateSystem);
+    pub usingnamespace api.EntityUpdateTrait(EntityStateSystem);
+    pub const accept = .{EState};
 
-    pub var entity_condition: api.EntityTypeCondition = undefined;
-
-    var entities: utils.BitSet = undefined;
-
-    pub fn systemInit() void {
-        entities = utils.BitSet.new(firefly.api.COMPONENT_ALLOC);
-        entity_condition = api.EntityTypeCondition{
-            .accept_kind = api.EComponentAspectGroup.newKindOf(.{EState}),
-        };
-    }
-
-    pub fn systemDeinit() void {
-        entity_condition = undefined;
-        entities.deinit();
-        entities = undefined;
-    }
-
-    pub fn entityRegistration(id: Index, register: bool) void {
-        entities.setValue(id, register);
-    }
-
-    pub fn update(_: api.UpdateEvent) void {
-        // TODO try to ged rid of ifs for better performance
-        var next = entities.nextSetBit(0);
+    pub fn updateEntities(components: *utils.BitSet) void {
+        var next = components.nextSetBit(0);
         while (next) |i| {
             if (EState.byId(i)) |e| processEntity(e);
-            next = entities.nextSetBit(i + 1);
+            next = components.nextSetBit(i + 1);
         }
     }
 
-    fn processEntity(entity: *EState) void {
+    inline fn processEntity(entity: *EState) void {
         const state_engine = EntityStateEngine.byId(entity.state_engine_ref);
         state_engine.registry.id_2 = if (entity.current_state) |s| s.id else UNDEF_INDEX;
         var next = state_engine.states.slots.nextSetBit(0);
