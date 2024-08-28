@@ -224,7 +224,8 @@ pub const Room = struct {
             self.state = .LOADED;
             stopping_room_ref = null;
             self.player_ref = player_ref;
-            if (callback) |c| c(self.id);
+            if (callback) |c|
+                c(self.id);
             self.player_ref = null;
         }
     }
@@ -293,6 +294,7 @@ fn createRoomTransition(reg: api.CallAttributes) void {
     const view_id = graphics.View.idByName(reg.getAttribute(game.TaskAttributes.VIEW_NAME).?).?;
     const layer_id = graphics.Layer.idByName(reg.getAttribute(game.TaskAttributes.LAYER_NAME).?).?;
 
+    // TODO add dispose of entity to Composite
     _ = api.Entity.new(.{ .name = transition_name })
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
         .withComponent(graphics.EView{ .view_id = view_id, .layer_id = layer_id })
@@ -348,33 +350,36 @@ fn roomStoppedCallback(_: Index) void {
     const target_transition = room_transition_registry.name_3.?;
 
     // activate new room also load room if not loaded
-    const target_room = Room.byName(target_room_name) orelse return;
-    target_room.activateRoom();
+    if (Room.byName(target_room_name)) |target_room| {
+        target_room.activateRoom();
 
-    // set player position adjust cam
-    const player_transform = graphics.ETransform.byId(player_id) orelse return;
-    const source_transition = ERoomTransition.byId(source_transition_id) orelse return;
-    const source_transition_transform = graphics.ETransform.byId(source_transition_id) orelse return;
-    const target_transition_transform = graphics.ETransform.byName(target_transition) orelse return;
+        // set player position adjust cam
+        const player_transform = graphics.ETransform.byId(player_id) orelse return;
+        const source_transition = ERoomTransition.byId(source_transition_id) orelse return;
+        const source_transition_transform = graphics.ETransform.byId(source_transition_id) orelse return;
+        const target_transition_transform = graphics.ETransform.byName(target_transition) orelse return;
 
-    // playerToTransition(player.playerPosition) - sourceTransform.position
-    // playerTargetPos(targetTransform.position) + playerToTransition
-    // player.playerPosition(playerTargetPos )
+        // playerToTransition(player.playerPosition) - sourceTransform.position
+        // playerTargetPos(targetTransform.position) + playerToTransition
+        // player.playerPosition(playerTargetPos )
 
-    const player_to_transition: utils.PosF = player_transform.position - source_transition_transform.position;
-    const player_target_pos = target_transition_transform.position + player_to_transition;
-    player_transform.position = player_target_pos;
+        const player_to_transition: utils.PosF = player_transform.position - source_transition_transform.position;
+        const player_target_pos = target_transition_transform.position + player_to_transition;
+        player_transform.position = player_target_pos;
 
-    switch (source_transition.orientation) {
-        .EAST => player_transform.position[0] += 5,
-        .WEST => player_transform.position[0] -= 5,
-        .NORTH => player_transform.position[1] -= 5,
-        .SOUTH => player_transform.position[1] += 5,
-        else => {},
+        switch (source_transition.orientation) {
+            .EAST => player_transform.position[0] += 5,
+            .WEST => player_transform.position[0] -= 5,
+            .NORTH => player_transform.position[1] -= 5,
+            .SOUTH => player_transform.position[1] += 5,
+            else => {},
+        }
+
+        // start new room
+        target_room.start(player_name, null);
+    } else {
+        utils.panic(api.ALLOC, "No Room with name: {s} found", .{target_room_name});
     }
-
-    // start new room
-    target_room.start(player_name, null);
 }
 
 //////////////////////////////////////////////////////////////
@@ -460,8 +465,9 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn exitAction(_: api.CallReg) api.ActionResult {
-        color[3] -= @min(5, color[3]);
-        if (color[3] <= 0)
+        color[3] = @min(255, color[3] + 5);
+        std.debug.print("color: {d}\n", .{color[3]});
+        if (color[3] >= 255)
             return api.ActionResult.Success;
         return api.ActionResult.Running;
     }

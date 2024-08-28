@@ -87,6 +87,14 @@ fn init() void {
             .{ game.TaskAttributes.VIEW_NAME, view_name },
         },
     );
+    api.Task.runTaskByNameWith(
+        game.Tasks.JSON_LOAD_ROOM,
+        null,
+        .{
+            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
+            .{ game.TaskAttributes.VIEW_NAME, view_name },
+        },
+    );
 
     // add player and init cam for room
     _ = game.Room.byName(room2_name).?.withTask(

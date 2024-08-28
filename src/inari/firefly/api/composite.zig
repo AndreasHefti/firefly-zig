@@ -42,6 +42,11 @@ pub const CompositeObject = struct {
     task_name: ?String = null,
     life_cycle: CompositeLifeCycle,
     attributes: ?api.Attributes = null,
+
+    pub fn deinit(self: *CompositeObject) void {
+        if (self.attributes) |*a| a.deinit();
+        self.attributes = null;
+    }
 };
 
 pub const Composite = struct {
@@ -72,6 +77,13 @@ pub const Composite = struct {
     }
 
     pub fn destruct(self: *Composite) void {
+        var next = self.objects.slots.nextSetBit(0);
+        while (next) |i| {
+            next = self.objects.slots.nextSetBit(i + 1);
+            if (self.objects.get(i)) |o|
+                o.deinit();
+        }
+
         self.objects.deinit();
         self.objects = undefined;
         self._loaded_components.deinit();

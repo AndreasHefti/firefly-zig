@@ -198,10 +198,10 @@ pub const Task = struct {
         if (self.callback) |c|
             c(context);
 
-        if (attributes) |attrs| {
-            var a = attrs;
-            a.deinit();
-        }
+        // if (attributes) |*attrs| {
+        //     var a = attrs;
+        //     a.deinit();
+        // }
     }
 
     pub fn format(
