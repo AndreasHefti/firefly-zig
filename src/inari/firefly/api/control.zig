@@ -159,12 +159,12 @@ pub const Task = struct {
                 Task.disposeById(self.id);
         }
 
-        const attrs = api.Attributes.of(attributes);
+        const a_id = api.Attributes.ofGetId(attributes);
 
         if (self.blocking) {
-            self._run(caller_id, attrs);
+            self._run(caller_id, a_id);
         } else {
-            _ = std.Thread.spawn(.{}, _run, .{ self, caller_id, attrs }) catch unreachable;
+            _ = std.Thread.spawn(.{}, _run, .{ self, caller_id, a_id }) catch unreachable;
         }
     }
 
@@ -186,17 +186,11 @@ pub const Task = struct {
     fn _run(
         self: *Task,
         caller_id: ?Index,
-        attributes: ?api.Attributes,
+        a_id: ?Index,
     ) void {
-        const context: api.CallAttributes = .{
-            .caller_id = caller_id orelse UNDEF_INDEX,
-            .id_1 = self.id,
-            .attributes = attributes,
-        };
-
-        self.function(context);
+        self.function(caller_id, a_id);
         if (self.callback) |c|
-            c(context);
+            c(caller_id, a_id);
 
         // if (attributes) |*attrs| {
         //     var a = attrs;
@@ -226,7 +220,7 @@ pub const Trigger = struct {
     name: ?String = null,
 
     task_ref: Index,
-    attributes: ?api.Attributes,
+    attributes: ?String,
     registry: api.CallReg = api.CallReg{},
     condition: api.RegPredicate,
 

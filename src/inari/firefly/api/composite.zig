@@ -41,10 +41,11 @@ pub const CompositeObject = struct {
     task_ref: ?Index = null,
     task_name: ?String = null,
     life_cycle: CompositeLifeCycle,
-    attributes: ?api.Attributes = null,
+    attributes: ?Index = null,
 
     pub fn deinit(self: *CompositeObject) void {
-        if (self.attributes) |*a| a.deinit();
+        if (self.attributes) |a_id|
+            api.Attributes.disposeById(a_id);
         self.attributes = null;
     }
 };
@@ -59,7 +60,7 @@ pub const Composite = struct {
     name: ?String = null,
     loaded: bool = false,
 
-    attributes: api.Attributes = undefined,
+    attributes: ?Index = undefined,
     objects: utils.DynArray(CompositeObject) = undefined,
     _loaded_components: utils.DynArray(api.CReference) = undefined,
 
@@ -73,7 +74,7 @@ pub const Composite = struct {
             3,
         );
 
-        self.attributes = api.Attributes.new();
+        self.attributes = api.Attributes.new(.{ .name = self.name }).id;
     }
 
     pub fn destruct(self: *Composite) void {
@@ -88,26 +89,24 @@ pub const Composite = struct {
         self.objects = undefined;
         self._loaded_components.deinit();
         self._loaded_components = undefined;
-        self.attributes.deinit();
-        self.attributes = undefined;
-    }
-
-    pub fn setAttribute(self: *Composite, name: String, value: String) void {
-        self.attributes.put(name, value) catch unreachable;
+        if (self.attributes) |a_id| {
+            api.Attributes.disposeById(a_id);
+            self.attributes = null;
+        }
     }
 
     pub fn withTask(
         self: *Composite,
         task: api.Task,
         life_cycle: CompositeLifeCycle,
-        attributes: ?api.Attributes,
+        attributes: anytype,
     ) *Composite {
         const _task = api.Task.new(task);
         _ = self.objects.add(CompositeObject{
             .task_ref = _task.id,
             .task_name = _task.name,
             .life_cycle = life_cycle,
-            .attributes = attributes,
+            .attributes = api.Attributes.ofGetId(attributes),
         });
         return self;
     }
@@ -213,14 +212,20 @@ pub fn CompositeTrait(comptime T: type) type {
         ) *T {
             checkInCreationState(self);
 
-            var attrs = api.Attributes.of(attributes);
-            if (attrs) |*a| a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
-
-            _ = api.Composite.byId(self.id).withObject(.{
-                .task_ref = task_id,
-                .life_cycle = life_cycle,
-                .attributes = attrs,
-            });
+            const attrs = api.Attributes.of(attributes, null);
+            if (attrs) |a| {
+                a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
+                _ = api.Composite.byId(self.id).withObject(.{
+                    .task_ref = task_id,
+                    .life_cycle = life_cycle,
+                    .attributes = a.id,
+                });
+            } else {
+                _ = api.Composite.byId(self.id).withObject(.{
+                    .task_ref = task_id,
+                    .life_cycle = life_cycle,
+                });
+            }
 
             return self;
         }
@@ -233,14 +238,20 @@ pub fn CompositeTrait(comptime T: type) type {
         ) *T {
             checkInCreationState(self);
 
-            var attrs = api.Attributes.of(attributes);
-            if (attrs) |*a| a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
-
-            _ = api.Composite.byId(self.id).withObject(.{
-                .task_name = task_name,
-                .life_cycle = life_cycle,
-                .attributes = attrs,
-            });
+            const attrs = api.Attributes.of(attributes, null);
+            if (attrs) |a| {
+                a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
+                _ = api.Composite.byId(self.id).withObject(.{
+                    .task_name = task_name,
+                    .life_cycle = life_cycle,
+                    .attributes = a.id,
+                });
+            } else {
+                _ = api.Composite.byId(self.id).withObject(.{
+                    .task_name = task_name,
+                    .life_cycle = life_cycle,
+                });
+            }
 
             return self;
         }

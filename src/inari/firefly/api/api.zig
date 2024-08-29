@@ -142,6 +142,7 @@ pub fn init(context: InitContext) !void {
 
     // register api based components and entity components
     Component.registerComponent(Entity);
+    Component.registerComponent(Attributes);
     EComponent.registerEntityComponent(EMultiplier);
 
     asset.init();
@@ -239,7 +240,7 @@ pub const NamePool = struct {
             const str = std.fmt.allocPrint(ALLOC, "{d}", i) catch return null;
             defer ALLOC.free(str);
             names.insert(str) catch unreachable;
-            return names.hash_map.getKey(str);
+            return names.hash_dict.getKey(str);
         }
         return null;
     }
@@ -254,75 +255,133 @@ pub const NamePool = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Attributes = struct {
-    _map: std.StringHashMap(String),
+    pub usingnamespace Component.Trait(Attributes, .{
+        .name = "Attributes",
+        .activation = false,
+        .subscription = false,
+    });
 
-    pub fn new() Attributes {
-        return .{ ._map = std.StringHashMap(String).init(ALLOC) };
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+
+    id_1: Index = UNDEF_INDEX,
+    id_2: Index = UNDEF_INDEX,
+    id_3: Index = UNDEF_INDEX,
+    id_4: Index = UNDEF_INDEX,
+    id_5: Index = UNDEF_INDEX,
+
+    _dict: std.StringHashMap(String) = undefined,
+
+    pub fn construct(self: *Attributes) void {
+        self._dict = std.StringHashMap(String).init(ALLOC);
     }
 
-    pub fn of(attributes: anytype) ?Attributes {
-        if (@typeInfo(@TypeOf(attributes)) == .Optional)
-            if (attributes != null)
-                return @as(Attributes, attributes.?);
+    pub fn destruct(self: *Attributes) void {
+        self.clear();
+        self._dict.deinit();
+        self._dict = undefined;
+    }
 
-        if (@typeInfo(@TypeOf(attributes)) == .Struct) {
-            if (@hasField(@TypeOf(attributes), "_map")) {
-                return @as(Attributes, attributes);
-            } else {
-                var result: Attributes = .{ ._map = std.StringHashMap(String).init(ALLOC) };
+    pub fn ofGetId(attributes: anytype) ?Index {
+        return if (of(attributes, null)) |a| a.id else null;
+    }
 
-                inline for (attributes) |v| {
-                    result.set(v[0], v[1]);
-                }
+    pub fn ofWithName(attributes: anytype, name: String) ?String {
+        return if (of(attributes, name)) |a| a.name else null;
+    }
 
-                return result;
-            }
+    pub fn of(attributes: anytype, name: ?String) ?*Attributes {
+        const at = @typeInfo(@TypeOf(attributes));
+        if (at == .Null) {
+            return null;
         }
 
-        return null;
-    }
+        if (at == .Pointer) {
+            const at_deref = @TypeOf(attributes.*);
+            return if (@hasField(at_deref, "id") and @hasField(at_deref, "_dict"))
+                Attributes.byId(attributes.id)
+            else
+                null;
+        }
 
-    pub fn deinit(self: *Attributes) void {
-        self.clear();
-        self._map.deinit();
+        if (at == .Optional) {
+            if (attributes) |attrs| {
+                if (@typeInfo(@TypeOf(attrs)) == .Int) {
+                    return Attributes.byId(attrs);
+                }
+            }
+
+            return null;
+        }
+
+        if (at == .Int) {
+            return Attributes.byId(attributes);
+        }
+
+        if (at == .Struct) {
+            if (@hasField(@TypeOf(attributes), "id") and @hasField(@TypeOf(attributes), "_dict")) {
+                return Attributes.byId(attributes.id);
+            }
+
+            var result: *Attributes = Attributes.new(.{ .name = name });
+
+            inline for (attributes) |v| {
+                const t = @typeInfo(@TypeOf(v[1]));
+                if (t == .Int) {
+                    if (utils.stringEquals(v[0], "id_1")) {
+                        result.id_1 = v[1];
+                    } else if (utils.stringEquals(v[0], "id_2")) {
+                        result.id_2 = v[1];
+                    } else if (utils.stringEquals(v[0], "id_3")) {
+                        result.id_3 = v[1];
+                    } else if (utils.stringEquals(v[0], "id_4")) {
+                        result.id_4 = v[1];
+                    } else if (utils.stringEquals(v[0], "id_5")) {
+                        result.id_5 = v[1];
+                    }
+                } else {
+                    result.set(v[0], v[1]);
+                }
+            }
+
+            return result;
+        }
+
+        utils.panic(ALLOC, "Failed to create Attributes from anytype: .{any}", .{attributes});
     }
 
     pub fn clear(self: *Attributes) void {
-        var it = self._map.iterator();
+        var it = self._dict.iterator();
         while (it.next()) |e| {
             ALLOC.free(e.key_ptr.*);
             ALLOC.free(e.value_ptr.*);
         }
 
-        self._map.clearAndFree();
+        self._dict.clearAndFree();
     }
 
     pub fn set(self: *Attributes, name: String, value: String) void {
-        if (self._map.contains(name))
+        if (self._dict.contains(name))
             self.remove(name);
 
-        self._map.put(
+        self._dict.put(
             ALLOC.dupe(u8, name) catch unreachable,
             ALLOC.dupe(u8, value) catch unreachable,
         ) catch unreachable;
     }
 
     pub fn setAll(self: *Attributes, attributes: Attributes) void {
-        var it = attributes._map.iterator();
+        var it = attributes._dict.iterator();
         while (it.next()) |e|
             self.set(e.key_ptr.*, e.value_ptr.*);
     }
 
     pub fn get(self: Attributes, name: String) ?String {
-        return self._map.get(name);
-    }
-
-    pub fn getCopy(self: Attributes, name: String) ?String {
-        return NamePool.alloc(self._map.get(name));
+        return self._dict.get(name);
     }
 
     pub fn remove(self: *Attributes, name: String) void {
-        if (self._map.fetchRemove(name)) |kv| {
+        if (self._dict.fetchRemove(name)) |kv| {
             ALLOC.free(kv.key);
             ALLOC.free(kv.value);
         }
@@ -334,8 +393,8 @@ pub const Attributes = struct {
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        try writer.print("Attributes[ ", .{});
-        var it = self._map.iterator();
+        try writer.print("Attributes({d}:{?s})[ ", .{ self.id, self.name });
+        var it = self._dict.iterator();
         while (it.next()) |e| {
             try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
         }
@@ -391,68 +450,6 @@ pub const CallReg = struct {
     }
 };
 
-pub const CallAttributes = struct {
-    // set by the caller and points back to the caller or owner of the registry
-    caller_id: Index = UNDEF_INDEX,
-
-    id_1: Index = UNDEF_INDEX,
-    id_2: Index = UNDEF_INDEX,
-    id_3: Index = UNDEF_INDEX,
-    id_4: Index = UNDEF_INDEX,
-    id_5: Index = UNDEF_INDEX,
-
-    attributes: ?Attributes = null,
-
-    pub fn deinit(self: *CallAttributes) void {
-        if (self.attributes) |*p|
-            p.deinit();
-        self.attributes = undefined;
-    }
-
-    pub fn setAttribute(self: *CallAttributes, name: String, value: String) void {
-        if (self.attributes == null)
-            self.attributes = Attributes.new();
-
-        self.attributes.?.set(name, value);
-    }
-
-    pub fn setAttributes(self: *CallAttributes, attributes: Attributes) void {
-        if (self.attributes == null)
-            self.attributes = Attributes.new();
-
-        self.attributes.?.setAll(attributes);
-    }
-
-    pub fn getAttribute(self: CallAttributes, name: String) ?String {
-        if (self.attributes) |a| return a.get(name);
-        return null;
-    }
-
-    pub fn getAttributeCopy(self: CallAttributes, name: String) ?String {
-        if (self.attributes) |a| return a.getCopy(name);
-        return null;
-    }
-
-    pub fn format(
-        self: CallAttributes,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "CallAttributes[ caller_id:{d}, id_1:{d}, id_2:{d}, id_3:{d}, id_4:{d}, id_5:{d}, ",
-            .{ self.caller_id, self.id_1, self.id_2, self.id_3, self.id_4, self.id_5 },
-        );
-        if (self.attributes) |p| {
-            try writer.print(" attributes: ", .{});
-            var i = p._map.iterator();
-            while (i.next()) |e|
-                try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
-        }
-        try writer.print(" ]", .{});
-    }
-};
-
 //////////////////////////////////////////////////////////////
 //// Convenient Function Declarations
 //////////////////////////////////////////////////////////////
@@ -467,7 +464,7 @@ pub const RegFunction = *const fn (CallReg) void;
 pub const RegPredicate = *const fn (CallReg) bool;
 pub const ActionFunction = *const fn (CallReg) ActionResult;
 pub const ActionCallback = *const fn (CallReg, ActionResult) void;
-pub const AttributedFunction = *const fn (CallAttributes) void;
+pub const AttributedFunction = *const fn (c_id: ?Index, a_id: ?Index) void;
 
 //////////////////////////////////////////////////////////////
 //// Convenient Functions

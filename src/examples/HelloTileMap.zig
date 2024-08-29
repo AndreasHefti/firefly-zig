@@ -47,19 +47,19 @@ fn init() void {
     firefly.api.Task.runTaskByNameWith(
         firefly.game.Tasks.JSON_LOAD_TILE_SET,
         null,
-        api.Attributes.of(.{
+        .{
             .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
-        }),
+        },
     );
 
     // load tile mapping from json
     firefly.api.Task.runTaskByNameWith(
         firefly.game.Tasks.JSON_LOAD_TILE_MAPPING,
         null,
-        api.Attributes.of(.{
+        .{
             .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
             .{ game.TaskAttributes.VIEW_NAME, view_name },
-        }),
+        },
     );
 
     // activate

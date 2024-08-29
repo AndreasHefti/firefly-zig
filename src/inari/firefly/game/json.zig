@@ -63,15 +63,16 @@ pub const JSONResourceHandle = struct {
     json_resource: ?String,
     free_json_resource: bool,
 
-    pub fn new(attrs: api.CallAttributes) JSONResourceHandle {
-        if (attrs.getAttribute(game.TaskAttributes.FILE_RESOURCE)) |file| {
+    pub fn new(a_id: Index) JSONResourceHandle {
+        var attrs = api.Attributes.byId(a_id);
+        if (attrs.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
             return .{
                 .json_resource = firefly.api.loadFromFile(file),
                 .free_json_resource = true,
             };
         } else {
             return .{
-                .json_resource = attrs.getAttribute(game.TaskAttributes.JSON_RESOURCE),
+                .json_resource = attrs.get(game.TaskAttributes.JSON_RESOURCE),
                 .free_json_resource = false,
             };
         }
@@ -137,8 +138,12 @@ pub const JSONTileSet = struct {
     tiles: []const JSONTile,
 };
 
-fn loadTileSetFromJSON(attrs: api.CallAttributes) void {
-    var json_res_handle = JSONResourceHandle.new(attrs);
+fn loadTileSetFromJSON(_: ?Index, a_id: ?Index) void {
+    const attr_id = a_id orelse
+        return;
+
+    var attrs = api.Attributes.byId(attr_id);
+    var json_res_handle = JSONResourceHandle.new(attr_id);
     defer json_res_handle.deinit();
 
     if (json_res_handle.json_resource) |json| {
@@ -223,7 +228,7 @@ fn loadTileSetFromJSON(attrs: api.CallAttributes) void {
         }
 
         // add tile set as owned reference if requested
-        if (attrs.getAttribute(api.OWNER_COMPOSITE_TASK_ATTRIBUTE)) |owner_name| {
+        if (attrs.get(api.OWNER_COMPOSITE_TASK_ATTRIBUTE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
                 comp.addComponentReference(game.TileSet.referenceById(tile_set.id, true));
         }
@@ -317,10 +322,14 @@ pub const JSONTileGrid = struct {
     codes: String,
 };
 
-fn loadTileMappingFromJSON(attrs: api.CallAttributes) void {
-    const view_name = attrs.getAttribute(game.TaskAttributes.VIEW_NAME) orelse
+fn loadTileMappingFromJSON(caller_id: ?Index, a_id: ?Index) void {
+    const attr_id = a_id orelse
+        return;
+
+    var attrs = api.Attributes.byId(attr_id);
+    const view_name = attrs.get(game.TaskAttributes.VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
-    var json_res_handle = JSONResourceHandle.new(attrs);
+    var json_res_handle = JSONResourceHandle.new(attr_id);
     defer json_res_handle.deinit();
 
     if (json_res_handle.json_resource) |json| {
@@ -366,13 +375,10 @@ fn loadTileMappingFromJSON(attrs: api.CallAttributes) void {
                     );
 
                 // load tile set from file
-                var tile_set_attrs = api.Attributes.new();
-                defer tile_set_attrs.deinit();
-                tile_set_attrs.set(game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.?);
                 api.Task.runTaskByNameWith(
                     if (tile_set_def.resource.load_task) |load_task| load_task else game.Tasks.JSON_LOAD_TILE_SET,
-                    attrs.caller_id,
-                    tile_set_attrs,
+                    caller_id,
+                    .{.{ game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.? }},
                 );
             }
 
@@ -442,7 +448,7 @@ fn loadTileMappingFromJSON(attrs: api.CallAttributes) void {
         }
 
         // add tile set as owned reference if requested
-        if (attrs.getAttribute(api.OWNER_COMPOSITE_TASK_ATTRIBUTE)) |owner_name| {
+        if (attrs.get(api.OWNER_COMPOSITE_TASK_ATTRIBUTE)) |owner_name| {
             if (api.Composite.byName(owner_name)) |comp|
                 comp.addComponentReference(game.TileMapping.referenceById(tile_mapping.id, true));
         }
@@ -514,11 +520,15 @@ pub const JSONRoomObject = struct {
     attributes: ?[]const JSONAttribute = null,
 };
 
-fn loadRoomFromJSON(attrs: api.CallAttributes) void {
-    const view_name = attrs.getAttribute(game.TaskAttributes.VIEW_NAME) orelse
+fn loadRoomFromJSON(_: ?Index, a_id: ?Index) void {
+    const attr_id = a_id orelse
+        return;
+
+    var attrs = api.Attributes.byId(attr_id);
+    const view_name = attrs.get(game.TaskAttributes.VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
 
-    var json_res_handle = JSONResourceHandle.new(attrs);
+    var json_res_handle = JSONResourceHandle.new(attr_id);
     defer json_res_handle.deinit();
 
     const json = json_res_handle.json_resource orelse {
@@ -570,7 +580,7 @@ fn loadRoomFromJSON(attrs: api.CallAttributes) void {
     // TODO add objects as activation tasks
     if (jsonTileMapping.objects) |objects| {
         for (0..objects.len) |i| {
-            var attributes = api.Attributes.new();
+            var attributes = api.Attributes.new(.{});
 
             attributes.set(game.TaskAttributes.NAME, objects[i].name);
             attributes.set(game.TaskAttributes.VIEW_NAME, view_name);

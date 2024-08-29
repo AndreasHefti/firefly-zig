@@ -476,7 +476,7 @@ pub const Scene = struct {
     update_action: api.ActionFunction,
     callback: ?api.ActionCallback = null,
     registry: api.CallReg = api.CallReg{},
-    attributes: api.Attributes = undefined,
+    attributes: ?Index = null,
 
     _loaded: bool = false,
 
@@ -489,13 +489,7 @@ pub const Scene = struct {
     }
 
     pub fn construct(self: *Scene) void {
-        self.attributes = api.Attributes.new();
         self.registry.caller_id = self.id;
-    }
-
-    pub fn destruct(self: *Scene) void {
-        self.attributes.deinit();
-        self.attributes = undefined;
     }
 
     pub fn withUpdateAction(self: *Scene, action: api.ActionFunction) *Scene {

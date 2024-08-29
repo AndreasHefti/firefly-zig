@@ -86,10 +86,6 @@ pub fn registerComponent(comptime T: type) void {
     ComponentPool(T).init();
 }
 
-// pub fn deinitComponent(comptime T: type) void {
-//     ComponentPool(T).deinit();
-// }
-
 pub const CReference = struct {
     type: ComponentAspect,
     id: Index,

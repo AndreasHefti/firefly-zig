@@ -112,9 +112,9 @@ fn init() void {
     firefly.api.Task.runTaskByNameWith(
         firefly.game.Tasks.JSON_LOAD_TILE_SET,
         null,
-        firefly.api.Attributes.of(.{
+        .{
             .{ firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET },
-        }),
+        },
     );
     var tile_set: *TileSet = TileSet.byName("TestTileSet").?;
     TileSet.activateByName("TestTileSet", true);

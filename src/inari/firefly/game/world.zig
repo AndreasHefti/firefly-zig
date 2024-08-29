@@ -274,11 +274,13 @@ pub const ERoomTransition = struct {
     orientation: utils.Orientation,
 };
 
-fn createRoomTransition(reg: api.CallAttributes) void {
+fn createRoomTransition(_: ?Index, a_id: ?Index) void {
+    const attr_id = a_id orelse return;
+    var attrs = api.Attributes.byId(attr_id);
     // create the room transition entity
-    const orientation_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
+    const orientation_name = attrs.get(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
     const orientation = utils.Orientation.byName(orientation_name);
-    const condition_name = reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_CONDITION) orelse
+    const condition_name = attrs.get(game.TaskAttributes.ROOM_TRANSITION_CONDITION) orelse
         switch (orientation) {
         .EAST => game.Conditions.GOES_EAST,
         .WEST => game.Conditions.GOES_WEST,
@@ -286,13 +288,13 @@ fn createRoomTransition(reg: api.CallAttributes) void {
         .SOUTH => game.Conditions.GOES_SOUTH,
         else => "NONE",
     };
-    const transition_name = reg.getAttributeCopy(game.TaskAttributes.NAME).?;
-    const target_room_name = reg.getAttributeCopy(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM).?;
-    const target_transition_name = reg.getAttributeCopy(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION).?;
+    const transition_name = api.NamePool.alloc(attrs.get(game.TaskAttributes.NAME)).?;
+    const target_room_name = api.NamePool.alloc(attrs.get(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM)).?;
+    const target_transition_name = api.NamePool.alloc(attrs.get(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION)).?;
 
-    const bounds = utils.parseRectF(reg.getAttribute(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?).?;
-    const view_id = graphics.View.idByName(reg.getAttribute(game.TaskAttributes.VIEW_NAME).?).?;
-    const layer_id = graphics.Layer.idByName(reg.getAttribute(game.TaskAttributes.LAYER_NAME).?).?;
+    const bounds = utils.parseRectF(attrs.get(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?).?;
+    const view_id = graphics.View.idByName(attrs.get(game.TaskAttributes.VIEW_NAME).?).?;
+    const layer_id = graphics.Layer.idByName(attrs.get(game.TaskAttributes.LAYER_NAME).?).?;
 
     // TODO add dispose of entity to Composite
     _ = api.Entity.new(.{ .name = transition_name })
