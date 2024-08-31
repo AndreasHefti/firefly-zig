@@ -44,27 +44,27 @@ pub const Condition = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    check: api.RegPredicate,
+    check: api.CallPredicate,
 
-    pub fn functionById(id: Index) api.RegPredicate {
+    pub fn functionById(id: Index) api.CallPredicate {
         return Condition.byId(id).f;
     }
 
-    pub fn functionByName(name: String) api.RegPredicate {
+    pub fn functionByName(name: String) api.CallPredicate {
         return Condition.byName(name).?.check;
     }
 
-    pub fn createAND(comptime f1: api.RegPredicate, comptime f2: api.RegPredicate) api.RegPredicate {
+    pub fn createAND(comptime f1: api.CallPredicate, comptime f2: api.RegPredicate) api.CallPredicate {
         return struct {
-            fn check(reg: api.CallReg) bool {
+            fn check(reg: *api.CallContext) bool {
                 return f1(reg) and f2(reg);
             }
         }.check;
     }
 
-    pub fn createOR(comptime f1: api.RegPredicate, comptime f2: api.RegPredicate) api.RegPredicate {
+    pub fn createOR(comptime f1: api.CallPredicate, comptime f2: api.CallPredicate) api.CallPredicate {
         return struct {
-            fn check(reg: api.CallReg) bool {
+            fn check(reg: *api.CallContext) bool {
                 return f1(reg) or f2(reg);
             }
         }.check;
@@ -75,7 +75,6 @@ pub const Condition = struct {
 //// Component Control
 //////////////////////////////////////////////////////////////////////////
 
-pub const ControlFunction = *const fn (component_id: Index, data_id: Index) void;
 pub const Control = struct {
     pub usingnamespace api.Component.Trait(Control, .{
         .name = "Control",
@@ -88,7 +87,7 @@ pub const Control = struct {
     groups: ?api.GroupKind = null,
 
     controlled_component_type: api.ComponentAspect,
-    update: ControlFunction,
+    update: api.ControlFunction,
 
     pub fn destruct(self: *Control) void {
         self.groups = null;
@@ -100,7 +99,7 @@ pub fn ControlSubTypeTrait(comptime T: type, comptime ControlledType: type) type
         pub const component_type = ControlledType;
         pub usingnamespace firefly.api.SubTypeTrait(Control, T);
 
-        pub fn new(subtype: T, update: ControlFunction) *T {
+        pub fn new(subtype: T, update: api.ControlFunction) *T {
             if (!initialized) @panic("Not Initialized");
 
             return @This().newSubType(
@@ -128,7 +127,6 @@ pub const VoidControl = struct {
 ////Task and Trigger
 //////////////////////////////////////////////////////////////////////////
 
-/// NOTE: Task takes ownership over given attributes and free memory for attributes after use
 pub const Task = struct {
     pub usingnamespace api.Component.Trait(Task, .{
         .name = "Task",
@@ -142,60 +140,65 @@ pub const Task = struct {
     run_once: bool = false,
     blocking: bool = true,
 
-    function: api.AttributedFunction,
-    callback: ?api.AttributedFunction = null,
+    function: api.CallFunction,
+    callback: ?api.CallFunction = null,
 
     pub fn run(self: *Task) void {
-        self.runWith(self, null, null);
+        var ctx = api.CallContext{};
+        defer ctx.deinit();
+        self.runWith(self, ctx);
     }
 
-    pub fn runWith(
-        self: *Task,
-        caller_id: ?Index,
-        attributes: anytype,
-    ) void {
+    pub fn runWith(self: *Task, context: *api.CallContext) void {
         defer {
             if (self.run_once)
                 Task.disposeById(self.id);
         }
 
-        const a_id = api.Attributes.ofGetId(attributes);
-
         if (self.blocking) {
-            self._run(caller_id, a_id);
+            self._run(context);
         } else {
-            _ = std.Thread.spawn(.{}, _run, .{ self, caller_id, a_id }) catch unreachable;
+            _ = std.Thread.spawn(.{}, _run, .{ self, context }) catch unreachable;
         }
     }
 
     pub fn runTaskById(task_id: Index) void {
-        Task.byId(task_id).runWith(null, null);
+        Task.byId(task_id).runWith(null);
     }
 
-    pub fn runTaskByIdWith(task_id: Index, caller_id: ?Index, attributes: anytype) void {
-        Task.byId(task_id).runWith(caller_id, attributes);
+    pub fn runTaskByIdWith(task_id: Index, context: ?api.CallContext) void {
+        if (context) |ctx| {
+            var c = ctx;
+            defer c.deinit();
+            Task.byId(task_id).runWith(&c);
+        } else {
+            var c = api.CallContext{};
+            defer c.deinit();
+            Task.byId(task_id).runWith(&c);
+        }
     }
     pub fn runTaskByName(task_name: String) void {
-        if (Task.byName(task_name)) |t| t.runWith(null, null);
+        runTaskByNameWith(task_name, null);
     }
 
-    pub fn runTaskByNameWith(task_name: String, caller_id: ?Index, attributes: anytype) void {
-        if (Task.byName(task_name)) |t| t.runWith(caller_id, attributes);
+    pub fn runTaskByNameWith(task_name: String, context: ?api.CallContext) void {
+        if (Task.byName(task_name)) |t| {
+            if (context) |ctx| {
+                var c = ctx;
+                defer c.deinit();
+                t.runWith(&c);
+            } else {
+                var c = api.CallContext{};
+                defer c.deinit();
+                t.runWith(&c);
+            }
+        }
     }
 
-    fn _run(
-        self: *Task,
-        caller_id: ?Index,
-        a_id: ?Index,
-    ) void {
-        self.function(caller_id, a_id);
+    fn _run(self: *Task, context: *api.CallContext) void {
+        self.function(context);
         if (self.callback) |c|
-            c(caller_id, a_id);
-
-        // if (attributes) |*attrs| {
-        //     var a = attrs;
-        //     a.deinit();
-        // }
+            c(context);
     }
 
     pub fn format(
@@ -220,9 +223,8 @@ pub const Trigger = struct {
     name: ?String = null,
 
     task_ref: Index,
-    attributes: ?String,
-    registry: api.CallReg = api.CallReg{},
-    condition: api.RegPredicate,
+    call_context: api.CallContext = undefined,
+    condition: api.CallPredicate,
 
     pub fn componentTypeInit() !void {
         firefly.api.subscribeUpdate(update);
@@ -232,12 +234,23 @@ pub const Trigger = struct {
         firefly.api.unsubscribeUpdate(update);
     }
 
+    pub fn construct(self: *Trigger) void {
+        self.call_context = .{
+            .caller_id = self.id,
+            .caller_name = self.name,
+        };
+    }
+
+    pub fn destruct(self: *Trigger) void {
+        self.call_context.deinit();
+    }
+
     fn update(_: api.UpdateEvent) void {
         var next = Trigger.nextActiveId(0);
         while (next) |i| {
             const trigger = Trigger.byId(i);
-            if (trigger.condition(trigger.registry))
-                Task.byId(trigger.task_ref).runWith(trigger.id, trigger.attributes);
+            if (trigger.condition(&trigger.call_context))
+                Task.byId(trigger.task_ref).runWith(&trigger.call_context);
 
             next = Trigger.nextActiveId(i + 1);
         }
@@ -251,7 +264,7 @@ pub const Trigger = struct {
 pub const State = struct {
     id: Index = UNDEF_INDEX,
     name: ?String,
-    condition: ?api.RegPredicate = null,
+    condition: ?api.CallPredicate = null,
     init: ?*const fn (Index) void = null,
     dispose: ?*const fn (Index) void = null,
 
@@ -273,17 +286,21 @@ pub const StateEngine = struct {
     id: Index = UNDEF_INDEX,
     name: ?String,
     states: utils.DynArray(State) = undefined,
-    registry: api.CallReg = api.CallReg{},
+    call_context: api.CallContext = undefined,
     current_state: ?*State = null,
     update_scheduler: ?api.UpdateScheduler = null,
 
     pub fn construct(self: *StateEngine) void {
         self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable;
-        self.registry.caller_id = self.id;
+        self.call_context = .{
+            .caller_id = self.id,
+            .caller_name = self.name,
+        };
     }
 
     pub fn destruct(self: *StateEngine) void {
         self.states.deinit();
+        self.call_context.deinit();
     }
 
     pub fn withState(self: *StateEngine, state: State) *StateEngine {
@@ -328,15 +345,19 @@ pub const EntityStateEngine = struct {
     id: Index = UNDEF_INDEX,
     name: ?String,
     states: utils.DynArray(State) = undefined,
-    registry: api.CallReg = api.CallReg{},
+    call_context: api.CallContext = undefined,
 
     pub fn construct(self: *EntityStateEngine) void {
         self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
-        self.registry.caller_id = self.id;
+        self.call_context = .{
+            .caller_id = self.id,
+            .caller_name = self.name,
+        };
     }
 
     pub fn destruct(self: *EntityStateEngine) void {
         self.states.deinit();
+        self.call_context.deinit();
     }
 
     pub fn withState(self: *EntityStateEngine, state: State) *EntityStateEngine {
@@ -381,14 +402,14 @@ pub const StateSystem = struct {
         if (state_engine.update_scheduler) |u| if (!u.needs_update)
             return;
 
-        state_engine.registry.id_1 = if (state_engine.current_state) |s| s.id else UNDEF_INDEX;
+        state_engine.call_context.id_1 = if (state_engine.current_state) |s| s.id else UNDEF_INDEX;
 
         var next = state_engine.states.slots.nextSetBit(0);
         while (next) |i| {
             if (state_engine.states.get(i)) |state| {
                 if (state.condition) |condition| {
-                    state_engine.registry.id_2 = state.id;
-                    if (condition(state_engine.registry)) {
+                    state_engine.call_context.id_2 = state.id;
+                    if (condition(&state_engine.call_context)) {
                         state_engine.setNewState(state);
                         return;
                     }
@@ -414,18 +435,18 @@ pub const EntityStateSystem = struct {
 
     inline fn processEntity(entity: *EState) void {
         const state_engine = EntityStateEngine.byId(entity.state_engine_ref);
-        state_engine.registry.id_2 = if (entity.current_state) |s| s.id else UNDEF_INDEX;
+        state_engine.call_context.id_2 = if (entity.current_state) |s| s.id else UNDEF_INDEX;
         var next = state_engine.states.slots.nextSetBit(0);
         while (next) |i| {
             next = state_engine.states.slots.nextSetBit(i + 1);
             if (state_engine.states.get(i)) |state| {
-                if (state.id == state_engine.registry.id_2)
+                if (state.id == state_engine.call_context.id_2)
                     continue;
 
                 if (state.condition) |condition| {
-                    state_engine.registry.id_1 = entity.id;
+                    state_engine.call_context.id_1 = entity.id;
 
-                    if (condition(state_engine.registry)) {
+                    if (condition(&state_engine.call_context)) {
                         EntityStateEngine.setNewState(entity, state);
                         return;
                     }

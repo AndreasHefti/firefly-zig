@@ -86,13 +86,6 @@ pub fn registerComponent(comptime T: type) void {
     ComponentPool(T).init();
 }
 
-pub const CReference = struct {
-    type: ComponentAspect,
-    id: Index,
-    activation: ?*const fn (Index, bool) void,
-    dispose: ?*const fn (Index) void,
-};
-
 pub fn print(string_buffer: *utils.StringBuffer) void {
     string_buffer.print("\nComponents:", .{});
     var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
@@ -167,7 +160,7 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
             return pool.items.get(id).?;
         }
 
-        pub fn referenceById(id: Index, owned: bool) ?CReference {
+        pub fn referenceById(id: Index, owned: bool) ?api.CRef {
             _ = pool.items.get(id) orelse return null;
             return .{
                 .type = aspect,
@@ -314,7 +307,7 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime contex
             }
             return null;
         }
-        pub fn referenceByName(name: String, owned: bool) ?CReference {
+        pub fn referenceByName(name: String, owned: bool) ?api.CRef {
             if (adapter.pool.name_mapping) |*nm| {
                 if (nm.get(name)) |id| {
                     return .{

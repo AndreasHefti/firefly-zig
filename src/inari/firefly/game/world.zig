@@ -179,7 +179,7 @@ pub const Room = struct {
         }
     }
 
-    fn runRoom(_: api.CallReg, _: api.ActionResult) void {
+    fn runRoom(_: *api.CallContext) void {
         var room = Room.byName(starting_room_ref.?).?;
         room.state = .RUNNING;
         game.resumeGame();
@@ -235,7 +235,7 @@ pub const Room = struct {
         defer self.state = .CREATED;
     }
 
-    fn deactivateRoomCallback(_: api.CallReg, _: api.ActionResult) void {
+    fn deactivateRoomCallback(_: *api.CallContext) void {
         var room = Room.byName(stopping_room_ref.?).?;
         api.Composite.activateByName(room.name, false);
         room.state = .LOADED;
@@ -262,20 +262,18 @@ pub const Room = struct {
 //// Room Transition
 //////////////////////////////////////////////////////////////
 
-var room_transition_registry = api.CallReg{};
-
 pub const ERoomTransition = struct {
     pub usingnamespace api.EComponent.Trait(ERoomTransition, "ERoomTransition");
 
     id: Index = UNDEF_INDEX,
-    condition: ?api.RegPredicate = null,
+    condition: ?api.CallPredicate = null,
     target_room: String,
     target_transition: String,
     orientation: utils.Orientation,
 };
 
-fn createRoomTransition(_: ?Index, a_id: ?Index) void {
-    const attr_id = a_id orelse return;
+fn createRoomTransition(ctx: *api.CallContext) void {
+    const attr_id = ctx.attributes_id orelse return;
     var attrs = api.Attributes.byId(attr_id);
     // create the room transition entity
     const orientation_name = attrs.get(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
@@ -313,6 +311,14 @@ fn createRoomTransition(_: ?Index, a_id: ?Index) void {
         .activate();
 }
 
+const TransitionState = struct {
+    var player_id: ?Index = null;
+    var player_name: ?String = null;
+    var transition_id: ?Index = null;
+    var target_room: ?String = null;
+    var target_transition: ?String = null;
+};
+
 // ContactCallback used to apply to player to get called on players transition contact constraint
 pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan) bool {
     // check transition condition
@@ -334,22 +340,22 @@ pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan
     }
 
     // stop current room with callback
-    room_transition_registry.id_1 = player_id;
-    room_transition_registry.id_2 = transition_id;
-    room_transition_registry.name_1 = player_name;
-    room_transition_registry.name_2 = transition.target_room;
-    room_transition_registry.name_3 = transition.target_transition;
+    TransitionState.player_id = player_id;
+    TransitionState.transition_id = transition_id;
+    TransitionState.player_name = player_name;
+    TransitionState.target_room = transition.target_room;
+    TransitionState.target_transition = transition.target_transition;
 
     game.Room.stopRoom(player_name, roomStoppedCallback);
     return true;
 }
 
 fn roomStoppedCallback(_: Index) void {
-    const player_id = room_transition_registry.id_1;
-    const source_transition_id = room_transition_registry.id_2;
-    const player_name = room_transition_registry.name_1.?;
-    const target_room_name = room_transition_registry.name_2.?;
-    const target_transition = room_transition_registry.name_3.?;
+    const player_id = TransitionState.player_id.?;
+    const source_transition_id = TransitionState.transition_id.?;
+    const player_name = TransitionState.player_name.?;
+    const target_room_name = TransitionState.target_room.?;
+    const target_transition = TransitionState.target_transition.?;
 
     // activate new room also load room if not loaded
     if (Room.byName(target_room_name)) |target_room| {
@@ -447,30 +453,32 @@ pub const SimpleRoomTransitionScene = struct {
         color = &graphics.EShape.byName(entity_name).?.color;
     }
 
-    fn entryInit(_: api.CallReg) void {
+    fn entryInit(_: *api.CallContext) void {
         entityInit(true);
     }
 
-    fn exitInit(_: api.CallReg) void {
+    fn exitInit(_: *api.CallContext) void {
         entityInit(false);
     }
 
-    fn disposeEntity(_: api.CallReg) void {
+    fn disposeEntity(_: *api.CallContext) void {
         api.Entity.disposeByName(entity_name);
     }
 
-    fn entryAction(_: api.CallReg) api.ActionResult {
+    fn entryAction(ctx: *api.CallContext) void {
         color[3] -= @min(5, color[3]);
         if (color[3] <= 0)
-            return api.ActionResult.Success;
-        return api.ActionResult.Running;
+            ctx.result = .Success
+        else
+            ctx.result = .Running;
     }
 
-    fn exitAction(_: api.CallReg) api.ActionResult {
+    fn exitAction(ctx: *api.CallContext) void {
         color[3] = @min(255, color[3] + 5);
         std.debug.print("color: {d}\n", .{color[3]});
         if (color[3] >= 255)
-            return api.ActionResult.Success;
-        return api.ActionResult.Running;
+            ctx.result = .Success
+        else
+            ctx.result = .Running;
     }
 };

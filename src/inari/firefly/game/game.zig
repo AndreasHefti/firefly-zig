@@ -131,20 +131,20 @@ pub const Conditions = struct {
     pub const GOES_SOUTH = "GOES_SOUTH";
 };
 
-fn goesEast(reg: api.CallReg) bool {
-    return if (physics.EMovement.byId(reg.id_1)) |m| m.velocity[0] > 0 else false;
+fn goesEast(ctx: *api.CallContext) bool {
+    return if (physics.EMovement.byId(ctx.id_1)) |m| m.velocity[0] > 0 else false;
 }
 
-fn goesWest(reg: api.CallReg) bool {
-    return if (physics.EMovement.byId(reg.id_1)) |m| m.velocity[0] < 0 else false;
+fn goesWest(ctx: *api.CallContext) bool {
+    return if (physics.EMovement.byId(ctx.id_1)) |m| m.velocity[0] < 0 else false;
 }
 
-fn goesNorth(reg: api.CallReg) bool {
-    return if (physics.EMovement.byId(reg.id_1)) |m| m.velocity[1] < 0 else false;
+fn goesNorth(ctx: *api.CallContext) bool {
+    return if (physics.EMovement.byId(ctx.id_1)) |m| m.velocity[1] < 0 else false;
 }
 
-fn goesSouth(reg: api.CallReg) bool {
-    return if (physics.EMovement.byId(reg.id_1)) |m| m.velocity[1] > 0 else false;
+fn goesSouth(ctx: *api.CallContext) bool {
+    return if (physics.EMovement.byId(ctx.id_1)) |m| m.velocity[1] > 0 else false;
 }
 
 pub const SimpleRoomTransitionScene = world.SimpleRoomTransitionScene;

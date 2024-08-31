@@ -46,20 +46,24 @@ fn init() void {
     // load atlas and create tile set with task
     firefly.api.Task.runTaskByNameWith(
         firefly.game.Tasks.JSON_LOAD_TILE_SET,
-        null,
-        .{
-            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
-        },
+        firefly.api.CallContext.withAttributes(
+            null,
+            .{
+                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
+            },
+        ),
     );
 
     // load tile mapping from json
     firefly.api.Task.runTaskByNameWith(
         firefly.game.Tasks.JSON_LOAD_TILE_MAPPING,
-        null,
-        .{
-            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
-            .{ game.TaskAttributes.VIEW_NAME, view_name },
-        },
+        firefly.api.CallContext.withAttributes(
+            null,
+            .{
+                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
+                .{ game.TaskAttributes.VIEW_NAME, view_name },
+            },
+        ),
     );
 
     // activate

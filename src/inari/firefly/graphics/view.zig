@@ -471,12 +471,11 @@ pub const Scene = struct {
 
     scheduler: ?*api.UpdateScheduler = null,
 
-    init_function: ?api.RegFunction = null,
-    dispose_function: ?api.RegFunction = null,
-    update_action: api.ActionFunction,
-    callback: ?api.ActionCallback = null,
-    registry: api.CallReg = api.CallReg{},
-    attributes: ?Index = null,
+    init_function: ?api.CallFunction = null,
+    dispose_function: ?api.CallFunction = null,
+    update_action: api.CallFunction,
+    callback: ?api.CallFunction = null,
+    call_context: api.CallContext = undefined,
 
     _loaded: bool = false,
 
@@ -489,7 +488,14 @@ pub const Scene = struct {
     }
 
     pub fn construct(self: *Scene) void {
-        self.registry.caller_id = self.id;
+        self.call_context = .{
+            .caller_id = self.id,
+            .caller_name = self.name,
+        };
+    }
+
+    pub fn destruct(self: *Scene) void {
+        self.call_context.deinit();
     }
 
     pub fn withUpdateAction(self: *Scene, action: api.ActionFunction) *Scene {
@@ -514,7 +520,7 @@ pub const Scene = struct {
                 return;
 
             if (self.init_function) |f|
-                f(self.registry);
+                f(&self.call_context);
         } else {
             stop(self);
             defer self._loaded = false;
@@ -522,7 +528,7 @@ pub const Scene = struct {
                 return;
 
             if (self.dispose_function) |f|
-                f(self.registry);
+                f(&self.call_context);
         }
     }
 
@@ -554,13 +560,13 @@ pub const Scene = struct {
                     continue;
             }
 
-            const result = scene.update_action(scene.registry);
-            if (result == .Running)
+            scene.update_action(&scene.call_context);
+            if (scene.call_context.result == .Running)
                 continue;
 
             scene.stop();
             if (scene.callback) |call|
-                call(scene.registry, result);
+                call(&scene.call_context);
 
             if (scene.delete_after_run)
                 Scene.disposeById(scene.id);

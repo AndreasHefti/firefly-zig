@@ -138,11 +138,11 @@ pub const JSONTileSet = struct {
     tiles: []const JSONTile,
 };
 
-fn loadTileSetFromJSON(_: ?Index, a_id: ?Index) void {
-    const attr_id = a_id orelse
+fn loadTileSetFromJSON(ctx: *api.CallContext) void {
+    const attr_id = ctx.attributes_id orelse
         return;
 
-    var attrs = api.Attributes.byId(attr_id);
+    //var attrs = api.Attributes.byId(attr_id);
     var json_res_handle = JSONResourceHandle.new(attr_id);
     defer json_res_handle.deinit();
 
@@ -227,11 +227,8 @@ fn loadTileSetFromJSON(_: ?Index, a_id: ?Index) void {
             }
         }
 
-        // add tile set as owned reference if requested
-        if (attrs.get(api.OWNER_COMPOSITE_TASK_ATTRIBUTE)) |owner_name| {
-            if (api.Composite.byName(owner_name)) |comp|
-                comp.addComponentReference(game.TileSet.referenceById(tile_set.id, true));
-        }
+        if (ctx.c_ref_callback) |callback|
+            callback(game.TileSet.referenceById(tile_set.id, true).?, ctx);
     }
 }
 
@@ -322,8 +319,8 @@ pub const JSONTileGrid = struct {
     codes: String,
 };
 
-fn loadTileMappingFromJSON(caller_id: ?Index, a_id: ?Index) void {
-    const attr_id = a_id orelse
+fn loadTileMappingFromJSON(ctx: *api.CallContext) void {
+    const attr_id = ctx.attributes_id orelse
         return;
 
     var attrs = api.Attributes.byId(attr_id);
@@ -377,8 +374,12 @@ fn loadTileMappingFromJSON(caller_id: ?Index, a_id: ?Index) void {
                 // load tile set from file
                 api.Task.runTaskByNameWith(
                     if (tile_set_def.resource.load_task) |load_task| load_task else game.Tasks.JSON_LOAD_TILE_SET,
-                    caller_id,
-                    .{.{ game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.? }},
+                    api.CallContext.withAttributes(
+                        ctx.caller_id,
+                        .{
+                            .{ game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.? },
+                        },
+                    ),
                 );
             }
 
@@ -448,10 +449,8 @@ fn loadTileMappingFromJSON(caller_id: ?Index, a_id: ?Index) void {
         }
 
         // add tile set as owned reference if requested
-        if (attrs.get(api.OWNER_COMPOSITE_TASK_ATTRIBUTE)) |owner_name| {
-            if (api.Composite.byName(owner_name)) |comp|
-                comp.addComponentReference(game.TileMapping.referenceById(tile_mapping.id, true));
-        }
+        if (ctx.c_ref_callback) |callback|
+            callback(game.TileMapping.referenceById(tile_mapping.id, true).?, ctx);
     }
 }
 
@@ -520,8 +519,8 @@ pub const JSONRoomObject = struct {
     attributes: ?[]const JSONAttribute = null,
 };
 
-fn loadRoomFromJSON(_: ?Index, a_id: ?Index) void {
-    const attr_id = a_id orelse
+fn loadRoomFromJSON(ctx: *api.CallContext) void {
+    const attr_id = ctx.attributes_id orelse
         return;
 
     var attrs = api.Attributes.byId(attr_id);
@@ -577,7 +576,7 @@ fn loadRoomFromJSON(_: ?Index, a_id: ?Index) void {
         },
     );
 
-    // TODO add objects as activation tasks
+    // add objects as activation tasks
     if (jsonTileMapping.objects) |objects| {
         for (0..objects.len) |i| {
             var attributes = api.Attributes.new(.{});

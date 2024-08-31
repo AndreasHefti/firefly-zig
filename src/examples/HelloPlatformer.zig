@@ -81,19 +81,23 @@ fn init() void {
     // load first (entry) room from file
     api.Task.runTaskByNameWith(
         game.Tasks.JSON_LOAD_ROOM,
-        null,
-        .{
-            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room2.json" },
-            .{ game.TaskAttributes.VIEW_NAME, view_name },
-        },
+        firefly.api.CallContext.withAttributes(
+            null,
+            .{
+                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room2.json" },
+                .{ game.TaskAttributes.VIEW_NAME, view_name },
+            },
+        ),
     );
     api.Task.runTaskByNameWith(
         game.Tasks.JSON_LOAD_ROOM,
-        null,
-        .{
-            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
-            .{ game.TaskAttributes.VIEW_NAME, view_name },
-        },
+        firefly.api.CallContext.withAttributes(
+            null,
+            .{
+                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
+                .{ game.TaskAttributes.VIEW_NAME, view_name },
+            },
+        ),
     );
 
     // add player and init cam for room
@@ -116,7 +120,7 @@ fn roomLoaded(_: Index) void {
 }
 
 var player_pos_ptr: *utils.PosF = undefined;
-fn createPlayer(_: ?Index, _: ?Index) void {
+fn createPlayer(_: *api.CallContext) void {
     const sprite_id = graphics.SpriteTemplate.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },

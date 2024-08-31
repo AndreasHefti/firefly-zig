@@ -89,11 +89,13 @@ fn init() void {
     // load room from file
     api.Task.runTaskByNameWith(
         game.Tasks.JSON_LOAD_ROOM,
-        null,
-        .{
-            .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
-            .{ game.TaskAttributes.VIEW_NAME, view_name },
-        },
+        firefly.api.CallContext.withAttributes(
+            null,
+            .{
+                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
+                .{ game.TaskAttributes.VIEW_NAME, view_name },
+            },
+        ),
     );
 
     // and just start the Room with no player
@@ -123,7 +125,7 @@ fn pivot_control(_: Index, _: Index) void {
 // and pivot control is been activated.
 var start_scene_init = false;
 var color: *utils.Color = undefined;
-fn startSceneAction(_: api.CallReg) api.ActionResult {
+fn startSceneAction(ctx: *api.CallContext) void {
     if (!start_scene_init) {
         // create overlay entity
         const entity = api.Entity.new(.{ .name = "StartSceneEntity" })
@@ -150,8 +152,8 @@ fn startSceneAction(_: api.CallReg) api.ActionResult {
     if (color[3] <= 0) {
         api.Entity.disposeByName("StartSceneEntity");
         api.Control.activateByName("KeyControl", true);
-        return api.ActionResult.Success;
+        ctx.result = api.ActionResult.Success;
+    } else {
+        ctx.result = api.ActionResult.Running;
     }
-
-    return api.ActionResult.Running;
 }

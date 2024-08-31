@@ -37,13 +37,13 @@ pub const CompositeLifeCycle = enum {
     DISPOSE,
 };
 
-pub const CompositeObject = struct {
+pub const CompositeTaskRef = struct {
     task_ref: ?Index = null,
     task_name: ?String = null,
     life_cycle: CompositeLifeCycle,
     attributes: ?Index = null,
 
-    pub fn deinit(self: *CompositeObject) void {
+    pub fn deinit(self: *CompositeTaskRef) void {
         if (self.attributes) |a_id|
             api.Attributes.disposeById(a_id);
         self.attributes = null;
@@ -61,15 +61,15 @@ pub const Composite = struct {
     loaded: bool = false,
 
     attributes: ?Index = undefined,
-    objects: utils.DynArray(CompositeObject) = undefined,
-    _loaded_components: utils.DynArray(api.CReference) = undefined,
+    task_refs: utils.DynArray(CompositeTaskRef) = undefined,
+    _loaded_components: utils.DynArray(api.CRef) = undefined,
 
     pub fn construct(self: *Composite) void {
-        self.objects = utils.DynArray(CompositeObject).newWithRegisterSize(
+        self.task_refs = utils.DynArray(CompositeTaskRef).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             5,
         );
-        self._loaded_components = utils.DynArray(api.CReference).newWithRegisterSize(
+        self._loaded_components = utils.DynArray(api.CRef).newWithRegisterSize(
             api.COMPONENT_ALLOC,
             3,
         );
@@ -78,15 +78,15 @@ pub const Composite = struct {
     }
 
     pub fn destruct(self: *Composite) void {
-        var next = self.objects.slots.nextSetBit(0);
+        var next = self.task_refs.slots.nextSetBit(0);
         while (next) |i| {
-            next = self.objects.slots.nextSetBit(i + 1);
-            if (self.objects.get(i)) |o|
+            next = self.task_refs.slots.nextSetBit(i + 1);
+            if (self.task_refs.get(i)) |o|
                 o.deinit();
         }
 
-        self.objects.deinit();
-        self.objects = undefined;
+        self.task_refs.deinit();
+        self.task_refs = undefined;
         self._loaded_components.deinit();
         self._loaded_components = undefined;
         if (self.attributes) |a_id| {
@@ -102,7 +102,7 @@ pub const Composite = struct {
         attributes: anytype,
     ) *Composite {
         const _task = api.Task.new(task);
-        _ = self.objects.add(CompositeObject{
+        _ = self.task_refs.add(CompositeTaskRef{
             .task_ref = _task.id,
             .task_name = _task.name,
             .life_cycle = life_cycle,
@@ -111,15 +111,15 @@ pub const Composite = struct {
         return self;
     }
 
-    pub fn withObject(self: *Composite, object: CompositeObject) *Composite {
-        if (object.task_ref == null and object.task_name == null)
-            utils.panic(api.ALLOC, "CompositeObject has whether id nor name. {any}", .{object});
+    pub fn withTaskRef(self: *Composite, task_ref: CompositeTaskRef) *Composite {
+        if (task_ref.task_ref == null and task_ref.task_name == null)
+            utils.panic(api.ALLOC, "CompositeTaskRef has whether id nor name. {any}", .{task_ref});
 
-        _ = self.objects.add(object);
+        _ = self.task_refs.add(task_ref);
         return self;
     }
 
-    pub fn addComponentReference(self: *Composite, ref: ?api.CReference) void {
+    pub fn addComponentReference(self: *Composite, ref: ?api.CRef) void {
         if (ref) |r| _ = self._loaded_components.add(r);
     }
 
@@ -164,21 +164,38 @@ pub const Composite = struct {
         }
     }
 
+    fn callRefCallback(c_ref: api.CRef, context: ?*api.CallContext) void {
+        if (context) |c|
+            _ = Composite.byId(c.caller_id)._loaded_components.add(c_ref);
+    }
+
     fn runTasks(self: *Composite, life_cycle: CompositeLifeCycle) void {
-        var next = self.objects.slots.nextSetBit(0);
+        var next = self.task_refs.slots.nextSetBit(0);
         while (next) |i| {
-            const tr = self.objects.get(i) orelse {
-                next = self.objects.slots.nextSetBit(i + 1);
-                continue;
-            };
+            next = self.task_refs.slots.nextSetBit(i + 1);
+            const tr = self.task_refs.get(i).?;
 
             if (tr.life_cycle == life_cycle)
                 if (tr.task_ref) |id|
-                    api.Task.runTaskByIdWith(id, self.id, tr.attributes)
+                    api.Task.runTaskByIdWith(
+                        id,
+                        .{
+                            .caller_id = self.id,
+                            .caller_name = self.name,
+                            .attributes_id = tr.attributes,
+                            .c_ref_callback = callRefCallback,
+                        },
+                    )
                 else if (tr.task_name) |name|
-                    api.Task.runTaskByNameWith(name, self.id, tr.attributes);
-
-            next = self.objects.slots.nextSetBit(i + 1);
+                    api.Task.runTaskByNameWith(
+                        name,
+                        .{
+                            .caller_id = self.id,
+                            .caller_name = self.name,
+                            .attributes_id = tr.attributes,
+                            .c_ref_callback = callRefCallback,
+                        },
+                    );
         }
     }
 };
@@ -215,13 +232,13 @@ pub fn CompositeTrait(comptime T: type) type {
             const attrs = api.Attributes.of(attributes, null);
             if (attrs) |a| {
                 a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
-                _ = api.Composite.byId(self.id).withObject(.{
+                _ = api.Composite.byId(self.id).withTaskRef(.{
                     .task_ref = task_id,
                     .life_cycle = life_cycle,
                     .attributes = a.id,
                 });
             } else {
-                _ = api.Composite.byId(self.id).withObject(.{
+                _ = api.Composite.byId(self.id).withTaskRef(.{
                     .task_ref = task_id,
                     .life_cycle = life_cycle,
                 });
@@ -241,13 +258,13 @@ pub fn CompositeTrait(comptime T: type) type {
             const attrs = api.Attributes.of(attributes, null);
             if (attrs) |a| {
                 a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
-                _ = api.Composite.byId(self.id).withObject(.{
+                _ = api.Composite.byId(self.id).withTaskRef(.{
                     .task_name = task_name,
                     .life_cycle = life_cycle,
                     .attributes = a.id,
                 });
             } else {
-                _ = api.Composite.byId(self.id).withObject(.{
+                _ = api.Composite.byId(self.id).withTaskRef(.{
                     .task_name = task_name,
                     .life_cycle = life_cycle,
                 });

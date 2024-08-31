@@ -58,7 +58,6 @@ pub const AssetAspect = AssetAspectGroup.Aspect;
 pub const AssetTrait = asset.AssetTrait;
 
 pub const Component = component;
-pub const CReference = component.CReference;
 pub const ComponentAspectGroup = component.ComponentAspectGroup;
 pub const ComponentKind = ComponentAspectGroup.Kind;
 pub const ComponentAspect = ComponentAspectGroup.Aspect;
@@ -82,7 +81,6 @@ pub const EComponent = entity.EComponent;
 pub const EComponentAspectGroup = entity.EComponentAspectGroup;
 pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
-pub const ControlFunction = control.ControlFunction;
 pub const Task = control.Task;
 pub const Trigger = control.Trigger;
 pub const Control = control.Control;
@@ -102,6 +100,52 @@ pub const EntityStateSystem = control.EntityStateSystem;
 
 pub const BindingId = usize;
 pub const Deinit = *const fn () void;
+
+pub const ActionResult = enum {
+    Running,
+    Success,
+    Failed,
+};
+
+pub const CRef = struct {
+    type: ComponentAspect,
+    id: Index,
+    activation: ?*const fn (Index, bool) void,
+    dispose: ?*const fn (Index) void,
+};
+
+pub const CallContext = struct {
+    caller_id: Index = UNDEF_INDEX,
+    caller_name: ?String = null,
+
+    id_1: Index = UNDEF_INDEX,
+    id_2: Index = UNDEF_INDEX,
+    id_3: Index = UNDEF_INDEX,
+    id_4: Index = UNDEF_INDEX,
+    id_5: Index = UNDEF_INDEX,
+
+    attributes_id: ?Index = null,
+    c_ref_callback: ?CRefCallback = null,
+    result: ?ActionResult = null,
+
+    pub fn withAttributes(caller_id: ?Index, attributes: anytype) CallContext {
+        return CallContext{
+            .caller_id = caller_id orelse UNDEF_INDEX,
+            .attributes_id = Attributes.ofGetId(attributes),
+        };
+    }
+
+    pub fn deinit(self: *CallContext) void {
+        if (self.attributes_id) |aid|
+            Attributes.disposeById(aid);
+        self.attributes_id = null;
+    }
+};
+
+pub const ControlFunction = *const fn (component_id: Index, data_id: Index) void;
+pub const CallFunction = *const fn (*CallContext) void;
+pub const CallPredicate = *const fn (*CallContext) bool;
+pub const CRefCallback = *const fn (CRef, ?*CallContext) void;
 
 //////////////////////////////////////////////////////////////
 //// Initialization
@@ -264,12 +308,6 @@ pub const Attributes = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
 
-    id_1: Index = UNDEF_INDEX,
-    id_2: Index = UNDEF_INDEX,
-    id_3: Index = UNDEF_INDEX,
-    id_4: Index = UNDEF_INDEX,
-    id_5: Index = UNDEF_INDEX,
-
     _dict: std.StringHashMap(String) = undefined,
 
     pub fn construct(self: *Attributes) void {
@@ -401,70 +439,6 @@ pub const Attributes = struct {
         try writer.print("]", .{});
     }
 };
-
-//////////////////////////////////////////////////////////////
-//// Call Register
-//////////////////////////////////////////////////////////////
-/// Arbitrary id and name register to be used with
-/// generic API function calls
-///
-pub const CallReg = struct {
-    // set by the caller and points back to the caller or owner of the registry
-    caller_id: Index = UNDEF_INDEX,
-
-    id_1: Index = UNDEF_INDEX,
-    id_2: Index = UNDEF_INDEX,
-    id_3: Index = UNDEF_INDEX,
-    id_4: Index = UNDEF_INDEX,
-    id_5: Index = UNDEF_INDEX,
-
-    name_1: ?String = null,
-    name_2: ?String = null,
-    name_3: ?String = null,
-    name_4: ?String = null,
-    name_5: ?String = null,
-
-    pub fn clear(self: *CallReg) void {
-        self.id_1 = UNDEF_INDEX;
-        self.id_2 = UNDEF_INDEX;
-        self.id_3 = UNDEF_INDEX;
-        self.id_4 = UNDEF_INDEX;
-        self.id_5 = UNDEF_INDEX;
-        self.name_1 = null;
-        self.name_2 = null;
-        self.name_3 = null;
-        self.name_4 = null;
-        self.name_5 = null;
-    }
-
-    pub fn format(
-        self: CallReg,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try writer.print(
-            "CallReg[ caller_id:{d}, id_1:{d}, id_2:{d}, id_3:{d}, id_4:{d}, id_5:{d}][ name_1:{?s}, name_2:{?s}, name_3:{?s}, name_4:{?s}, name_5:{?s},]  ",
-            .{ self.caller_id, self.id_1, self.id_2, self.id_3, self.id_4, self.id_5, self.name_1, self.name_2, self.name_3, self.name_4, self.name_5 },
-        );
-    }
-};
-
-//////////////////////////////////////////////////////////////
-//// Convenient Function Declarations
-//////////////////////////////////////////////////////////////
-
-pub const ActionResult = enum {
-    Running,
-    Success,
-    Failed,
-};
-
-pub const RegFunction = *const fn (CallReg) void;
-pub const RegPredicate = *const fn (CallReg) bool;
-pub const ActionFunction = *const fn (CallReg) ActionResult;
-pub const ActionCallback = *const fn (CallReg, ActionResult) void;
-pub const AttributedFunction = *const fn (c_id: ?Index, a_id: ?Index) void;
 
 //////////////////////////////////////////////////////////////
 //// Convenient Functions
