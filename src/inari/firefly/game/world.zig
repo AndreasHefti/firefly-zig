@@ -90,10 +90,9 @@ pub const Room = struct {
     end_scene_ref: ?String = null,
     player_ref: ?String = null, // if set, room is active (STARTING,RUNNING,PAUSED,STOPPING) for referenced player
 
-    _callback: ?RoomCallback = undefined,
-
-    var starting_room_ref: ?String = null;
-    var stopping_room_ref: ?String = null;
+    _run_callback: ?RoomCallback = undefined,
+    _stop_callback: ?RoomCallback = undefined,
+    _unload_callback: ?RoomCallback = undefined,
 
     pub fn new(room: Room) *Room {
         var result = @This().newSubType(
@@ -143,14 +142,16 @@ pub const Room = struct {
         player_ref: String,
         callback: ?RoomCallback,
     ) void {
-        // if this or another room is already starting, ignore call
-        if (starting_room_ref != null) {
+        // if this room is already starting, ignore call
+        if (self.state == .STARTING or self.state == .RUNNING) {
             std.debug.print("Another Room is already starting cannot start: {any}", .{self});
             return;
         }
 
         // activate if room is not already loaded --> but should be loaded before
-        if (self.state != .ACTIVATED) self.activateRoom();
+        if (self.state != .ACTIVATED)
+            self.activateRoom();
+
         // ignore when room is in unexpected state
         if (self.state != .ACTIVATED) {
             std.debug.print("Room is in unexpected state to run: {any} still active!", .{self});
@@ -159,14 +160,19 @@ pub const Room = struct {
 
         self.player_ref = player_ref;
         self.state = .STARTING;
-        starting_room_ref = self.name;
+
         // TODO init and adjust camera for player
         // game.Player.byName(player_ref).adjustCamera()
+        if (game.SimplePivotCamera.byName("Camera1")) |cam| {
+            cam.snap_to_bounds = self.bounds;
+            //cam.adjust(view_id: Index)
+        }
 
         // run start scene if defined. Callback gets invoked when scene finished
         if (self.start_scene_ref) |scene_name| {
             if (graphics.Scene.byName(scene_name)) |scene| {
-                self._callback = callback;
+                self._run_callback = callback;
+                scene.call_context.caller_id = self.id;
                 scene.callback = runRoom;
                 scene.run();
             }
@@ -174,75 +180,94 @@ pub const Room = struct {
             // just run the Room immediately
             game.resumeGame();
             self.state = .RUNNING;
-            starting_room_ref = null;
             if (callback) |c| c(self.id);
         }
     }
 
-    fn runRoom(_: *api.CallContext) void {
-        var room = Room.byName(starting_room_ref.?).?;
+    fn runRoom(ctx: *api.CallContext) void {
+        var room = Room.byId(ctx.caller_id);
+        defer room._run_callback = null;
+
         room.state = .RUNNING;
         game.resumeGame();
-        starting_room_ref = null;
-        if (room._callback) |c| c(room.id);
-        room._callback = null;
+        if (room._run_callback) |c|
+            c(room.id);
     }
 
     // 6. Stop (Scene) --> stops the play and start end scene if available,
     //                    deactivates all registered component refs and run registered deactivation tasks.
-    pub fn stopRoom(
-        player_ref: String,
-        callback: ?RoomCallback,
-    ) void {
+    pub fn stopRoom(player_ref: String, callback: ?RoomCallback) void {
         if (getActiveRoomForPlayer(player_ref)) |room|
-            stop(room, player_ref, callback);
+            stop(room, callback);
     }
 
-    pub fn stop(
-        self: *Room,
-        player_ref: String,
-        callback: ?RoomCallback,
-    ) void {
-        // ignore when room is not running
-        if (self.state != .RUNNING or stopping_room_ref != null)
+    pub fn stop(self: *Room, callback: ?RoomCallback) void {
+        // ignore when room is not running or already stopping
+        if (self.state != .RUNNING or self.state == .STOPPING)
             return;
 
         self.state = .STOPPING;
-        stopping_room_ref = self.name;
         game.pauseGame();
 
         // if end scene defined run it and wait for callback
         if (self.end_scene_ref) |scene_name| {
             if (graphics.Scene.byName(scene_name)) |scene| {
-                self._callback = callback;
-                scene.callback = deactivateRoomCallback;
+                self._stop_callback = callback;
+                scene.call_context.caller_id = self.id;
+                scene.callback = stopRoomCallback;
                 scene.run();
             }
         } else {
             // just end the Room immediately
             api.Composite.activateById(self.id, false);
             self.state = .LOADED;
-            stopping_room_ref = null;
-            self.player_ref = player_ref;
             if (callback) |c|
                 c(self.id);
             self.player_ref = null;
         }
     }
 
-    // 7. Dispose --> Dispose also meta data and delete the room object
-    pub fn dispose(self: *Room) void {
-        defer self.state = .CREATED;
+    pub fn unloadRoom(player_ref: String, callback: ?RoomCallback) void {
+        if (getActiveRoomForPlayer(player_ref)) |room|
+            unload(room, callback);
     }
 
-    fn deactivateRoomCallback(_: *api.CallContext) void {
-        var room = Room.byName(stopping_room_ref.?).?;
+    // 7. Dispose --> Dispose also meta data and delete the room object
+    pub fn unload(self: *Room, callback: ?RoomCallback) void {
+        defer self.state = .CREATED;
+
+        if (self.state == .RUNNING) {
+            self._unload_callback = callback;
+            self.stop(unloadRoomCallback);
+        } else {
+            self.state = .CREATED;
+
+            if (callback) |c|
+                c(self.id);
+        }
+    }
+
+    fn unloadRoomCallback(room_id: Index) void {
+        var room = Room.byId(room_id);
+        defer room._unload_callback = null;
+
+        if (api.Composite.byName(room.name)) |composite|
+            composite.unload();
+
+        room.state = .CREATED;
+
+        if (room._unload_callback) |c|
+            c(room.id);
+    }
+
+    fn stopRoomCallback(ctx: *api.CallContext) void {
+        var room = Room.byId(ctx.caller_id);
+        defer room._stop_callback = null;
+
         api.Composite.activateByName(room.name, false);
         room.state = .LOADED;
-        stopping_room_ref = null;
         room.player_ref = null;
-        if (room._callback) |c| c(room.id);
-        room._callback = null;
+        if (room._stop_callback) |c| c(room.id);
     }
 
     pub fn getActiveRoomForPlayer(player_ref: String) ?*Room {
@@ -295,7 +320,7 @@ fn createRoomTransition(ctx: *api.CallContext) void {
     const layer_id = graphics.Layer.idByName(attrs.get(game.TaskAttributes.LAYER_NAME).?).?;
 
     // TODO add dispose of entity to Composite
-    _ = api.Entity.new(.{ .name = transition_name })
+    const trans_entity_id = api.Entity.new(.{ .name = transition_name })
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
         .withComponent(graphics.EView{ .view_id = view_id, .layer_id = layer_id })
         .withComponent(physics.EContact{
@@ -308,13 +333,16 @@ fn createRoomTransition(ctx: *api.CallContext) void {
         .target_transition = target_transition_name,
         .orientation = orientation,
     })
-        .activate();
+        .activate().id;
+
+    // add transition entity as owned reference if requested
+    if (ctx.c_ref_callback) |callback|
+        callback(api.Entity.referenceById(trans_entity_id, true).?, ctx);
 }
 
 const TransitionState = struct {
     var player_id: ?Index = null;
-    var player_name: ?String = null;
-    var transition_id: ?Index = null;
+    var orientation: ?utils.Orientation = null;
     var target_room: ?String = null;
     var target_transition: ?String = null;
 };
@@ -327,7 +355,7 @@ pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan
     const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return false;
     const transition_id = c.entity_id;
     const player = api.Entity.byId(player_id);
-    const player_name = player.name orelse return false;
+    //const player_name = player.name orelse return false;
     const move = physics.EMovement.byId(player_id) orelse return false;
     const transition = ERoomTransition.byId(transition_id) orelse return false;
 
@@ -339,21 +367,20 @@ pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan
         else => return false,
     }
 
-    // stop current room with callback
+    // set current transition state
     TransitionState.player_id = player_id;
-    TransitionState.transition_id = transition_id;
-    TransitionState.player_name = player_name;
+    TransitionState.orientation = transition.orientation;
     TransitionState.target_room = transition.target_room;
     TransitionState.target_transition = transition.target_transition;
 
-    game.Room.stopRoom(player_name, roomStoppedCallback);
+    // unload current room with callback
+    game.Room.unloadRoom(player.name.?, roomUnloadedCallback);
     return true;
 }
 
-fn roomStoppedCallback(_: Index) void {
+fn roomUnloadedCallback(_: Index) void {
     const player_id = TransitionState.player_id.?;
-    const source_transition_id = TransitionState.transition_id.?;
-    const player_name = TransitionState.player_name.?;
+    const orientation = TransitionState.orientation.?;
     const target_room_name = TransitionState.target_room.?;
     const target_transition = TransitionState.target_transition.?;
 
@@ -362,29 +389,36 @@ fn roomStoppedCallback(_: Index) void {
         target_room.activateRoom();
 
         // set player position adjust cam
+        const player = api.Entity.byId(player_id);
         const player_transform = graphics.ETransform.byId(player_id) orelse return;
-        const source_transition = ERoomTransition.byId(source_transition_id) orelse return;
-        const source_transition_transform = graphics.ETransform.byId(source_transition_id) orelse return;
+        const player_movement = physics.EMovement.byId(player_id) orelse return;
+        //const source_transition = ERoomTransition.byId(source_transition_id) orelse return;
+        //const source_transition_transform = graphics.ETransform.byId(source_transition_id) orelse return;
         const target_transition_transform = graphics.ETransform.byName(target_transition) orelse return;
 
-        // playerToTransition(player.playerPosition) - sourceTransform.position
-        // playerTargetPos(targetTransform.position) + playerToTransition
-        // player.playerPosition(playerTargetPos )
+        player_movement.on_ground = false;
 
-        const player_to_transition: utils.PosF = player_transform.position - source_transition_transform.position;
-        const player_target_pos = target_transition_transform.position + player_to_transition;
-        player_transform.position = player_target_pos;
+        // TODO calc smooth player transition for every orientation
 
-        switch (source_transition.orientation) {
-            .EAST => player_transform.position[0] += 5,
-            .WEST => player_transform.position[0] -= 5,
+        // const player_to_transition: utils.PosF = player_transform.position - source_transition_transform.position;
+        // const player_target_pos = target_transition_transform.position + player_to_transition;
+        // player_transform.position = player_target_pos;
+
+        player_transform.moveTo(
+            target_transition_transform.position[0],
+            target_transition_transform.position[1],
+        );
+
+        switch (orientation) {
+            .EAST => player_transform.position[0] -= 5,
+            .WEST => player_transform.position[0] -= 10,
             .NORTH => player_transform.position[1] -= 5,
             .SOUTH => player_transform.position[1] += 5,
             else => {},
         }
 
         // start new room
-        target_room.start(player_name, null);
+        target_room.start(player.name.?, null);
     } else {
         utils.panic(api.ALLOC, "No Room with name: {s} found", .{target_room_name});
     }
@@ -466,7 +500,7 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn entryAction(ctx: *api.CallContext) void {
-        color[3] -= @min(5, color[3]);
+        color[3] -= @min(10, color[3]);
         if (color[3] <= 0)
             ctx.result = .Success
         else
@@ -474,8 +508,7 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn exitAction(ctx: *api.CallContext) void {
-        color[3] = @min(255, color[3] + 5);
-        std.debug.print("color: {d}\n", .{color[3]});
+        color[3] = @min(255, @as(usize, @intCast(color[3])) + 10);
         if (color[3] >= 255)
             ctx.result = .Success
         else

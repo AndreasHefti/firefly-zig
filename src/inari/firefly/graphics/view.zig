@@ -413,6 +413,11 @@ pub const ETransform = struct {
         self.position[1] += y;
     }
 
+    pub fn moveTo(self: *ETransform, x: Float, y: Float) void {
+        self.position[0] = x;
+        self.position[1] = y;
+    }
+
     pub fn moveCInt(self: *ETransform, x: CInt, y: CInt) void {
         self.position[0] += utils.cint_float(x);
         self.position[1] += utils.cint_float(y);

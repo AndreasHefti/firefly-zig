@@ -99,6 +99,16 @@ fn init() void {
             },
         ),
     );
+    api.Task.runTaskByNameWith(
+        game.Tasks.JSON_LOAD_ROOM,
+        firefly.api.CallContext.withAttributes(
+            null,
+            .{
+                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room3.json" },
+                .{ game.TaskAttributes.VIEW_NAME, view_name },
+            },
+        ),
+    );
 
     // add player and init cam for room
     _ = game.Room.byName(room2_name).?.withTask(
@@ -169,7 +179,7 @@ fn createPlayer(_: *api.CallContext) void {
     })
         .withActiveControlOf(game.SimplePlatformerJumpControl{
         .jump_button = api.InputButtonType.FIRE_1,
-        .jump_impulse = 100,
+        .jump_impulse = 140,
         .double_jump = true,
     })
         .activate();

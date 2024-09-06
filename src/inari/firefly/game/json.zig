@@ -595,7 +595,7 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
 
             _ = room.addTaskByName(
                 api.NamePool.alloc(objects[i].build_task).?,
-                api.CompositeLifeCycle.LOAD,
+                api.CompositeLifeCycle.ACTIVATE,
                 attributes,
             );
         }

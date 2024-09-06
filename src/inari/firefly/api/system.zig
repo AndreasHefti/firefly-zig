@@ -207,7 +207,7 @@ pub fn SystemTrait(comptime T: type) type {
 
         fn activation(active: bool) void {
             if (active) {
-                std.debug.print("********** activate System: {?s}\n", .{
+                std.debug.print("INFO: Activate System: {?s}\n", .{
                     System.byId(component_ref.?).name,
                 });
                 if (has_entity_registration) {

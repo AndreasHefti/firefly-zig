@@ -34,7 +34,7 @@ pub const CompositeLifeCycle = enum {
     LOAD,
     ACTIVATE,
     DEACTIVATE,
-    DISPOSE,
+    UNLOAD,
 };
 
 pub const CompositeTaskRef = struct {
@@ -78,6 +78,9 @@ pub const Composite = struct {
     }
 
     pub fn destruct(self: *Composite) void {
+        if (self.loaded)
+            unload(self);
+
         var next = self.task_refs.slots.nextSetBit(0);
         while (next) |i| {
             next = self.task_refs.slots.nextSetBit(i + 1);
@@ -131,7 +134,7 @@ pub const Composite = struct {
         self.runTasks(.LOAD);
     }
 
-    pub fn dispose(self: *Composite) void {
+    pub fn unload(self: *Composite) void {
         defer self.loaded = false;
         if (!self.loaded)
             return;
@@ -139,7 +142,7 @@ pub const Composite = struct {
         // first deactivate if still active
         Composite.activateById(self.id, false);
         // run dispose tasks if defined
-        self.runTasks(.DISPOSE);
+        self.runTasks(.UNLOAD);
         // dispose all owned references that still available
         var next = self._loaded_components.slots.nextSetBit(0);
         while (next) |i| {
@@ -175,27 +178,27 @@ pub const Composite = struct {
             next = self.task_refs.slots.nextSetBit(i + 1);
             const tr = self.task_refs.get(i).?;
 
-            if (tr.life_cycle == life_cycle)
-                if (tr.task_ref) |id|
-                    api.Task.runTaskByIdWith(
-                        id,
-                        .{
-                            .caller_id = self.id,
-                            .caller_name = self.name,
-                            .attributes_id = tr.attributes,
-                            .c_ref_callback = callRefCallback,
-                        },
-                    )
-                else if (tr.task_name) |name|
-                    api.Task.runTaskByNameWith(
-                        name,
-                        .{
-                            .caller_id = self.id,
-                            .caller_name = self.name,
-                            .attributes_id = tr.attributes,
-                            .c_ref_callback = callRefCallback,
-                        },
-                    );
+            if (tr.life_cycle == life_cycle) {
+                var ctx: api.CallContext = .{
+                    .caller_id = self.id,
+                    .caller_name = self.name,
+                    .attributes_id = tr.attributes,
+                    .c_ref_callback = callRefCallback,
+                };
+
+                const task_id = if (tr.task_name) |name|
+                    api.Task.idByName(name)
+                else
+                    tr.task_ref;
+
+                if (task_id) |id| {
+                    var task = api.Task.byId(id);
+                    const delete = task.run_once;
+                    task.runWith(&ctx, true);
+                    if (delete)
+                        self.task_refs.delete(i);
+                }
+            }
         }
     }
 };

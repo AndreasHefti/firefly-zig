@@ -149,56 +149,58 @@ pub const Task = struct {
         self.runWith(self, ctx);
     }
 
-    pub fn runWith(self: *Task, context: *api.CallContext) void {
-        defer {
-            if (self.run_once)
-                Task.disposeById(self.id);
-        }
-
+    pub fn runWith(self: *Task, context: *api.CallContext, owned: bool) void {
         if (self.blocking) {
-            self._run(context);
+            self._run(context, owned);
         } else {
-            _ = std.Thread.spawn(.{}, _run, .{ self, context }) catch unreachable;
+            _ = std.Thread.spawn(.{}, _run, .{ self, context, owned }) catch unreachable;
         }
     }
 
     pub fn runTaskById(task_id: Index) void {
-        Task.byId(task_id).runWith(null);
+        var ctx = api.CallContext{};
+        Task.byId(task_id).runWith(&ctx, false);
     }
 
-    pub fn runTaskByIdWith(task_id: Index, context: ?api.CallContext) void {
-        if (context) |ctx| {
-            var c = ctx;
-            defer c.deinit();
-            Task.byId(task_id).runWith(&c);
-        } else {
-            var c = api.CallContext{};
-            defer c.deinit();
-            Task.byId(task_id).runWith(&c);
-        }
+    pub fn runOwnedTaskById(task_id: Index, context: *api.CallContext) void {
+        Task.byId(task_id).runWith(context, true);
     }
+
+    pub fn runTaskByIdWith(task_id: Index, context: api.CallContext) void {
+        var ctx = context;
+        Task.byId(task_id).runWith(&ctx, false);
+    }
+
     pub fn runTaskByName(task_name: String) void {
-        runTaskByNameWith(task_name, null);
-    }
-
-    pub fn runTaskByNameWith(task_name: String, context: ?api.CallContext) void {
-        if (Task.byName(task_name)) |t| {
-            if (context) |ctx| {
-                var c = ctx;
-                defer c.deinit();
-                t.runWith(&c);
-            } else {
-                var c = api.CallContext{};
-                defer c.deinit();
-                t.runWith(&c);
-            }
+        if (Task.byName(task_name)) |task| {
+            var ctx = api.CallContext{};
+            task.runWith(&ctx, false);
         }
     }
 
-    fn _run(self: *Task, context: *api.CallContext) void {
+    pub fn runTaskByNameWith(task_name: String, context: api.CallContext) void {
+        if (Task.byName(task_name)) |task| {
+            var ctx = context;
+            task.runWith(&ctx, false);
+        }
+    }
+
+    pub fn runOwnedTaskByName(task_name: String, context: *api.CallContext) void {
+        if (Task.byName(task_name)) |task| {
+            task.runWith(context, true);
+        }
+    }
+
+    fn _run(self: *Task, context: *api.CallContext, owned: bool) void {
         self.function(context);
         if (self.callback) |c|
             c(context);
+
+        if (!owned)
+            context.deinit();
+
+        if (self.run_once)
+            Task.disposeById(self.id);
     }
 
     pub fn format(
@@ -250,7 +252,7 @@ pub const Trigger = struct {
         while (next) |i| {
             const trigger = Trigger.byId(i);
             if (trigger.condition(&trigger.call_context))
-                Task.byId(trigger.task_ref).runWith(&trigger.call_context);
+                Task.byId(trigger.task_ref).runWith(&trigger.call_context, true);
 
             next = Trigger.nextActiveId(i + 1);
         }

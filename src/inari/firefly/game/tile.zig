@@ -447,6 +447,8 @@ pub const TileMapping = struct {
         // create TileGrids
         next = self.tile_grid_data.slots.nextSetBit(0);
         while (next) |i| {
+            next = self.tile_grid_data.slots.nextSetBit(i + 1);
+
             const tile_grid_data = self.tile_grid_data.get(i).?;
             if (firefly.graphics.Layer.idByName(tile_grid_data.layer)) |layer_id| {
                 var tile_grid = firefly.graphics.TileGrid.new(.{
@@ -473,7 +475,6 @@ pub const TileMapping = struct {
 
                 _ = tile_grid.activate();
             }
-            next = self.tile_grid_data.slots.nextSetBit(i + 1);
         }
     }
 
@@ -527,5 +528,13 @@ pub const TileMapping = struct {
             next = self.layer_entity_mapping.slots.nextSetBit(i + 1);
         }
         self.layer_entity_mapping.clear();
+
+        // dispose all grids
+        next = self.tile_grid_data.slots.nextSetBit(0);
+        while (next) |i| {
+            next = self.tile_grid_data.slots.nextSetBit(i + 1);
+            const tile_grid_data = self.tile_grid_data.get(i).?;
+            firefly.graphics.TileGrid.disposeByName(tile_grid_data.name);
+        }
     }
 };

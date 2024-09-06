@@ -1,0 +1,26 @@
+{
+    "name": "Room3",
+    "bounds": "0,0,320,320",
+    "start_scene": "SimpleTransitionSceneEntry",
+    "end_scene": "SimpleTransitionSceneExit",
+    "tile_sets": [
+        { "name": "TestTileSet", "file": "resources/example_tileset.json" }
+    ],
+    "tile_map": { "name": "TileMapRoom3", "file": "resources/example_tilemap3.json" },
+    "objects": [
+     {
+       "name": "t1",
+       "object_type": "room_transition",
+       "build_task": "ROOM_TRANSITION_BUILDER",
+       "layer": "Foreground",
+       "position": "16,-3",
+       "attributes": [
+           { "name": "ROOM_TRANSITION_ORIENTATION", "value": "NORTH"},
+           { "name": "ROOM_TRANSITION_CONDITION", "value": "GOES_NORTH"},
+           { "name": "ROOM_TRANSITION_TARGET_ROOM", "value": "Room1"},
+           { "name": "ROOM_TRANSITION_TARGET_TRANSITION", "value": "t2"},
+           { "name": "ROOM_TRANSITION_BOUNDS", "value": "16,-3,48,6"}
+       ]
+     }
+   ]
+}
