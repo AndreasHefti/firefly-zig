@@ -586,7 +586,9 @@ fn ComponentPool(comptime T: type) type {
 
                     for (0..e.value_ptr.size_pointer) |i| {
                         const control_id = e.value_ptr.items[i];
-                        api.Control.byId(control_id).update(c_id, control_id);
+                        var control = api.Control.byId(control_id);
+                        control.call_context.id_1 = c_id;
+                        control.update(&control.call_context);
                     }
                 }
             }

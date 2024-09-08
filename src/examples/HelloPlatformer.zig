@@ -45,6 +45,7 @@ var pivot: utils.PosF = .{ 0, 0 };
 
 fn init() void {
     firefly.physics.ContactSystem.activate();
+    firefly.physics.ContactGizmosRenderer.activate();
 
     // create view with two layer
     var view = graphics.View.new(.{
@@ -167,7 +168,7 @@ fn createPlayer(_: *api.CallContext) void {
         .withConstraint(.{
         .name = "Room_Transition",
         .layer_id = graphics.Layer.idByName(layer2),
-        .bounds = .{ .rect = .{ 4, 1, 8, 19 } },
+        .bounds = .{ .rect = .{ 6, 6, 4, 4 } },
         .type_filter = physics.ContactTypeKind.of(.{game.ContactTypes.ROOM_TRANSITION}),
         .full_scan = true,
         .callback = game.TransitionContactCallback,
@@ -181,6 +182,13 @@ fn createPlayer(_: *api.CallContext) void {
         .jump_button = api.InputButtonType.FIRE_1,
         .jump_impulse = 140,
         .double_jump = true,
+    })
+        .withComponent(graphics.EShape{
+        .color = .{ 0, 255, 0, 255 },
+        .fill = false,
+        .shape_type = api.ShapeType.RECTANGLE,
+        .thickness = 0.3,
+        .vertices = api.allocFloatArray(.{ 6, 6, 4, 4 }),
     })
         .activate();
 

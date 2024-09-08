@@ -319,7 +319,6 @@ fn createRoomTransition(ctx: *api.CallContext) void {
     const view_id = graphics.View.idByName(attrs.get(game.TaskAttributes.VIEW_NAME).?).?;
     const layer_id = graphics.Layer.idByName(attrs.get(game.TaskAttributes.LAYER_NAME).?).?;
 
-    // TODO add dispose of entity to Composite
     const trans_entity_id = api.Entity.new(.{ .name = transition_name })
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
         .withComponent(graphics.EView{ .view_id = view_id, .layer_id = layer_id })
@@ -350,7 +349,8 @@ const TransitionState = struct {
 // ContactCallback used to apply to player to get called on players transition contact constraint
 pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan) bool {
     // check transition condition
-    if (contact.mask.?.count() <= 8) return false;
+    //if (contact.mask.?.count() < 4) return false;
+    std.debug.print("maks: {d}\n", .{contact.mask.?.count()});
 
     const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return false;
     const transition_id = c.entity_id;

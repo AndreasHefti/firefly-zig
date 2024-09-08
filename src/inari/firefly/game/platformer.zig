@@ -399,9 +399,9 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
     button_left: api.InputButtonType = api.InputButtonType.LEFT,
     button_right: api.InputButtonType = api.InputButtonType.RIGHT,
 
-    pub fn update(entity_id: Index, self_id: Index) void {
-        const self = @This().byId(self_id);
-        var move = physics.EMovement.byId(entity_id) orelse return;
+    pub fn update(ctx: *api.CallContext) void {
+        const self = @This().byId(ctx.caller_id);
+        var move = physics.EMovement.byId(ctx.id_1) orelse return;
 
         if (!self.move_on_air and !move.on_ground)
             return;
@@ -449,9 +449,9 @@ pub const SimplePlatformerJumpControl = struct {
 
     _off_ground: u8 = 0,
 
-    pub fn update(entity_id: Index, self_id: Index) void {
-        const self = @This().byId(self_id);
-        var move = physics.EMovement.byId(entity_id) orelse return;
+    pub fn update(ctx: *api.CallContext) void {
+        const self = @This().byId(ctx.caller_id);
+        var move = physics.EMovement.byId(ctx.id_1) orelse return;
 
         // measure off ground time to achieve jump_tolerance and
         if (move.on_ground) {

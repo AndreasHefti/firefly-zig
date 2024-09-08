@@ -49,6 +49,7 @@ pub const ContactScan = contact.ContactScan;
 pub const EContact = contact.EContact;
 pub const EContactScan = contact.EContactScan;
 pub const ContactSystem = contact.ContactSystem;
+pub const ContactGizmosRenderer = contact.ContactGizmosRenderer;
 pub const CollisionResolverFunction = contact.CollisionResolverFunction;
 pub const CollisionResolver = contact.CollisionResolver;
 pub const ContactConstraint = contact.ContactConstraint;

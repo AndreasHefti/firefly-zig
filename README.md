@@ -17,12 +17,12 @@ TODO:
       - [x] State Engine
       - [x] TileMap
       - [x] WorldMap
-      - [ ] Global index/id register (per component?) 
-      - [ ] Global name register (per component?) 
+      - [x] Global index/id register (per component?) 
+      - [x] Global name register (per component?) 
       - [ ] ...
 
 TODO Refactoring:
-    - [ ] All control functions should use global register if possible
+    - [x] All control functions should use CallContext
     - [ ] Use HashMap(Index, T) for additional data stores instead of DynArray(T) where possible
     - [ ] SimpleRoomTransitionScene rename to SimpleFadeInOutScene and shall be a composite with additional data that one can instantiate
 

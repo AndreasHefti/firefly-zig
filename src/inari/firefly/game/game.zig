@@ -228,9 +228,9 @@ pub const SimplePivotCamera = struct {
         );
     }
 
-    pub fn update(view_id: Index, cam_id: Index) void {
-        const self = @This().byId(cam_id);
-        var view = graphics.View.byId(view_id);
+    pub fn update(ctx: *api.CallContext) void {
+        const self = @This().byId(ctx.caller_id);
+        var view = graphics.View.byId(ctx.id_1);
         const move = getMove(self, view);
 
         //std.debug.print("move: {d}\n", .{move});

@@ -142,7 +142,6 @@ pub const CallContext = struct {
     }
 };
 
-pub const ControlFunction = *const fn (component_id: Index, data_id: Index) void;
 pub const CallFunction = *const fn (*CallContext) void;
 pub const CallPredicate = *const fn (*CallContext) bool;
 pub const CRefCallback = *const fn (CRef, ?*CallContext) void;

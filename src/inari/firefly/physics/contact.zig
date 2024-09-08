@@ -27,6 +27,7 @@ pub fn init() void {
     api.EComponent.registerEntityComponent(EContact);
     api.EComponent.registerEntityComponent(EContactScan);
     ContactSystem.init();
+    ContactGizmosRenderer.init();
 }
 
 pub fn deinit() void {
@@ -790,5 +791,49 @@ pub const ContactSystem = struct {
         }
 
         return has_any_contact;
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Contact Gizmos Renderer
+//////////////////////////////////////////////////////////////
+
+pub const ContactGizmosRenderer = struct {
+    pub usingnamespace api.SystemTrait(ContactGizmosRenderer);
+    pub usingnamespace graphics.EntityRendererTrait(ContactGizmosRenderer);
+
+    pub const accept = .{ graphics.ETransform, EContact };
+    pub const dismiss = .{graphics.ETile};
+
+    pub fn renderEntities(entities: *firefly.utils.BitSet, _: graphics.ViewRenderEvent) void {
+        var i = entities.nextSetBit(0);
+        while (i) |id| {
+            i = entities.nextSetBit(id + 1);
+
+            // render the gizmo
+            const contact: *EContact = EContact.byId(id).?;
+            const trans: *graphics.ETransform = graphics.ETransform.byId(id).?;
+            var v = [4]utils.Float{
+                contact.bounds.rect[0],
+                contact.bounds.rect[1],
+                contact.bounds.rect[2],
+                contact.bounds.rect[3],
+            };
+            firefly.api.rendering.renderShape(
+                api.ShapeType.RECTANGLE,
+                &v,
+                false,
+                0.3,
+                trans.position,
+                .{ 255, 0, 0, 255 },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+            );
+        }
     }
 };

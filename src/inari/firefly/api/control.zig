@@ -87,7 +87,14 @@ pub const Control = struct {
     groups: ?api.GroupKind = null,
 
     controlled_component_type: api.ComponentAspect,
-    update: api.ControlFunction,
+    call_context: api.CallContext = undefined,
+    update: api.CallFunction,
+
+    pub fn construct(self: *Control) void {
+        self.call_context = .{
+            .caller_id = self.id,
+        };
+    }
 
     pub fn destruct(self: *Control) void {
         self.groups = null;
@@ -99,7 +106,7 @@ pub fn ControlSubTypeTrait(comptime T: type, comptime ControlledType: type) type
         pub const component_type = ControlledType;
         pub usingnamespace firefly.api.SubTypeTrait(Control, T);
 
-        pub fn new(subtype: T, update: api.ControlFunction) *T {
+        pub fn new(subtype: T, update: api.CallFunction) *T {
             if (!initialized) @panic("Not Initialized");
 
             return @This().newSubType(
