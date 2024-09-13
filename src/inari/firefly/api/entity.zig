@@ -24,7 +24,7 @@ pub const Entity = struct {
         if (@This().isInitialized())
             return;
 
-        std.debug.print("**** Size Of Entity: {d}\n", .{@sizeOf(Entity)});
+        std.debug.print("FIREFLY: INFO: Size Of Entity: {d}\n", .{@sizeOf(Entity)});
 
         try EComponent.init();
     }

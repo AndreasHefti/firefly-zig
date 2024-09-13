@@ -787,7 +787,7 @@ pub fn IRenderAPI() type {
             tint_color: ?Color,
             blend_mode: ?BlendMode,
         ) void = undefined,
-        // TODO
+
         renderSprite: *const fn (
             texture_id: BindingId,
             texture_bounds: RectF,
@@ -799,7 +799,7 @@ pub fn IRenderAPI() type {
             blend_mode: ?BlendMode,
             multiplier: ?[]const PosF,
         ) void = undefined,
-        // TODO
+
         renderShape: *const fn (
             shape_type: ShapeType,
             vertices: []Float,
@@ -847,6 +847,18 @@ pub fn IRenderAPI() type {
             var self = Self{};
             self.deinit = dummyDeinit;
             return self;
+        }
+
+        pub inline fn renderShapeMin(
+            self: *Self,
+            shape_type: ShapeType,
+            vertices: []Float,
+            fill: bool,
+            thickness: ?Float,
+            offset: PosF,
+            color: Color,
+        ) void {
+            self.renderShape(shape_type, vertices, fill, thickness, offset, color, null, null, null, null, null, null, null);
         }
     };
 }

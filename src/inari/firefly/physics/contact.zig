@@ -28,6 +28,7 @@ pub fn init() void {
     api.EComponent.registerEntityComponent(EContactScan);
     ContactSystem.init();
     ContactGizmosRenderer.init();
+    ContactScanGizmosRenderer.init();
 }
 
 pub fn deinit() void {
@@ -795,7 +796,7 @@ pub const ContactSystem = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Contact Gizmos Renderer
+//// Contact and ContactScan Gizmos Renderer
 //////////////////////////////////////////////////////////////
 
 pub const ContactGizmosRenderer = struct {
@@ -805,35 +806,80 @@ pub const ContactGizmosRenderer = struct {
     pub const accept = .{ graphics.ETransform, EContact };
     pub const dismiss = .{graphics.ETile};
 
+    pub var color: utils.Color = .{ 255, 0, 0, 255 };
+    pub var thickness: utils.Float = 0.3;
+
     pub fn renderEntities(entities: *firefly.utils.BitSet, _: graphics.ViewRenderEvent) void {
         var i = entities.nextSetBit(0);
         while (i) |id| {
             i = entities.nextSetBit(id + 1);
 
             // render the gizmo
-            const contact: *EContact = EContact.byId(id).?;
-            const trans: *graphics.ETransform = graphics.ETransform.byId(id).?;
+            const contact: *EContact = EContact.byId(id) orelse continue;
+            const trans: *graphics.ETransform = graphics.ETransform.byId(id) orelse continue;
             var v = [4]utils.Float{
                 contact.bounds.rect[0],
                 contact.bounds.rect[1],
                 contact.bounds.rect[2],
                 contact.bounds.rect[3],
             };
-            firefly.api.rendering.renderShape(
+            firefly.api.rendering.renderShapeMin(
                 api.ShapeType.RECTANGLE,
                 &v,
                 false,
-                0.3,
+                thickness,
                 trans.position,
-                .{ 255, 0, 0, 255 },
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
+                color,
             );
+        }
+    }
+};
+
+pub const ContactScanGizmosRenderer = struct {
+    pub usingnamespace api.SystemTrait(ContactScanGizmosRenderer);
+    pub usingnamespace graphics.EntityRendererTrait(ContactScanGizmosRenderer);
+
+    pub const accept = .{ graphics.ETransform, EContactScan };
+    pub var color: utils.Color = .{ 0, 255, 0, 255 };
+    pub var thickness: utils.Float = 0.3;
+
+    pub fn renderEntities(entities: *firefly.utils.BitSet, _: graphics.ViewRenderEvent) void {
+        var i = entities.nextSetBit(0);
+        while (i) |id| {
+            i = entities.nextSetBit(id + 1);
+
+            var v = [4]utils.Float{ 0, 0, 0, 0 };
+            var shape_type: api.ShapeType = api.ShapeType.RECTANGLE;
+
+            // render the gizmos
+            const scans: *EContactScan = EContactScan.byId(id) orelse continue;
+            const trans: *graphics.ETransform = graphics.ETransform.byId(id) orelse continue;
+            var si = scans.constraints.nextSetBit(0);
+            while (si) |next_s| {
+                si = scans.constraints.nextSetBit(next_s + 1);
+                const constraint = ContactConstraint.byId(next_s);
+                if (constraint.bounds.circle) |circle| {
+                    shape_type = api.ShapeType.CIRCLE;
+                    v[0] = circle[0];
+                    v[1] = circle[1];
+                    v[2] = circle[2];
+                    v[3] = 0;
+                } else {
+                    shape_type = api.ShapeType.RECTANGLE;
+                    v[0] = constraint.bounds.rect[0];
+                    v[1] = constraint.bounds.rect[1];
+                    v[2] = constraint.bounds.rect[2];
+                    v[3] = constraint.bounds.rect[3];
+                }
+                firefly.api.rendering.renderShapeMin(
+                    shape_type,
+                    &v,
+                    false,
+                    thickness,
+                    trans.position,
+                    color,
+                );
+            }
         }
     }
 };
