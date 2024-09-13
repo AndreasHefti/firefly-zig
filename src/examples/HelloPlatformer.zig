@@ -44,6 +44,8 @@ const speed = 1;
 var pivot: utils.PosF = .{ 0, 0 };
 
 fn init() void {
+
+    // needed systems that are not active by default
     firefly.physics.ContactSystem.activate();
     firefly.physics.ContactGizmosRenderer.activate();
     firefly.physics.ContactScanGizmosRenderer.activate();
@@ -60,11 +62,6 @@ fn init() void {
             .zoom = zoom,
         },
     });
-
-    // create key control
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_A, api.InputButtonType.LEFT);
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_D, api.InputButtonType.RIGHT);
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // crate transition scene
     // TODO this must be done by Array activation later on
@@ -103,18 +100,18 @@ fn init() void {
         ),
     );
 
-    // add player and init cam for room
-    _ = game.Room.byName(room1_name).?.withTask(
+    // create player and load tasks
+    var player = game.Player.new(.{ .name = player_name });
+    _ = player.withTask(
         api.Task{
-            .name = "CreatePlayer",
             .run_once = true,
             .function = playerLoadTask,
         },
-        api.CompositeLifeCycle.ACTIVATE,
+        api.CompositeLifeCycle.LOAD,
         null,
     );
 
-    // and just start the Room
+    // and just start the Room with the player
     game.Room.startRoom(room1_name, player_name, roomLoaded);
 }
 
@@ -122,23 +119,24 @@ fn roomLoaded(_: Index) void {
     std.debug.print("Room running!!!\n", .{});
 }
 
-var player_pos_ptr: *utils.PosF = undefined;
 fn playerLoadTask(_: *api.CallContext) void {
+    var view = graphics.View.byName(view_name) orelse return;
+    var player = game.Player.byName(player_name) orelse return;
+    player._view_id = view.id;
+
+    // single sprite for this player
     const sprite_id = graphics.SpriteTemplate.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },
     }).id;
 
-    // var attrs: *api.Attributes = ctx.getAttributes() orelse
-    //     @panic("Expecting Attributes");
-
-    // const view_name = attrs.get(game.TaskAttributes.VIEW_NAME) orelse
-    //     @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
-
-    var view = graphics.View.byName(view_name) orelse return;
+    // init key control for the player
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_A, api.InputButtonType.LEFT);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_D, api.InputButtonType.RIGHT);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // create player entity
-    _ = api.Entity.new(.{
+    player._entity_id = api.Entity.new(.{
         .name = player_name,
     })
         .withGroupAspect(game.Groups.PAUSEABLE)
@@ -183,12 +181,15 @@ fn playerLoadTask(_: *api.CallContext) void {
         .jump_impulse = 140,
         .double_jump = true,
     })
-        .activate();
+        .id;
+    player._move = physics.EMovement.byId(player._entity_id).?;
+    player._transform = graphics.ETransform.byId(player._entity_id).?;
 
     // create camera control
     _ = view.withControlOf(
         game.SimplePivotCamera{
             .name = cam_name,
+            .pivot = &player._transform.position,
             .pixel_perfect = false,
             .snap_to_bounds = .{ 0, 0, 0, 0 },
             .velocity_relative_to_pivot = .{ 0.5, 0.5 },
@@ -196,11 +197,5 @@ fn playerLoadTask(_: *api.CallContext) void {
         },
         true,
     );
-
-    // apply player position as pivot for camera
-    var cam = game.SimplePivotCamera.byName(cam_name).?;
-    player_pos_ptr = &graphics.ETransform.byName(player_name).?.position;
-    cam.pivot = player_pos_ptr;
-    cam.snap_to_bounds = game.Room.byName(room2_name).?.bounds;
-    cam.adjust(graphics.View.idByName(view_name).?);
+    player._cam_id = game.SimplePivotCamera.idByName(cam_name).?;
 }

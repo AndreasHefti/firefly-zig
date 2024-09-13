@@ -29,8 +29,8 @@ pub fn init() void {
         return;
 
     api.Composite.registerSubtype(Room);
-    api.EComponent.registerEntityComponent(ERoomTransition);
     api.Composite.registerSubtype(Player);
+    api.EComponent.registerEntityComponent(ERoomTransition);
 
     _ = api.Task.new(.{
         .name = game.Tasks.ROOM_TRANSITION_BUILDER,
@@ -56,9 +56,12 @@ pub const Player = struct {
     id: Index = UNDEF_INDEX,
     name: String,
 
-    _player_entity_id: Index = undefined,
-    _player_transform: *graphics.ETransform = undefined,
-    _player_move: *physics.EMovement = undefined,
+    _loaded: bool = false,
+    _entity_id: Index = UNDEF_INDEX,
+    _transform: *graphics.ETransform = undefined,
+    _move: *physics.EMovement = undefined,
+    _cam_id: Index = UNDEF_INDEX,
+    _view_id: Index = UNDEF_INDEX,
 
     pub fn new(player: Player) *Player {
         return @This().newSubType(
@@ -67,6 +70,18 @@ pub const Player = struct {
             },
             player,
         );
+    }
+
+    pub fn load(self: *Player) void {
+        defer self._loaded = true;
+        if (self._loaded)
+            return;
+
+        api.Composite.byId(self.id).load();
+        var cam = game.SimplePivotCamera.byId(self._cam_id);
+        cam.pivot = &self._transform.position;
+        api.Entity.activateById(self._entity_id, true);
+        game.pauseGame();
     }
 };
 
@@ -186,12 +201,13 @@ pub const Room = struct {
         self.player_ref = player_ref;
         self.state = .STARTING;
 
-        // TODO init and adjust camera for player
-        // game.Player.byName(player_ref).adjustCamera()
-        if (game.SimplePivotCamera.byName("Camera1")) |cam| {
+        // load player if needed and init camera
+        const player = game.Player.byName(player_ref);
+        if (player) |p| {
+            p.load();
+            var cam = game.SimplePivotCamera.byId(p._cam_id);
             cam.snap_to_bounds = self.bounds;
-            cam.adjust(graphics.View.idByName("TestView").?);
-            //cam.adjust(view_id: Index)
+            cam.adjust(p._view_id);
         }
 
         // run start scene if defined. Callback gets invoked when scene finished

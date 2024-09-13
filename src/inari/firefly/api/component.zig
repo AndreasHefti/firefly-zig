@@ -711,6 +711,10 @@ pub fn SubTypeTrait(comptime T: type, comptime SubType: type) type {
             return result.value_ptr;
         }
 
+        pub fn activateById(id: Index, active: bool) void {
+            T.activateById(id, active);
+        }
+
         pub fn activate(self: *SubType) void {
             T.activateById(self.id, true);
         }
@@ -732,6 +736,14 @@ pub fn SubTypeTrait(comptime T: type, comptime SubType: type) type {
                 return subtype.data.getPtr(c.id);
 
             return null;
+        }
+
+        pub fn idByName(name: String) ?Index {
+            return T.idByName(name);
+        }
+
+        pub fn activateByName(name: String, active: bool) void {
+            T.activateByName(name, active);
         }
 
         pub fn idIterator() std.AutoHashMap(Index, SubType).KeyIterator {
