@@ -15,16 +15,19 @@ TODO:
       - [x] Audio
       - [ ] Behavior
       - [x] State Engine
-      - [x] TileMap
-      - [x] WorldMap
+      - [x] TileSet (created in code or loaded from JSON file)
+      - [x] TileMap (created in code or loaded from JSON file)
       - [x] Global index/id register (per component?) 
       - [x] Global name register (per component?) 
-      - [ ] ...
+      - [x] Camera (simple pivot camera)
+      - [ ] Player 
+      - [ ] Area (created in code or loaded from JSON file)
+      - [x] Room (created in code or loaded from JSON file)
 
 TODO Refactoring:
-    - [x] All control functions should use CallContext
-    - [x] Use HashMap(Index, T) for additional data stores instead of DynArray(T) where possible
-    - [ ] SimpleRoomTransitionScene rename to SimpleFadeInOutScene and shall be a composite with additional data that one can instantiate
+  - [x] All control functions should use CallContext
+  - [x] Use HashMap(Index, T) for additional data stores instead of DynArray(T) where possible
+  - [ ] SimpleRoomTransitionScene rename to SimpleFadeInOutScene and shall be a composite with additional data that one can instantiate
 
  
  ## Code Example:
