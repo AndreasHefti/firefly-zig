@@ -90,6 +90,14 @@ pub const TaskAttributes = struct {
     /// JSON String resource reference. If this is set, a task shall interpret this as JSON Sting
     /// and try to load defined components from JSON
     pub const JSON_RESOURCE = "JSON_RESOURCE";
+    // // Player init attributes
+    // pub const PLAYER_NAME = "PLAYER_NAME";
+    // pub const PLAYER_INIT_POS = "PLAYER_INIT_POS";
+    // pub const PLAYER_TEXTURE_NAME = "PLAYER_TEXTURE_NAME";
+    // pub const PLAYER_INIT_POS = "PLAYER_INIT_POS";
+    // pub const PLAYER_INIT_POS = "PLAYER_INIT_POS";
+    // pub const PLAYER_INIT_POS = "PLAYER_INIT_POS";
+
     // The room name within the context
     pub const ROOM_NAME = "ROOM_NAME";
     pub const ROOM_TRANSITION_CONDITION = "ROOM_TRANSITION_CONDITION";
@@ -187,6 +195,7 @@ pub const TileLayerData = tile.TileLayerData;
 pub const JSONTile = json.JSONTile;
 pub const JSONTileSet = json.JSONTileSet;
 
+pub const Player = world.Player;
 pub const Room = world.Room;
 pub const RoomState = world.RoomState;
 pub const Area = world.Area;

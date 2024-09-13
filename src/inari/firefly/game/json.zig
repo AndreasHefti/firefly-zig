@@ -142,7 +142,6 @@ fn loadTileSetFromJSON(ctx: *api.CallContext) void {
     const attr_id = ctx.attributes_id orelse
         return;
 
-    //var attrs = api.Attributes.byId(attr_id);
     var json_res_handle = JSONResourceHandle.new(attr_id);
     defer json_res_handle.deinit();
 
@@ -320,13 +319,13 @@ pub const JSONTileGrid = struct {
 };
 
 fn loadTileMappingFromJSON(ctx: *api.CallContext) void {
-    const attr_id = ctx.attributes_id orelse
+    var attrs = ctx.getAttributes() orelse
         return;
 
-    var attrs = api.Attributes.byId(attr_id);
     const view_name = attrs.get(game.TaskAttributes.VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
-    var json_res_handle = JSONResourceHandle.new(attr_id);
+
+    var json_res_handle = JSONResourceHandle.new(attrs.id);
     defer json_res_handle.deinit();
 
     if (json_res_handle.json_resource) |json| {
@@ -520,14 +519,13 @@ pub const JSONRoomObject = struct {
 };
 
 fn loadRoomFromJSON(ctx: *api.CallContext) void {
-    const attr_id = ctx.attributes_id orelse
+    var attrs = ctx.getAttributes() orelse
         return;
 
-    var attrs = api.Attributes.byId(attr_id);
     const view_name = attrs.get(game.TaskAttributes.VIEW_NAME) orelse
         @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
 
-    var json_res_handle = JSONResourceHandle.new(attr_id);
+    var json_res_handle = JSONResourceHandle.new(attrs.id);
     defer json_res_handle.deinit();
 
     const json = json_res_handle.json_resource orelse {

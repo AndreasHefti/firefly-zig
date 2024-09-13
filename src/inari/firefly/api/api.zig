@@ -135,6 +135,11 @@ pub const CallContext = struct {
         };
     }
 
+    pub fn getAttributes(self: *CallContext) ?*Attributes {
+        if (self.attributes_id) |id| return Attributes.byId(id);
+        return null;
+    }
+
     pub fn deinit(self: *CallContext) void {
         if (self.attributes_id) |aid|
             Attributes.disposeById(aid);

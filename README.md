@@ -23,7 +23,7 @@ TODO:
 
 TODO Refactoring:
     - [x] All control functions should use CallContext
-    - [ ] Use HashMap(Index, T) for additional data stores instead of DynArray(T) where possible
+    - [x] Use HashMap(Index, T) for additional data stores instead of DynArray(T) where possible
     - [ ] SimpleRoomTransitionScene rename to SimpleFadeInOutScene and shall be a composite with additional data that one can instantiate
 
  
@@ -71,4 +71,8 @@ _ = Entity.new(.{ .name = "TestEntity" })
     },
 ).entity().activate();
 ```
+
+ ## Platformer essentials and Room loading from JSON file now working:
+
+ ![](platformer.gif)
 

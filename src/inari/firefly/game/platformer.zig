@@ -30,7 +30,6 @@ pub fn init() void {
     PlatformerCollisionResolver.init();
     api.Control.registerSubtype(SimplePlatformerHorizontalMoveControl);
     api.Control.registerSubtype(SimplePlatformerJumpControl);
-    api.Composite.registerSubtype(Player);
 }
 
 pub fn deinit() void {
@@ -40,30 +39,6 @@ pub fn deinit() void {
 
     PlatformerCollisionResolver.deinit();
 }
-
-//////////////////////////////////////////////////////////////
-//// Player data and composite
-//////////////////////////////////////////////////////////////
-
-pub const Player = struct {
-    pub usingnamespace api.CompositeTrait(Player);
-
-    id: Index = UNDEF_INDEX,
-    name: String,
-
-    _player_entity_id: Index = undefined,
-    _player_transform: *graphics.ETransform = undefined,
-    _player_move: *physics.EMovement = undefined,
-
-    pub fn new(player: Player) *Player {
-        return @This().newSubType(
-            api.Composite{
-                .name = player.name,
-            },
-            player,
-        );
-    }
-};
 
 //////////////////////////////////////////////////////////////
 //// Platformer Collision Resolver
@@ -249,8 +224,6 @@ pub const PlatformerCollisionResolver = struct {
 
         //std.debug.print("contact: {any}\n", .{terr_scan.scan.mask});
         //std.debug.print("ground: {any}\n", .{self._ground_scan});
-        // std.debug.print("_south1: {any}\n", .{self._south.s1});
-        // std.debug.print("_south3: {any}\n", .{self._south.s3});
 
         self._movement.flag(MovFlags.GROUND_TOUCHED, !pref_ground and self._movement.on_ground);
         self._movement.flag(MovFlags.LOST_GROUND, pref_ground and !self._movement.on_ground);

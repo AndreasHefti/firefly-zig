@@ -49,7 +49,8 @@ fn init() void {
     firefly.physics.ContactScanGizmosRenderer.activate();
 
     // create view with two layer
-    var view = graphics.View.new(.{
+    // TODO this must be done by Array activation later on
+    _ = graphics.View.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
         .scale = .{ scale, scale },
@@ -60,27 +61,17 @@ fn init() void {
         },
     });
 
-    // create camera control (apply player pivot and room bounds later)
-    _ = view.withControlOf(
-        game.SimplePivotCamera{
-            .name = cam_name,
-            .pixel_perfect = false,
-            .snap_to_bounds = .{ 0, 0, 0, 0 },
-            .velocity_relative_to_pivot = .{ 0.5, 0.5 },
-            .enable_parallax = true,
-        },
-        true,
-    );
-
     // create key control
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_A, api.InputButtonType.LEFT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_D, api.InputButtonType.RIGHT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // crate transition scene
+    // TODO this must be done by Array activation later on
     game.SimpleRoomTransitionScene.init(screen_width, screen_height, view_name, layer2);
 
-    // load first (entry) room from file
+    // load rooms from file
+    // TODO this must be done by Array activation later on
     api.Task.runTaskByNameWith(
         game.Tasks.JSON_LOAD_ROOM,
         firefly.api.CallContext.withAttributes(
@@ -117,7 +108,7 @@ fn init() void {
         api.Task{
             .name = "CreatePlayer",
             .run_once = true,
-            .function = createPlayer,
+            .function = playerLoadTask,
         },
         api.CompositeLifeCycle.ACTIVATE,
         null,
@@ -132,11 +123,19 @@ fn roomLoaded(_: Index) void {
 }
 
 var player_pos_ptr: *utils.PosF = undefined;
-fn createPlayer(_: *api.CallContext) void {
+fn playerLoadTask(_: *api.CallContext) void {
     const sprite_id = graphics.SpriteTemplate.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },
     }).id;
+
+    // var attrs: *api.Attributes = ctx.getAttributes() orelse
+    //     @panic("Expecting Attributes");
+
+    // const view_name = attrs.get(game.TaskAttributes.VIEW_NAME) orelse
+    //     @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
+
+    var view = graphics.View.byName(view_name) orelse return;
 
     // create player entity
     _ = api.Entity.new(.{
@@ -184,14 +183,19 @@ fn createPlayer(_: *api.CallContext) void {
         .jump_impulse = 140,
         .double_jump = true,
     })
-    //     .withComponent(graphics.EShape{
-    //     .color = .{ 0, 255, 0, 255 },
-    //     .fill = false,
-    //     .shape_type = api.ShapeType.RECTANGLE,
-    //     .thickness = 0.3,
-    //     .vertices = api.allocFloatArray(.{ 6, 6, 4, 4 }),
-    // })
         .activate();
+
+    // create camera control
+    _ = view.withControlOf(
+        game.SimplePivotCamera{
+            .name = cam_name,
+            .pixel_perfect = false,
+            .snap_to_bounds = .{ 0, 0, 0, 0 },
+            .velocity_relative_to_pivot = .{ 0.5, 0.5 },
+            .enable_parallax = true,
+        },
+        true,
+    );
 
     // apply player position as pivot for camera
     var cam = game.SimplePivotCamera.byName(cam_name).?;

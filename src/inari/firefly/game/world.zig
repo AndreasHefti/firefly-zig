@@ -30,6 +30,7 @@ pub fn init() void {
 
     api.Composite.registerSubtype(Room);
     api.EComponent.registerEntityComponent(ERoomTransition);
+    api.Composite.registerSubtype(Player);
 
     _ = api.Task.new(.{
         .name = game.Tasks.ROOM_TRANSITION_BUILDER,
@@ -44,6 +45,30 @@ pub fn deinit() void {
 
     api.Task.disposeByName(game.Tasks.ROOM_TRANSITION_BUILDER);
 }
+
+//////////////////////////////////////////////////////////////
+//// Player data and composite
+//////////////////////////////////////////////////////////////
+
+pub const Player = struct {
+    pub usingnamespace api.CompositeTrait(Player);
+
+    id: Index = UNDEF_INDEX,
+    name: String,
+
+    _player_entity_id: Index = undefined,
+    _player_transform: *graphics.ETransform = undefined,
+    _player_move: *physics.EMovement = undefined,
+
+    pub fn new(player: Player) *Player {
+        return @This().newSubType(
+            api.Composite{
+                .name = player.name,
+            },
+            player,
+        );
+    }
+};
 
 //////////////////////////////////////////////////////////////
 //// Area
