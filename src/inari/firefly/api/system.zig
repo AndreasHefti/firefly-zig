@@ -181,10 +181,6 @@ pub fn SystemTrait(comptime T: type) type {
 
         fn notifyEntityChange(e: api.ComponentEvent) void {
             if (e.c_id) |id| {
-                // std.debug.print("********** System: {?s} notifyEntityChange {any}\n", .{
-                //     System.byId(component_ref.?).name,
-                //     api.Entity.byId(id),
-                // });
                 if (has_entity_condition) {
                     if (@typeInfo(@TypeOf(T.entity_condition)) == .Optional) {
                         if (T.entity_condition) |*ec| {
@@ -207,7 +203,7 @@ pub fn SystemTrait(comptime T: type) type {
 
         fn activation(active: bool) void {
             if (active) {
-                std.debug.print("INFO: Activate System: {?s}\n", .{
+                std.debug.print("FIREFLY : INFO: Activate System: {?s}\n", .{
                     System.byId(component_ref.?).name,
                 });
                 if (has_entity_registration) {
@@ -238,7 +234,7 @@ pub fn SystemTrait(comptime T: type) type {
                     }
                 }
             } else {
-                std.debug.print("********** deactivate System: {?s}\n", .{
+                std.debug.print("FIREFLY : INFO: Activate System: {?s}\n", .{
                     System.byId(component_ref.?).name,
                 });
                 if (has_entity_registration) {

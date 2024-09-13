@@ -107,7 +107,7 @@ fn roomLoaded(_: Index) void {
 }
 
 // key input is moving the invisible pivot point of the camera when the Room is active
-fn pivot_control(_: Index, _: Index) void {
+fn pivot_control(_: *firefly.api.CallContext) void {
     if (firefly.api.input.checkButtonPressed(api.InputButtonType.UP))
         pivot[1] -= speed;
     if (firefly.api.input.checkButtonPressed(api.InputButtonType.DOWN))

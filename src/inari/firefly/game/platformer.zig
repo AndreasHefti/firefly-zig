@@ -332,7 +332,7 @@ pub const PlatformerCollisionResolver = struct {
         var refresh = false;
 
         if (self._west.max > 0) {
-            std.debug.print("adjust left: {any}\n", .{self._west.max});
+            //std.debug.print("adjust left: {any}\n", .{self._west.max});
             self._transform.moveCInt(self._west.max, 0);
             self._transform.position[0] = @floor(self._transform.position[0]);
             self._movement.flag(MovFlags.SLIP_RIGHT, self._movement.velocity[0] > -1);
@@ -342,7 +342,7 @@ pub const PlatformerCollisionResolver = struct {
         }
 
         if (self._east.max > 0) {
-            std.debug.print("adjust right: {any}\n", .{-self._east.max});
+            //std.debug.print("adjust right: {any}\n", .{-self._east.max});
             self._transform.moveCInt(-self._east.max, 0);
             self._transform.position[0] = @ceil(self._transform.position[0]);
             self._movement.flag(MovFlags.SLIP_LEFT, self._movement.velocity[0] < 1);
@@ -484,7 +484,7 @@ pub const SimplePlatformerJumpControl = struct {
             }
         }
 
-        if (move.kind._mask != 0)
-            std.debug.print("move aspects: {any}\n", .{move.kind});
+        // if (move.kind._mask != 0)
+        //     std.debug.print("move aspects: {any}\n", .{move.kind});
     }
 };

@@ -170,7 +170,6 @@ fn pause(p: bool) void {
         var entity = api.Entity.byId(i);
         var groups = entity.groups orelse continue;
         if (groups.hasAspect(Groups.PAUSEABLE)) {
-            std.debug.print("{s} Entity: {?s}\n", .{ if (p) "Pause" else "Resume", entity.name });
             entity.activation(!p);
         }
     }
@@ -221,9 +220,12 @@ pub const SimplePivotCamera = struct {
     pub fn adjust(self: *SimplePivotCamera, view_id: Index) void {
         var view = graphics.View.byId(view_id);
         const move = getMove(self, view);
-        view.adjustProjection(
-            @floor(view.projection.position + move),
-            false,
+        view.moveProjection(
+            .{
+                move[0] * view.projection.zoom * view.scale.?[0],
+                move[1] * view.projection.zoom * view.scale.?[1],
+            },
+            true,
             self.snap_to_bounds,
         );
     }
@@ -233,7 +235,6 @@ pub const SimplePivotCamera = struct {
         var view = graphics.View.byId(ctx.id_1);
         const move = getMove(self, view);
 
-        //std.debug.print("move: {d}\n", .{move});
         if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
             view.moveProjection(
                 move * self.velocity_relative_to_pivot,
@@ -269,7 +270,6 @@ pub const SimplePivotCamera = struct {
             (view.projection.position[0] + view.projection.width / 2) / view.projection.zoom / view.scale.?[0],
             (view.projection.position[1] + view.projection.height / 2) / view.projection.zoom / view.scale.?[1],
         };
-        //std.debug.print("self pivot: {d} cam_world_pivot: {d} \n", .{ self.pivot.*, cam_world_pivot });
         return self.pivot.* + self.offset - cam_world_pivot;
     }
 };

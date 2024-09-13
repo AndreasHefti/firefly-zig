@@ -120,13 +120,13 @@ fn init() void {
 }
 
 const speed = 2;
-fn entity_control(entity_id: Index, _: Index) void {
+fn entity_control(ctx: *firefly.api.CallContext) void {
     if (firefly.api.input.checkButtonPressed(InputButtonType.UP))
-        ETransform.byId(entity_id).?.position[1] -= speed;
+        ETransform.byId(ctx.caller_id).?.position[1] -= speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN))
-        ETransform.byId(entity_id).?.position[1] += speed;
+        ETransform.byId(ctx.caller_id).?.position[1] += speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.LEFT))
-        ETransform.byId(entity_id).?.position[0] -= speed;
+        ETransform.byId(ctx.caller_id).?.position[0] -= speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.RIGHT))
-        ETransform.byId(entity_id).?.position[0] += speed;
+        ETransform.byId(ctx.caller_id).?.position[0] += speed;
 }

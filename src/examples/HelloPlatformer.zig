@@ -112,7 +112,7 @@ fn init() void {
     );
 
     // add player and init cam for room
-    _ = game.Room.byName(room2_name).?.withTask(
+    _ = game.Room.byName(room1_name).?.withTask(
         api.Task{
             .name = "CreatePlayer",
             .run_once = true,
@@ -123,7 +123,7 @@ fn init() void {
     );
 
     // and just start the Room
-    game.Room.startRoom(room2_name, player_name, roomLoaded);
+    game.Room.startRoom(room1_name, player_name, roomLoaded);
 }
 
 fn roomLoaded(_: Index) void {

@@ -70,9 +70,7 @@ fn sceneRun(ctx: *api.CallContext) void {
             ctx.result = api.ActionResult.Success
         else
             ctx.result = api.ActionResult.Running;
-    }
-
-    ctx.result = api.ActionResult.Failed;
+    } else ctx.result = api.ActionResult.Failed;
 }
 
 fn sceneEnd(_: *api.CallContext) void {

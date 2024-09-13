@@ -118,7 +118,7 @@ pub const Room = struct {
         if (self.state != .LOADED) self.load();
         // ignore when room is in unexpected state
         if (self.state != .LOADED) {
-            std.debug.print("Room is in unexpected state to run: {any} still active!", .{self});
+            std.debug.print("FIREFLY : ERROR: Room is in unexpected state to run: {any} still active!", .{self});
             return;
         }
 
@@ -144,7 +144,7 @@ pub const Room = struct {
     ) void {
         // if this room is already starting, ignore call
         if (self.state == .STARTING or self.state == .RUNNING) {
-            std.debug.print("Another Room is already starting cannot start: {any}", .{self});
+            std.debug.print("FIREFLY : ERROR: Another Room is already starting cannot start: {any}", .{self});
             return;
         }
 
@@ -154,7 +154,7 @@ pub const Room = struct {
 
         // ignore when room is in unexpected state
         if (self.state != .ACTIVATED) {
-            std.debug.print("Room is in unexpected state to run: {any} still active!", .{self});
+            std.debug.print("FIREFLY : ERROR: Room is in unexpected state to run: {any} still active!", .{self});
             return;
         }
 
@@ -165,6 +165,7 @@ pub const Room = struct {
         // game.Player.byName(player_ref).adjustCamera()
         if (game.SimplePivotCamera.byName("Camera1")) |cam| {
             cam.snap_to_bounds = self.bounds;
+            cam.adjust(graphics.View.idByName("TestView").?);
             //cam.adjust(view_id: Index)
         }
 
@@ -341,6 +342,7 @@ fn createRoomTransition(ctx: *api.CallContext) void {
 
 const TransitionState = struct {
     var player_id: ?Index = null;
+    var player_offset: ?utils.PosF = null;
     var orientation: ?utils.Orientation = null;
     var target_room: ?String = null;
     var target_transition: ?String = null;
@@ -349,15 +351,15 @@ const TransitionState = struct {
 // ContactCallback used to apply to player to get called on players transition contact constraint
 pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan) bool {
     // check transition condition
-    //if (contact.mask.?.count() < 4) return false;
-    std.debug.print("maks: {d}\n", .{contact.mask.?.count()});
+    if (contact.mask.?.count() < 4) return false;
 
     const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return false;
     const transition_id = c.entity_id;
     const player = api.Entity.byId(player_id);
-    //const player_name = player.name orelse return false;
+    const player_transform = graphics.ETransform.byId(player_id) orelse return false;
     const move = physics.EMovement.byId(player_id) orelse return false;
     const transition = ERoomTransition.byId(transition_id) orelse return false;
+    const transition_transform = graphics.ETransform.byId(transition_id) orelse return false;
 
     switch (transition.orientation) {
         .EAST => if (move.velocity[0] <= 0) return false,
@@ -369,6 +371,7 @@ pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan
 
     // set current transition state
     TransitionState.player_id = player_id;
+    TransitionState.player_offset = player_transform.position - transition_transform.position;
     TransitionState.orientation = transition.orientation;
     TransitionState.target_room = transition.target_room;
     TransitionState.target_transition = transition.target_transition;
@@ -392,26 +395,17 @@ fn roomUnloadedCallback(_: Index) void {
         const player = api.Entity.byId(player_id);
         const player_transform = graphics.ETransform.byId(player_id) orelse return;
         const player_movement = physics.EMovement.byId(player_id) orelse return;
-        //const source_transition = ERoomTransition.byId(source_transition_id) orelse return;
-        //const source_transition_transform = graphics.ETransform.byId(source_transition_id) orelse return;
         const target_transition_transform = graphics.ETransform.byName(target_transition) orelse return;
 
         player_movement.on_ground = false;
-
-        // TODO calc smooth player transition for every orientation
-
-        // const player_to_transition: utils.PosF = player_transform.position - source_transition_transform.position;
-        // const player_target_pos = target_transition_transform.position + player_to_transition;
-        // player_transform.position = player_target_pos;
-
         player_transform.moveTo(
-            target_transition_transform.position[0],
-            target_transition_transform.position[1],
+            target_transition_transform.position[0] + TransitionState.player_offset.?[0],
+            target_transition_transform.position[1] + TransitionState.player_offset.?[1],
         );
 
         switch (orientation) {
-            .EAST => player_transform.position[0] -= 5,
-            .WEST => player_transform.position[0] -= 10,
+            .EAST => player_transform.position[0] += 5,
+            .WEST => player_transform.position[0] -= 5,
             .NORTH => player_transform.position[1] -= 5,
             .SOUTH => player_transform.position[1] += 5,
             else => {},
@@ -500,7 +494,7 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn entryAction(ctx: *api.CallContext) void {
-        color[3] -= @min(10, color[3]);
+        color[3] -= @min(20, color[3]);
         if (color[3] <= 0)
             ctx.result = .Success
         else
@@ -508,7 +502,7 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn exitAction(ctx: *api.CallContext) void {
-        color[3] = @min(255, @as(usize, @intCast(color[3])) + 10);
+        color[3] = @min(255, @as(usize, @intCast(color[3])) + 20);
         if (color[3] >= 255)
             ctx.result = .Success
         else

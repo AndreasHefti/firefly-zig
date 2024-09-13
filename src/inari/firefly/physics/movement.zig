@@ -230,8 +230,6 @@ pub fn EulerIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
 }
 
 pub fn adjustVelocity(movement: *EMovement) void {
-    //std.debug.print("velocity: {d}\n", .{movement.velocity});
-
     if (movement.adjust_block) {
         if (movement.kind.hasAspect(MovFlags.BLOCK_NORTH) and movement.velocity[1] < 0)
             movement.velocity[1] = 0;
@@ -271,8 +269,6 @@ pub fn adjustVelocity(movement: *EMovement) void {
         if (movement.max_velocity_west) |max|
             movement.velocity[0] = @max(movement.velocity[0], -max);
     }
-
-    //std.debug.print(" --> velocity: {d}\n", .{movement.velocity});
 }
 
 //////////////////////////////////////////////////////////////

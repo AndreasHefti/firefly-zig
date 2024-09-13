@@ -82,8 +82,6 @@ fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
     // just the initial state
     EState.byId(entity_id).?.current_state =
         if (vx > 0 and vy > 0) state_engine.states.get(0).? else if (vx > 0 and vy < 0) state_engine.states.get(1).? else if (vx < 0 and vy > 0) state_engine.states.get(2).? else state_engine.states.get(3).?;
-
-    //std.debug.print("start: {?any}\n", .{EState.byId(entity_id)});
 }
 
 inline fn changeX(entity_id: Index) void {
@@ -99,7 +97,6 @@ inline fn changeY(entity_id: Index) void {
 // 1
 fn rightDown(ctx: *api.CallContext) bool {
     const trans = ETransform.byId(ctx.id_1) orelse return false;
-    //std.debug.print("ctx.id_2: {any}  trans: {any}\n", .{ current_sid, trans });
     if ((trans.position[0] < min_x and ctx.id_2 == 3) or (trans.position[1] < min_y and ctx.id_2 == 2)) {
         if (ctx.id_2 == 3) changeX(ctx.id_1) else changeY(ctx.id_1);
         return true;
@@ -110,7 +107,6 @@ fn rightDown(ctx: *api.CallContext) bool {
 // 2
 fn rightUp(ctx: *api.CallContext) bool {
     const trans = ETransform.byId(ctx.id_1) orelse return false;
-    //std.debug.print("ctx.id_2: {any}  trans: {any}\n", .{ ctx.id_2, trans });
     if ((trans.position[0] < min_x and ctx.id_2 == 4) or (trans.position[1] > max_y and ctx.id_2 == 1)) {
         if (ctx.id_2 == 4) changeX(ctx.id_1) else changeY(ctx.id_1);
         return true;
@@ -121,7 +117,6 @@ fn rightUp(ctx: *api.CallContext) bool {
 // 3
 fn leftDown(ctx: *api.CallContext) bool {
     const trans = ETransform.byId(ctx.id_1) orelse return false;
-    //std.debug.print("ctx.id_2: {any}  trans: {any}\n", .{ ctx.id_2, trans });
     if ((trans.position[0] > max_x and ctx.id_2 == 1) or (trans.position[1] < min_y and ctx.id_2 == 4)) {
         if (ctx.id_2 == 1) changeX(ctx.id_1) else changeY(ctx.id_1);
         return true;
@@ -132,7 +127,6 @@ fn leftDown(ctx: *api.CallContext) bool {
 // 4
 fn leftUp(ctx: *api.CallContext) bool {
     const trans = ETransform.byId(ctx.id_1) orelse return false;
-    //std.debug.print("ctx.id_2: {any}  trans: {any}\n", .{ ctx.id_2, trans });
     if ((trans.position[0] > max_x and ctx.id_2 == 2) or (trans.position[1] > max_y and ctx.id_2 == 3)) {
         if (ctx.id_2 == 2) changeX(ctx.id_1) else changeY(ctx.id_1);
         return true;

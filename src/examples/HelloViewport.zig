@@ -71,8 +71,8 @@ fn loadWithView() void {
         .activate();
 }
 
-fn view_control(view_id: Index, _: Index) void {
-    var view = View.byId(view_id);
+fn view_control(ctx: *firefly.api.CallContext) void {
+    var view = View.byId(ctx.caller_id);
     view.projection.position[0] -= 0.1;
     view.projection.position[1] -= 0.1;
     view.position[0] += 1;

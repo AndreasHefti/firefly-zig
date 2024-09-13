@@ -214,7 +214,7 @@ pub const View = struct {
         firefly.api.window.toggleFullscreen();
         // adapt view to full screen
         //const window = firefly.api.window.getWindowData();
-        std.debug.print("screen: {d} {d} \n", .{
+        std.debug.print("FIREFLY : INFO: Set fullscreen, screen: {d} {d} \n", .{
             firefly.api.window.getMonitorWidth(1),
             firefly.api.window.getMonitorHeight(1),
         });
@@ -238,37 +238,17 @@ pub const View = struct {
         });
     }
 
-    pub fn adjustProjection(
-        self: *View,
-        vec: Vector2f,
-        pixel_perfect: bool,
-        snap_bounds: ?RectF,
-    ) void {
-        self.projection.position = vec;
-        if (pixel_perfect)
-            self.projection.position = @ceil(self.projection.position);
-        if (snap_bounds) |sb|
-            self.snapToBounds(sb);
-
-        eventDispatch.notify(.{
-            .event_type = ViewChangeEvent.Type.PROJECTION,
-            .view_id = self.id,
-        });
-    }
-
     inline fn adjustPixelPerfect(self: *View) void {
         self.projection.position = @ceil(self.projection.position);
     }
 
     inline fn snapToBounds(self: *View, bounds: RectF) void {
-        //std.debug.print("bounds : {d}\n", .{bounds});
         const _bounds: RectF = .{
             bounds[0] * self.projection.zoom * self.scale.?[0],
             bounds[1] * self.projection.zoom * self.scale.?[1],
             bounds[2] * self.projection.zoom * self.scale.?[0],
             bounds[3] * self.projection.zoom * self.scale.?[1],
         };
-        //std.debug.print("_bounds : {d}\n", .{_bounds});
 
         self.projection.position[0] = @min(self.projection.position[0], _bounds[0] + _bounds[2] - self.projection.width);
         self.projection.position[1] = @min(self.projection.position[1], _bounds[1] + _bounds[3] - self.projection.height);

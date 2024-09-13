@@ -411,11 +411,11 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
 
 fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
-        pub fn withActiveControl(self: *T, update: api.ControlFunction, name: ?String) *T {
+        pub fn withActiveControl(self: *T, update: api.CallFunction, name: ?String) *T {
             return withControl(self, update, name, true);
         }
 
-        pub fn withControl(self: *T, update: api.ControlFunction, name: ?String, active: bool) *T {
+        pub fn withControl(self: *T, update: api.CallFunction, name: ?String, active: bool) *T {
             if (adapter.pool.control_mapping) |*cm| {
                 const c_sub = api.VoidControl.new(.{ .name = name }, update);
                 cm.map(self.id, c_sub.id);
@@ -557,17 +557,18 @@ fn ComponentPool(comptime T: type) type {
                 T.componentTypeDeinit();
 
             items.deinit();
-            if (active_mapping) |*am| {
+            if (active_mapping) |*am|
                 am.deinit();
-                active_mapping = null;
-            }
+            active_mapping = null;
 
-            if (eventDispatch) |*ed| {
+            if (eventDispatch) |*ed|
                 ed.deinit();
-                eventDispatch = null;
-            }
+            eventDispatch = null;
 
-            if (name_mapping) |*nm| nm.deinit();
+            if (name_mapping) |*nm|
+                nm.deinit();
+            name_mapping = null;
+
             if (has_control_mapping)
                 api.unsubscribeUpdate(update);
             if (control_mapping) |*cm|

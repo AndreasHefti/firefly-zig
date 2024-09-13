@@ -86,9 +86,9 @@ fn init() void {
     }
 }
 
-fn control(entity_id: Index, _: Index) void {
-    const scan = EContactScan.byId(entity_id) orelse return;
-    const shape = EShape.byId(entity_id) orelse return;
+fn control(ctx: *firefly.api.CallContext) void {
+    const scan = EContactScan.byId(ctx.caller_id) orelse return;
+    const shape = EShape.byId(ctx.caller_id) orelse return;
 
     if (scan.hasAnyContact()) {
         shape.color[0] = 255;

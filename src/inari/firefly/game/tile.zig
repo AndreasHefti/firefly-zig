@@ -186,10 +186,7 @@ pub const TileSet = struct {
                 }
             }
             contact_mask_cache.put(tile_template.contact_mask_name.?, result) catch unreachable;
-        } else {
-            std.debug.print("Missing texture with name: {s}", .{self.texture_name});
-            @panic("Missing texture with name");
-        }
+        } else @panic("Missing texture with name");
 
         return contact_mask_cache.get(tile_template.contact_mask_name.?);
     }
