@@ -1,5 +1,5 @@
 const std = @import("std");
-const firefly = @import("inari/firefly/firefly.zig");
+pub const firefly = @import("inari/firefly/firefly.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
