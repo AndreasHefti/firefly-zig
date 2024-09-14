@@ -95,7 +95,7 @@ pub const JSONResourceHandle = struct {
 /// If component is not loaded yet, load the component with given load_task or default task
 pub const Resource = struct {
     name: String,
-    file: ?String = null,
+    file: String,
     load_task: ?String = null,
 };
 
@@ -155,80 +155,84 @@ fn loadTileSetFromJSON(ctx: *api.CallContext) void {
         defer parsed.deinit();
 
         const jsonTileSet: JSONTileSet = parsed.value;
-
-        // check if tile set already exists. If so, do nothing
-        // TODO hot reload here?
-        if (game.TileSet.existsName(jsonTileSet.name))
-            return;
-
-        // check texture and load or create if needed
-        if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
-            if (jsonTileSet.texture.load_task) |lt| {
-                api.Task.runTaskByName(lt);
-            } else {
-                _ = graphics.Texture.new(.{
-                    .name = api.NamePool.alloc(jsonTileSet.texture.name).?,
-                    .resource = api.NamePool.alloc(jsonTileSet.texture.file).?,
-                    .is_mipmap = false,
-                }).load();
-            }
-        }
-        // check Texture exists now
-        if (!graphics.Texture.existsByName(jsonTileSet.texture.name))
-            utils.panic(api.ALLOC, "Failed to find/load texture: {any}", .{jsonTileSet.texture});
-
-        // create TileSet from jsonTileSet
-        var tile_set = game.TileSet.new(.{
-            .name = api.NamePool.alloc(jsonTileSet.name),
-            .texture_name = api.NamePool.alloc(jsonTileSet.texture.name).?,
-            .tile_width = jsonTileSet.tile_width,
-            .tile_height = jsonTileSet.tile_height,
-        });
-
-        // create all tile templates for tile set
-        for (0..jsonTileSet.tiles.len) |i| {
-            var it = std.mem.split(u8, jsonTileSet.tiles[i].props, "|");
-
-            if (utils.parsePosF(it.next())) |tex_pos| {
-                var tile_template: game.TileTemplate = .{
-                    .name = api.NamePool.alloc(jsonTileSet.tiles[i].name),
-                    .sprite_data = .{
-                        .texture_pos = .{
-                            tex_pos[0] * tile_set.tile_width,
-                            tex_pos[1] * tile_set.tile_height,
-                        },
-                        .flip_x = utils.parseBoolean(it.next()),
-                        .flip_y = utils.parseBoolean(it.next()),
-                    },
-                    .contact_material_type = physics.ContactMaterialAspectGroup.getAspectIfExists(it.next().?),
-                    .contact_mask_name = api.NamePool.alloc(if (utils.parseBoolean(it.next())) jsonTileSet.tiles[i].name else null),
-                    .groups = api.NamePool.alloc(utils.parseName(it.next().?)),
-                };
-
-                if (jsonTileSet.tiles[i].animation) |a| {
-                    var it_a1 = std.mem.split(u8, a, "|");
-                    while (it_a1.next()) |frame| {
-                        var it_a2 = std.mem.split(u8, frame, ",");
-                        tile_template = tile_template.withAnimationFrame(.{
-                            .duration = utils.parseUsize(it_a2.next().?),
-                            .sprite_data = .{
-                                .texture_pos = .{
-                                    utils.parseFloat(it_a2.next()) * tile_set.tile_width,
-                                    utils.parseFloat(it_a2.next()) * tile_set.tile_height,
-                                },
-                                .flip_x = utils.parseBoolean(it_a2.next()),
-                                .flip_y = utils.parseBoolean(it_a2.next()),
-                            },
-                        });
-                    }
-                }
-                tile_set.addTileTemplate(tile_template);
-            }
-        }
+        const tile_set_id = loadTileSet(jsonTileSet);
 
         if (ctx.c_ref_callback) |callback|
-            callback(game.TileSet.referenceById(tile_set.id, true).?, ctx);
+            callback(game.TileSet.referenceById(tile_set_id, true).?, ctx);
     }
+}
+
+fn loadTileSet(jsonTileSet: JSONTileSet) Index {
+    // check if tile set already exists. If so, do nothing
+    // TODO hot reload here?
+    if (game.TileSet.existsName(jsonTileSet.name))
+        return game.TileSet.idByName(jsonTileSet.name).?;
+
+    // check texture and load or create if needed
+    if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
+        if (jsonTileSet.texture.load_task) |lt| {
+            api.Task.runTaskByName(lt);
+        } else {
+            _ = graphics.Texture.new(.{
+                .name = api.NamePool.alloc(jsonTileSet.texture.name).?,
+                .resource = api.NamePool.alloc(jsonTileSet.texture.file).?,
+                .is_mipmap = false,
+            }).load();
+        }
+    }
+    // check Texture exists now
+    if (!graphics.Texture.existsByName(jsonTileSet.texture.name))
+        utils.panic(api.ALLOC, "Failed to find/load texture: {any}", .{jsonTileSet.texture});
+
+    // create TileSet from jsonTileSet
+    var tile_set = game.TileSet.new(.{
+        .name = api.NamePool.alloc(jsonTileSet.name),
+        .texture_name = api.NamePool.alloc(jsonTileSet.texture.name).?,
+        .tile_width = jsonTileSet.tile_width,
+        .tile_height = jsonTileSet.tile_height,
+    });
+
+    // create all tile templates for tile set
+    for (0..jsonTileSet.tiles.len) |i| {
+        var it = std.mem.split(u8, jsonTileSet.tiles[i].props, "|");
+
+        if (utils.parsePosF(it.next())) |tex_pos| {
+            var tile_template: game.TileTemplate = .{
+                .name = api.NamePool.alloc(jsonTileSet.tiles[i].name),
+                .sprite_data = .{
+                    .texture_pos = .{
+                        tex_pos[0] * tile_set.tile_width,
+                        tex_pos[1] * tile_set.tile_height,
+                    },
+                    .flip_x = utils.parseBoolean(it.next()),
+                    .flip_y = utils.parseBoolean(it.next()),
+                },
+                .contact_material_type = physics.ContactMaterialAspectGroup.getAspectIfExists(it.next().?),
+                .contact_mask_name = api.NamePool.alloc(if (utils.parseBoolean(it.next())) jsonTileSet.tiles[i].name else null),
+                .groups = api.NamePool.alloc(utils.parseName(it.next().?)),
+            };
+
+            if (jsonTileSet.tiles[i].animation) |a| {
+                var it_a1 = std.mem.split(u8, a, "|");
+                while (it_a1.next()) |frame| {
+                    var it_a2 = std.mem.split(u8, frame, ",");
+                    tile_template = tile_template.withAnimationFrame(.{
+                        .duration = utils.parseUsize(it_a2.next().?),
+                        .sprite_data = .{
+                            .texture_pos = .{
+                                utils.parseFloat(it_a2.next()) * tile_set.tile_width,
+                                utils.parseFloat(it_a2.next()) * tile_set.tile_height,
+                            },
+                            .flip_x = utils.parseBoolean(it_a2.next()),
+                            .flip_y = utils.parseBoolean(it_a2.next()),
+                        },
+                    });
+                }
+            }
+            tile_set.addTileTemplate(tile_template);
+        }
+    }
+    return tile_set.id;
 }
 
 //////////////////////////////////////////////////////////////
@@ -338,119 +342,128 @@ fn loadTileMappingFromJSON(ctx: *api.CallContext) void {
         defer parsed.deinit();
 
         const jsonTileMapping: JSONTileMapping = parsed.value;
+        const tile_mapping_id = loadTileMapping(
+            jsonTileMapping,
+            view_name,
+        );
+        // add tile set as owned reference if requested
+        if (ctx.c_ref_callback) |callback|
+            callback(game.TileMapping.referenceById(tile_mapping_id, true).?, ctx);
+    }
+}
 
-        // check if tile map with name already exits. If so, do nothing
-        // TODO hot reload here?
-        if (game.TileMapping.existsName(jsonTileMapping.name))
-            return;
+fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
+    // check if tile map with name already exits. If so, do nothing
+    // TODO hot reload here?
+    if (game.TileMapping.existsName(jsonTileMapping.name))
+        return game.TileMapping.idByName(jsonTileMapping.name).?;
 
-        // prepare view
-        var view_id: ?Index = null;
-        if (firefly.graphics.View.idByName(view_name)) |vid| {
-            view_id = vid;
-        } else utils.panic(api.ALLOC, "View does not exists: {s}", .{view_name});
+    // prepare view
+    var view_id: ?Index = null;
+    if (firefly.graphics.View.idByName(view_name)) |vid| {
+        view_id = vid;
+    } else utils.panic(api.ALLOC, "View does not exists: {s}", .{view_name});
 
-        var tile_mapping = game.TileMapping.new(.{
-            .name = api.NamePool.alloc(jsonTileMapping.name),
-            .view_id = view_id.?,
-        });
+    var tile_mapping = game.TileMapping.new(.{
+        .name = api.NamePool.alloc(jsonTileMapping.name),
+        .view_id = view_id.?,
+    });
 
-        // process tile sets and make code offset mapping, if not exists, load it
-        var code_offset: Index = 1;
-        var code_offset_mapping = utils.DynIndexArray.new(api.ALLOC, 10);
-        defer code_offset_mapping.deinit();
+    // process tile sets and make code offset mapping, if not exists, load it
+    var code_offset: Index = 1;
+    var code_offset_mapping = utils.DynIndexArray.new(api.ALLOC, 10);
+    defer code_offset_mapping.deinit();
 
-        for (0..jsonTileMapping.tile_sets.len) |i| {
-            var tile_set_def = jsonTileMapping.tile_sets[i];
-            if (!game.TileSet.existsName(tile_set_def.resource.name)) {
-                if (tile_set_def.resource.file == null)
-                    utils.panic(
-                        api.ALLOC,
-                        "No File defined for missing resource: {s}",
-                        .{tile_set_def.resource.name},
-                    );
+    for (0..jsonTileMapping.tile_sets.len) |i| {
+        var tile_set_def = jsonTileMapping.tile_sets[i];
+        if (!game.TileSet.existsName(tile_set_def.resource.name)) {
+            utils.panic(
+                api.ALLOC,
+                "No File defined for missing resource: {s}",
+                .{tile_set_def.resource.name},
+            );
 
-                // load tile set from file
-                api.Task.runTaskByNameWith(
-                    if (tile_set_def.resource.load_task) |load_task| load_task else game.Tasks.JSON_LOAD_TILE_SET,
-                    api.CallContext.withAttributes(
-                        ctx.caller_id,
-                        .{
-                            .{ game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.? },
-                        },
-                    ),
-                );
-            }
-
-            if (tile_set_def.code_offset == null)
-                tile_set_def.code_offset = code_offset;
-
-            code_offset = code_offset + game.TileSet.byName(tile_set_def.resource.name).?.tile_templates.size();
+            // load tile set from file
+            api.Task.runTaskByNameWith(
+                if (tile_set_def.resource.load_task) |load_task|
+                    load_task
+                else
+                    game.Tasks.JSON_LOAD_TILE_SET,
+                api.CallContext.withAttributes(
+                    null,
+                    .{
+                        .{ game.TaskAttributes.FILE_RESOURCE, tile_set_def.resource.file.? },
+                    },
+                ),
+            );
         }
 
-        // process tile layer
-        for (0..jsonTileMapping.layer_mapping.len) |i| {
-            const layer_mapping = jsonTileMapping.layer_mapping[i];
+        if (tile_set_def.code_offset == null)
+            tile_set_def.code_offset = code_offset;
 
-            // get involved layer, if name exists but layer not yet, create one
-            var layer_id: ?Index = null;
-            if (firefly.graphics.Layer.existsName(layer_mapping.layer_name)) {
-                layer_id = firefly.graphics.Layer.idByName(layer_mapping.layer_name).?;
-            } else {
-                layer_id = firefly.graphics.Layer.new(.{
-                    .name = api.NamePool.alloc(layer_mapping.layer_name),
-                    .view_id = view_id.?,
-                    .order = i,
-                }).id;
-            }
+        code_offset = code_offset + game.TileSet.byName(tile_set_def.resource.name).?.tile_templates.size();
+    }
 
-            // create tile layer data
-            var tile_layer_data: *game.TileLayerData = tile_mapping.withTileLayerData(.{
-                .layer = api.NamePool.alloc(layer_mapping.layer_name).?,
-                .tint = utils.parseColor(layer_mapping.tint_color).?,
-                .blend = BlendMode.byName(layer_mapping.blend_mode),
-                .parallax = utils.parsePosF(layer_mapping.parallax_factor),
-                .offset = utils.parsePosF(layer_mapping.offset),
-            });
+    // process tile layer
+    for (0..jsonTileMapping.layer_mapping.len) |i| {
+        const layer_mapping = jsonTileMapping.layer_mapping[i];
 
-            // add tile set references to tile layer data
-            var tile_set_ref_it = std.mem.split(u8, layer_mapping.tile_sets_refs, ",");
-            while (tile_set_ref_it.next()) |tile_set_name| {
-                for (0..jsonTileMapping.tile_sets.len) |ii| {
-                    const tile_set_ref = jsonTileMapping.tile_sets[ii];
-                    if (utils.stringEquals(tile_set_ref.resource.name, tile_set_name)) {
-                        _ = tile_layer_data.withTileSetMapping(.{
-                            .tile_set_name = api.NamePool.alloc(tile_set_ref.resource.name).?,
-                            .code_offset = tile_set_ref.code_offset.?,
-                        });
-                        break;
-                    }
+        // get involved layer, if name exists but layer not yet, create one
+        var layer_id: ?Index = null;
+        if (firefly.graphics.Layer.existsName(layer_mapping.layer_name)) {
+            layer_id = firefly.graphics.Layer.idByName(layer_mapping.layer_name).?;
+        } else {
+            layer_id = firefly.graphics.Layer.new(.{
+                .name = api.NamePool.alloc(layer_mapping.layer_name),
+                .view_id = view_id.?,
+                .order = i,
+            }).id;
+        }
+
+        // create tile layer data
+        var tile_layer_data: *game.TileLayerData = tile_mapping.withTileLayerData(.{
+            .layer = api.NamePool.alloc(layer_mapping.layer_name).?,
+            .tint = utils.parseColor(layer_mapping.tint_color).?,
+            .blend = BlendMode.byName(layer_mapping.blend_mode),
+            .parallax = utils.parsePosF(layer_mapping.parallax_factor),
+            .offset = utils.parsePosF(layer_mapping.offset),
+        });
+
+        // add tile set references to tile layer data
+        var tile_set_ref_it = std.mem.split(u8, layer_mapping.tile_sets_refs, ",");
+        while (tile_set_ref_it.next()) |tile_set_name| {
+            for (0..jsonTileMapping.tile_sets.len) |ii| {
+                const tile_set_ref = jsonTileMapping.tile_sets[ii];
+                if (utils.stringEquals(tile_set_ref.resource.name, tile_set_name)) {
+                    _ = tile_layer_data.withTileSetMapping(.{
+                        .tile_set_name = api.NamePool.alloc(tile_set_ref.resource.name).?,
+                        .code_offset = tile_set_ref.code_offset.?,
+                    });
+                    break;
                 }
             }
         }
-
-        // apply tile grids
-        for (0..jsonTileMapping.tile_grids.len) |i| {
-            const json_grid = jsonTileMapping.tile_grids[i];
-            tile_mapping.addTileGridData(.{
-                .name = api.NamePool.alloc(json_grid.name).?,
-                .layer = api.NamePool.alloc(json_grid.layer).?,
-                .world_position = utils.parsePosF(json_grid.position) orelse .{ 0, 0 },
-                .spherical = json_grid.spherical,
-                .dimensions = .{
-                    json_grid.grid_tile_width,
-                    json_grid.grid_tile_height,
-                    json_grid.tile_width,
-                    json_grid.tile_height,
-                },
-                .codes = api.NamePool.alloc(json_grid.codes).?,
-            });
-        }
-
-        // add tile set as owned reference if requested
-        if (ctx.c_ref_callback) |callback|
-            callback(game.TileMapping.referenceById(tile_mapping.id, true).?, ctx);
     }
+
+    // apply tile grids
+    for (0..jsonTileMapping.tile_grids.len) |i| {
+        const json_grid = jsonTileMapping.tile_grids[i];
+        tile_mapping.addTileGridData(.{
+            .name = api.NamePool.alloc(json_grid.name).?,
+            .layer = api.NamePool.alloc(json_grid.layer).?,
+            .world_position = utils.parsePosF(json_grid.position) orelse .{ 0, 0 },
+            .spherical = json_grid.spherical,
+            .dimensions = .{
+                json_grid.grid_tile_width,
+                json_grid.grid_tile_height,
+                json_grid.tile_width,
+                json_grid.tile_height,
+            },
+            .codes = api.NamePool.alloc(json_grid.codes).?,
+        });
+    }
+
+    return tile_mapping.id;
 }
 
 //////////////////////////////////////////////////////////////
@@ -463,7 +476,13 @@ fn loadTileMappingFromJSON(ctx: *api.CallContext) void {
 ///     "tile_sets": [
 ///         { "name": "TestTileSet", "file": "resources/example_tileset.json" }
 ///     ],
-///     "tile_map": { "name": "TileMapRoom1", "file": "resources/example_tilemap1.json" },
+///
+/// NOTE: either of
+///     "tile_mapping_file": { "name": "TileMapRoom1", "file": "resources/example_tilemap1.json" },
+///     "tile_mapping": {
+///         TileSetMapping JSON
+///     }
+///
 ///     "objects": [
 ///      {
 ///        "name": "t1",
@@ -505,7 +524,8 @@ pub const JSONRoom = struct {
     start_scene: ?String = null,
     end_scene: ?String = null,
     tile_sets: []const Resource,
-    tile_map: Resource,
+    tile_mapping_file: ?Resource = null,
+    tile_mapping: ?JSONTileMapping = null,
     objects: ?[]const JSONRoomObject = null,
 };
 
@@ -557,22 +577,38 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
 
     for (0..jsonTileMapping.tile_sets.len) |i| {
         _ = room.addTaskByName(
-            game.Tasks.JSON_LOAD_TILE_SET,
+            jsonTileMapping.tile_sets[i].load_task orelse game.Tasks.JSON_LOAD_TILE_SET,
             api.CompositeLifeCycle.LOAD,
             .{
-                .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_sets[i].file.? },
+                .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_sets[i].file },
             },
         );
     }
 
-    _ = room.addTaskByName(
-        game.Tasks.JSON_LOAD_TILE_MAPPING,
-        api.CompositeLifeCycle.LOAD,
-        .{
-            .{ game.TaskAttributes.FILE_RESOURCE, jsonTileMapping.tile_map.file.? },
-            .{ game.TaskAttributes.VIEW_NAME, view_name },
-        },
-    );
+    if (jsonTileMapping.tile_mapping_file) |tile_mapping_file| {
+        _ = room.addTaskByName(
+            tile_mapping_file.load_task orelse game.Tasks.JSON_LOAD_TILE_MAPPING,
+            api.CompositeLifeCycle.LOAD,
+            .{
+                .{ game.TaskAttributes.FILE_RESOURCE, tile_mapping_file.file },
+                .{ game.TaskAttributes.VIEW_NAME, view_name },
+            },
+        );
+    } else if (jsonTileMapping.tile_mapping) |tm| {
+        const tileMappingJSON = std.json.stringifyAlloc(api.ALLOC, tm, .{}) catch unreachable;
+        defer api.ALLOC.free(tileMappingJSON);
+
+        _ = room.addTaskByName(
+            game.Tasks.JSON_LOAD_TILE_MAPPING,
+            api.CompositeLifeCycle.LOAD,
+            .{
+                .{ game.TaskAttributes.JSON_RESOURCE, tileMappingJSON },
+                .{ game.TaskAttributes.VIEW_NAME, view_name },
+            },
+        );
+    } else {
+        @panic("Neither tile_mapping_file nor tile_mapping property found");
+    }
 
     // add objects as activation tasks
     if (jsonTileMapping.objects) |objects| {
