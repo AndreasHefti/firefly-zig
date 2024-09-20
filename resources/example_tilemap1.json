@@ -1,4 +1,5 @@
 {
+    "file_type": "TileMap",
     "name": "TileMapRoom1",
     "tile_sets": [
         { "code_offset": 1, "resource": { "name": "TestTileSet", "file": "resources/example_tileset.json" }}

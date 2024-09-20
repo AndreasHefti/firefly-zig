@@ -205,14 +205,14 @@ pub const SpriteSet = struct {
 
     pub fn construct(self: *SpriteSet) void {
         self._stamps = utils.DynArray(SpriteStamp).new(firefly.api.COMPONENT_ALLOC);
-        self._sprite_template_refs = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 32);
+        self._loaded_sprite_template_refs = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 32);
     }
 
     pub fn destruct(self: *SpriteSet) void {
         self._stamps.deinit();
         self._stamps = undefined;
-        self._sprite_template_refs.deinit();
-        self._sprite_template_refs = undefined;
+        self._loaded_sprite_template_refs.deinit();
+        self._loaded_sprite_template_refs = undefined;
     }
 
     pub fn addStamp(self: *SpriteSet, stamp: SpriteStamp) void {

@@ -137,7 +137,7 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
             return pool._type_init;
         }
 
-        pub fn count() usize {
+        pub fn size() usize {
             return pool.items.slots.count();
         }
 
@@ -706,7 +706,7 @@ pub fn SubTypeTrait(comptime T: type, comptime SubType: type) type {
             result.value_ptr.*.id = id;
 
             if (@hasDecl(SubType, "construct"))
-                st.construct();
+                result.value_ptr.*.construct();
 
             return result.value_ptr;
         }
@@ -780,10 +780,10 @@ fn ComponentSubType(comptime T: type, comptime SubType: type) type {
             // unsubscribe from base Component events
             T.unsubscribe(notifyComponentChange);
             // destruct and clear subtype data
-            if (@hasDecl(SubType, "deconstruct")) {
+            if (@hasDecl(SubType, "destruct")) {
                 var it = data.iterator();
                 while (it.next()) |r|
-                    r.value_ptr.deconstruct();
+                    r.value_ptr.destruct();
             }
 
             data.deinit();
@@ -802,8 +802,8 @@ fn ComponentSubType(comptime T: type, comptime SubType: type) type {
                         sub_type.activation(false);
                 },
                 .DISPOSING => {
-                    if (@hasDecl(SubType, "deconstruct"))
-                        sub_type.deconstruct();
+                    if (@hasDecl(SubType, "destruct"))
+                        sub_type.destruct();
 
                     _ = data.remove(event.c_id.?);
                 },

@@ -81,6 +81,7 @@ pub const Control = struct {
         .grouping = true,
         .subtypes = true,
     });
+    pub usingnamespace api.CallContextTrait(Control);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -91,12 +92,11 @@ pub const Control = struct {
     update: api.CallFunction,
 
     pub fn construct(self: *Control) void {
-        self.call_context = .{
-            .caller_id = self.id,
-        };
+        self.initCallContext(true);
     }
 
     pub fn destruct(self: *Control) void {
+        self.deinitCallContext();
         self.groups = null;
     }
 };
@@ -153,7 +153,7 @@ pub const Task = struct {
     pub fn run(self: *Task) void {
         var ctx = api.CallContext{};
         defer ctx.deinit();
-        self.runWith(self, ctx);
+        self.runWith(ctx, true);
     }
 
     pub fn runWith(self: *Task, context: *api.CallContext, owned: bool) void {
@@ -189,7 +189,7 @@ pub const Task = struct {
         if (Task.byName(task_name)) |task| {
             var ctx = context;
             task.runWith(&ctx, false);
-        }
+        } else utils.panic(api.ALLOC, "No Task with name {s} found!", .{task_name});
     }
 
     pub fn runOwnedTaskByName(task_name: String, context: *api.CallContext) void {
@@ -227,6 +227,7 @@ pub const Trigger = struct {
     pub usingnamespace api.Component.Trait(Trigger, .{
         .name = "Trigger",
     });
+    pub usingnamespace api.CallContextTrait(Trigger);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -244,14 +245,11 @@ pub const Trigger = struct {
     }
 
     pub fn construct(self: *Trigger) void {
-        self.call_context = .{
-            .caller_id = self.id,
-            .caller_name = self.name,
-        };
+        self.initCallContext(true);
     }
 
     pub fn destruct(self: *Trigger) void {
-        self.call_context.deinit();
+        self.deinitCallContext();
     }
 
     fn update(_: api.UpdateEvent) void {
@@ -291,6 +289,7 @@ pub const State = struct {
 
 pub const StateEngine = struct {
     pub usingnamespace api.Component.Trait(StateEngine, .{ .name = "StateEngine" });
+    pub usingnamespace api.CallContextTrait(StateEngine);
 
     id: Index = UNDEF_INDEX,
     name: ?String,
@@ -301,15 +300,12 @@ pub const StateEngine = struct {
 
     pub fn construct(self: *StateEngine) void {
         self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable;
-        self.call_context = .{
-            .caller_id = self.id,
-            .caller_name = self.name,
-        };
+        self.initCallContext(true);
     }
 
     pub fn destruct(self: *StateEngine) void {
         self.states.deinit();
-        self.call_context.deinit();
+        self.deinitCallContext();
     }
 
     pub fn withState(self: *StateEngine, state: State) *StateEngine {
@@ -350,6 +346,7 @@ pub const StateEngine = struct {
 
 pub const EntityStateEngine = struct {
     pub usingnamespace api.Component.Trait(EntityStateEngine, .{ .name = "EntityStateEngine" });
+    pub usingnamespace api.CallContextTrait(EntityStateEngine);
 
     id: Index = UNDEF_INDEX,
     name: ?String,
@@ -358,15 +355,12 @@ pub const EntityStateEngine = struct {
 
     pub fn construct(self: *EntityStateEngine) void {
         self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
-        self.call_context = .{
-            .caller_id = self.id,
-            .caller_name = self.name,
-        };
+        self.initCallContext(true);
     }
 
     pub fn destruct(self: *EntityStateEngine) void {
         self.states.deinit();
-        self.call_context.deinit();
+        self.deinitCallContext();
     }
 
     pub fn withState(self: *EntityStateEngine, state: State) *EntityStateEngine {

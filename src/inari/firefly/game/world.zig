@@ -28,6 +28,7 @@ pub fn init() void {
     if (initialized)
         return;
 
+    api.Composite.registerSubtype(World);
     api.Composite.registerSubtype(Room);
     api.Composite.registerSubtype(Player);
     api.EComponent.registerEntityComponent(ERoomTransition);
@@ -35,6 +36,10 @@ pub fn init() void {
     _ = api.Task.new(.{
         .name = game.Tasks.ROOM_TRANSITION_BUILDER,
         .function = createRoomTransition,
+    });
+    _ = api.Task.new(.{
+        .name = game.Tasks.SIMPLE_ROOM_TRANSITION_SCENE_BUILDER,
+        .function = SimpleRoomTransitionScene.buildSimpleRoomTransitionScene,
     });
 }
 
@@ -63,15 +68,6 @@ pub const Player = struct {
     _cam_id: Index = UNDEF_INDEX,
     _view_id: Index = UNDEF_INDEX,
 
-    pub fn new(player: Player) *Player {
-        return @This().newSubType(
-            api.Composite{
-                .name = player.name,
-            },
-            player,
-        );
-    }
-
     pub fn load(self: *Player) void {
         defer self._loaded = true;
         if (self._loaded)
@@ -86,10 +82,23 @@ pub const Player = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Area
+//// World
 //////////////////////////////////////////////////////////////
 
-pub const Area = struct {};
+pub const World = struct {
+    pub usingnamespace api.CompositeTrait(World);
+
+    id: Index = UNDEF_INDEX,
+    name: String,
+
+    pub fn load(self: *World) void {
+        api.Composite.byId(self.id).load();
+    }
+
+    pub fn loadByName(name: String) void {
+        if (api.Composite.byName(name)) |c| c.load();
+    }
+};
 
 //////////////////////////////////////////////////////////////
 //// Room
@@ -134,15 +143,14 @@ pub const Room = struct {
     _stop_callback: ?RoomCallback = undefined,
     _unload_callback: ?RoomCallback = undefined,
 
-    pub fn new(room: Room) *Room {
-        var result = @This().newSubType(
-            api.Composite{
-                .name = room.name,
-            },
-            room,
-        );
-        result.state = .CREATED;
-        return result;
+    pub fn construct(self: *Room) void {
+        std.debug.print("FIREFLY : INFO: Room {s} created\n", .{self.name});
+        self.state = .CREATED;
+    }
+
+    pub fn destruct(self: *Room) void {
+        std.debug.print("FIREFLY : INFO: Room {s} destructed\n", .{self.name});
+        self.state = .NONE;
     }
 
     // 2. Load  --> run load tasks --> all needed data is in memory no file load after this. This might also create new activation tasks
@@ -217,7 +225,7 @@ pub const Room = struct {
                 scene.call_context.caller_id = self.id;
                 scene.callback = runRoom;
                 scene.run();
-            }
+            } else utils.panic(api.ALLOC, "Start scene with name {s} not found", .{scene_name});
         } else {
             // just run the Room immediately
             game.resumeGame();
@@ -258,7 +266,7 @@ pub const Room = struct {
                 scene.call_context.caller_id = self.id;
                 scene.callback = stopRoomCallback;
                 scene.run();
-            }
+            } else utils.panic(api.ALLOC, "End scene with name {s} not found", .{scene_name});
         } else {
             // just end the Room immediately
             api.Composite.activateById(self.id, false);
@@ -467,86 +475,72 @@ fn roomUnloadedCallback(_: Index) void {
 // with initial black color, fading alpha to 0 with ALPHA blend of the background
 
 pub const SimpleRoomTransitionScene = struct {
-    pub const entry_scene_name = "SimpleTransitionSceneEntry";
-    pub const exit_scene_name = "SimpleTransitionSceneExit";
-    const entity_name = "SimpleTransitionSceneEntity";
-    var color: *utils.Color = undefined;
+    fn buildSimpleRoomTransitionScene(ctx: *api.CallContext) void {
+        const name = ctx.getAttribute(game.TaskAttributes.NAME) orelse return;
+        const entry = ctx.getAttribute("exit") == null;
 
-    var _screen_width: Float = undefined;
-    var _screen_height: Float = undefined;
-    var _view_name: String = undefined;
-    var _layer_name: String = undefined;
+        var scene = graphics.Scene.new(.{
+            .name = name,
+            .init_function = entityInit,
+            .dispose_function = disposeEntity,
+            .update_action = if (entry) entryAction else exitAction,
+        });
 
-    pub fn init(screen_width: Float, screen_height: Float, view_name: String, layer_name: String) void {
-        _screen_width = screen_width;
-        _screen_height = screen_height;
-        _view_name = view_name;
-        _layer_name = layer_name;
-
-        // create Scenes
-        if (!graphics.Scene.existsName(entry_scene_name)) {
-            _ = graphics.Scene.new(.{
-                .name = entry_scene_name,
-                .init_function = entryInit,
-                .dispose_function = disposeEntity,
-                .update_action = entryAction,
-            });
-        }
-        if (!graphics.Scene.existsName(exit_scene_name)) {
-            _ = graphics.Scene.new(.{
-                .name = exit_scene_name,
-                .init_function = exitInit,
-                .dispose_function = disposeEntity,
-                .update_action = exitAction,
-            });
-        }
+        scene.setAllAttributesById(ctx.attributes_id);
     }
 
-    fn entityInit(entry: bool) void {
+    fn entityInit(ctx: *api.CallContext) void {
         // create new overlay entity
-        _ = api.Entity.new(.{ .name = entity_name })
-            .withComponent(graphics.ETransform{
-            .scale = .{ _screen_width, _screen_height },
-        })
-            .withComponent(graphics.EView{
-            .view_id = graphics.View.idByName(_view_name).?,
-            .layer_id = graphics.Layer.idByName(_layer_name).?,
-        })
-            .withComponent(graphics.EShape{
-            .blend_mode = api.BlendMode.ALPHA,
-            .color = .{ 0, 0, 0, if (entry) 255 else 0 },
-            .shape_type = api.ShapeType.RECTANGLE,
-            .fill = true,
-            .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
-        }).activate();
-        color = &graphics.EShape.byName(entity_name).?.color;
+        const name = ctx.getAttribute(game.TaskAttributes.NAME) orelse
+            @panic("missing game.TaskAttributes.NAME");
+        const view_name = ctx.getAttribute(game.TaskAttributes.VIEW_NAME) orelse
+            @panic("missing game.TaskAttributes.VIEW_NAME");
+        const layer_name = ctx.getAttribute(game.TaskAttributes.LAYER_NAME) orelse
+            @panic("missing game.TaskAttributes.LAYER_NAME");
+        const entry = ctx.getAttribute("exit") == null;
+
+        if (graphics.View.byName(view_name)) |view| {
+            ctx.id_1 = api.Entity.new(.{ .name = name })
+                .withComponent(graphics.ETransform{
+                .scale = .{ view.projection.width, view.projection.height },
+            })
+                .withComponent(graphics.EView{
+                .view_id = graphics.View.idByName(view_name).?,
+                .layer_id = graphics.Layer.idByName(layer_name).?,
+            })
+                .withComponent(graphics.EShape{
+                .blend_mode = api.BlendMode.ALPHA,
+                .color = .{ 0, 0, 0, if (entry) 255 else 0 },
+                .shape_type = api.ShapeType.RECTANGLE,
+                .fill = true,
+                .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
+            }).activate().id;
+        }
     }
 
-    fn entryInit(_: *api.CallContext) void {
-        entityInit(true);
-    }
-
-    fn exitInit(_: *api.CallContext) void {
-        entityInit(false);
-    }
-
-    fn disposeEntity(_: *api.CallContext) void {
-        api.Entity.disposeByName(entity_name);
+    fn disposeEntity(ctx: *api.CallContext) void {
+        const name = ctx.getAttribute(game.TaskAttributes.NAME) orelse return;
+        api.Entity.disposeByName(name);
+        ctx.id_1 = UNDEF_INDEX;
     }
 
     fn entryAction(ctx: *api.CallContext) void {
-        color[3] -= @min(20, color[3]);
-        if (color[3] <= 0)
-            ctx.result = .Success
-        else
-            ctx.result = .Running;
+        if (graphics.EShape.byId(ctx.id_1)) |shape| {
+            shape.color[3] -= @min(20, shape.color[3]);
+            if (shape.color[3] <= 0)
+                ctx.result = .Success
+            else
+                ctx.result = .Running;
+        }
     }
 
     fn exitAction(ctx: *api.CallContext) void {
-        color[3] = @min(255, @as(usize, @intCast(color[3])) + 20);
-        if (color[3] >= 255)
-            ctx.result = .Success
-        else
-            ctx.result = .Running;
+        if (graphics.EShape.byId(ctx.id_1)) |shape| {
+            shape.color[3] = @min(255, @as(usize, @intCast(shape.color[3])) + 20);
+            if (shape.color[3] >= 255)
+                ctx.result = .Success
+            else
+                ctx.result = .Running;
+        }
     }
 };

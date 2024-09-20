@@ -2,34 +2,52 @@
 
 Firefly is a 2D Game API and engine strongly based on ECS design. Uses Raylib under the hood 
 
-Note: Firefly is unter heavy development and way far from release or completed feature set. 
+Note: Firefly is under heavy development and way far from release or completed feature set. 
 
-TODO:
-  - Reimplement Asset(Shader) and Asset(SpriteSet)
-  - Go on with porting from FlyKo
-      - [x] Tiles
-      - [x] Text
-      - [x] Shapes
-      - [x] Move Collision-Detection
-      - [x] Collision-Resolving
-      - [x] Audio
-      - [ ] Behavior
-      - [x] State Engine
-      - [x] TileSet (created in code or loaded from JSON file)
-      - [x] TileMap (created in code or loaded from JSON file)
-      - [x] Global index/id register (per component?) 
-      - [x] Global name register (per component?) 
-      - [x] Camera (simple pivot camera)
-      - [ ] Player 
-      - [ ] Area (created in code or loaded from JSON file)
-      - [x] Room (created in code or loaded from JSON file)
+Features:
+    - [x] utils - geometry utilities
+    - [x] utils - DynArray, DynIndexArray and DynIndexMap for index mapping
+    - [x] utils - Event and EventDispatcher for define and using events
+    - [x] utils - Aspects, Aspect Groups and Kind (TODO AspectsTrait?)
+    - [x] utils - Bitset and Bit-Mask
 
-TODO Refactoring:
-  - [x] All control functions should use CallContext
-  - [x] Use HashMap(Index, T) for additional data stores instead of DynArray(T) where possible
-  - [ ] SimpleRoomTransitionScene rename to SimpleFadeInOutScene and shall be a composite with additional data that one can instantiate
+    - [x] api - NamePool to store arbitrary names on the heap
+    - [x] api - Components, Entities/Components, Systems (with Traits)
+    - [x] api - Attributes Component and CallContext (with Traits)
+    - [x] api - Composite Component(with Trait)
+    - [x] api - Assets Component (with Trait)
+    - [x] api - Control Component (with Trait)
+    - [x] api - Trigger Component
+    - [x] api - Task Component
+    - [x] api - State Engine Component
+    - [x] api - State Engine and Entity State Engine Components
 
- 
+    - [x] graphics - Shader
+    - [x] graphics - Texture Asset
+    - [x] graphics - View and Layer Components
+    - [x] graphics - Transform Entity Component
+    - [x] graphics - Sprites Entity Component
+    - [x] graphics - Tiles and TileMap Component
+    - [x] graphics - Text Entity Component
+    - [x] graphics - Shapes Entity Component
+
+    - [x] physics - Animation
+    - [x] physics - Movement 
+    - [x] physics - Collision-Detection
+    - [x] physics - Collision-Resolving
+    - [ ] physics - Ray-Cast
+    - [x] physics - Audio
+    
+    - [ ] game - Behavior 
+    - [x] game - TileSet (created in code or loaded from JSON file)
+    - [x] game - TileMap (created in code or loaded from JSON file)
+    - [x] game - Camera (simple pivot camera)
+    - [x] game - Player 
+    - [x] game - Area (created in code or loaded from JSON file)
+    - [x] game - Room (created in code or loaded from JSON file)
+    - [ ] game - Adaptable main View that fits to different screens without losing resolution
+
+
  ## Code Example:
 
 ![](inari.gif)

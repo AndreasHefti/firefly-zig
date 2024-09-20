@@ -1,8 +1,9 @@
 {
+    "file_type": "Room",
     "name": "Room2",
     "bounds": "0,0,320,320",
-    "start_scene": "SimpleTransitionSceneEntry",
-    "end_scene": "SimpleTransitionSceneExit",
+    "start_scene": "enterRoom",
+    "end_scene": "exitRoom",
     "tile_sets": [
         { "name": "TestTileSet", "file": "resources/example_tileset.json" }
     ],

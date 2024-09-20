@@ -28,7 +28,7 @@ pub fn deinit() void {
 
 /// Name of the owner composite. If this is set, task should get the
 /// composite referenced to and add all created components as owner to the composite
-pub const OWNER_COMPOSITE_TASK_ATTRIBUTE = "OWNER_COMPOSITE";
+//pub const OWNER_COMPOSITE_TASK_ATTRIBUTE = "OWNER_COMPOSITE";
 
 pub const CompositeLifeCycle = enum {
     LOAD,
@@ -41,13 +41,7 @@ pub const CompositeTaskRef = struct {
     task_ref: ?Index = null,
     task_name: ?String = null,
     life_cycle: CompositeLifeCycle,
-    attributes: ?Index = null,
-
-    pub fn deinit(self: *CompositeTaskRef) void {
-        if (self.attributes) |a_id|
-            api.Attributes.disposeById(a_id);
-        self.attributes = null;
-    }
+    attributes_id: ?Index = null,
 };
 
 pub const Composite = struct {
@@ -55,12 +49,13 @@ pub const Composite = struct {
         .name = "Composite",
         .subtypes = true,
     });
+    pub usingnamespace api.AttributeTrait(Composite);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     loaded: bool = false,
 
-    attributes: ?Index = undefined,
+    attributes_id: ?Index = null,
     task_refs: utils.DynArray(CompositeTaskRef) = undefined,
     _loaded_components: utils.DynArray(api.CRef) = undefined,
 
@@ -74,7 +69,7 @@ pub const Composite = struct {
             3,
         );
 
-        self.attributes = api.Attributes.new(.{ .name = self.name }).id;
+        self.createAttributes();
     }
 
     pub fn destruct(self: *Composite) void {
@@ -84,32 +79,33 @@ pub const Composite = struct {
         var next = self.task_refs.slots.nextSetBit(0);
         while (next) |i| {
             next = self.task_refs.slots.nextSetBit(i + 1);
-            if (self.task_refs.get(i)) |o|
-                o.deinit();
+            if (self.task_refs.get(i)) |ref| {
+                if (ref.attributes_id) |a_id|
+                    api.Attributes.disposeById(a_id);
+                ref.attributes_id = null;
+            }
         }
 
         self.task_refs.deinit();
         self.task_refs = undefined;
+
         self._loaded_components.deinit();
         self._loaded_components = undefined;
-        if (self.attributes) |a_id| {
-            api.Attributes.disposeById(a_id);
-            self.attributes = null;
-        }
+        self.deinitAttributes();
     }
 
     pub fn withTask(
         self: *Composite,
         task: api.Task,
         life_cycle: CompositeLifeCycle,
-        attributes: anytype,
+        attributes_id: ?Index,
     ) *Composite {
         const _task = api.Task.new(task);
         _ = self.task_refs.add(CompositeTaskRef{
             .task_ref = _task.id,
             .task_name = _task.name,
             .life_cycle = life_cycle,
-            .attributes = api.Attributes.ofGetId(attributes),
+            .attributes_id = attributes_id,
         });
         return self;
     }
@@ -182,7 +178,7 @@ pub const Composite = struct {
                 var ctx: api.CallContext = .{
                     .caller_id = self.id,
                     .caller_name = self.name,
-                    .attributes_id = tr.attributes,
+                    .attributes_id = tr.attributes_id,
                     .c_ref_callback = callRefCallback,
                 };
 
@@ -207,73 +203,51 @@ pub fn CompositeTrait(comptime T: type) type {
     return struct {
         pub usingnamespace firefly.api.SubTypeTrait(Composite, T);
 
-        pub fn withTask(
-            self: *T,
-            task: api.Task,
-            life_cycle: CompositeLifeCycle,
-            attributes: anytype,
-        ) *T {
-            checkInCreationState(self);
-
-            _ = self.addTaskById(
-                api.Task.new(task).id,
-                life_cycle,
-                attributes,
+        pub fn new(subType: T) *T {
+            return T.newSubType(
+                api.Composite{
+                    .name = subType.name,
+                },
+                subType,
             );
+        }
 
+        pub fn setAttribute(self: *T, name: String, value: String) void {
+            api.Composite.byId(self.id).setAttribute(name, value);
+        }
+
+        pub fn getAttribute(self: *T, name: String) ?String {
+            return api.Composite.byId(self.id).getAttribute(name);
+        }
+
+        pub fn withTask(self: *T, task: api.Task, life_cycle: CompositeLifeCycle, attributes_id: ?Index) *T {
+            checkInCreationState(self);
+            self.addTaskById(api.Task.new(task).id, life_cycle, attributes_id);
             return self;
         }
 
-        pub fn addTaskById(
-            self: *T,
-            task_id: Index,
-            life_cycle: api.CompositeLifeCycle,
-            attributes: anytype,
-        ) *T {
-            checkInCreationState(self);
-
-            const attrs = api.Attributes.of(attributes, null);
-            if (attrs) |a| {
-                a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
-                _ = api.Composite.byId(self.id).withTaskRef(.{
-                    .task_ref = task_id,
-                    .life_cycle = life_cycle,
-                    .attributes = a.id,
-                });
-            } else {
-                _ = api.Composite.byId(self.id).withTaskRef(.{
-                    .task_ref = task_id,
-                    .life_cycle = life_cycle,
-                });
-            }
-
+        pub fn withTaskByName(self: *T, task_name: String, life_cycle: CompositeLifeCycle, attributes_id: ?Index) *T {
+            self.addTaskByName(task_name, life_cycle, attributes_id);
             return self;
         }
 
-        pub fn addTaskByName(
-            self: *T,
-            task_name: String,
-            life_cycle: api.CompositeLifeCycle,
-            attributes: anytype,
-        ) *T {
+        pub fn addTaskById(self: *T, task_id: Index, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
+            checkInCreationState(self);
+            _ = api.Composite.byId(self.id).withTaskRef(.{
+                .task_ref = task_id,
+                .life_cycle = life_cycle,
+                .attributes_id = attributes_id,
+            });
+        }
+
+        pub fn addTaskByName(self: *T, task_name: String, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
             checkInCreationState(self);
 
-            const attrs = api.Attributes.of(attributes, null);
-            if (attrs) |a| {
-                a.set(OWNER_COMPOSITE_TASK_ATTRIBUTE, self.name);
-                _ = api.Composite.byId(self.id).withTaskRef(.{
-                    .task_name = task_name,
-                    .life_cycle = life_cycle,
-                    .attributes = a.id,
-                });
-            } else {
-                _ = api.Composite.byId(self.id).withTaskRef(.{
-                    .task_name = task_name,
-                    .life_cycle = life_cycle,
-                });
-            }
-
-            return self;
+            _ = api.Composite.byId(self.id).withTaskRef(.{
+                .task_name = task_name,
+                .life_cycle = life_cycle,
+                .attributes_id = attributes_id,
+            });
         }
 
         fn checkInCreationState(self: *T) void {

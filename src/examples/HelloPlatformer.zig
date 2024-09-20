@@ -51,7 +51,7 @@ fn init() void {
     firefly.physics.ContactScanGizmosRenderer.activate();
 
     // create view with two layer
-    // TODO this must be done by Array activation later on
+    // TODO this must be done by World activation later on
     _ = graphics.View.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
@@ -63,44 +63,24 @@ fn init() void {
         },
     });
 
-    // crate transition scene
-    // TODO this must be done by Array activation later on
-    game.SimpleRoomTransitionScene.init(screen_width, screen_height, view_name, layer2);
-
-    // load rooms from file
-    // TODO this must be done by Array activation later on
+    // create the world from json file
     api.Task.runTaskByNameWith(
-        game.Tasks.JSON_LOAD_ROOM,
-        firefly.api.CallContext.withAttributes(
-            null,
-            .{
-                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room2.json" },
-                .{ game.TaskAttributes.VIEW_NAME, view_name },
-            },
-        ),
-    );
-    api.Task.runTaskByNameWith(
-        game.Tasks.JSON_LOAD_ROOM,
-        firefly.api.CallContext.withAttributes(
-            null,
-            .{
-                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
-                .{ game.TaskAttributes.VIEW_NAME, view_name },
-            },
-        ),
-    );
-    api.Task.runTaskByNameWith(
-        game.Tasks.JSON_LOAD_ROOM,
-        firefly.api.CallContext.withAttributes(
-            null,
-            .{
-                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room3.json" },
-                .{ game.TaskAttributes.VIEW_NAME, view_name },
-            },
-        ),
+        game.Tasks.JSON_LOAD_WORLD,
+        .{
+            .attributes_id = api.Attributes.newWith(
+                null,
+                .{
+                    .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_world.json" },
+                    .{ game.TaskAttributes.VIEW_NAME, view_name },
+                },
+            ).id,
+        },
     );
 
-    // create player and load tasks
+    // load the created world (will create all thr rooms of the world from json files)
+    game.World.loadByName("World1");
+
+    //create player with load task (active room will load and activate the player when started)
     var player = game.Player.new(.{ .name = player_name });
     _ = player.withTask(
         api.Task{
@@ -115,8 +95,8 @@ fn init() void {
     game.Room.startRoom(room1_name, player_name, roomLoaded);
 }
 
-fn roomLoaded(_: Index) void {
-    std.debug.print("Room running!!!\n", .{});
+fn roomLoaded(room_id: Index) void {
+    std.debug.print("Room running!!! test_attribute1={?s} \n", .{game.Room.byId(room_id).getAttribute("test_attribute1")});
 }
 
 fn playerLoadTask(_: *api.CallContext) void {
@@ -135,7 +115,7 @@ fn playerLoadTask(_: *api.CallContext) void {
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_D, api.InputButtonType.RIGHT);
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
-    // create player entity
+    // create player entity with normal gravity movement, controller and collision scans
     player._entity_id = api.Entity.new(.{
         .name = player_name,
     })

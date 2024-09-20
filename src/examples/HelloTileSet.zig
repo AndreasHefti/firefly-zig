@@ -29,7 +29,7 @@ const IndexFrameIntegration = firefly.physics.IndexFrameIntegration;
 
 const JSON_TILE_SET: String =
     \\  {
-    \\      "type": "tileset",
+    \\      "type": "TileSet",
     \\      "name": "TestTileSet",
     \\      "texture": {
     \\          "name": "Atlas",

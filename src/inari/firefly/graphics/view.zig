@@ -449,6 +449,7 @@ pub const ETransform = struct {
 
 pub const Scene = struct {
     pub usingnamespace api.Component.Trait(Scene, .{ .name = "Scene" });
+    pub usingnamespace api.CallContextTrait(Scene);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -462,7 +463,7 @@ pub const Scene = struct {
     callback: ?api.CallFunction = null,
     call_context: api.CallContext = undefined,
 
-    _loaded: bool = false,
+    _active: bool = false,
 
     pub fn componentTypeInit() !void {
         firefly.api.subscribeUpdate(update);
@@ -473,14 +474,11 @@ pub const Scene = struct {
     }
 
     pub fn construct(self: *Scene) void {
-        self.call_context = .{
-            .caller_id = self.id,
-            .caller_name = self.name,
-        };
+        self.initCallContext(true);
     }
 
     pub fn destruct(self: *Scene) void {
-        self.call_context.deinit();
+        self.deinitCallContext();
     }
 
     pub fn withUpdateAction(self: *Scene, action: api.ActionFunction) *Scene {
@@ -500,16 +498,16 @@ pub const Scene = struct {
 
     pub fn activation(self: *Scene, active: bool) void {
         if (active) {
-            defer self._loaded = true;
-            if (self._loaded)
+            defer self._active = true;
+            if (self._active)
                 return;
 
             if (self.init_function) |f|
                 f(&self.call_context);
         } else {
             stop(self);
-            defer self._loaded = false;
-            if (!self._loaded)
+            defer self._active = false;
+            if (!self._active)
                 return;
 
             if (self.dispose_function) |f|

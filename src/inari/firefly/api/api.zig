@@ -114,39 +114,6 @@ pub const CRef = struct {
     dispose: ?*const fn (Index) void,
 };
 
-pub const CallContext = struct {
-    caller_id: Index = UNDEF_INDEX,
-    caller_name: ?String = null,
-
-    id_1: Index = UNDEF_INDEX,
-    id_2: Index = UNDEF_INDEX,
-    id_3: Index = UNDEF_INDEX,
-    id_4: Index = UNDEF_INDEX,
-    id_5: Index = UNDEF_INDEX,
-
-    attributes_id: ?Index = null,
-    c_ref_callback: ?CRefCallback = null,
-    result: ?ActionResult = null,
-
-    pub fn withAttributes(caller_id: ?Index, attributes: anytype) CallContext {
-        return CallContext{
-            .caller_id = caller_id orelse UNDEF_INDEX,
-            .attributes_id = Attributes.ofGetId(attributes),
-        };
-    }
-
-    pub fn getAttributes(self: *CallContext) ?*Attributes {
-        if (self.attributes_id) |id| return Attributes.byId(id);
-        return null;
-    }
-
-    pub fn deinit(self: *CallContext) void {
-        if (self.attributes_id) |aid|
-            Attributes.disposeById(aid);
-        self.attributes_id = null;
-    }
-};
-
 pub const CallFunction = *const fn (*CallContext) void;
 pub const CallPredicate = *const fn (*CallContext) bool;
 pub const CRefCallback = *const fn (CRef, ?*CallContext) void;
@@ -257,6 +224,12 @@ pub const NamePool = struct {
         return null;
     }
 
+    pub fn format(comptime fmt: String, args: anytype) String {
+        const formatted = std.fmt.allocPrint(ALLOC, fmt, args) catch unreachable;
+        defer ALLOC.free(formatted);
+        return alloc(formatted).?;
+    }
+
     pub fn concat(s1: String, s2: String, delimiter: ?String) String {
         const c = if (delimiter) |d|
             std.fmt.allocPrint(ALLOC, "{s}{s}{s}", .{ s1, d, s2 }) catch unreachable
@@ -302,6 +275,86 @@ pub const NamePool = struct {
 //// Attributes
 //////////////////////////////////////////////////////////////
 
+pub fn AttributeTrait(comptime T: type) type {
+    const has_attributes_id: bool = @hasField(T, "attributes_id");
+    const has_call_context: bool = @hasField(T, "call_context");
+
+    if (!has_attributes_id and !has_call_context)
+        @panic("Expecting type has one of the following fields: attributes_id: ?Index, call_context: CallContext");
+    // if (has_attributes_id and @TypeOf(T.attributes_id) != .Optional)
+    //     @panic("Expecting type has fields: attributes_id of optional type ?Index");
+    if (!@hasField(T, "id"))
+        @panic("Expecting type has fields: id: Index");
+
+    return struct {
+        pub fn createAttributes(self: *T) void {
+            _ = getAttributesId(self, true);
+        }
+
+        pub fn deinitAttributes(self: *T) void {
+            if (has_attributes_id) {
+                if (self.attributes_id) |id|
+                    Attributes.disposeById(id);
+                self.attributes_id = null;
+            } else if (has_call_context) {
+                if (self.call_context.attributes_id) |id|
+                    Attributes.disposeById(id);
+                self.call_context.attributes_id = null;
+            }
+        }
+
+        pub fn getAttributes(self: *T) ?*Attributes {
+            if (getAttributesId(self, true)) |id|
+                return Attributes.byId(id);
+            return null;
+        }
+
+        pub fn getAttribute(self: *T, name: String) ?String {
+            if (getAttributesId(self, true)) |id|
+                return Attributes.byId(id)._dict.get(name);
+            return null;
+        }
+
+        pub fn setAttribute(self: *T, name: String, value: String) void {
+            if (getAttributesId(self, true)) |id|
+                Attributes.byId(id).set(name, value);
+        }
+
+        pub fn setAllAttributes(self: *T, attributes: *Attributes) void {
+            if (getAttributesId(self, true)) |id|
+                Attributes.byId(id).setAll(attributes);
+        }
+
+        pub fn setAllAttributesById(self: *T, attributes_id: ?Index) void {
+            if (attributes_id) |aid|
+                if (getAttributesId(self, true)) |id|
+                    Attributes.byId(id).setAll(Attributes.byId(aid));
+        }
+
+        fn getAttributesId(self: *T, create: bool) ?Index {
+            if (has_attributes_id) {
+                if (self.attributes_id == null and create)
+                    self.attributes_id = Attributes.new(.{ .name = getAttributesName(self) }).id;
+
+                return self.attributes_id;
+            } else if (has_call_context) {
+                if (self.call_context.attributes_id == null and create)
+                    self.call_context.attributes_id = Attributes.new(.{ .name = getAttributesName(self) }).id;
+
+                return self.call_context.attributes_id;
+            }
+        }
+
+        fn getAttributesName(self: *T) ?String {
+            return NamePool.format("{s}_{d}_{?s}", .{
+                if (@hasDecl(T, "aspect")) T.aspect.name else @typeName(T),
+                self.id,
+                self.name,
+            });
+        }
+    };
+}
+
 pub const Attributes = struct {
     pub usingnamespace Component.Trait(Attributes, .{
         .name = "Attributes",
@@ -315,81 +368,40 @@ pub const Attributes = struct {
     _dict: std.StringHashMap(String) = undefined,
 
     pub fn construct(self: *Attributes) void {
+        //std.debug.print("** new attributes: {d}\n", .{self.id});
         self._dict = std.StringHashMap(String).init(ALLOC);
     }
 
     pub fn destruct(self: *Attributes) void {
+        //std.debug.print("** clear attributes: {d}\n", .{self.id});
         self.clear();
         self._dict.deinit();
         self._dict = undefined;
     }
 
-    pub fn ofGetId(attributes: anytype) ?Index {
-        return if (of(attributes, null)) |a| a.id else null;
-    }
+    pub fn newWith(name: ?String, attributes: anytype) *Attributes {
+        var result: *Attributes = Attributes.new(.{ .name = name });
 
-    pub fn ofWithName(attributes: anytype, name: String) ?String {
-        return if (of(attributes, name)) |a| a.name else null;
-    }
-
-    pub fn of(attributes: anytype, name: ?String) ?*Attributes {
-        const at = @typeInfo(@TypeOf(attributes));
-        if (at == .Null) {
-            return null;
-        }
-
-        if (at == .Pointer) {
-            const at_deref = @TypeOf(attributes.*);
-            return if (@hasField(at_deref, "id") and @hasField(at_deref, "_dict"))
-                Attributes.byId(attributes.id)
-            else
-                null;
-        }
-
-        if (at == .Optional) {
-            if (attributes) |attrs| {
-                if (@typeInfo(@TypeOf(attrs)) == .Int) {
-                    return Attributes.byId(attrs);
+        inline for (attributes) |v| {
+            const t = @typeInfo(@TypeOf(v[1]));
+            if (t == .Int) {
+                if (utils.stringEquals(v[0], "id_1")) {
+                    result.id_1 = v[1];
+                } else if (utils.stringEquals(v[0], "id_2")) {
+                    result.id_2 = v[1];
+                } else if (utils.stringEquals(v[0], "id_3")) {
+                    result.id_3 = v[1];
+                } else if (utils.stringEquals(v[0], "id_4")) {
+                    result.id_4 = v[1];
+                } else if (utils.stringEquals(v[0], "id_5")) {
+                    result.id_5 = v[1];
                 }
+            } else {
+                result.set(v[0], v[1]);
             }
-
-            return null;
         }
 
-        if (at == .Int) {
-            return Attributes.byId(attributes);
-        }
-
-        if (at == .Struct) {
-            if (@hasField(@TypeOf(attributes), "id") and @hasField(@TypeOf(attributes), "_dict")) {
-                return Attributes.byId(attributes.id);
-            }
-
-            var result: *Attributes = Attributes.new(.{ .name = name });
-
-            inline for (attributes) |v| {
-                const t = @typeInfo(@TypeOf(v[1]));
-                if (t == .Int) {
-                    if (utils.stringEquals(v[0], "id_1")) {
-                        result.id_1 = v[1];
-                    } else if (utils.stringEquals(v[0], "id_2")) {
-                        result.id_2 = v[1];
-                    } else if (utils.stringEquals(v[0], "id_3")) {
-                        result.id_3 = v[1];
-                    } else if (utils.stringEquals(v[0], "id_4")) {
-                        result.id_4 = v[1];
-                    } else if (utils.stringEquals(v[0], "id_5")) {
-                        result.id_5 = v[1];
-                    }
-                } else {
-                    result.set(v[0], v[1]);
-                }
-            }
-
-            return result;
-        }
-
-        utils.panic(ALLOC, "Failed to create Attributes from anytype: .{any}", .{attributes});
+        return result;
     }
 
     pub fn clear(self: *Attributes) void {
@@ -412,13 +424,13 @@ pub const Attributes = struct {
         ) catch unreachable;
     }
 
-    pub fn setAll(self: *Attributes, attributes: Attributes) void {
+    pub fn setAll(self: *Attributes, attributes: *Attributes) void {
         var it = attributes._dict.iterator();
         while (it.next()) |e|
             self.set(e.key_ptr.*, e.value_ptr.*);
     }
 
-    pub fn get(self: Attributes, name: String) ?String {
+    pub fn get(self: *Attributes, name: String) ?String {
         return self._dict.get(name);
     }
 
@@ -441,6 +453,70 @@ pub const Attributes = struct {
             try writer.print("{s}={s}, ", .{ e.key_ptr.*, e.value_ptr.* });
         }
         try writer.print("]", .{});
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// CallContext
+//////////////////////////////////////////////////////////////
+
+pub fn CallContextTrait(comptime T: type) type {
+    const has_call_context: bool = @hasField(T, "call_context");
+
+    if (!has_call_context)
+        @panic("Expecting type has field: call_context");
+
+    return struct {
+        pub usingnamespace AttributeTrait(T);
+        const Self = @This();
+
+        pub fn initCallContext(self: *T, init_attributes: bool) void {
+            self.call_context = .{
+                .caller_id = self.id,
+            };
+            if (@hasField(T, "name"))
+                self.call_context.caller_name = self.name;
+
+            if (init_attributes)
+                self.call_context.attributes_id = Attributes.new(.{ .name = Self.getAttributesName(self) }).id;
+        }
+
+        pub fn deinitCallContext(self: *T) void {
+            self.deinitAttributes();
+        }
+    };
+}
+
+pub const CallContext = struct {
+    caller_id: Index = UNDEF_INDEX,
+    caller_name: ?String = null,
+
+    id_1: Index = UNDEF_INDEX,
+    id_2: Index = UNDEF_INDEX,
+    id_3: Index = UNDEF_INDEX,
+    id_4: Index = UNDEF_INDEX,
+
+    attributes_id: ?Index = null,
+    c_ref_callback: ?CRefCallback = null,
+    result: ?ActionResult = null,
+
+    pub fn getAttribute(self: *CallContext, name: String) ?String {
+        if (self.attributes_id) |id|
+            return Attributes.byId(id).get(name);
+        return null;
+    }
+
+    pub fn withAttributes(caller_id: ?Index, attributes: anytype) CallContext {
+        return CallContext{
+            .caller_id = caller_id orelse UNDEF_INDEX,
+            .attributes_id = Attributes.newWith(null, attributes).id,
+        };
+    }
+
+    pub fn deinit(self: *CallContext) void {
+        if (self.attributes_id) |aid|
+            Attributes.disposeById(aid);
+        self.attributes_id = null;
     }
 };
 

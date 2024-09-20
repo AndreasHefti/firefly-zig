@@ -1,0 +1,41 @@
+{
+    "file_type": "World",
+    "name": "World1",
+    "room_transitions": [
+        { 
+            "name": "enterRoom", 
+            "builder": "simpleRoomTransitionBuilder",
+            "attributes": [
+                { "name": "LAYER_NAME", "value": "Foreground"}
+            ]
+        },
+        { 
+            "name": "exitRoom", 
+            "builder": "simpleRoomTransitionBuilder",
+            "attributes": [
+                { "name": "LAYER_NAME", "value": "Foreground"},
+                { "name": "exit", "value": "true"}
+            ]
+        }
+    ],
+    "attributes": [
+        { "name": "description", "value": "This is a test world with three rooms."}
+    ],
+    "rooms": [
+        {
+            "name": "Room1",
+            "file": { "name": "Room1", "file": "resources/example_room1.json" },
+            "attributes": [
+                { "name": "description", "value": "This es the entrance room."}
+            ]
+        },
+        {
+            "name": "Room2",
+            "file": { "name": "Room1", "file": "resources/example_room2.json" }
+        },
+        {
+            "name": "Room3",
+            "file": { "name": "Room1", "file": "resources/example_room3.json" }
+        }
+    ]
+}

@@ -31,12 +31,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
-    firefly.Engine.startWindow(.{
-        .width = 640,
-        .height = 480,
-        .fps = 60,
-        .title = "Hello Contact",
-    }, init);
+    firefly.Engine.start(600, 480, 60, "Hello Contact", init);
 }
 
 fn init() void {

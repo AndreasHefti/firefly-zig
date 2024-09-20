@@ -76,12 +76,29 @@ pub fn start(
     startWindow(
         .{ .width = w, .height = h, .fps = fps, .title = title },
         init_callback,
+        null,
+    );
+}
+
+pub fn startWithQuitCallback(
+    w: CInt,
+    h: CInt,
+    fps: CInt,
+    title: CString,
+    init_callback: ?*const fn () void,
+    quit_callback: ?*const fn () void,
+) void {
+    startWindow(
+        .{ .width = w, .height = h, .fps = fps, .title = title },
+        init_callback,
+        quit_callback,
     );
 }
 
 pub fn startWindow(
     window: WindowData,
     init_callback: ?*const fn () void,
+    quit_callback: ?*const fn () void,
 ) void {
     reorderAllSystems(&CoreSystems.DEFAULT_SYSTEM_ORDER);
 
@@ -98,6 +115,7 @@ pub fn startWindow(
     while (!firefly.api.window.hasWindowClosed() and running)
         tick();
 
+    if (quit_callback) |q| q();
     firefly.api.window.closeWindow();
 }
 

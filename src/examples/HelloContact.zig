@@ -33,7 +33,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
         .fps = 60,
         .title = "Hello Contact",
         .flags = &[_]WindowFlag{WindowFlag.FLAG_WINDOW_RESIZABLE},
-    }, init);
+    }, init, null);
 }
 
 fn init() void {
