@@ -5,6 +5,7 @@ Firefly is a 2D Game API and engine strongly based on ECS design. Uses Raylib un
 Note: Firefly is under heavy development and way far from release or completed feature set. 
 
 Features:
+
     - [x] utils - geometry utilities
     - [x] utils - DynArray, DynIndexArray and DynIndexMap for index mapping
     - [x] utils - Event and EventDispatcher for define and using events
