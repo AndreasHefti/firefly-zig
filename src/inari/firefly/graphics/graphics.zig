@@ -27,9 +27,10 @@ pub const DefaultSpriteRenderer = sprite.DefaultSpriteRenderer;
 
 pub const ETile = tile.ETile;
 pub const TileGrid = tile.TileGrid;
-pub const TileTypeAspect = tile.TileTypeAspect;
-pub const TileTypeAspectGroup = tile.TileTypeAspectGroup;
-pub const TileTypeKind = tile.TileTypeKind;
+// Tile Type Aspects
+pub const TileTypeAspectGroup = utils.AspectGroup("TileType");
+pub const TileTypeAspect = TileTypeAspectGroup.Aspect;
+pub const TileTypeKind = TileTypeAspectGroup.Kind;
 pub const BasicTileTypes = tile.BasicTileTypes;
 pub const DefaultTileGridRenderer = tile.DefaultTileGridRenderer;
 

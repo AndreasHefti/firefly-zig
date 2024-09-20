@@ -16,8 +16,14 @@ pub fn init() void {
     if (INIT)
         return;
 
-    COMPONENT_INTERFACE_TABLE = utils.DynArray(ComponentTypeInterface).newWithRegisterSize(api.COMPONENT_ALLOC, 20);
-    SUB_COMPONENT_INTERFACE_TABLE = utils.DynArray(SubComponentTypeInterface).newWithRegisterSize(api.COMPONENT_ALLOC, 20);
+    COMPONENT_INTERFACE_TABLE = utils.DynArray(ComponentTypeInterface).newWithRegisterSize(
+        api.COMPONENT_ALLOC,
+        20,
+    );
+    SUB_COMPONENT_INTERFACE_TABLE = utils.DynArray(SubComponentTypeInterface).newWithRegisterSize(
+        api.COMPONENT_ALLOC,
+        20,
+    );
 }
 
 pub fn deinit() void {
@@ -52,22 +58,11 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 //// Component API
 //////////////////////////////////////////////////////////////
-pub const ComponentAspectGroup = utils.AspectGroup(struct {
-    pub const name = "ComponentType";
-});
-pub const ComponentKind = ComponentAspectGroup.Kind;
-pub const ComponentAspect = ComponentAspectGroup.Aspect;
-
-pub const GroupAspectGroup = utils.AspectGroup(struct {
-    pub const name = "ComponentGroup";
-});
-pub const GroupKind = GroupAspectGroup.Kind;
-pub const GroupAspect = GroupAspectGroup.Aspect;
 
 const ComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
     clear: *const fn (Index) void,
-    deinit: api.Deinit,
+    deinit: api.DeinitFunction,
     to_string: *const fn (*utils.StringBuffer) void,
 };
 var COMPONENT_INTERFACE_TABLE: utils.DynArray(ComponentTypeInterface) = undefined;
@@ -125,7 +120,7 @@ pub const ComponentEvent = struct {
 pub fn Trait(comptime T: type, comptime context: Context) type {
     return struct {
         pub const COMPONENT_TYPE_NAME = context.name;
-        pub var aspect: ComponentAspect = undefined;
+        pub var aspect: api.ComponentAspect = undefined;
 
         const pool = ComponentPool(T);
 
@@ -223,18 +218,18 @@ fn GroupingTrait(comptime T: type, comptime adapter: anytype, comptime _: Contex
             @compileError("Expects component type to have field: groups: ?GroupKind");
     }
     return struct {
-        pub fn getGroups(id: Index) ?GroupKind {
+        pub fn getGroups(id: Index) ?api.GroupKind {
             const c = adapter.pool.items.get(id) orelse return null;
             return c.groups;
         }
 
-        pub fn withGroupAspect(self: *T, aspect: GroupAspect) *T {
+        pub fn withGroupAspect(self: *T, aspect: api.GroupAspect) *T {
             return addToGroup(self, aspect);
         }
 
-        pub fn addToGroup(self: *T, aspect: GroupAspect) *T {
+        pub fn addToGroup(self: *T, aspect: api.GroupAspect) *T {
             if (self.groups == null)
-                self.groups = GroupAspectGroup.newKind();
+                self.groups = api.GroupAspectGroup.newKind();
 
             if (self.groups) |*g|
                 g.addAspect(aspect);
@@ -242,19 +237,19 @@ fn GroupingTrait(comptime T: type, comptime adapter: anytype, comptime _: Contex
             return self;
         }
 
-        pub fn removeFromGroup(self: *T, group: GroupAspect) *T {
+        pub fn removeFromGroup(self: *T, group: api.GroupAspect) *T {
             if (self.groups) |g|
                 g.removeAspect(group);
 
             return self;
         }
 
-        pub fn isInGroup(self: *T, group: GroupAspect) bool {
+        pub fn isInGroup(self: *T, group: api.GroupAspect) bool {
             const g = self.groups orelse return false;
             return g.hasAspect(group);
         }
 
-        fn processGroup(group: GroupAspect, f: *const fn (*T) void) void {
+        fn processGroup(group: api.GroupAspect, f: *const fn (*T) void) void {
             var next = adapter.pool.items.slots.nextSetBit(0);
             while (next) |i| {
                 const c = adapter.pool.items.get(i) orelse continue;
@@ -524,7 +519,7 @@ fn ComponentPool(comptime T: type) type {
             }
 
             items = utils.DynArray(T).new(api.COMPONENT_ALLOC);
-            ComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
+            api.ComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
 
             if (has_active_mapping)
                 active_mapping = utils.BitSet.newEmpty(api.COMPONENT_ALLOC, 64);
@@ -753,7 +748,7 @@ pub fn SubTypeTrait(comptime T: type, comptime SubType: type) type {
 }
 
 const SubComponentTypeInterface = struct {
-    deinit: api.Deinit,
+    deinit: api.DeinitFunction,
 };
 var SUB_COMPONENT_INTERFACE_TABLE: utils.DynArray(SubComponentTypeInterface) = undefined;
 

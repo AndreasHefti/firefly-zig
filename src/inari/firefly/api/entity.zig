@@ -17,7 +17,7 @@ pub const Entity = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    kind: EComponentKind = undefined,
+    kind: api.EComponentKind = undefined,
     groups: ?api.GroupKind = null,
 
     pub fn componentTypeInit() !void {
@@ -37,7 +37,7 @@ pub const Entity = struct {
     }
 
     pub fn construct(self: *Entity) void {
-        self.kind = EComponentAspectGroup.newKind();
+        self.kind = api.EComponentAspectGroup.newKind();
     }
 
     pub fn destruct(self: *Entity) void {
@@ -50,7 +50,7 @@ pub const Entity = struct {
     }
 
     pub fn hasComponent(self: *Entity, entity_component_type: anytype) bool {
-        if (EComponentAspectGroup.getAspectFromAnytype(entity_component_type)) |aspect|
+        if (api.EComponentAspectGroup.getAspectFromAnytype(entity_component_type)) |aspect|
             return self.kind.hasAspect(aspect);
         return false;
     }
@@ -89,18 +89,18 @@ pub const Entity = struct {
             "Entity[{d}|{?s}|]",
             .{ self.id, self.name },
         );
-        for (0..EComponentAspectGroup.size()) |i| {
+        for (0..api.EComponentAspectGroup.size()) |i| {
             if (self.kind.has(@intCast(i))) {
-                try writer.print(" {s} ", .{EComponentAspectGroup.getAspectById(i).name});
+                try writer.print(" {s} ", .{api.EComponentAspectGroup.getAspectById(i).name});
             }
         }
     }
 };
 
 pub const EntityTypeCondition = struct {
-    accept_kind: ?EComponentKind = null,
+    accept_kind: ?api.EComponentKind = null,
     accept_full_only: bool = true,
-    dismiss_kind: ?EComponentKind = null,
+    dismiss_kind: ?api.EComponentKind = null,
 
     pub fn check(self: *EntityTypeCondition, id: Index) bool {
         const e_kind = Entity.byId(id).kind;
@@ -150,16 +150,10 @@ pub const EMultiplier = struct {
 const EComponentTypeInterface = struct {
     activate: *const fn (Index, bool) void,
     clear: *const fn (Index) void,
-    deinit: api.Deinit,
+    deinit: api.DeinitFunction,
     to_string: *const fn (*utils.StringBuffer) void,
 };
 var INTERFACE_TABLE: utils.DynArray(EComponentTypeInterface) = undefined;
-
-pub const EComponentAspectGroup = utils.AspectGroup(struct {
-    pub const name = "EComponent";
-});
-pub const EComponentKind = EComponentAspectGroup.Kind;
-pub const EComponentAspect = EComponentAspectGroup.Aspect;
 
 pub const EComponent = struct {
     var initialized = false;
@@ -171,7 +165,7 @@ pub const EComponent = struct {
             // TODO use AutoHashMap or ArrayHashMap here??
             pub const pool = EComponentPool(T);
             // component type pool function references
-            pub var aspect: EComponentAspect = undefined;
+            pub var aspect: api.EComponentAspect = undefined;
 
             pub fn byId(id: Index) ?*T {
                 return pool.items.get(id);
@@ -259,8 +253,8 @@ pub const EComponent = struct {
         if (!initialized)
             return;
 
-        for (0..EComponentAspectGroup.size()) |i| {
-            const aspect = EComponentAspectGroup.getAspectById(i);
+        for (0..api.EComponentAspectGroup.size()) |i| {
+            const aspect = api.EComponentAspectGroup.getAspectById(i);
             if (entity.kind.hasAspect(aspect)) {
                 if (INTERFACE_TABLE.get(aspect.id)) |ref|
                     ref.activate(entity.id, active);
@@ -304,7 +298,7 @@ pub fn EComponentPool(comptime T: type) type {
 
             errdefer Self.deinit();
 
-            EComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
+            api.EComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
             items = utils.DynArray(T).new(firefly.api.ENTITY_ALLOC);
             _ = INTERFACE_TABLE.add(EComponentTypeInterface{
                 .activate = Self.activate,

@@ -25,13 +25,13 @@ pub const BezierCurveIntegration = animation.BezierCurveIntegration;
 
 pub const MovFlags = movement.MovFlags;
 pub const EMovement = movement.EMovement;
+pub const MovementAspectGroup = firefly.utils.AspectGroup("Movement");
+pub const MovementAspect = MovementAspectGroup.Aspect;
+pub const MovementKind = MovementAspectGroup.Kind;
 pub const MovementEvent = movement.MovementEvent;
 pub const MovementListener = movement.MovementListener;
 pub const subscribeMovement = movement.subscribe;
 pub const unsubscribeMovement = movement.unsubscribe;
-pub const MovementAspectGroup = movement.MovementAspectGroup;
-pub const MovementAspect = movement.MovementAspect;
-pub const MovementKind = movement.MovementKind;
 pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: Float) bool;
 pub const MovementSystem = movement.MovementSystem;
 
@@ -56,12 +56,15 @@ pub const CollisionResolver = contact.CollisionResolver;
 pub const ContactConstraint = contact.ContactConstraint;
 pub const ContactCallbackFunction = contact.ContactCallbackFunction;
 pub const IContactMap = contact.IContactMap;
-pub const ContactTypeAspectGroup = contact.ContactTypeAspectGroup;
-pub const ContactTypeAspect = contact.ContactTypeAspect;
-pub const ContactTypeKind = contact.ContactTypeKind;
-pub const ContactMaterialAspectGroup = contact.ContactMaterialAspectGroup;
-pub const ContactMaterialAspect = contact.ContactMaterialAspect;
-pub const ContactMaterialKind = contact.ContactMaterialKind;
+// Contact Type Aspects
+pub const ContactTypeAspectGroup = firefly.utils.AspectGroup("ContactType");
+pub const ContactTypeAspect = ContactTypeAspectGroup.Aspect;
+pub const ContactTypeKind = ContactTypeAspectGroup.Kind;
+// Contact Material Aspects
+pub const ContactMaterialAspectGroup = firefly.utils.AspectGroup("ContactMaterial");
+pub const ContactMaterialAspect = ContactMaterialAspectGroup.Aspect;
+pub const ContactMaterialKind = ContactMaterialAspectGroup.Kind;
+
 pub const DebugCollisionResolver = contact.DebugCollisionResolver;
 
 //////////////////////////////////////////////////////////////

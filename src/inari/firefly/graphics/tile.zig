@@ -26,7 +26,7 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    BasicTileTypes.UNDEFINED = TileTypeAspectGroup.getAspect("UNDEFINED");
+    BasicTileTypes.UNDEFINED = graphics.TileTypeAspectGroup.getAspect("UNDEFINED");
     api.Component.registerComponent(TileGrid);
     api.EComponent.registerEntityComponent(ETile);
     DefaultTileGridRenderer.init();
@@ -42,14 +42,8 @@ pub fn deinit() void {
 //// Tile API
 //////////////////////////////////////////////////////////////
 
-// Tile Type Aspects
-pub const TileTypeAspectGroup = utils.AspectGroup(struct {
-    pub const name = "TileType";
-});
-pub const TileTypeAspect = TileTypeAspectGroup.Aspect;
-pub const TileTypeKind = TileTypeAspectGroup.Kind;
 pub const BasicTileTypes = struct {
-    pub var UNDEFINED: TileTypeAspect = undefined;
+    pub var UNDEFINED: graphics.TileTypeAspect = undefined;
 };
 
 //////////////////////////////////////////////////////////////

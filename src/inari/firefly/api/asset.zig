@@ -25,13 +25,6 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////////////////
 //// Public API
 //////////////////////////////////////////////////////////////////////////
-
-pub const AssetAspectGroup = utils.AspectGroup(struct {
-    pub const name = "Asset";
-});
-pub const AssetKind = AssetAspectGroup.Kind;
-pub const AssetAspect = AssetAspectGroup.Aspect;
-
 pub const Asset = struct {
     pub usingnamespace api.Component.Trait(Asset, .{
         .name = "Asset",
@@ -40,7 +33,7 @@ pub const Asset = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    asset_type: AssetAspect,
+    asset_type: api.AssetAspect,
 
     pub usingnamespace AssetLoadTrait(Asset);
 };
@@ -59,7 +52,7 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
             return @This().newSubType(
                 Asset{
                     .name = subtype.name,
-                    .asset_type = AssetAspectGroup.getAspect(ASSET_TYPE_NAME),
+                    .asset_type = api.AssetAspectGroup.getAspect(ASSET_TYPE_NAME),
                 },
                 subtype,
             );

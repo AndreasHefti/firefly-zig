@@ -41,6 +41,8 @@ pub const InitContext = struct {
     allocator: Allocator,
 };
 
+pub const BindingId = usize;
+
 pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
@@ -50,24 +52,21 @@ pub var window: IWindowAPI() = undefined;
 pub var input: IInputAPI() = undefined;
 pub var audio: IAudioAPI() = undefined;
 
-//pub const Asset = asset.Asset;
 pub const Asset = asset.Asset;
-pub const AssetAspectGroup = asset.AssetAspectGroup;
+pub const AssetAspectGroup = utils.AspectGroup("Asset");
 pub const AssetKind = AssetAspectGroup.Kind;
 pub const AssetAspect = AssetAspectGroup.Aspect;
 pub const AssetTrait = asset.AssetTrait;
-
 pub const Component = component;
-pub const ComponentAspectGroup = component.ComponentAspectGroup;
-pub const ComponentKind = ComponentAspectGroup.Kind;
-pub const ComponentAspect = ComponentAspectGroup.Aspect;
+pub const ComponentAspectGroup = utils.AspectGroup("ComponentType");
+pub const GroupKind = GroupAspectGroup.Kind;
+pub const GroupAspect = GroupAspectGroup.Aspect;
 pub const ComponentEvent = component.ComponentEvent;
 pub const ComponentListener = component.ComponentListener;
-pub const GroupAspect = component.GroupAspect;
-pub const GroupKind = component.GroupKind;
-pub const GroupAspectGroup = component.GroupAspectGroup;
+pub const ComponentKind = ComponentAspectGroup.Kind;
+pub const ComponentAspect = ComponentAspectGroup.Aspect;
+pub const GroupAspectGroup = utils.AspectGroup("ComponentGroup");
 pub const SubTypeTrait = component.SubTypeTrait;
-
 pub const Condition = control.Condition;
 pub const System = system.System;
 pub const SystemTrait = system.SystemTrait;
@@ -78,7 +77,7 @@ pub const Entity = entity.Entity;
 pub const EntityTypeCondition = entity.EntityTypeCondition;
 pub const EMultiplier = entity.EMultiplier;
 pub const EComponent = entity.EComponent;
-pub const EComponentAspectGroup = entity.EComponentAspectGroup;
+pub const EComponentAspectGroup = utils.AspectGroup("EComponent");
 pub const EComponentKind = EComponentAspectGroup.Kind;
 pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const Task = control.Task;
@@ -89,17 +88,12 @@ pub const VoidControl = control.VoidControl;
 pub const Composite = composite.Composite;
 pub const CompositeLifeCycle = composite.CompositeLifeCycle;
 pub const CompositeTrait = composite.CompositeTrait;
-pub const OWNER_COMPOSITE_TASK_ATTRIBUTE = composite.OWNER_COMPOSITE_TASK_ATTRIBUTE;
-pub const CompositeObject = composite.CompositeObject;
 pub const State = control.State;
 pub const StateEngine = control.StateEngine;
 pub const EntityStateEngine = control.EntityStateEngine;
 pub const EState = control.EState;
 pub const StateSystem = control.StateSystem;
 pub const EntityStateSystem = control.EntityStateSystem;
-
-pub const BindingId = usize;
-pub const Deinit = *const fn () void;
 
 pub const ActionResult = enum {
     Running,
@@ -114,6 +108,7 @@ pub const CRef = struct {
     dispose: ?*const fn (Index) void,
 };
 
+pub const DeinitFunction = *const fn () void;
 pub const CallFunction = *const fn (*CallContext) void;
 pub const CallPredicate = *const fn (*CallContext) bool;
 pub const CRefCallback = *const fn (CRef, ?*CallContext) void;
@@ -916,7 +911,7 @@ pub fn IRenderAPI() type {
 
         printDebug: *const fn (*StringBuffer) void = undefined,
 
-        deinit: Deinit = undefined,
+        deinit: DeinitFunction = undefined,
 
         pub fn init(initImpl: *const fn (*IRenderAPI()) void) Self {
             var self = Self{};
@@ -989,7 +984,7 @@ pub fn IWindowAPI() type {
         toggleBorderlessWindowed: *const fn () void = undefined,
         setWindowFlags: *const fn ([]WindowFlag) void = undefined,
 
-        deinit: Deinit = undefined,
+        deinit: DeinitFunction = undefined,
 
         pub fn init(initImpl: *const fn (*IWindowAPI()) void) Self {
             var self = Self{};
@@ -1271,7 +1266,7 @@ pub fn IInputAPI() type {
         getMouseDelta: *const fn () Vector2f = undefined,
         setMouseButtonMapping: *const fn (MouseAction, InputButtonType) void = undefined,
 
-        deinit: Deinit = undefined,
+        deinit: DeinitFunction = undefined,
 
         pub fn init(initImpl: *const fn (*IInputAPI()) void) Self {
             var self = Self{};
@@ -1330,7 +1325,7 @@ pub fn IAudioAPI() type {
         getMusicTimeLength: *const fn (BindingId) Float = undefined,
         getMusicTimePlayed: *const fn (BindingId) Float = undefined,
 
-        deinit: Deinit = undefined,
+        deinit: DeinitFunction = undefined,
 
         pub fn init(initImpl: *const fn (*IAudioAPI()) void) Self {
             var self = Self{};

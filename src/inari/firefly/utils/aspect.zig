@@ -13,7 +13,7 @@ const MaxIndex = 128;
 /// The integer type used to shift a bit mask
 const ShiftInt = std.math.Log2Int(MaskInt);
 
-pub fn AspectGroup(comptime T: type) type {
+pub fn AspectGroup(comptime group_name: String) type {
     return struct {
         pub const Aspect = struct {
             const _group_ = Group;
@@ -23,7 +23,7 @@ pub fn AspectGroup(comptime T: type) type {
         };
 
         const Group = @This();
-        const _name: String = if (@hasDecl(T, "name")) T.name else @typeName(T);
+        const _name: String = group_name;
         var _aspect_count: u8 = 0;
         var _aspects: [MaxIndex]Aspect = [_]Aspect{undefined} ** MaxIndex;
 

@@ -3,6 +3,7 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 const graphics = firefly.graphics;
+const physics = firefly.physics;
 
 const Index = firefly.utils.Index;
 const Float = firefly.utils.Float;
@@ -23,20 +24,20 @@ pub fn init() void {
     api.EComponent.registerEntityComponent(EMovement);
     MovementSystem.init();
 
-    MovFlags.ON_SLOPE_UP = MovementAspectGroup.getAspect("ON_SLOPE_UP");
-    MovFlags.ON_SLOPE_DOWN = MovementAspectGroup.getAspect("ON_SLOPE_DOWN");
-    MovFlags.GROUND_TOUCHED = MovementAspectGroup.getAspect("GROUND_TOUCHED");
-    MovFlags.LOST_GROUND = MovementAspectGroup.getAspect("LOST_GROUND");
-    MovFlags.SLIP_RIGHT = MovementAspectGroup.getAspect("SLIP_RIGHT");
-    MovFlags.SLIP_LEFT = MovementAspectGroup.getAspect("SLIP_RIGHT");
-    MovFlags.JUMP = MovementAspectGroup.getAspect("JUMP");
-    MovFlags.DOUBLE_JUMP = MovementAspectGroup.getAspect("DOUBLE_JUMP");
-    MovFlags.CLIMB_UP = MovementAspectGroup.getAspect("CLIMB_UP");
-    MovFlags.CLIMB_DOWN = MovementAspectGroup.getAspect("CLIMB_DOWN");
-    MovFlags.BLOCK_WEST = MovementAspectGroup.getAspect("BLOCK_WEST");
-    MovFlags.BLOCK_EAST = MovementAspectGroup.getAspect("BLOCK_EAST");
-    MovFlags.BLOCK_NORTH = MovementAspectGroup.getAspect("BLOCK_NORTH");
-    MovFlags.BLOCK_SOUTH = MovementAspectGroup.getAspect("BLOCK_SOUTH");
+    MovFlags.ON_SLOPE_UP = physics.MovementAspectGroup.getAspect("ON_SLOPE_UP");
+    MovFlags.ON_SLOPE_DOWN = physics.MovementAspectGroup.getAspect("ON_SLOPE_DOWN");
+    MovFlags.GROUND_TOUCHED = physics.MovementAspectGroup.getAspect("GROUND_TOUCHED");
+    MovFlags.LOST_GROUND = physics.MovementAspectGroup.getAspect("LOST_GROUND");
+    MovFlags.SLIP_RIGHT = physics.MovementAspectGroup.getAspect("SLIP_RIGHT");
+    MovFlags.SLIP_LEFT = physics.MovementAspectGroup.getAspect("SLIP_RIGHT");
+    MovFlags.JUMP = physics.MovementAspectGroup.getAspect("JUMP");
+    MovFlags.DOUBLE_JUMP = physics.MovementAspectGroup.getAspect("DOUBLE_JUMP");
+    MovFlags.CLIMB_UP = physics.MovementAspectGroup.getAspect("CLIMB_UP");
+    MovFlags.CLIMB_DOWN = physics.MovementAspectGroup.getAspect("CLIMB_DOWN");
+    MovFlags.BLOCK_WEST = physics.MovementAspectGroup.getAspect("BLOCK_WEST");
+    MovFlags.BLOCK_EAST = physics.MovementAspectGroup.getAspect("BLOCK_EAST");
+    MovFlags.BLOCK_NORTH = physics.MovementAspectGroup.getAspect("BLOCK_NORTH");
+    MovFlags.BLOCK_SOUTH = physics.MovementAspectGroup.getAspect("BLOCK_SOUTH");
 }
 
 pub fn deinit() void {
@@ -70,27 +71,21 @@ pub fn unsubscribe(listener: MovementListener) void {
     MovementSystem.event_dispatch.unregister(listener);
 }
 
-pub const MovementAspectGroup = utils.AspectGroup(struct {
-    pub const name = "Movement";
-});
-pub const MovementAspect = MovementAspectGroup.Aspect;
-pub const MovementKind = MovementAspectGroup.Kind;
-
 pub const MovFlags = struct {
-    pub var ON_SLOPE_UP: MovementAspect = undefined;
-    pub var ON_SLOPE_DOWN: MovementAspect = undefined;
-    pub var GROUND_TOUCHED: MovementAspect = undefined;
-    pub var LOST_GROUND: MovementAspect = undefined;
-    pub var SLIP_RIGHT: MovementAspect = undefined;
-    pub var SLIP_LEFT: MovementAspect = undefined;
-    pub var JUMP: MovementAspect = undefined;
-    pub var DOUBLE_JUMP: MovementAspect = undefined;
-    pub var CLIMB_UP: MovementAspect = undefined;
-    pub var CLIMB_DOWN: MovementAspect = undefined;
-    pub var BLOCK_WEST: MovementAspect = undefined;
-    pub var BLOCK_EAST: MovementAspect = undefined;
-    pub var BLOCK_NORTH: MovementAspect = undefined;
-    pub var BLOCK_SOUTH: MovementAspect = undefined;
+    pub var ON_SLOPE_UP: physics.MovementAspect = undefined;
+    pub var ON_SLOPE_DOWN: physics.MovementAspect = undefined;
+    pub var GROUND_TOUCHED: physics.MovementAspect = undefined;
+    pub var LOST_GROUND: physics.MovementAspect = undefined;
+    pub var SLIP_RIGHT: physics.MovementAspect = undefined;
+    pub var SLIP_LEFT: physics.MovementAspect = undefined;
+    pub var JUMP: physics.MovementAspect = undefined;
+    pub var DOUBLE_JUMP: physics.MovementAspect = undefined;
+    pub var CLIMB_UP: physics.MovementAspect = undefined;
+    pub var CLIMB_DOWN: physics.MovementAspect = undefined;
+    pub var BLOCK_WEST: physics.MovementAspect = undefined;
+    pub var BLOCK_EAST: physics.MovementAspect = undefined;
+    pub var BLOCK_NORTH: physics.MovementAspect = undefined;
+    pub var BLOCK_SOUTH: physics.MovementAspect = undefined;
 };
 
 pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: Float) bool;
@@ -103,7 +98,7 @@ pub const EMovement = struct {
     pub usingnamespace api.EComponent.Trait(@This(), "EMovement");
 
     id: Index = UNDEF_INDEX,
-    kind: MovementKind = undefined,
+    kind: physics.MovementKind = undefined,
     integrator: MoveIntegrator = SimpleStepIntegrator,
     update_scheduler: ?api.UpdateScheduler = null,
 
@@ -161,7 +156,7 @@ pub const EMovement = struct {
             flag(self, a, _flag);
     }
 
-    pub fn flag(self: *EMovement, aspect: MovementAspect, _flag: bool) void {
+    pub fn flag(self: *EMovement, aspect: physics.MovementAspect, _flag: bool) void {
         self.kind.activateAspect(aspect, _flag);
     }
 };

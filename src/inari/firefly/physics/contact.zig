@@ -3,6 +3,7 @@ const firefly = @import("../firefly.zig");
 const utils = firefly.utils;
 const api = firefly.api;
 const graphics = firefly.graphics;
+const physics = firefly.physics;
 
 const Vector2i = firefly.utils.Vector2i;
 const Vector2f = firefly.utils.Vector2f;
@@ -41,20 +42,6 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 //// contact API
 //////////////////////////////////////////////////////////////
-
-// Contact Type Aspects
-pub const ContactTypeAspectGroup = utils.AspectGroup(struct {
-    pub const name = "ContactType";
-});
-pub const ContactTypeAspect = ContactTypeAspectGroup.Aspect;
-pub const ContactTypeKind = ContactTypeAspectGroup.Kind;
-
-// Contact Material Aspects
-pub const ContactMaterialAspectGroup = utils.AspectGroup(struct {
-    pub const name = "ContactMaterial";
-});
-pub const ContactMaterialAspect = ContactMaterialAspectGroup.Aspect;
-pub const ContactMaterialKind = ContactMaterialAspectGroup.Kind;
 
 pub const ContactBounds = struct {
     rect: utils.RectF,
@@ -114,8 +101,8 @@ pub const Contact = struct {
     const grow: usize = 100;
 
     entity_id: Index = UNDEF_INDEX,
-    type: ?ContactTypeAspect = null,
-    material: ?ContactMaterialAspect = null,
+    type: ?physics.ContactTypeAspect = null,
+    material: ?physics.ContactMaterialAspect = null,
     mask: utils.BitMask,
 
     pub fn clear(self: *Contact) void {
@@ -234,9 +221,9 @@ pub const ContactConstraint = struct {
     /// If this is null, it means the same layer as the root entity is located on
     layer_id: ?Index = null,
     /// Contact type restriction filter. If null all contact types match
-    type_filter: ?ContactTypeKind = null,
+    type_filter: ?physics.ContactTypeKind = null,
     /// Material type restriction filter. If null all materials match
-    material_filter: ?ContactMaterialKind = null,
+    material_filter: ?physics.ContactMaterialKind = null,
     /// Indicates if the engine shall make and store a full scan
     /// with individual Contacts data for each detected contact
     full_scan: bool = false,
@@ -272,7 +259,11 @@ pub const ContactConstraint = struct {
         self.scan.clear();
     }
 
-    pub fn match(self: *ContactConstraint, c_type: ?ContactTypeAspect, c_material: ?ContactMaterialAspect) bool {
+    pub fn match(
+        self: *ContactConstraint,
+        c_type: ?physics.ContactTypeAspect,
+        c_material: ?physics.ContactMaterialAspect,
+    ) bool {
         if (self.type_filter) |tf| {
             if (c_type) |t|
                 if (tf.hasAspect(t))
@@ -350,9 +341,9 @@ pub const ContactScan = struct {
     // List of entity ids that has a contact with this contact scan
     entities: utils.DynIndexArray,
     // Collection of contact type aspects to filter on (null = any type)
-    types: ContactTypeKind,
+    types: physics.ContactTypeKind,
     // Collection of material aspects to filter on (null = any material)
-    materials: ContactMaterialKind,
+    materials: physics.ContactMaterialKind,
     // List of Contact ids has a contact with this contact scan (only available on full contact scan)
     contacts: ?utils.DynIndexArray = null,
     // The overall accumulated contact mask of all contacts of this scan (only available on full contact scan)
@@ -371,8 +362,8 @@ pub const ContactScan = struct {
     fn newSimple(bounds: ContactBounds) ContactScan {
         return .{
             .bounds = bounds,
-            .types = ContactTypeAspectGroup.newKind(),
-            .materials = ContactMaterialAspectGroup.newKind(),
+            .types = physics.ContactTypeAspectGroup.newKind(),
+            .materials = physics.ContactMaterialAspectGroup.newKind(),
             .entities = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 3),
         };
     }
@@ -380,8 +371,8 @@ pub const ContactScan = struct {
     fn newFull(bounds: ContactBounds) ContactScan {
         return .{
             .bounds = bounds,
-            .types = ContactTypeAspectGroup.newKind(),
-            .materials = ContactMaterialAspectGroup.newKind(),
+            .types = physics.ContactTypeAspectGroup.newKind(),
+            .materials = physics.ContactMaterialAspectGroup.newKind(),
             .entities = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 3),
             .contacts = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 3),
             .mask = utils.BitMask.new(
@@ -423,15 +414,15 @@ pub const ContactScan = struct {
         return self.entities.size_pointer > 0;
     }
 
-    pub fn hasContactOfType(self: *ContactScan, c_type: ContactTypeAspect) bool {
+    pub fn hasContactOfType(self: *ContactScan, c_type: physics.ContactTypeAspect) bool {
         return self.types.hasAspect(c_type);
     }
 
-    pub fn hasContactOfMaterial(self: *ContactScan, c_material: ContactMaterialAspect) bool {
+    pub fn hasContactOfMaterial(self: *ContactScan, c_material: physics.ContactMaterialAspect) bool {
         return self.materials.hasAspect(c_material);
     }
 
-    pub fn firstContactOfType(self: *ContactScan, c_type: ContactTypeAspect) ?*Contact {
+    pub fn firstContactOfType(self: *ContactScan, c_type: physics.ContactTypeAspect) ?*Contact {
         if (self.contacts) |contacts| {
             for (contacts.items) |index| {
                 if (Contact.get(index)) |c| {
@@ -445,7 +436,7 @@ pub const ContactScan = struct {
         return null;
     }
 
-    pub fn firstContactOfMaterial(self: *ContactScan, c_material: ContactMaterialAspect) ?*Contact {
+    pub fn firstContactOfMaterial(self: *ContactScan, c_material: physics.ContactMaterialAspect) ?*Contact {
         if (self.contacts) |contacts| {
             for (contacts.items) |index| {
                 if (Contact.get(index)) |c| {
@@ -523,8 +514,8 @@ pub const EContact = struct {
     id: Index = UNDEF_INDEX,
 
     bounds: ContactBounds,
-    type: ?ContactTypeAspect = null,
-    material: ?ContactMaterialAspect = null,
+    type: ?physics.ContactTypeAspect = null,
+    material: ?physics.ContactMaterialAspect = null,
     mask: ?utils.BitMask = null,
 };
 
@@ -577,8 +568,8 @@ pub const EContactScan = struct {
 
     pub fn firstContactOf(
         self: *EContactScan,
-        c_type: ?ContactTypeAspect,
-        material: ?ContactMaterialAspect,
+        c_type: ?physics.ContactTypeAspect,
+        material: ?physics.ContactMaterialAspect,
     ) ?*ContactScan {
         var next = self.constraints.nextSetBit(0);
         while (next) |i| {
@@ -608,7 +599,7 @@ pub const IContactMap = struct {
     entityRegistration: *const fn (Index, register: bool) void = undefined,
     update: *const fn () void = undefined,
     getPotentialContactIds: *const fn (region: utils.RectF, view_id: ?Index, layer_id: ?Index) ?utils.BitSet = undefined,
-    deinit: api.Deinit = undefined,
+    deinit: api.DeinitFunction = undefined,
 
     fn init(initImpl: *const fn (*IContactMap) void) IContactMap {
         var self = IContactMap{};
@@ -644,9 +635,9 @@ pub const ContactSystem = struct {
 
     pub fn systemActivation(active: bool) void {
         if (active) {
-            firefly.physics.subscribeMovement(processMoved);
+            physics.subscribeMovement(processMoved);
         } else {
-            firefly.physics.unsubscribeMovement(processMoved);
+            physics.unsubscribeMovement(processMoved);
         }
     }
 
@@ -658,7 +649,7 @@ pub const ContactSystem = struct {
         }
     }
 
-    fn processMoved(event: firefly.physics.MovementEvent) void {
+    fn processMoved(event: physics.MovementEvent) void {
         var next = event.moved.nextSetBit(0);
         while (next) |i| {
             if (EContactScan.byId(i)) |e_scan|
