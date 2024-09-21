@@ -1,6 +1,6 @@
 # firefly-zig
 
-Firefly is a 2D Game API and engine strongly based on ECS design. Uses Raylib under the hood 
+Firefly is a 2D Game API and engine strongly based on ECS design. Uses raylib under the hood 
 
 Note: Firefly is under heavy development and way far from release or completed feature set. 
 
