@@ -11,78 +11,72 @@
         { "name": "TestTileSet", "file": "resources/example_tileset.json" }
     ],
     "tile_mapping": {
-      "name": "TileMapRoom1",
-      "tile_sets": [
+        "name": "TileMapRoom1",
+        "tile_sets": [
           { "code_offset": 1, "resource": { "name": "TestTileSet", "file": "resources/example_tileset.json" }}
-      ],
-      "layer_mapping": [
-          {
-              "layer_name": "Background",
-              "offset": "0,0",
-              "blend_mode": "ALPHA",
-              "tint_color": "255,255,255,100",
-              "tile_sets_refs": "TestTileSet",
-              "parallax_factor": "-0.2,-0.2"
-          },
-          {
-              "layer_name": "Foreground",
-              "offset": "0,0",
-              "blend_mode": "ALPHA",
-              "tint_color": "255,255,255,255",
-              "tile_sets_refs": "TestTileSet" 
-          }
-      ],
-      "tile_grids": [
-          {
-              "name": "Grid1",
-              "layer": "Background",
-              "position": "0,0",
-              "spherical": false,
-              "tile_width": 16,
-              "tile_height": 16,
-              "grid_tile_width": 20,
-              "grid_tile_height": 10,
-              "codes": "0,0,0,0,0,0,0,0,0,2,32,22,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,39,0,0,29,22,12,0,0,0,0,0,0,0,0,0,0,0,2,32,0,0,19,19,0,0,22,12,0,0,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,22,12,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,22,12,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
-          },
-          {
-              "name": "Grid2",
-              "layer": "Foreground",
-              "position": "0,0",
-              "spherical": false,
-              "tile_width": 16,
-              "tile_height": 16,
-              "grid_tile_width": 20,
-              "grid_tile_height": 10,
-              "codes": "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,1,0,0,0,13,0,0,0,40,0,0,0,0,0,3,1,1,1,1,1,1,5,0,0,1,14,13,0,1,0,0,0,0,0,0,0,0,0,0,1,1,6,0,0,1,1,1,0,22,1,1,21,21,11,11,0,2,1,1,1,1,1,5,0,0,0,0,0,0,0,0,0,0,0,0,0,23,33,0,1,1,1,6,0,0,3,7,13,0,3,4,14,13,3,13,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1"
-          }
-      ]
-  },
+        ],
+        "layer_mapping": [
+            {
+                "layer_name": "Background",
+                "offset": "0,0",
+                "blend_mode": "ALPHA",
+                "tint_color": "255,255,255,100",
+                "tile_sets_refs": "TestTileSet",
+                "parallax_factor": "-0.2,-0.2"
+            },
+            {
+                "layer_name": "Foreground",
+                "offset": "0,0",
+                "blend_mode": "ALPHA",
+                "tint_color": "255,255,255,255",
+                "tile_sets_refs": "TestTileSet" 
+            }
+        ],
+        "tile_grids": [
+            {
+                "name": "Grid1",
+                "layer": "Background",
+                "position": "0,0",
+                "spherical": false,
+                "tile_width": 16,
+                "tile_height": 16,
+                "grid_tile_width": 20,
+                "grid_tile_height": 10,
+                "codes": "0,0,0,0,0,0,0,0,0,2,32,22,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,39,0,0,29,22,12,0,0,0,0,0,0,0,0,0,0,0,2,32,0,0,19,19,0,0,22,12,0,0,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,22,12,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,22,12,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+            },
+            {
+                "name": "Grid2",
+                "layer": "Foreground",
+                "position": "0,0",
+                "spherical": false,
+                "tile_width": 16,
+                "tile_height": 16,
+                "grid_tile_width": 20,
+                "grid_tile_height": 10,
+                "codes": "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,1,0,0,0,13,0,0,0,40,0,0,0,0,0,3,1,1,1,1,1,1,5,0,0,1,14,13,0,1,0,0,0,0,0,0,0,0,0,0,1,1,6,0,0,1,1,1,0,22,1,1,21,21,11,11,0,2,1,1,1,1,1,5,0,0,0,0,0,0,0,0,0,0,0,0,0,23,33,0,1,1,1,6,0,0,3,7,13,0,3,4,14,13,3,13,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1"
+            }
+        ]
+    },
     "objects": [
-     {
-       "name": "t1",
-       "object_type": "room_transition",
-       "build_task": "ROOM_TRANSITION_BUILDER",
-       "layer": "Foreground",
-       "position": "318,16",
-       "attributes": [
-          { "name": "ROOM_TRANSITION_ORIENTATION", "value": "EAST"},
-          { "name": "ROOM_TRANSITION_TARGET_ROOM", "value": "Room2"},
-          { "name": "ROOM_TRANSITION_TARGET_TRANSITION", "value": "t1"},
-          { "name": "ROOM_TRANSITION_BOUNDS", "value": "318,16,4,16"}
-       ]
-     },
-     {
-       "name": "t2",
-       "object_type": "room_transition",
-       "build_task": "ROOM_TRANSITION_BUILDER",
-       "layer": "Foreground",
-       "position": "256,157",
-       "attributes": [
-          { "name": "ROOM_TRANSITION_ORIENTATION", "value": "SOUTH"},
-          { "name": "ROOM_TRANSITION_TARGET_ROOM", "value": "Room3"},
-          { "name": "ROOM_TRANSITION_TARGET_TRANSITION", "value": "t1"},
-          { "name": "ROOM_TRANSITION_BOUNDS", "value": "256,157,48,12"}
-       ]
-     }
-   ]
+        {
+            "name": "t1",
+            "object_type": "room_transition",
+            "build_task": "room_transition_builder",
+            "attributes": [
+                { "name": "layer", "value": "Foreground"},
+                { "name": "bounds", "value": "318,16,4,16"},
+                { "name": "props", "value": "Room2|t1|EAST"}
+            ]
+        },
+        {
+            "name": "t2",
+            "object_type": "room_transition",
+            "build_task": "room_transition_builder",
+            "attributes": [
+                { "name": "layer", "value": "Foreground"},
+                { "name": "bounds", "value": "256,157,48,12"},
+                { "name": "props", "value": "Room3|t1|SOUTH"}
+            ]
+        }
+    ]
 }

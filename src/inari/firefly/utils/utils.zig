@@ -78,8 +78,9 @@ pub inline fn f32_cint(v: f32) c_int {
 
 pub inline fn parseBoolean(value: ?String) bool {
     if (value) |v| {
-        if (v.len == 0) return false;
-        return v[0] != '0';
+        if (v.len == 0)
+            return false;
+        return v[0] != '0' or stringEquals("true", v) or stringEquals("TRUE", v);
     }
     return false;
 }

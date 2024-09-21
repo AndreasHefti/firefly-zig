@@ -283,13 +283,16 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime contex
 
     return struct {
         pub fn existsName(name: String) bool {
-            if (adapter.pool.name_mapping) |*nm| {
+            if (adapter.pool.name_mapping) |*nm|
                 return nm.contains(name);
-            }
             return false;
         }
 
-        pub fn idByName(name: String) ?Index {
+        pub fn idByName(name: String) Index {
+            return idByNameOptional(name) orelse missName(name);
+        }
+
+        pub fn idByNameOptional(name: String) ?Index {
             if (adapter.pool.name_mapping) |*nm|
                 return nm.get(name);
             return null;
@@ -302,6 +305,7 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime contex
             }
             return null;
         }
+
         pub fn referenceByName(name: String, owned: bool) ?api.CRef {
             if (adapter.pool.name_mapping) |*nm| {
                 if (nm.get(name)) |id| {
@@ -320,6 +324,10 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime contex
             if (adapter.pool.name_mapping) |*nm| {
                 if (nm.get(name)) |id| adapter.pool.clear(id);
             }
+        }
+
+        inline fn missName(name: String) void {
+            utils.panic(api.ALLOC, "no component with name: {s}", .{name});
         }
     };
 }

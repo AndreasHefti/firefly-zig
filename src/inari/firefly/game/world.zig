@@ -348,28 +348,26 @@ pub const ERoomTransition = struct {
 };
 
 fn createRoomTransition(ctx: *api.CallContext) void {
-    const attr_id = ctx.attributes_id orelse return;
-    var attrs = api.Attributes.byId(attr_id);
     // create the room transition entity
-    const orientation_name = attrs.get(game.TaskAttributes.ROOM_TRANSITION_ORIENTATION).?;
-    const orientation = utils.Orientation.byName(orientation_name);
-    const condition_name = attrs.get(game.TaskAttributes.ROOM_TRANSITION_CONDITION) orelse
-        switch (orientation) {
+    const name = ctx.string(game.TaskAttributes.NAME);
+    const view_id = graphics.View.idByName(ctx.attribute(game.TaskAttributes.VIEW_NAME));
+    const layer_id = graphics.Layer.idByName(ctx.attribute(game.TaskAttributes.LAYER_NAME));
+    const bounds = ctx.rectF(game.TaskAttributes.BOUNDS);
+
+    var properties = ctx.properties(game.TaskAttributes.PROPERTIES);
+    const target_room_name = properties.nextName().?;
+    const target_transition_name = properties.nextName().?;
+    const orientation = properties.nextOrientation().?;
+
+    const condition_name = switch (orientation) {
         .EAST => game.Conditions.GOES_EAST,
         .WEST => game.Conditions.GOES_WEST,
         .NORTH => game.Conditions.GOES_NORTH,
         .SOUTH => game.Conditions.GOES_SOUTH,
         else => "NONE",
     };
-    const transition_name = api.NamePool.alloc(attrs.get(game.TaskAttributes.NAME)).?;
-    const target_room_name = api.NamePool.alloc(attrs.get(game.TaskAttributes.ROOM_TRANSITION_TARGET_ROOM)).?;
-    const target_transition_name = api.NamePool.alloc(attrs.get(game.TaskAttributes.ROOM_TRANSITION_TARGET_TRANSITION)).?;
 
-    const bounds = utils.parseRectF(attrs.get(game.TaskAttributes.ROOM_TRANSITION_BOUNDS).?).?;
-    const view_id = graphics.View.idByName(attrs.get(game.TaskAttributes.VIEW_NAME).?).?;
-    const layer_id = graphics.Layer.idByName(attrs.get(game.TaskAttributes.LAYER_NAME).?).?;
-
-    const trans_entity_id = api.Entity.new(.{ .name = transition_name })
+    const trans_entity_id = api.Entity.new(.{ .name = name })
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
         .withComponent(graphics.EView{ .view_id = view_id, .layer_id = layer_id })
         .withComponent(physics.EContact{
@@ -476,8 +474,8 @@ fn roomUnloadedCallback(_: Index) void {
 
 pub const SimpleRoomTransitionScene = struct {
     fn buildSimpleRoomTransitionScene(ctx: *api.CallContext) void {
-        const name = ctx.getAttribute(game.TaskAttributes.NAME) orelse return;
-        const entry = ctx.getAttribute("exit") == null;
+        const name = ctx.string(game.TaskAttributes.NAME);
+        const entry = !ctx.boolean("exit");
 
         var scene = graphics.Scene.new(.{
             .name = name,
@@ -491,13 +489,10 @@ pub const SimpleRoomTransitionScene = struct {
 
     fn entityInit(ctx: *api.CallContext) void {
         // create new overlay entity
-        const name = ctx.getAttribute(game.TaskAttributes.NAME) orelse
-            @panic("missing game.TaskAttributes.NAME");
-        const view_name = ctx.getAttribute(game.TaskAttributes.VIEW_NAME) orelse
-            @panic("missing game.TaskAttributes.VIEW_NAME");
-        const layer_name = ctx.getAttribute(game.TaskAttributes.LAYER_NAME) orelse
-            @panic("missing game.TaskAttributes.LAYER_NAME");
-        const entry = ctx.getAttribute("exit") == null;
+        const name = ctx.string(game.TaskAttributes.NAME);
+        const view_name = ctx.string(game.TaskAttributes.VIEW_NAME);
+        const layer_name = ctx.string(game.TaskAttributes.LAYER_NAME);
+        const entry = !ctx.boolean("exit");
 
         if (graphics.View.byName(view_name)) |view| {
             ctx.id_1 = api.Entity.new(.{ .name = name })
@@ -505,8 +500,8 @@ pub const SimpleRoomTransitionScene = struct {
                 .scale = .{ view.projection.width, view.projection.height },
             })
                 .withComponent(graphics.EView{
-                .view_id = graphics.View.idByName(view_name).?,
-                .layer_id = graphics.Layer.idByName(layer_name).?,
+                .view_id = graphics.View.idByName(view_name),
+                .layer_id = graphics.Layer.idByName(layer_name),
             })
                 .withComponent(graphics.EShape{
                 .blend_mode = api.BlendMode.ALPHA,
@@ -519,7 +514,7 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn disposeEntity(ctx: *api.CallContext) void {
-        const name = ctx.getAttribute(game.TaskAttributes.NAME) orelse return;
+        const name = ctx.attribute(game.TaskAttributes.NAME);
         api.Entity.disposeByName(name);
         ctx.id_1 = UNDEF_INDEX;
     }

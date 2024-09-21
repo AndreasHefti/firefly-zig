@@ -225,15 +225,15 @@ pub const NamePool = struct {
         return alloc(formatted).?;
     }
 
-    pub fn concat(s1: String, s2: String, delimiter: ?String) String {
-        const c = if (delimiter) |d|
-            std.fmt.allocPrint(ALLOC, "{s}{s}{s}", .{ s1, d, s2 }) catch unreachable
-        else
-            std.fmt.allocPrint(ALLOC, "{s}{s}", .{ s1, s2 }) catch unreachable;
+    // pub fn concat(s1: String, s2: String, delimiter: ?String) String {
+    //     const c = if (delimiter) |d|
+    //         std.fmt.allocPrint(ALLOC, "{s}{s}{s}", .{ s1, d, s2 }) catch unreachable
+    //     else
+    //         std.fmt.allocPrint(ALLOC, "{s}{s}", .{ s1, s2 }) catch unreachable;
 
-        defer ALLOC.free(c);
-        return alloc(c).?;
-    }
+    //     defer ALLOC.free(c);
+    //     return alloc(c).?;
+    // }
 
     pub fn getCName(name: ?String) ?CString {
         if (name) |n| {
@@ -263,6 +263,60 @@ pub const NamePool = struct {
 
     pub fn free(name: String) void {
         names.remove(name);
+    }
+};
+
+pub const PropertyIterator = struct {
+    delegate: std.mem.SplitIterator(u8, std.mem.DelimiterType.scalar),
+
+    pub fn new(s: String) PropertyIterator {
+        return PropertyIterator{ .delegate = std.mem.splitScalar(u8, s, '|') };
+    }
+
+    pub inline fn next(self: *PropertyIterator) ?String {
+        return self.delegate.next();
+    }
+
+    pub inline fn nextAspect(self: *PropertyIterator, comptime aspect_group: anytype) ?aspect_group.Aspect {
+        if (self.delegate.next()) |s|
+            return aspect_group.getAspectIfExists(s);
+        return null;
+    }
+
+    pub inline fn nextName(self: *PropertyIterator) ?String {
+        if (self.delegate.next()) |s|
+            return NamePool.alloc(utils.parseName(s));
+        return null;
+    }
+
+    pub inline fn nextBoolean(self: *PropertyIterator) bool {
+        return utils.parseBoolean(self.delegate.next());
+    }
+
+    pub inline fn nextFloat(self: *PropertyIterator) ?Float {
+        return utils.parseFloat(self.delegate.next());
+    }
+
+    pub inline fn nextIndex(self: *PropertyIterator) ?Index {
+        return utils.parseUsize(self.delegate.next());
+    }
+
+    pub inline fn nextPosF(self: *PropertyIterator) ?utils.PosF {
+        return utils.parsePosF(self.delegate.next());
+    }
+
+    pub inline fn nextRectF(self: *PropertyIterator) ?utils.RectF {
+        return utils.parseRectF(self.delegate.next());
+    }
+
+    pub inline fn nextColor(self: *PropertyIterator) ?utils.Color {
+        return utils.parseColor(self.delegate.next());
+    }
+
+    pub inline fn nextOrientation(self: *PropertyIterator) ?utils.Orientation {
+        if (next(self)) |n|
+            return utils.Orientation.byName(n);
+        return null;
     }
 };
 
@@ -495,17 +549,53 @@ pub const CallContext = struct {
     c_ref_callback: ?CRefCallback = null,
     result: ?ActionResult = null,
 
-    pub fn getAttribute(self: *CallContext, name: String) ?String {
-        if (self.attributes_id) |id|
-            return Attributes.byId(id).get(name);
-        return null;
-    }
-
-    pub fn withAttributes(caller_id: ?Index, attributes: anytype) CallContext {
+    pub fn new(caller_id: ?Index, attributes: anytype) CallContext {
         return CallContext{
             .caller_id = caller_id orelse UNDEF_INDEX,
             .attributes_id = Attributes.newWith(null, attributes).id,
         };
+    }
+
+    pub fn optionalAttribute(self: *CallContext, name: String) ?String {
+        return NamePool.alloc(self.getAttrs().get(name));
+    }
+
+    pub fn attribute(self: *CallContext, name: String) String {
+        return optionalAttribute(self, name) orelse miss(name);
+    }
+
+    pub fn optionalString(self: *CallContext, name: String) ?String {
+        return NamePool.alloc(utils.parseName(self.getAttrs().get(name)));
+    }
+
+    pub fn string(self: *CallContext, name: String) String {
+        return optionalString(self, name) orelse miss(name);
+    }
+
+    pub fn boolean(self: *CallContext, name: String) bool {
+        return utils.parseBoolean(self.optionalAttribute(name) orelse return false);
+    }
+
+    pub fn optionalRectF(self: *CallContext, name: String) ?RectF {
+        return utils.parseRectF(self.attribute(name));
+    }
+
+    pub fn rectF(self: *CallContext, name: String) RectF {
+        return optionalRectF(self, name) orelse miss(name);
+    }
+
+    pub fn properties(self: *CallContext, name: String) PropertyIterator {
+        return PropertyIterator.new(attribute(self, name));
+    }
+
+    inline fn miss(name: String) void {
+        utils.panic(ALLOC, "No attribute with name: {s}", .{name});
+    }
+
+    inline fn getAttrs(self: *CallContext) *Attributes {
+        if (self.attributes_id) |id|
+            return Attributes.byId(id);
+        @panic("No Attributes initialized");
     }
 
     pub fn deinit(self: *CallContext) void {

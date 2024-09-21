@@ -78,13 +78,17 @@ pub const Groups = struct {
 };
 
 pub const TaskAttributes = struct {
-    pub const NAME = "NAME";
+    pub const NAME = "name";
     /// Name of the involved View
-    pub const VIEW_NAME = "VIEW_NAME";
+    pub const VIEW_NAME = "view";
     /// Name of involved Layer
-    pub const LAYER_NAME = "LAYER_NAME";
-    /// Position of involved object. Format ("x,y")
-    pub const POSITION = "POSITION";
+    pub const LAYER_NAME = "layer";
+    /// Position, Format: "x,y"
+    pub const POSITION = "position";
+    /// Bounds, Format: "x,y,width,height"
+    pub const BOUNDS = "bounds";
+    /// Arbitrary properties, Format: "prop1|prop2|prop3|..."
+    pub const PROPERTIES = "props";
     /// File resource name. If this is set, a task shall try to load the data from referenced file
     pub const FILE_RESOURCE = "FILE_RESOURCE";
     /// JSON String resource reference. If this is set, a task shall interpret this as JSON Sting
@@ -92,23 +96,22 @@ pub const TaskAttributes = struct {
     pub const JSON_RESOURCE = "JSON_RESOURCE";
 
     // The room name within the context
-    pub const ROOM_NAME = "ROOM_NAME";
-    pub const ROOM_TRANSITION_CONDITION = "ROOM_TRANSITION_CONDITION";
-    pub const ROOM_TRANSITION_BOUNDS = "ROOM_TRANSITION_BOUNDS";
-    pub const ROOM_TRANSITION_ORIENTATION = "ROOM_TRANSITION_ORIENTATION";
-    pub const ROOM_TRANSITION_TARGET_ROOM = "ROOM_TRANSITION_TARGET_ROOM";
-    pub const ROOM_TRANSITION_TARGET_TRANSITION = "ROOM_TRANSITION_TARGET_TRANSITION";
+    pub const ROOM_NAME = "room";
+    // pub const ROOM_TRANSITION_CONDITION = "ROOM_TRANSITION_CONDITION";
+    // pub const ROOM_TRANSITION_BOUNDS = "ROOM_TRANSITION_BOUNDS";
+    // pub const ROOM_TRANSITION_ORIENTATION = "ROOM_TRANSITION_ORIENTATION";
+    // pub const ROOM_TRANSITION_TARGET_ROOM = "ROOM_TRANSITION_TARGET_ROOM";
+    // pub const ROOM_TRANSITION_TARGET_TRANSITION = "ROOM_TRANSITION_TARGET_TRANSITION";
 };
 
 pub const Tasks = struct {
-    pub const JSON_LOAD_TILE_SET = "JSON_LOAD_TILE_SET_TASK";
-    pub const JSON_LOAD_TILE_MAPPING = "JSON_LOAD_TILE_MAPPING_TASK";
-    pub const JSON_LOAD_ROOM = "JSON_LOAD_ROOM_TASK";
-    pub const JSON_LOAD_WORLD = "JSON_LOAD_WORLD_TASK";
+    pub const JSON_LOAD_TILE_SET = "load_tile_set_json_default";
+    pub const JSON_LOAD_TILE_MAPPING = "load_tile_mapping_json_default";
+    pub const JSON_LOAD_ROOM = "load_room_json_default";
+    pub const JSON_LOAD_WORLD = "load_world_json_default";
 
     pub const SIMPLE_ROOM_TRANSITION_SCENE_BUILDER = "simpleRoomTransitionBuilder";
-    pub const ROOM_TRANSITION_BUILDER = "ROOM_TRANSITION_BUILDER";
-    pub const ROOM_TRANSITION = "ROOM_TRANSITION";
+    pub const ROOM_TRANSITION_BUILDER = "room_transition_builder";
 };
 
 pub const MaterialTypes = struct {

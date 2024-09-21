@@ -89,7 +89,7 @@ fn init() void {
     // load room from file
     api.Task.runTaskByNameWith(
         game.Tasks.JSON_LOAD_ROOM,
-        firefly.api.CallContext.withAttributes(
+        firefly.api.CallContext.new(
             null,
             .{
                 .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
@@ -133,8 +133,8 @@ fn startSceneAction(ctx: *api.CallContext) void {
             .scale = .{ screen_width, screen_height },
         })
             .withComponent(graphics.EView{
-            .view_id = graphics.View.idByName(view_name).?,
-            .layer_id = graphics.Layer.idByName(layer2).?,
+            .view_id = graphics.View.idByName(view_name),
+            .layer_id = graphics.Layer.idByName(layer2),
         })
             .withComponent(graphics.EShape{
             .blend_mode = api.BlendMode.ALPHA,

@@ -410,7 +410,7 @@ pub const TileMapping = struct {
 
                                     // create entity from TileTemplate for specific view and layer and add code mapping
                                     const entity = api.Entity.new(.{
-                                        .name = firefly.api.NamePool.concat(tile_template.name.?, layer_mapping.layer, "_"),
+                                        .name = api.NamePool.format("{s}_{s}", .{ tile_template.name.?, layer_mapping.layer }),
                                         .groups = api.GroupKind.fromStringList(tile_template.groups),
                                     })
                                         .withComponent(graphics.ETransform{})
@@ -447,31 +447,30 @@ pub const TileMapping = struct {
             next = self.tile_grid_data.slots.nextSetBit(i + 1);
 
             const tile_grid_data = self.tile_grid_data.get(i).?;
-            if (firefly.graphics.Layer.idByName(tile_grid_data.layer)) |layer_id| {
-                var tile_grid = firefly.graphics.TileGrid.new(.{
-                    .name = tile_grid_data.name,
-                    .view_id = self.view_id,
-                    .layer_id = layer_id,
-                    .dimensions = tile_grid_data.dimensions,
-                    .world_position = tile_grid_data.world_position,
-                    .spherical = tile_grid_data.spherical,
-                });
+            const layer_id = graphics.Layer.idByName(tile_grid_data.layer);
+            var tile_grid = graphics.TileGrid.new(.{
+                .name = tile_grid_data.name,
+                .view_id = self.view_id,
+                .layer_id = layer_id,
+                .dimensions = tile_grid_data.dimensions,
+                .world_position = tile_grid_data.world_position,
+                .spherical = tile_grid_data.spherical,
+            });
 
-                // fill grid
-                const code_mapping = self.layer_entity_mapping.get(layer_id).?;
-                var code_it = std.mem.split(u8, tile_grid_data.codes, ",");
-                for (0..tile_grid.dimensions[1]) |y| {
-                    for (0..tile_grid.dimensions[0]) |x| {
-                        const code = std.fmt.parseInt(Index, code_it.next().?, 10) catch 0;
-                        if (code > 0) {
-                            const entity_id = code_mapping.get(code);
-                            tile_grid.set(x, y, entity_id);
-                        }
+            // fill grid
+            const code_mapping = self.layer_entity_mapping.get(layer_id).?;
+            var code_it = std.mem.split(u8, tile_grid_data.codes, ",");
+            for (0..tile_grid.dimensions[1]) |y| {
+                for (0..tile_grid.dimensions[0]) |x| {
+                    const code = std.fmt.parseInt(Index, code_it.next().?, 10) catch 0;
+                    if (code > 0) {
+                        const entity_id = code_mapping.get(code);
+                        tile_grid.set(x, y, entity_id);
                     }
                 }
-
-                _ = tile_grid.activate();
             }
+
+            _ = tile_grid.activate();
         }
     }
 

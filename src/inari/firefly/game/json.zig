@@ -159,10 +159,7 @@ pub const JSONTileSet = struct {
 };
 
 fn loadTileSetFromJSON(ctx: *api.CallContext) void {
-    const attr_id = ctx.attributes_id orelse
-        return;
-
-    var json_res_handle = JSONResourceHandle.new(attr_id);
+    var json_res_handle = JSONResourceHandle.new(ctx.attributes_id.?);
     defer json_res_handle.deinit();
 
     if (json_res_handle.json_resource) |json| {
@@ -187,7 +184,7 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
     // check if tile set already exists. If so, do nothing
     // TODO hot reload here?
     if (game.TileSet.existsName(jsonTileSet.name))
-        return game.TileSet.idByName(jsonTileSet.name).?;
+        return game.TileSet.idByName(jsonTileSet.name);
 
     // check texture and load or create if needed
     if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
@@ -215,9 +212,9 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
 
     // create all tile templates for tile set
     for (0..jsonTileSet.tiles.len) |i| {
-        var it = std.mem.split(u8, jsonTileSet.tiles[i].props, "|");
+        var it = api.PropertyIterator.new(jsonTileSet.tiles[i].props);
 
-        if (utils.parsePosF(it.next())) |tex_pos| {
+        if (it.nextPosF()) |tex_pos| {
             var tile_template: game.TileTemplate = .{
                 .name = api.NamePool.alloc(jsonTileSet.tiles[i].name),
                 .sprite_data = .{
@@ -225,12 +222,12 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
                         tex_pos[0] * tile_set.tile_width,
                         tex_pos[1] * tile_set.tile_height,
                     },
-                    .flip_x = utils.parseBoolean(it.next()),
-                    .flip_y = utils.parseBoolean(it.next()),
+                    .flip_x = it.nextBoolean(),
+                    .flip_y = it.nextBoolean(),
                 },
-                .contact_material_type = physics.ContactMaterialAspectGroup.getAspectIfExists(it.next().?),
-                .contact_mask_name = api.NamePool.alloc(if (utils.parseBoolean(it.next())) jsonTileSet.tiles[i].name else null),
-                .groups = api.NamePool.alloc(utils.parseName(it.next().?)),
+                .contact_material_type = it.nextAspect(physics.ContactMaterialAspectGroup),
+                .contact_mask_name = api.NamePool.alloc(if (it.nextBoolean()) jsonTileSet.tiles[i].name else null),
+                .groups = it.nextName(),
             };
 
             if (jsonTileSet.tiles[i].animation) |a| {
@@ -349,9 +346,7 @@ fn loadTileMappingFromJSON(ctx: *api.CallContext) void {
     var json_res_handle = JSONResourceHandle.new(ctx.attributes_id.?);
     defer json_res_handle.deinit();
 
-    const view_name = ctx.getAttribute(game.TaskAttributes.VIEW_NAME) orelse
-        @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
-
+    const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
     if (json_res_handle.json_resource) |json| {
         const parsed = std.json.parseFromSlice(
             JSONTileMapping,
@@ -377,17 +372,13 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
     // check if tile map with name already exits. If so, do nothing
     // TODO hot reload here?
     if (game.TileMapping.existsName(jsonTileMapping.name))
-        return game.TileMapping.idByName(jsonTileMapping.name).?;
+        return game.TileMapping.idByName(jsonTileMapping.name);
 
     // prepare view
-    var view_id: ?Index = null;
-    if (firefly.graphics.View.idByName(view_name)) |vid| {
-        view_id = vid;
-    } else utils.panic(api.ALLOC, "View does not exists: {s}", .{view_name});
-
+    const view_id = graphics.View.idByName(view_name);
     var tile_mapping = game.TileMapping.new(.{
         .name = api.NamePool.alloc(jsonTileMapping.name),
-        .view_id = view_id.?,
+        .view_id = view_id,
     });
 
     // process tile sets and make code offset mapping, if not exists, load it
@@ -432,12 +423,12 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 
         // get involved layer, if name exists but layer not yet, create one
         var layer_id: ?Index = null;
-        if (firefly.graphics.Layer.existsName(layer_mapping.layer_name)) {
-            layer_id = firefly.graphics.Layer.idByName(layer_mapping.layer_name).?;
+        if (graphics.Layer.existsName(layer_mapping.layer_name)) {
+            layer_id = graphics.Layer.idByName(layer_mapping.layer_name);
         } else {
-            layer_id = firefly.graphics.Layer.new(.{
+            layer_id = graphics.Layer.new(.{
                 .name = api.NamePool.alloc(layer_mapping.layer_name),
-                .view_id = view_id.?,
+                .view_id = view_id,
                 .order = i,
             }).id;
         }
@@ -452,7 +443,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
         });
 
         // add tile set references to tile layer data
-        var tile_set_ref_it = std.mem.split(u8, layer_mapping.tile_sets_refs, ",");
+        var tile_set_ref_it = std.mem.splitScalar(u8, layer_mapping.tile_sets_refs, ',');
         while (tile_set_ref_it.next()) |tile_set_name| {
             for (0..jsonTileMapping.tile_sets.len) |ii| {
                 const tile_set_ref = jsonTileMapping.tile_sets[ii];
@@ -570,9 +561,7 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
     var json_res_handle = JSONResourceHandle.new(ctx.attributes_id.?);
     defer json_res_handle.deinit();
 
-    const view_name = ctx.getAttribute(game.TaskAttributes.VIEW_NAME) orelse
-        @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
-
+    const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
     const json = json_res_handle.json_resource orelse {
         utils.panic(api.ALLOC, "Failed to load json from file: {any}", .{json_res_handle.json_resource});
         return;
@@ -660,10 +649,6 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
                 },
             );
 
-            if (objects[i].layer) |layer|
-                attributes.set(game.TaskAttributes.LAYER_NAME, layer);
-            if (objects[i].position) |position|
-                attributes.set(game.TaskAttributes.POSITION, position);
             if (objects[i].attributes) |attr| {
                 for (0..attr.len) |ai|
                     attributes.set(attr[ai].name, attr[ai].value);
@@ -774,9 +759,7 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
     const jsonWorld: JSONWorld = parsed.value;
     checkFileType(jsonWorld, JSONFileTypes.WORLD);
 
-    const view_name = ctx.getAttribute(game.TaskAttributes.VIEW_NAME) orelse
-        @panic("Missing attribute TaskAttributes.ATTR_VIEW_NAME");
-
+    const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
     var world: *game.World = game.World.new(.{
         .name = api.NamePool.alloc(jsonWorld.name).?,
     });

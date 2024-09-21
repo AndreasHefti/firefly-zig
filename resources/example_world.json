@@ -6,14 +6,14 @@
             "name": "enterRoom", 
             "builder": "simpleRoomTransitionBuilder",
             "attributes": [
-                { "name": "LAYER_NAME", "value": "Foreground"}
+                { "name": "layer", "value": "Foreground"}
             ]
         },
         { 
             "name": "exitRoom", 
             "builder": "simpleRoomTransitionBuilder",
             "attributes": [
-                { "name": "LAYER_NAME", "value": "Foreground"},
+                { "name": "layer", "value": "Foreground"},
                 { "name": "exit", "value": "true"}
             ]
         }

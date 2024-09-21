@@ -68,6 +68,18 @@ pub inline fn parseUsize(value: ?String) usize {
     return 0;
 }
 
+pub inline fn parsePosI(value: ?String) ?PosI {
+    if (value) |v| {
+        if (v.len == 0) return null;
+        var it = std.mem.split(u8, v, ",");
+        return .{
+            if (it.next()) |n| std.fmt.parseInt(c_int, n) catch return null else return null,
+            if (it.next()) |n| std.fmt.parseInt(c_int, n) catch return null else return null,
+        };
+    }
+    return null;
+}
+
 pub inline fn parsePosF(value: ?String) ?PosF {
     if (value) |v| {
         if (v.len == 0) return null;

@@ -111,7 +111,7 @@ fn init() void {
 
     firefly.api.Task.runTaskByNameWith(
         firefly.game.Tasks.JSON_LOAD_TILE_SET,
-        firefly.api.CallContext.withAttributes(
+        firefly.api.CallContext.new(
             null,
             .{
                 .{ firefly.game.TaskAttributes.JSON_RESOURCE, JSON_TILE_SET },

@@ -125,8 +125,8 @@ fn playerLoadTask(_: *api.CallContext) void {
         .pivot = .{ 0, 0 },
     })
         .withComponent(graphics.EView{
-        .view_id = graphics.View.idByName(view_name).?,
-        .layer_id = graphics.Layer.idByName(layer2).?,
+        .view_id = graphics.View.idByName(view_name),
+        .layer_id = graphics.Layer.idByName(layer2),
     })
         .withComponent(graphics.ESprite{ .template_id = sprite_id })
         .withComponent(physics.EMovement{
