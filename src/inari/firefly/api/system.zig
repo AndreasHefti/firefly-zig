@@ -22,7 +22,7 @@ pub fn deinit() void {
 }
 
 pub const System = struct {
-    pub usingnamespace api.Component.Trait(System, .{ .name = "System", .subscription = false });
+    pub usingnamespace api.Component.Mixin(System, .{ .name = "System", .subscription = false });
     // struct fields of a System
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -52,7 +52,7 @@ pub const System = struct {
     }
 };
 
-pub fn EntityUpdateTrait(comptime T: type) type {
+pub fn EntityUpdateMixin(comptime T: type) type {
     return struct {
         comptime {
             if (@typeInfo(T) != .Struct)
@@ -64,7 +64,7 @@ pub fn EntityUpdateTrait(comptime T: type) type {
         pub var entity_condition: api.EntityTypeCondition = undefined;
         pub var entities: firefly.utils.BitSet = undefined;
 
-        pub fn systemTraitInit() void {
+        pub fn systemMixinInit() void {
             entities = firefly.utils.BitSet.new(api.ALLOC);
             if (@hasDecl(T, "accept") or @hasDecl(T, "dismiss")) {
                 entity_condition = api.EntityTypeCondition{
@@ -75,7 +75,7 @@ pub fn EntityUpdateTrait(comptime T: type) type {
             }
         }
 
-        pub fn systemTraitDeinit() void {
+        pub fn systemMixinDeinit() void {
             entity_condition = undefined;
             entities.deinit();
             entities = undefined;
@@ -94,11 +94,11 @@ pub fn EntityUpdateTrait(comptime T: type) type {
     };
 }
 
-// pub fn ComponentUpdateTrait(comptime T: type, comptime CType: type) type {
+// pub fn ComponentUpdateMixin(comptime T: type, comptime CType: type) type {
 
 // }
 
-pub fn SystemTrait(comptime T: type) type {
+pub fn SystemMixin(comptime T: type) type {
     const has_render_order: bool = @hasDecl(T, "render_order");
     const has_view_render_order: bool = @hasDecl(T, "view_render_order");
     const has_update_order: bool = @hasDecl(T, "update_order");
@@ -135,8 +135,8 @@ pub fn SystemTrait(comptime T: type) type {
                 .onDestruct = destruct,
             }).id;
 
-            if (@hasDecl(T, "systemTraitInit"))
-                T.systemTraitInit();
+            if (@hasDecl(T, "systemMixinInit"))
+                T.systemMixinInit();
             if (@hasDecl(T, "systemInit"))
                 T.systemInit();
         }
@@ -160,8 +160,8 @@ pub fn SystemTrait(comptime T: type) type {
             if (component_ref != null) {
                 if (@hasDecl(T, "systemDeinit"))
                     T.systemDeinit();
-                if (@hasDecl(T, "systemTraitDeinit"))
-                    T.systemTraitDeinit();
+                if (@hasDecl(T, "systemMixinDeinit"))
+                    T.systemMixinDeinit();
             }
             component_ref = null;
         }

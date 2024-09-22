@@ -210,7 +210,7 @@ pub const Contact = struct {
 //////////////////////////////////////////////////////////////
 pub const ContactCallbackFunction = *const fn (entity_id: Index, contacts: *ContactScan) bool;
 pub const ContactConstraint = struct {
-    pub usingnamespace api.Component.Trait(ContactConstraint, .{ .name = "ContactConstraint" });
+    pub usingnamespace api.Component.Mixin(ContactConstraint, .{ .name = "ContactConstraint" });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -509,7 +509,7 @@ fn debugCollisionResolver(entity_id: Index, _: ?Index) void {
 //////////////////////////////////////////////////////////////
 
 pub const EContact = struct {
-    pub usingnamespace api.EComponent.Trait(EContact, "EContact");
+    pub usingnamespace api.EComponent.Mixin(EContact, "EContact");
 
     id: Index = UNDEF_INDEX,
 
@@ -520,7 +520,7 @@ pub const EContact = struct {
 };
 
 pub const EContactScan = struct {
-    pub usingnamespace api.EComponent.Trait(EContactScan, "EContactScan");
+    pub usingnamespace api.EComponent.Mixin(EContactScan, "EContactScan");
 
     id: Index = UNDEF_INDEX,
 
@@ -613,7 +613,7 @@ pub const IContactMap = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ContactSystem = struct {
-    pub usingnamespace api.SystemTrait(ContactSystem);
+    pub usingnamespace api.SystemMixin(ContactSystem);
     pub var entity_condition: api.EntityTypeCondition = undefined;
 
     var simple_mapping: utils.BitSet = undefined;
@@ -791,8 +791,8 @@ pub const ContactSystem = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ContactGizmosRenderer = struct {
-    pub usingnamespace api.SystemTrait(ContactGizmosRenderer);
-    pub usingnamespace graphics.EntityRendererTrait(ContactGizmosRenderer);
+    pub usingnamespace api.SystemMixin(ContactGizmosRenderer);
+    pub usingnamespace graphics.EntityRendererMixin(ContactGizmosRenderer);
 
     pub const accept = .{ graphics.ETransform, EContact };
     pub const dismiss = .{graphics.ETile};
@@ -827,8 +827,8 @@ pub const ContactGizmosRenderer = struct {
 };
 
 pub const ContactScanGizmosRenderer = struct {
-    pub usingnamespace api.SystemTrait(ContactScanGizmosRenderer);
-    pub usingnamespace graphics.EntityRendererTrait(ContactScanGizmosRenderer);
+    pub usingnamespace api.SystemMixin(ContactScanGizmosRenderer);
+    pub usingnamespace graphics.EntityRendererMixin(ContactScanGizmosRenderer);
 
     pub const accept = .{ graphics.ETransform, EContactScan };
     pub var color: utils.Color = .{ 0, 255, 0, 255 };

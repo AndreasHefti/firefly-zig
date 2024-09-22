@@ -208,7 +208,7 @@ pub const SimplePlatformerJumpControl = platformer.SimplePlatformerJumpControl;
 //////////////////////////////////////////////////////////////
 
 pub const SimplePivotCamera = struct {
-    pub usingnamespace api.ControlSubTypeTrait(SimplePivotCamera, graphics.View);
+    pub usingnamespace api.ControlSubTypeMixin(SimplePivotCamera, graphics.View);
 
     id: Index = UNDEF_INDEX,
     name: String,

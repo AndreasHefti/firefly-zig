@@ -249,7 +249,7 @@ fn AnimationResolver(comptime Integration: type) type {
 //////////////////////////////////////////////////////////////
 
 pub const EAnimation = struct {
-    pub usingnamespace api.EComponent.Trait(@This(), "EAnimation");
+    pub usingnamespace api.EComponent.Mixin(@This(), "EAnimation");
 
     id: Index = UNDEF_INDEX,
     animations: utils.BitSet = undefined,
@@ -316,7 +316,7 @@ pub const EAnimation = struct {
 //////////////////////////////////////////////////////////////
 
 pub const AnimationSystem = struct {
-    pub usingnamespace api.SystemTrait(AnimationSystem);
+    pub usingnamespace api.SystemMixin(AnimationSystem);
     var animation_type_refs: utils.DynArray(AnimationTypeReference) = undefined;
     var animation_refs: utils.DynArray(IAnimation) = undefined;
 

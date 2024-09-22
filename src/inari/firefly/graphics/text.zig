@@ -41,7 +41,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const Font = struct {
-    pub usingnamespace firefly.api.AssetTrait(Font, "Font");
+    pub usingnamespace firefly.api.AssetMixin(Font, "Font");
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -77,7 +77,7 @@ pub const Font = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EText = struct {
-    pub usingnamespace api.EComponent.Trait(@This(), "EText");
+    pub usingnamespace api.EComponent.Mixin(@This(), "EText");
 
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
@@ -103,8 +103,8 @@ pub const EText = struct {
 //////////////////////////////////////////////////////////////
 
 pub const DefaultTextRenderer = struct {
-    pub usingnamespace api.SystemTrait(DefaultTextRenderer);
-    pub usingnamespace graphics.EntityRendererTrait(DefaultTextRenderer);
+    pub usingnamespace api.SystemMixin(DefaultTextRenderer);
+    pub usingnamespace graphics.EntityRendererMixin(DefaultTextRenderer);
 
     pub const accept = .{ graphics.ETransform, EText };
 

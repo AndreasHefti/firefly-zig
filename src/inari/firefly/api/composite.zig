@@ -45,11 +45,11 @@ pub const CompositeTaskRef = struct {
 };
 
 pub const Composite = struct {
-    pub usingnamespace api.Component.Trait(Composite, .{
+    pub usingnamespace api.Component.Mixin(Composite, .{
         .name = "Composite",
         .subtypes = true,
     });
-    pub usingnamespace api.AttributeTrait(Composite);
+    pub usingnamespace api.AttributeMixin(Composite);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -199,9 +199,9 @@ pub const Composite = struct {
     }
 };
 
-pub fn CompositeTrait(comptime T: type) type {
+pub fn CompositeMixin(comptime T: type) type {
     return struct {
-        pub usingnamespace firefly.api.SubTypeTrait(Composite, T);
+        pub usingnamespace firefly.api.SubTypeMixin(Composite, T);
 
         pub fn new(subType: T) *T {
             return T.newSubType(

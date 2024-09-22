@@ -56,7 +56,7 @@ pub const Asset = asset.Asset;
 pub const AssetAspectGroup = utils.AspectGroup("Asset");
 pub const AssetKind = AssetAspectGroup.Kind;
 pub const AssetAspect = AssetAspectGroup.Aspect;
-pub const AssetTrait = asset.AssetTrait;
+pub const AssetMixin = asset.AssetMixin;
 pub const Component = component;
 pub const ComponentAspectGroup = utils.AspectGroup("ComponentType");
 pub const GroupKind = GroupAspectGroup.Kind;
@@ -66,11 +66,11 @@ pub const ComponentListener = component.ComponentListener;
 pub const ComponentKind = ComponentAspectGroup.Kind;
 pub const ComponentAspect = ComponentAspectGroup.Aspect;
 pub const GroupAspectGroup = utils.AspectGroup("ComponentGroup");
-pub const SubTypeTrait = component.SubTypeTrait;
+pub const SubTypeMixin = component.SubTypeMixin;
 pub const Condition = control.Condition;
 pub const System = system.System;
-pub const SystemTrait = system.SystemTrait;
-pub const EntityUpdateTrait = system.EntityUpdateTrait;
+pub const SystemMixin = system.SystemMixin;
+pub const EntityUpdateMixin = system.EntityUpdateMixin;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
@@ -83,11 +83,11 @@ pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const Task = control.Task;
 pub const Trigger = control.Trigger;
 pub const Control = control.Control;
-pub const ControlSubTypeTrait = control.ControlSubTypeTrait;
+pub const ControlSubTypeMixin = control.ControlSubTypeMixin;
 pub const VoidControl = control.VoidControl;
 pub const Composite = composite.Composite;
 pub const CompositeLifeCycle = composite.CompositeLifeCycle;
-pub const CompositeTrait = composite.CompositeTrait;
+pub const CompositeMixin = composite.CompositeMixin;
 pub const State = control.State;
 pub const StateEngine = control.StateEngine;
 pub const EntityStateEngine = control.EntityStateEngine;
@@ -324,7 +324,7 @@ pub const PropertyIterator = struct {
 //// Attributes
 //////////////////////////////////////////////////////////////
 
-pub fn AttributeTrait(comptime T: type) type {
+pub fn AttributeMixin(comptime T: type) type {
     const has_attributes_id: bool = @hasField(T, "attributes_id");
     const has_call_context: bool = @hasField(T, "call_context");
 
@@ -405,7 +405,7 @@ pub fn AttributeTrait(comptime T: type) type {
 }
 
 pub const Attributes = struct {
-    pub usingnamespace Component.Trait(Attributes, .{
+    pub usingnamespace Component.Mixin(Attributes, .{
         .name = "Attributes",
         .activation = false,
         .subscription = false,
@@ -509,14 +509,14 @@ pub const Attributes = struct {
 //// CallContext
 //////////////////////////////////////////////////////////////
 
-pub fn CallContextTrait(comptime T: type) type {
+pub fn CallContextMixin(comptime T: type) type {
     const has_call_context: bool = @hasField(T, "call_context");
 
     if (!has_call_context)
         @panic("Expecting type has field: call_context");
 
     return struct {
-        pub usingnamespace AttributeTrait(T);
+        pub usingnamespace AttributeMixin(T);
         const Self = @This();
 
         pub fn initCallContext(self: *T, init_attributes: bool) void {

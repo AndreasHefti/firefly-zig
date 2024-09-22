@@ -35,7 +35,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const EShape = struct {
-    pub usingnamespace api.EComponent.Trait(@This(), "EShape");
+    pub usingnamespace api.EComponent.Mixin(@This(), "EShape");
 
     id: Index = UNDEF_INDEX,
 
@@ -68,8 +68,8 @@ pub const EShape = struct {
 //////////////////////////////////////////////////////////////
 
 pub const DefaultShapeRenderer = struct {
-    pub usingnamespace api.SystemTrait(DefaultShapeRenderer);
-    pub usingnamespace graphics.EntityRendererTrait(DefaultShapeRenderer);
+    pub usingnamespace api.SystemMixin(DefaultShapeRenderer);
+    pub usingnamespace graphics.EntityRendererMixin(DefaultShapeRenderer);
 
     pub const accept = .{ graphics.ETransform, EShape };
 

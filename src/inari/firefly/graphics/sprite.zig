@@ -43,7 +43,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const SpriteTemplate = struct {
-    pub usingnamespace api.Component.Trait(
+    pub usingnamespace api.Component.Mixin(
         @This(),
         .{
             .name = "SpriteTemplate",
@@ -153,7 +153,7 @@ pub const SpriteTemplate = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ESprite = struct {
-    pub usingnamespace api.EComponent.Trait(@This(), "ESprite");
+    pub usingnamespace api.EComponent.Mixin(@This(), "ESprite");
 
     id: Index = utils.UNDEF_INDEX,
     template_id: Index = utils.UNDEF_INDEX,
@@ -192,7 +192,7 @@ pub const SpriteStamp = struct {
 };
 
 pub const SpriteSet = struct {
-    pub usingnamespace firefly.api.AssetTrait(SpriteSet, "SpriteSet");
+    pub usingnamespace firefly.api.AssetMixin(SpriteSet, "SpriteSet");
 
     _stamps: utils.DynArray(SpriteStamp) = undefined,
     _loaded_sprite_template_refs: utils.DynIndexArray = undefined,
@@ -323,8 +323,8 @@ pub const SpriteSet = struct {
 //////////////////////////////////////////////////////////////
 
 pub const DefaultSpriteRenderer = struct {
-    pub usingnamespace api.SystemTrait(DefaultSpriteRenderer);
-    pub usingnamespace graphics.EntityRendererTrait(DefaultSpriteRenderer);
+    pub usingnamespace api.SystemMixin(DefaultSpriteRenderer);
+    pub usingnamespace graphics.EntityRendererMixin(DefaultSpriteRenderer);
 
     pub const accept = .{ graphics.ETransform, ESprite };
 

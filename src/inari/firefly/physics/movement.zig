@@ -95,7 +95,7 @@ pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: 
 //////////////////////////////////////////////////////////////
 
 pub const EMovement = struct {
-    pub usingnamespace api.EComponent.Trait(@This(), "EMovement");
+    pub usingnamespace api.EComponent.Mixin(@This(), "EMovement");
 
     id: Index = UNDEF_INDEX,
     kind: physics.MovementKind = undefined,
@@ -271,8 +271,8 @@ pub fn adjustVelocity(movement: *EMovement) void {
 //////////////////////////////////////////////////////////////
 
 pub const MovementSystem = struct {
-    pub usingnamespace api.SystemTrait(MovementSystem);
-    pub usingnamespace api.EntityUpdateTrait(MovementSystem);
+    pub usingnamespace api.SystemMixin(MovementSystem);
+    pub usingnamespace api.EntityUpdateMixin(MovementSystem);
 
     pub const accept = .{EMovement};
 

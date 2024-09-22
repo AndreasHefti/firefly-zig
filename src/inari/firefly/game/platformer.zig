@@ -362,7 +362,7 @@ pub const PlatformerCollisionResolver = struct {
 //////////////////////////////////////////////////////////////
 
 pub const SimplePlatformerHorizontalMoveControl = struct {
-    pub usingnamespace api.ControlSubTypeTrait(SimplePlatformerHorizontalMoveControl, api.Entity);
+    pub usingnamespace api.ControlSubTypeMixin(SimplePlatformerHorizontalMoveControl, api.Entity);
 
     id: Index = UNDEF_INDEX,
     run_velocity_step: Float = 5,
@@ -411,7 +411,7 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
 //////////////////////////////////////////////////////////////
 
 pub const SimplePlatformerJumpControl = struct {
-    pub usingnamespace api.ControlSubTypeTrait(SimplePlatformerJumpControl, api.Entity);
+    pub usingnamespace api.ControlSubTypeMixin(SimplePlatformerJumpControl, api.Entity);
 
     id: Index = UNDEF_INDEX,
     jump_button: api.InputButtonType = api.InputButtonType.FIRE_1,

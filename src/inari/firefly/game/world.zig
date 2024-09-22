@@ -56,7 +56,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const Player = struct {
-    pub usingnamespace api.CompositeTrait(Player);
+    pub usingnamespace api.CompositeMixin(Player);
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -86,7 +86,7 @@ pub const Player = struct {
 //////////////////////////////////////////////////////////////
 
 pub const World = struct {
-    pub usingnamespace api.CompositeTrait(World);
+    pub usingnamespace api.CompositeMixin(World);
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -127,7 +127,7 @@ pub const RoomState = enum {
 pub const RoomCallback = *const fn (room_id: Index) void;
 
 pub const Room = struct {
-    pub usingnamespace api.CompositeTrait(Room);
+    pub usingnamespace api.CompositeMixin(Room);
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -338,7 +338,7 @@ pub const Room = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ERoomTransition = struct {
-    pub usingnamespace api.EComponent.Trait(ERoomTransition, "ERoomTransition");
+    pub usingnamespace api.EComponent.Mixin(ERoomTransition, "ERoomTransition");
 
     id: Index = UNDEF_INDEX,
     condition: ?api.CallPredicate = null,

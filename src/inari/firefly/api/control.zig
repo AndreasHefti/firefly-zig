@@ -36,7 +36,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////////////////
 /// A generic condition that uses a api.RegPredicate to check
 pub const Condition = struct {
-    pub usingnamespace api.Component.Trait(Condition, .{
+    pub usingnamespace api.Component.Mixin(Condition, .{
         .name = "Condition",
         .activation = false,
         .subscription = false,
@@ -76,12 +76,12 @@ pub const Condition = struct {
 //////////////////////////////////////////////////////////////////////////
 
 pub const Control = struct {
-    pub usingnamespace api.Component.Trait(Control, .{
+    pub usingnamespace api.Component.Mixin(Control, .{
         .name = "Control",
         .grouping = true,
         .subtypes = true,
     });
-    pub usingnamespace api.CallContextTrait(Control);
+    pub usingnamespace api.CallContextMixin(Control);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -101,10 +101,10 @@ pub const Control = struct {
     }
 };
 
-pub fn ControlSubTypeTrait(comptime T: type, comptime ControlledType: type) type {
+pub fn ControlSubTypeMixin(comptime T: type, comptime ControlledType: type) type {
     return struct {
         pub const component_type = ControlledType;
-        pub usingnamespace firefly.api.SubTypeTrait(Control, T);
+        pub usingnamespace firefly.api.SubTypeMixin(Control, T);
 
         pub fn new(subtype: T, update: api.CallFunction) *T {
             if (!initialized) @panic("Not Initialized");
@@ -127,7 +127,7 @@ pub fn ControlSubTypeTrait(comptime T: type, comptime ControlledType: type) type
 pub const VoidControl = struct {
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    pub usingnamespace ControlSubTypeTrait(VoidControl, VoidControl);
+    pub usingnamespace ControlSubTypeMixin(VoidControl, VoidControl);
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -135,7 +135,7 @@ pub const VoidControl = struct {
 //////////////////////////////////////////////////////////////////////////
 
 pub const Task = struct {
-    pub usingnamespace api.Component.Trait(Task, .{
+    pub usingnamespace api.Component.Mixin(Task, .{
         .name = "Task",
         .activation = false,
         .subscription = false,
@@ -224,10 +224,10 @@ pub const Task = struct {
 };
 
 pub const Trigger = struct {
-    pub usingnamespace api.Component.Trait(Trigger, .{
+    pub usingnamespace api.Component.Mixin(Trigger, .{
         .name = "Trigger",
     });
-    pub usingnamespace api.CallContextTrait(Trigger);
+    pub usingnamespace api.CallContextMixin(Trigger);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -288,8 +288,8 @@ pub const State = struct {
 //////////////////////////////////////////////////////////////
 
 pub const StateEngine = struct {
-    pub usingnamespace api.Component.Trait(StateEngine, .{ .name = "StateEngine" });
-    pub usingnamespace api.CallContextTrait(StateEngine);
+    pub usingnamespace api.Component.Mixin(StateEngine, .{ .name = "StateEngine" });
+    pub usingnamespace api.CallContextMixin(StateEngine);
 
     id: Index = UNDEF_INDEX,
     name: ?String,
@@ -345,8 +345,8 @@ pub const StateEngine = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EntityStateEngine = struct {
-    pub usingnamespace api.Component.Trait(EntityStateEngine, .{ .name = "EntityStateEngine" });
-    pub usingnamespace api.CallContextTrait(EntityStateEngine);
+    pub usingnamespace api.Component.Mixin(EntityStateEngine, .{ .name = "EntityStateEngine" });
+    pub usingnamespace api.CallContextMixin(EntityStateEngine);
 
     id: Index = UNDEF_INDEX,
     name: ?String,
@@ -378,7 +378,7 @@ pub const EntityStateEngine = struct {
 };
 
 pub const EState = struct {
-    pub usingnamespace api.EComponent.Trait(@This(), "EState");
+    pub usingnamespace api.EComponent.Mixin(@This(), "EState");
 
     id: Index = UNDEF_INDEX,
     state_engine_ref: Index = undefined,
@@ -395,7 +395,7 @@ pub const EState = struct {
 //////////////////////////////////////////////////////////////
 
 pub const StateSystem = struct {
-    pub usingnamespace api.SystemTrait(StateSystem);
+    pub usingnamespace api.SystemMixin(StateSystem);
 
     pub fn update(_: api.UpdateEvent) void {
         StateEngine.processActive(processEngine);
@@ -424,8 +424,8 @@ pub const StateSystem = struct {
 };
 
 pub const EntityStateSystem = struct {
-    pub usingnamespace api.SystemTrait(EntityStateSystem);
-    pub usingnamespace api.EntityUpdateTrait(EntityStateSystem);
+    pub usingnamespace api.SystemMixin(EntityStateSystem);
+    pub usingnamespace api.EntityUpdateMixin(EntityStateSystem);
     pub const accept = .{EState};
 
     pub fn updateEntities(components: *utils.BitSet) void {

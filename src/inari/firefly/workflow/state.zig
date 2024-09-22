@@ -74,7 +74,7 @@
 // //////////////////////////////////////////////////////////////
 
 // pub const StateEngine = struct {
-//     pub usingnamespace Component.Trait(StateEngine, .{ .name = "StateEngine" });
+//     pub usingnamespace Component.Mixin(StateEngine, .{ .name = "StateEngine" });
 
 //     id: Index = UNDEF_INDEX,
 //     name: ?String,
@@ -127,7 +127,7 @@
 // //////////////////////////////////////////////////////////////
 
 // pub const EntityStateEngine = struct {
-//     pub usingnamespace Component.Trait(EntityStateEngine, .{ .name = "EntityStateEngine" });
+//     pub usingnamespace Component.Mixin(EntityStateEngine, .{ .name = "EntityStateEngine" });
 
 //     id: Index = UNDEF_INDEX,
 //     name: ?String,
@@ -156,7 +156,7 @@
 // };
 
 // pub const EState = struct {
-//     pub usingnamespace EComponent.Trait(@This(), "EState");
+//     pub usingnamespace EComponent.Mixin(@This(), "EState");
 
 //     id: Index = UNDEF_INDEX,
 //     state_engine: *EntityStateEngine,

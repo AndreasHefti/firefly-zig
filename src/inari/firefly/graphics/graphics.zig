@@ -96,10 +96,10 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////
-//// EntityRendererTrait useful for entity renderer systems
+//// EntityRendererMixin useful for entity renderer systems
 //////////////////////////////////////////////////////////////
 
-pub fn EntityRendererTrait(comptime T: type) type {
+pub fn EntityRendererMixin(comptime T: type) type {
     return struct {
         comptime {
             if (@typeInfo(T) != .Struct)
@@ -111,7 +111,7 @@ pub fn EntityRendererTrait(comptime T: type) type {
         pub var entity_condition: ?api.EntityTypeCondition = null;
         pub var entities: ViewLayerMapping = undefined;
 
-        pub fn systemTraitInit() void {
+        pub fn systemMixinInit() void {
             entities = ViewLayerMapping.new();
             if (@hasDecl(T, "accept") or @hasDecl(T, "dismiss")) {
                 entity_condition = api.EntityTypeCondition{
@@ -122,7 +122,7 @@ pub fn EntityRendererTrait(comptime T: type) type {
             }
         }
 
-        pub fn systemTraitDeinit() void {
+        pub fn systemMixinDeinit() void {
             entity_condition = undefined;
             entities.deinit();
             entities = undefined;
@@ -144,10 +144,10 @@ pub fn EntityRendererTrait(comptime T: type) type {
 }
 
 //////////////////////////////////////////////////////////////
-//// ComponentRendererTrait useful for component renderer systems
+//// ComponentRendererMixin useful for component renderer systems
 //////////////////////////////////////////////////////////////
 
-pub fn ViewLayerComponentRendererTrait(comptime T: type, comptime CType: type) type {
+pub fn ViewLayerComponentRendererMixin(comptime T: type, comptime CType: type) type {
     return struct {
         comptime {
             if (@typeInfo(T) != .Struct)
@@ -159,11 +159,11 @@ pub fn ViewLayerComponentRendererTrait(comptime T: type, comptime CType: type) t
         pub const component_register_type = CType;
         pub var components: ViewLayerMapping = undefined;
 
-        pub fn systemTraitInit() void {
+        pub fn systemMixinInit() void {
             components = ViewLayerMapping.new();
         }
 
-        pub fn systemTraitDeinit() void {
+        pub fn systemMixinDeinit() void {
             components.deinit();
             components = undefined;
         }
@@ -189,7 +189,7 @@ pub fn ViewLayerComponentRendererTrait(comptime T: type, comptime CType: type) t
 //////////////////////////////////////////////////////////////
 
 pub const Shader = struct {
-    pub usingnamespace firefly.api.AssetTrait(Shader, "Shader");
+    pub usingnamespace firefly.api.AssetMixin(Shader, "Shader");
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -270,7 +270,7 @@ pub const Shader = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Texture = struct {
-    pub usingnamespace firefly.api.AssetTrait(Texture, "Texture");
+    pub usingnamespace firefly.api.AssetMixin(Texture, "Texture");
 
     id: Index = UNDEF_INDEX,
     name: String,

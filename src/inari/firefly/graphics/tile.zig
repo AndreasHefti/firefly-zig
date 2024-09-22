@@ -51,7 +51,7 @@ pub const BasicTileTypes = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETile = struct {
-    pub usingnamespace api.EComponent.Trait(@This(), "ETile");
+    pub usingnamespace api.EComponent.Mixin(@This(), "ETile");
 
     id: Index = UNDEF_INDEX,
     sprite_template_id: Index = UNDEF_INDEX,
@@ -83,7 +83,7 @@ pub const ETile = struct {
 //////////////////////////////////////////////////////////////
 
 pub const TileGrid = struct {
-    pub usingnamespace api.Component.Trait(TileGrid, .{
+    pub usingnamespace api.Component.Mixin(TileGrid, .{
         .name = "TileGrid",
     });
 
@@ -337,8 +337,8 @@ pub const TileGrid = struct {
 //////////////////////////////////////////////////////////////
 
 pub const DefaultTileGridRenderer = struct {
-    pub usingnamespace api.SystemTrait(DefaultTileGridRenderer);
-    pub usingnamespace graphics.ViewLayerComponentRendererTrait(DefaultTileGridRenderer, TileGrid);
+    pub usingnamespace api.SystemMixin(DefaultTileGridRenderer);
+    pub usingnamespace graphics.ViewLayerComponentRendererMixin(DefaultTileGridRenderer, TileGrid);
 
     pub fn renderComponents(components: *firefly.utils.BitSet, event: graphics.ViewRenderEvent) void {
         var i = components.nextSetBit(0);

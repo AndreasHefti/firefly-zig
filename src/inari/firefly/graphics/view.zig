@@ -156,7 +156,7 @@ pub const ViewChangeEvent = struct {
 //////////////////////////////////////////////////////////////
 
 pub const View = struct {
-    pub usingnamespace api.Component.Trait(View, .{
+    pub usingnamespace api.Component.Mixin(View, .{
         .name = "View",
         .control = true,
     });
@@ -326,7 +326,7 @@ pub const View = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Layer = struct {
-    pub usingnamespace api.Component.Trait(Layer, .{ .name = "Layer" });
+    pub usingnamespace api.Component.Mixin(Layer, .{ .name = "Layer" });
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -355,7 +355,7 @@ pub const Layer = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EView = struct {
-    pub usingnamespace api.EComponent.Trait(EView, "EView");
+    pub usingnamespace api.EComponent.Mixin(EView, "EView");
 
     id: Index = UNDEF_INDEX,
     view_id: Index = UNDEF_INDEX,
@@ -380,7 +380,7 @@ pub const EView = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETransform = struct {
-    pub usingnamespace api.EComponent.Trait(ETransform, "ETransform");
+    pub usingnamespace api.EComponent.Mixin(ETransform, "ETransform");
 
     id: Index = UNDEF_INDEX,
     position: PosF = .{ 0, 0 },
@@ -448,8 +448,8 @@ pub const ETransform = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Scene = struct {
-    pub usingnamespace api.Component.Trait(Scene, .{ .name = "Scene" });
-    pub usingnamespace api.CallContextTrait(Scene);
+    pub usingnamespace api.Component.Mixin(Scene, .{ .name = "Scene" });
+    pub usingnamespace api.CallContextMixin(Scene);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -562,7 +562,7 @@ pub const Scene = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ViewRenderer = struct {
-    pub usingnamespace api.SystemTrait(ViewRenderer);
+    pub usingnamespace api.SystemMixin(ViewRenderer);
     var VIEW_RENDER_EVENT = api.ViewRenderEvent{};
     pub const render_order = 0;
 

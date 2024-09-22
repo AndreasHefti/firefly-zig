@@ -93,7 +93,7 @@ pub const TileTemplate = struct {
 };
 
 pub const TileSet = struct {
-    pub usingnamespace api.Component.Trait(
+    pub usingnamespace api.Component.Mixin(
         @This(),
         .{
             .name = "TileSet",
@@ -300,7 +300,7 @@ pub const TileGridData = struct {
 };
 
 pub const TileMapping = struct {
-    pub usingnamespace api.Component.Trait(
+    pub usingnamespace api.Component.Mixin(
         @This(),
         .{
             .name = "TileMapping",

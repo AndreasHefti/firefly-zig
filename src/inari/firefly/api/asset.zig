@@ -26,7 +26,7 @@ pub fn deinit() void {
 //// Public API
 //////////////////////////////////////////////////////////////////////////
 pub const Asset = struct {
-    pub usingnamespace api.Component.Trait(Asset, .{
+    pub usingnamespace api.Component.Mixin(Asset, .{
         .name = "Asset",
         .subtypes = true,
     });
@@ -35,12 +35,12 @@ pub const Asset = struct {
     name: ?String = null,
     asset_type: api.AssetAspect,
 
-    pub usingnamespace AssetLoadTrait(Asset);
+    pub usingnamespace AssetLoadMixin(Asset);
 };
 
-pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
+pub fn AssetMixin(comptime T: type, comptime type_name: String) type {
     return struct {
-        pub usingnamespace firefly.api.SubTypeTrait(api.Asset, T);
+        pub usingnamespace firefly.api.SubTypeMixin(api.Asset, T);
 
         pub const ASSET_TYPE_NAME = type_name;
 
@@ -58,11 +58,11 @@ pub fn AssetTrait(comptime T: type, comptime type_name: String) type {
             );
         }
 
-        pub usingnamespace AssetLoadTrait(T);
+        pub usingnamespace AssetLoadMixin(T);
     };
 }
 
-fn AssetLoadTrait(comptime T: type) type {
+fn AssetLoadMixin(comptime T: type) type {
     return struct {
         pub fn load(self: *T) void {
             Asset.activateById(self.id, true);

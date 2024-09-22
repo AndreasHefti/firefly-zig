@@ -9,7 +9,7 @@ const Vector2f = firefly.utils.Vector2f;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 pub const Entity = struct {
-    pub usingnamespace api.Component.Trait(Entity, .{
+    pub usingnamespace api.Component.Mixin(Entity, .{
         .name = "Entity",
         .control = true,
         .grouping = true,
@@ -133,7 +133,7 @@ pub const EntityTypeCondition = struct {
 //////////////////////////////////////////////////////////////////////////
 
 pub const EMultiplier = struct {
-    pub usingnamespace EComponent.Trait(@This(), "EMultiplier");
+    pub usingnamespace EComponent.Mixin(@This(), "EMultiplier");
 
     id: Index = UNDEF_INDEX,
     positions: []const Vector2f = undefined,
@@ -158,7 +158,7 @@ var INTERFACE_TABLE: utils.DynArray(EComponentTypeInterface) = undefined;
 pub const EComponent = struct {
     var initialized = false;
 
-    pub fn Trait(comptime T: type, comptime type_name: String) type {
+    pub fn Mixin(comptime T: type, comptime type_name: String) type {
         return struct {
             // component type fields
             pub const COMPONENT_TYPE_NAME = type_name;
@@ -333,7 +333,7 @@ pub fn EComponentPool(comptime T: type) type {
         }
 
         fn register(c: T, id: Index) *T {
-            checkComponentTrait(c);
+            checkComponentMixin(c);
 
             if (c.id != UNDEF_INDEX)
                 @panic("Entity Component id mismatch");
@@ -381,7 +381,7 @@ pub fn EComponentPool(comptime T: type) type {
             }
         }
 
-        fn checkComponentTrait(c: T) void {
+        fn checkComponentMixin(c: T) void {
             comptime {
                 if (@typeInfo(@TypeOf(c)) != .Struct) @compileError("Expects component is a struct.");
                 if (!@hasField(@TypeOf(c), "id")) @compileError("Expects component to have field 'id'.");

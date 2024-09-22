@@ -19,7 +19,7 @@ var UPDATE_EVENT = UpdateEvent{};
 var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
 var running = false;
 
-// TODO remove this after System refactoring. Use Traits instead
+// TODO remove this after System refactoring. Use Mixins instead
 pub const CoreSystems = struct {
     pub const STATE = @typeName(api.StateSystem);
     pub const ENTITY_STATE = @typeName(api.EntityStateSystem);

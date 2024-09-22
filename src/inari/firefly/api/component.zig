@@ -114,10 +114,10 @@ pub const ComponentEvent = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Component Traits
+//// Component Mixins
 //////////////////////////////////////////////////////////////
 
-pub fn Trait(comptime T: type, comptime context: Context) type {
+pub fn Mixin(comptime T: type, comptime context: Context) type {
     return struct {
         pub const COMPONENT_TYPE_NAME = context.name;
         pub var aspect: api.ComponentAspect = undefined;
@@ -184,16 +184,16 @@ pub fn Trait(comptime T: type, comptime context: Context) type {
 
         // optional component type features
         const empty_struct = struct {};
-        pub usingnamespace if (context.name_mapping) NameMappingTrait(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.activation) ActivationTrait(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.subscription or context.subtypes) SubscriptionTrait(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.control) ControlTrait(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.grouping) GroupingTrait(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.subtypes) ComponentSubTypingTrait(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.name_mapping) NameMappingMixin(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.activation) ActivationMixin(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.subscription or context.subtypes) SubscriptionMixin(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.control) ControlMixin(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.grouping) GroupingMixin(T, @This(), context) else empty_struct;
+        pub usingnamespace if (context.subtypes) ComponentSubTypingMixin(T, @This(), context) else empty_struct;
     };
 }
 
-fn ComponentSubTypingTrait(comptime T: type, comptime _: anytype, comptime context: Context) type {
+fn ComponentSubTypingMixin(comptime T: type, comptime _: anytype, comptime context: Context) type {
     return struct {
         pub fn registerSubtype(comptime SubType: type) void {
             ComponentSubType(T, SubType).init();
@@ -212,7 +212,7 @@ fn ComponentSubTypingTrait(comptime T: type, comptime _: anytype, comptime conte
     };
 }
 
-fn GroupingTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
+fn GroupingMixin(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     comptime {
         if (!@hasField(T, "groups"))
             @compileError("Expects component type to have field: groups: ?GroupKind");
@@ -263,7 +263,7 @@ fn GroupingTrait(comptime T: type, comptime adapter: anytype, comptime _: Contex
     };
 }
 
-fn SubscriptionTrait(comptime _: type, comptime adapter: anytype, comptime _: Context) type {
+fn SubscriptionMixin(comptime _: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
         pub fn subscribe(listener: ComponentListener) void {
             if (adapter.pool.eventDispatch) |*ed| ed.register(listener);
@@ -275,7 +275,7 @@ fn SubscriptionTrait(comptime _: type, comptime adapter: anytype, comptime _: Co
     };
 }
 
-fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime context: Context) type {
+fn NameMappingMixin(comptime T: type, comptime adapter: anytype, comptime context: Context) type {
     comptime {
         if (!@hasField(T, "name"))
             @compileError("Expects component type to have field: name: ?String");
@@ -332,7 +332,7 @@ fn NameMappingTrait(comptime T: type, comptime adapter: anytype, comptime contex
     };
 }
 
-fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
+fn ActivationMixin(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
         pub fn activateById(id: Index, active: bool) void {
             adapter.pool.activate(id, active);
@@ -412,7 +412,7 @@ fn ActivationTrait(comptime T: type, comptime adapter: anytype, comptime _: Cont
     };
 }
 
-fn ControlTrait(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
+fn ControlMixin(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
     return struct {
         pub fn withActiveControl(self: *T, update: api.CallFunction, name: ?String) *T {
             return withControl(self, update, name, true);
@@ -691,7 +691,7 @@ fn ComponentPool(comptime T: type) type {
 //// Component Subtype
 //////////////////////////////////////////////////////////////////////////
 
-pub fn SubTypeTrait(comptime T: type, comptime SubType: type) type {
+pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
     comptime {
         if (!T.allowSubtypes())
             @compileError("Component of type does not support subtypes");

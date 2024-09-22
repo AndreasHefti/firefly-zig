@@ -140,7 +140,7 @@ pub const AudioPlayer = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Sound = struct {
-    pub usingnamespace firefly.api.AssetTrait(Sound, "Sound");
+    pub usingnamespace firefly.api.AssetMixin(Sound, "Sound");
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -172,7 +172,7 @@ pub const Sound = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Music = struct {
-    pub usingnamespace firefly.api.AssetTrait(Music, "Music");
+    pub usingnamespace firefly.api.AssetMixin(Music, "Music");
 
     id: Index = UNDEF_INDEX,
     name: String,

@@ -9,15 +9,15 @@ Features:
     - [x] utils - geometry utilities
     - [x] utils - DynArray, DynIndexArray and DynIndexMap for index mapping
     - [x] utils - Event and EventDispatcher for define and using events
-    - [x] utils - Aspects, Aspect Groups and Kind (TODO AspectsTrait?)
+    - [x] utils - Aspects, Aspect Groups and Kind (TODO AspectsMixin?)
     - [x] utils - Bitset and Bit-Mask
 
     - [x] api - NamePool to store arbitrary names on the heap
-    - [x] api - Components, Entities/Components, Systems (with Traits)
-    - [x] api - Attributes Component and CallContext (with Traits)
-    - [x] api - Composite Component(with Trait)
-    - [x] api - Assets Component (with Trait)
-    - [x] api - Control Component (with Trait)
+    - [x] api - Components, Entities/Components, Systems (with Mixins)
+    - [x] api - Attributes Component and CallContext (with Mixins)
+    - [x] api - Composite Component(with Mixin)
+    - [x] api - Assets Component (with Mixin)
+    - [x] api - Control Component (with Mixin)
     - [x] api - Trigger Component
     - [x] api - Task Component
     - [x] api - State Engine Component
