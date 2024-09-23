@@ -174,14 +174,6 @@ pub fn Mixin(comptime T: type, comptime context: Context) type {
                 pool.clear(id);
         }
 
-        pub fn processBitSet(indices: *utils.BitSet, f: *const fn (*T) void) void {
-            var next = indices.nextSetBit(0);
-            while (next) |i| {
-                if (pool.items.get(i)) |c| f(c);
-                next = indices.nextSetBit(i + 1);
-            }
-        }
-
         // optional component type features
         const empty_struct = struct {};
         pub usingnamespace if (context.name_mapping) NameMappingMixin(T, @This(), context) else empty_struct;

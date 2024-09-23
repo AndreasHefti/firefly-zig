@@ -9,7 +9,7 @@ Features:
     - [x] utils - geometry utilities
     - [x] utils - DynArray, DynIndexArray and DynIndexMap for index mapping
     - [x] utils - Event and EventDispatcher for define and using events
-    - [x] utils - Aspects, Aspect Groups and Kind (TODO AspectsMixin?)
+    - [x] utils - Aspects, Aspect Groups and Kind (TODO Aspects Mixin?)
     - [x] utils - Bitset and Bit-Mask
 
     - [x] api - NamePool to store arbitrary names on the heap
