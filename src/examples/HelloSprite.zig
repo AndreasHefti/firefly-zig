@@ -26,12 +26,12 @@ fn _Example_One_Entity_No_Views() void {
         .is_mipmap = false,
     }).load();
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     }).id;
 
-    _ = Entity.new(.{ .name = "TestEntity" })
+    _ = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{
         .position = .{ 64, 164 },
         .scale = .{ 4, 4 },

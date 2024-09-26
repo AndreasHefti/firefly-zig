@@ -28,16 +28,16 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Composite.registerSubtype(World);
-    api.Composite.registerSubtype(Room);
-    api.Composite.registerSubtype(Player);
+    api.Composite.Subtypes.register(World);
+    api.Composite.Subtypes.register(Room);
+    api.Composite.Subtypes.register(Player);
     api.EComponent.registerEntityComponent(ERoomTransition);
 
-    _ = api.Task.new(.{
+    _ = api.Task.Component.new(.{
         .name = game.Tasks.ROOM_TRANSITION_BUILDER,
         .function = createRoomTransition,
     });
-    _ = api.Task.new(.{
+    _ = api.Task.Component.new(.{
         .name = game.Tasks.SIMPLE_ROOM_TRANSITION_SCENE_BUILDER,
         .function = SimpleRoomTransitionScene.buildSimpleRoomTransitionScene,
     });
@@ -48,7 +48,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    api.Task.disposeByName(game.Tasks.ROOM_TRANSITION_BUILDER);
+    api.Task.Naming.dispose(game.Tasks.ROOM_TRANSITION_BUILDER);
 }
 
 //////////////////////////////////////////////////////////////
@@ -73,10 +73,10 @@ pub const Player = struct {
         if (self._loaded)
             return;
 
-        api.Composite.byId(self.id).load();
+        api.Composite.Component.byId(self.id).load();
         var cam = game.SimplePivotCamera.byId(self._cam_id);
         cam.pivot = &self._transform.position;
-        api.Entity.activateById(self._entity_id, true);
+        api.Entity.Activation.activate(self._entity_id);
         game.pauseGame();
     }
 };
@@ -96,7 +96,7 @@ pub const World = struct {
     }
 
     pub fn loadByName(name: String) void {
-        if (api.Composite.byName(name)) |c| c.load();
+        if (api.Composite.Naming.byName(name)) |c| c.load();
     }
 };
 
@@ -158,7 +158,7 @@ pub const Room = struct {
         if (self.state != .CREATED) return;
         defer self.state = .LOADED;
 
-        api.Composite.byId(self.id).load();
+        api.Composite.Component.byId(self.id).load();
     }
 
     // 3. Activate  runs activation tasks to create needed components and entities are created from in memory meta  data,
@@ -170,7 +170,7 @@ pub const Room = struct {
             return;
         }
 
-        api.Composite.activateById(self.id, true);
+        api.Composite.Activation.activate(self.id);
         self.state = .ACTIVATED;
         game.pauseGame();
     }
@@ -220,7 +220,7 @@ pub const Room = struct {
 
         // run start scene if defined. Callback gets invoked when scene finished
         if (self.start_scene_ref) |scene_name| {
-            if (graphics.Scene.byName(scene_name)) |scene| {
+            if (graphics.Scene.Naming.byName(scene_name)) |scene| {
                 self._run_callback = callback;
                 scene.call_context.caller_id = self.id;
                 scene.callback = runRoom;
@@ -261,7 +261,7 @@ pub const Room = struct {
 
         // if end scene defined run it and wait for callback
         if (self.end_scene_ref) |scene_name| {
-            if (graphics.Scene.byName(scene_name)) |scene| {
+            if (graphics.Scene.Naming.byName(scene_name)) |scene| {
                 self._stop_callback = callback;
                 scene.call_context.caller_id = self.id;
                 scene.callback = stopRoomCallback;
@@ -269,7 +269,7 @@ pub const Room = struct {
             } else utils.panic(api.ALLOC, "End scene with name {s} not found", .{scene_name});
         } else {
             // just end the Room immediately
-            api.Composite.activateById(self.id, false);
+            api.Composite.Activation.deactivate(self.id);
             self.state = .LOADED;
             if (callback) |c|
                 c(self.id);
@@ -301,7 +301,7 @@ pub const Room = struct {
         var room = Room.byId(room_id);
         defer room._unload_callback = null;
 
-        if (api.Composite.byName(room.name)) |composite|
+        if (api.Composite.Naming.byName(room.name)) |composite|
             composite.unload();
 
         room.state = .CREATED;
@@ -314,7 +314,7 @@ pub const Room = struct {
         var room = Room.byId(ctx.caller_id);
         defer room._stop_callback = null;
 
-        api.Composite.activateByName(room.name, false);
+        api.Composite.Activation.deactivateByName(room.name);
         room.state = .LOADED;
         room.player_ref = null;
         if (room._stop_callback) |c| c(room.id);
@@ -350,8 +350,8 @@ pub const ERoomTransition = struct {
 fn createRoomTransition(ctx: *api.CallContext) void {
     // create the room transition entity
     const name = ctx.string(game.TaskAttributes.NAME);
-    const view_id = graphics.View.idByName(ctx.attribute(game.TaskAttributes.VIEW_NAME));
-    const layer_id = graphics.Layer.idByName(ctx.attribute(game.TaskAttributes.LAYER_NAME));
+    const view_id = graphics.View.Naming.getId(ctx.attribute(game.TaskAttributes.VIEW_NAME));
+    const layer_id = graphics.Layer.Naming.getId(ctx.attribute(game.TaskAttributes.LAYER_NAME));
     const bounds = ctx.rectF(game.TaskAttributes.BOUNDS);
 
     var properties = ctx.properties(game.TaskAttributes.PROPERTIES);
@@ -367,7 +367,7 @@ fn createRoomTransition(ctx: *api.CallContext) void {
         else => "NONE",
     };
 
-    const trans_entity_id = api.Entity.new(.{ .name = name })
+    const trans_entity_id = api.Entity.Component.new(.{ .name = name })
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
         .withComponent(graphics.EView{ .view_id = view_id, .layer_id = layer_id })
         .withComponent(physics.EContact{
@@ -384,7 +384,7 @@ fn createRoomTransition(ctx: *api.CallContext) void {
 
     // add transition entity as owned reference if requested
     if (ctx.c_ref_callback) |callback|
-        callback(api.Entity.referenceById(trans_entity_id, true).?, ctx);
+        callback(api.Entity.Component.getReference(trans_entity_id, true).?, ctx);
 }
 
 const TransitionState = struct {
@@ -402,7 +402,7 @@ pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan
 
     const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return false;
     const transition_id = c.entity_id;
-    const player = api.Entity.byId(player_id);
+    const player = api.Entity.Component.byId(player_id);
     const player_transform = graphics.ETransform.byId(player_id) orelse return false;
     const move = physics.EMovement.byId(player_id) orelse return false;
     const transition = ERoomTransition.byId(transition_id) orelse return false;
@@ -439,7 +439,7 @@ fn roomUnloadedCallback(_: Index) void {
         target_room.activateRoom();
 
         // set player position adjust cam
-        const player = api.Entity.byId(player_id);
+        const player = api.Entity.Component.byId(player_id);
         const player_transform = graphics.ETransform.byId(player_id) orelse return;
         const player_movement = physics.EMovement.byId(player_id) orelse return;
         const target_transition_transform = graphics.ETransform.byName(target_transition) orelse return;
@@ -477,7 +477,7 @@ pub const SimpleRoomTransitionScene = struct {
         const name = ctx.string(game.TaskAttributes.NAME);
         const entry = !ctx.boolean("exit");
 
-        var scene = graphics.Scene.new(.{
+        var scene = graphics.Scene.Component.new(.{
             .name = name,
             .init_function = entityInit,
             .dispose_function = disposeEntity,
@@ -494,14 +494,14 @@ pub const SimpleRoomTransitionScene = struct {
         const layer_name = ctx.string(game.TaskAttributes.LAYER_NAME);
         const entry = !ctx.boolean("exit");
 
-        if (graphics.View.byName(view_name)) |view| {
-            ctx.id_1 = api.Entity.new(.{ .name = name })
+        if (graphics.View.Naming.byName(view_name)) |view| {
+            ctx.id_1 = api.Entity.Component.new(.{ .name = name })
                 .withComponent(graphics.ETransform{
                 .scale = .{ view.projection.width, view.projection.height },
             })
                 .withComponent(graphics.EView{
-                .view_id = graphics.View.idByName(view_name),
-                .layer_id = graphics.Layer.idByName(layer_name),
+                .view_id = graphics.View.Naming.getId(view_name),
+                .layer_id = graphics.Layer.Naming.getId(layer_name),
             })
                 .withComponent(graphics.EShape{
                 .blend_mode = api.BlendMode.ALPHA,
@@ -515,7 +515,7 @@ pub const SimpleRoomTransitionScene = struct {
 
     fn disposeEntity(ctx: *api.CallContext) void {
         const name = ctx.attribute(game.TaskAttributes.NAME);
-        api.Entity.disposeByName(name);
+        api.Entity.Naming.dispose(name);
         ctx.id_1 = UNDEF_INDEX;
     }
 

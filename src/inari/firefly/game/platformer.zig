@@ -28,8 +28,8 @@ pub fn init() void {
         return;
 
     PlatformerCollisionResolver.init();
-    api.Control.registerSubtype(SimplePlatformerHorizontalMoveControl);
-    api.Control.registerSubtype(SimplePlatformerJumpControl);
+    api.Control.Subtypes.register(SimplePlatformerHorizontalMoveControl);
+    api.Control.Subtypes.register(SimplePlatformerJumpControl);
 }
 
 pub fn deinit() void {
@@ -147,7 +147,7 @@ pub const PlatformerCollisionResolver = struct {
             .full_scan = true,
         });
 
-        inst._terrain_constraint_ref = physics.ContactConstraint.byName("PlatformerCollisionResolver").?;
+        inst._terrain_constraint_ref = physics.ContactConstraint.Naming.byName("PlatformerCollisionResolver").?;
         const x_half: CInt = @divFloor(inst.contact_bounds[2], 2);
         const x_full: CInt = inst.contact_bounds[2] - 3;
         const y_half: CInt = @divFloor(inst.contact_bounds[3], 2);

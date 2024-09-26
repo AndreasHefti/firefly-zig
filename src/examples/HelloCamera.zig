@@ -41,12 +41,12 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    const sprite = SpriteTemplate.new(.{
+    const sprite = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    const view = View.new(.{
+    const view = View.Component.new(.{
         .name = "TestView",
         .position = .{ 20, 40 },
         .pivot = .{ 0, 0 },
@@ -65,30 +65,33 @@ fn init() void {
         },
     });
 
-    const entity = Entity.new(.{ .name = "TestEntity" })
-        .withActiveControl(entity_control, "PlayerControl")
+    const entity = Entity.Component.new(.{ .name = "TestEntity" })
+        .withControl(entity_control, "PlayerControl", true)
         .withComponent(EView{ .view_id = view.id })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
         .withComponent(ESprite{ .template_id = sprite.id })
         .activate();
 
-    _ = view.withActiveControlOf(SimplePivotCamera{
-        .name = "Camera1",
-        .pixel_perfect = false,
-        .snap_to_bounds = .{ -100, -100, 800, 800 },
-        .pivot = &ETransform.byId(entity.id).?.position,
-        .offset = .{ 16, 16 },
-        .velocity_relative_to_pivot = .{ 0.1, 0.1 },
-    });
+    View.Control.addActiveOf(
+        view.id,
+        SimplePivotCamera{
+            .name = "Camera1",
+            .pixel_perfect = false,
+            .snap_to_bounds = .{ -100, -100, 800, 800 },
+            .pivot = &ETransform.byId(entity.id).?.position,
+            .offset = .{ 16, 16 },
+            .velocity_relative_to_pivot = .{ 0.1, 0.1 },
+        },
+    );
 
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_UP, InputButtonType.UP);
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_DOWN, InputButtonType.DOWN);
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_LEFT, InputButtonType.LEFT);
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_RIGHT, InputButtonType.RIGHT);
 
-    View.activateById(view.id, true);
+    View.Activation.activate(view.id);
 
-    _ = Entity.new(.{ .name = "RefEntity" })
+    _ = Entity.Component.new(.{ .name = "RefEntity" })
         .withComponent(EView{ .view_id = view.id })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
         .withComponent(ESprite{ .template_id = sprite.id })
@@ -104,10 +107,9 @@ fn init() void {
         .{ 300, 350 },
         .{ 400, 250 },
         .{ 500, 150 },
-    }) })
-        .activate();
+    }) }).activate();
 
-    _ = Entity.new(.{ .name = "Border" })
+    _ = Entity.Component.new(.{ .name = "Border" })
         .withComponent(EView{ .view_id = view.id })
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .vertices = firefly.api.allocFloatArray([_]Float{ -100, -100, 800, 800 }), .fill = false, .thickness = 2, .color = .{ 150, 0, 0, 255 } })

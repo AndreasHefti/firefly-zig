@@ -27,9 +27,13 @@ pub fn init() !void {
         return;
 
     ViewRenderer.init();
-    api.Component.registerComponent(Layer);
-    api.Component.registerComponent(View);
-    api.Component.registerComponent(Scene);
+
+    // register components
+    api.Component.registerComponent(Layer, "Layer");
+    api.Component.registerComponent(View, "View");
+    api.Component.registerComponent(Scene, "Scene");
+
+    // register entity components
     api.EComponent.registerEntityComponent(EView);
     api.EComponent.registerEntityComponent(ETransform);
 }
@@ -156,10 +160,11 @@ pub const ViewChangeEvent = struct {
 //////////////////////////////////////////////////////////////
 
 pub const View = struct {
-    pub usingnamespace api.Component.Mixin(View, .{
-        .name = "View",
-        .control = true,
-    });
+    pub const Component = api.Component.Mixin(View);
+    pub const Naming = api.Component.NameMappingMixin(View);
+    pub const Activation = api.Component.ActivationMixin(View);
+    pub const Subscription = api.Component.SubscriptionMixin(View);
+    pub const Control = api.Component.ControlMixin(View);
 
     // struct fields
     id: Index = UNDEF_INDEX,
@@ -191,11 +196,11 @@ pub const View = struct {
         eventDispatch = utils.EventDispatch(ViewChangeEvent).new(firefly.api.COMPONENT_ALLOC);
         active_views_to_fbo = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
         active_views_to_screen = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
-        Layer.subscribe(onLayerAction);
+        Layer.Subscription.subscribe(onLayerAction);
     }
 
     pub fn componentTypeDeinit() void {
-        Layer.unsubscribe(onLayerAction);
+        Layer.Subscription.unsubscribe(onLayerAction);
         active_views_to_fbo.deinit();
         active_views_to_fbo = undefined;
         active_views_to_screen.deinit();
@@ -269,10 +274,10 @@ pub const View = struct {
         }
     }
 
-    fn onLayerAction(event: api.ComponentEvent) void {
+    pub fn onLayerAction(event: api.ComponentEvent) void {
         switch (event.event_type) {
-            .ACTIVATED => addLayerMapping(Layer.byId(event.c_id.?)),
-            .DEACTIVATING => removeLayerMapping(Layer.byId(event.c_id.?)),
+            .ACTIVATED => addLayerMapping(Layer.Component.byId(event.c_id.?)),
+            .DEACTIVATING => removeLayerMapping(Layer.Component.byId(event.c_id.?)),
             else => {},
         }
     }
@@ -298,7 +303,7 @@ pub const View = struct {
     }
 
     fn addLayerMapping(layer: *const Layer) void {
-        var view: *View = View.byId(layer.view_id);
+        var view: *View = View.Component.byId(layer.view_id);
         if (view.ordered_active_layer == null) {
             view.ordered_active_layer = utils.DynArray(Index).newWithRegisterSize(
                 firefly.api.COMPONENT_ALLOC,
@@ -314,7 +319,7 @@ pub const View = struct {
     }
 
     fn removeLayerMapping(layer: *const Layer) void {
-        var view: *View = View.byId(layer.view_id);
+        var view: *View = Component.byId(layer.view_id);
         if (view.ordered_active_layer) |*l| {
             l.delete(layer.order);
         }
@@ -326,10 +331,14 @@ pub const View = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Layer = struct {
-    pub usingnamespace api.Component.Mixin(Layer, .{ .name = "Layer" });
+    pub const Component = api.Component.Mixin(Layer);
+    pub const Naming = api.Component.NameMappingMixin(Layer);
+    pub const Activation = api.Component.ActivationMixin(Layer);
+    pub const Subscription = api.Component.SubscriptionMixin(Layer);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
+
     view_id: Index,
     order: usize = 0,
     offset: ?Vector2f = null,
@@ -337,7 +346,7 @@ pub const Layer = struct {
     shader_binding: ?BindingId = null,
 
     pub fn setViewByName(self: *Layer, view_name: String) void {
-        self.view_id = View.byName(view_name).id;
+        self.view_id = View.Naming.byName(view_name).id;
     }
 
     pub fn withShader(self: *Layer, id: Index) void {
@@ -448,13 +457,17 @@ pub const ETransform = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Scene = struct {
-    pub usingnamespace api.Component.Mixin(Scene, .{ .name = "Scene" });
+    pub const Component = api.Component.Mixin(Scene);
+    pub const Naming = api.Component.NameMappingMixin(Scene);
+    pub const Activation = api.Component.ActivationMixin(Scene);
+    pub const Subscriptio = api.Component.SubscriptionMixin(Scene);
+
     pub usingnamespace api.CallContextMixin(Scene);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    delete_after_run: bool = false,
 
+    delete_after_run: bool = false,
     scheduler: ?*api.UpdateScheduler = null,
 
     init_function: ?api.CallFunction = null,
@@ -481,12 +494,12 @@ pub const Scene = struct {
         self.deinitCallContext();
     }
 
-    pub fn withUpdateAction(self: *Scene, action: api.ActionFunction) *Scene {
+    pub fn withUpdateAction(self: *Scene, action: api.CallFunction) *Scene {
         self.update_action = action;
         return self;
     }
 
-    pub fn withCallback(self: *Scene, callback: api.ActionCallback) *Scene {
+    pub fn withCallback(self: *Scene, callback: api.CallFunction) *Scene {
         self.callback = callback;
         return self;
     }
@@ -516,11 +529,11 @@ pub const Scene = struct {
     }
 
     pub fn run(self: *Scene) void {
-        Scene.activateById(self.id, true);
+        Scene.Activation.activate(self.id);
     }
 
     pub fn stop(self: *Scene) void {
-        Scene.activateById(self.id, false);
+        Scene.Activation.deactivate(self.id);
     }
 
     pub fn reset(self: *Scene) void {
@@ -534,10 +547,10 @@ pub const Scene = struct {
     }
 
     fn update(_: api.UpdateEvent) void {
-        var next = Scene.nextActiveId(0);
+        var next = Activation.nextId(0);
         while (next) |i| {
-            next = Scene.nextActiveId(i + 1);
-            var scene = Scene.byId(i);
+            next = Activation.nextId(i + 1);
+            var scene = Component.byId(i);
             if (scene.scheduler) |s| {
                 if (!s.needs_update)
                     continue;
@@ -552,7 +565,7 @@ pub const Scene = struct {
                 call(&scene.call_context);
 
             if (scene.delete_after_run)
-                Scene.disposeById(scene.id);
+                Component.dispose(scene.id);
         }
     }
 };
@@ -583,17 +596,17 @@ pub const ViewRenderer = struct {
             firefly.api.rendering.endRendering();
         } else {
             // 1. render objects to all FBOs
-            var next = View.nextActiveId(0);
+            var next = View.Activation.nextId(0);
             while (next) |id| {
-                renderToFBO(View.byId(id));
-                next = View.nextActiveId(id + 1);
+                renderToFBO(View.Component.byId(id));
+                next = View.Activation.nextId(id + 1);
             }
 
             // 2. render all FBO that has not screen as target but other FBO
             for (0..View.active_views_to_fbo.size_pointer) |id| {
-                const source_view: *View = View.byId(id);
+                const source_view: *View = View.Component.byId(id);
                 if (source_view.target_view_id) |tid| {
-                    const target_view: *View = View.byId(tid);
+                    const target_view: *View = View.Component.byId(tid);
                     if (target_view.render_texture_binding) |b| {
                         firefly.api.rendering.startRendering(b.id, &target_view.projection);
                         firefly.api.rendering.renderTexture(
@@ -618,7 +631,7 @@ pub const ViewRenderer = struct {
             firefly.api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
             for (0..View.active_views_to_screen.size_pointer) |id| {
-                const view: *View = View.byId(id);
+                const view: *View = View.Component.byId(id);
                 if (view.render_texture_binding) |b| {
                     firefly.api.rendering.renderTexture(
                         b.id,
@@ -648,7 +661,7 @@ pub const ViewRenderer = struct {
             if (view.ordered_active_layer != null) {
                 var it = view.ordered_active_layer.?.slots.nextSetBit(0);
                 while (it) |layer_id| {
-                    const layer: *const Layer = Layer.byId(layer_id);
+                    const layer: *const Layer = Layer.Component.byId(layer_id);
                     // apply layer shader to render engine if set
                     if (layer.shader_binding) |sb|
                         firefly.api.rendering.setActiveShader(sb);

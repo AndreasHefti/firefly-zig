@@ -32,62 +32,28 @@ pub fn deinit() void {
         return;
 
     // deinit all registered component pools
-    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    var next = COMPONENT_INTERFACE_TABLE.slots.prevSetBit(COMPONENT_INTERFACE_TABLE.size());
     while (next) |i| {
         if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| {
             interface.deinit();
             COMPONENT_INTERFACE_TABLE.delete(i);
         }
-        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+        next = COMPONENT_INTERFACE_TABLE.slots.prevSetBit(i);
     }
     COMPONENT_INTERFACE_TABLE.deinit();
     COMPONENT_INTERFACE_TABLE = undefined;
+
     // deinit all registered sub-component types
-    next = SUB_COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    next = SUB_COMPONENT_INTERFACE_TABLE.slots.prevSetBit(SUB_COMPONENT_INTERFACE_TABLE.size());
     while (next) |i| {
         if (SUB_COMPONENT_INTERFACE_TABLE.get(i)) |interface| {
             interface.deinit();
             SUB_COMPONENT_INTERFACE_TABLE.delete(i);
         }
-        next = SUB_COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+        next = SUB_COMPONENT_INTERFACE_TABLE.slots.prevSetBit(i);
     }
     SUB_COMPONENT_INTERFACE_TABLE.deinit();
     SUB_COMPONENT_INTERFACE_TABLE = undefined;
-}
-
-//////////////////////////////////////////////////////////////
-//// Component API
-//////////////////////////////////////////////////////////////
-
-const ComponentTypeInterface = struct {
-    activate: *const fn (Index, bool) void,
-    clear: *const fn (Index) void,
-    deinit: api.DeinitFunction,
-    to_string: *const fn (*utils.StringBuffer) void,
-};
-var COMPONENT_INTERFACE_TABLE: utils.DynArray(ComponentTypeInterface) = undefined;
-
-pub const Context = struct {
-    name: String,
-    activation: bool = true,
-    name_mapping: bool = true,
-    subscription: bool = true, // TODO make default false
-    control: bool = false,
-    grouping: bool = false,
-    subtypes: bool = false,
-};
-
-pub fn registerComponent(comptime T: type) void {
-    ComponentPool(T).init();
-}
-
-pub fn print(string_buffer: *utils.StringBuffer) void {
-    string_buffer.print("\nComponents:", .{});
-    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
-    while (next) |i| {
-        if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| interface.to_string(string_buffer);
-        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
-    }
 }
 
 //////////////////////////////////////////////////////////////
@@ -114,518 +80,202 @@ pub const ComponentEvent = struct {
 };
 
 //////////////////////////////////////////////////////////////
+//// Component API
+//////////////////////////////////////////////////////////////
+
+const ComponentTypeInterface = struct {
+    activate: ?*const fn (Index, bool) void,
+    clear: *const fn (Index) void,
+    deinit: api.DeinitFunction,
+    to_string: *const fn (*utils.StringBuffer) void,
+};
+var COMPONENT_INTERFACE_TABLE: utils.DynArray(ComponentTypeInterface) = undefined;
+
+pub fn registerComponent(comptime T: type, comptime name: String) void {
+    Mixin(T).init(name);
+}
+
+pub fn print(string_buffer: *utils.StringBuffer) void {
+    string_buffer.print("\nComponents:", .{});
+    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    while (next) |i| {
+        if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| interface.to_string(string_buffer);
+        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+    }
+}
+
+//////////////////////////////////////////////////////////////
 //// Component Mixins
 //////////////////////////////////////////////////////////////
 
-pub fn Mixin(comptime T: type, comptime context: Context) type {
-    return struct {
-        pub const COMPONENT_TYPE_NAME = context.name;
-        pub var aspect: api.ComponentAspect = undefined;
+pub fn Mixin(comptime T: type) type {
+    if (@typeInfo(T) != .Struct)
+        @compileError("Expects component type is a struct.");
+    // if (!@hasDecl(T, "Component"))
+    //     @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
+    if (!@hasField(T, "id"))
+        @compileError("Expects component type to have field: id: Index, that holds the index-id of the component instance");
 
-        const pool = ComponentPool(T);
+    const has_activation: bool = @hasDecl(T, "Activation");
+    const has_naming: bool = @hasDecl(T, "Naming");
+    const has_subscription: bool = @hasDecl(T, "Subscription");
+    const has_grouping: bool = @hasDecl(T, "Grouping");
+    const has_control: bool = @hasDecl(T, "Control");
+    const has_subtypes: bool = @hasDecl(T, "Subtypes");
 
-        pub fn allowSubtypes() bool {
-            return context.subtypes;
-        }
-
-        pub fn isInitialized() bool {
-            return pool._type_init;
-        }
-
-        pub fn size() usize {
-            return pool.items.slots.count();
-        }
-
-        pub fn new(t: T) *T {
-            if (context.subtypes)
-                @panic("Use new on specific subtype");
-
-            return pool.register(t);
-        }
-
-        pub fn reg(t: T) *T {
-            return pool.register(t);
-        }
-
-        pub fn exists(id: Index) bool {
-            return pool.items.exists(id);
-        }
-
-        pub fn byId(id: Index) *T {
-            return pool.items.get(id).?;
-        }
-
-        pub fn referenceById(id: Index, owned: bool) ?api.CRef {
-            _ = pool.items.get(id) orelse return null;
-            return .{
-                .type = aspect,
-                .id = id,
-                .activation = if (context.activation) T.activateById else null,
-                .dispose = if (owned) disposeById else null,
-            };
-        }
-
-        pub fn nextId(id: Index) ?Index {
-            return pool.items.slots.nextSetBit(id);
-        }
-
-        pub fn disposeById(id: Index) void {
-            if (id != UNDEF_INDEX)
-                pool.clear(id);
-        }
-
-        // optional component type features
-        const empty_struct = struct {};
-        pub usingnamespace if (context.name_mapping) NameMappingMixin(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.activation) ActivationMixin(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.subscription or context.subtypes) SubscriptionMixin(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.control) ControlMixin(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.grouping) GroupingMixin(T, @This(), context) else empty_struct;
-        pub usingnamespace if (context.subtypes) ComponentSubTypingMixin(T, @This(), context) else empty_struct;
-    };
-}
-
-fn ComponentSubTypingMixin(comptime T: type, comptime _: anytype, comptime context: Context) type {
-    return struct {
-        pub fn registerSubtype(comptime SubType: type) void {
-            ComponentSubType(T, SubType).init();
-        }
-
-        pub fn dataById(id: Index, comptime SubType: type) ?@TypeOf(SubType) {
-            return SubType.dataById(id);
-        }
-
-        pub fn dataByName(name: String, comptime SubType: type) ?@TypeOf(SubType) {
-            if (!context.name_mapping)
-                return null;
-
-            return SubType.dataByName(name);
-        }
-    };
-}
-
-fn GroupingMixin(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
-    comptime {
-        if (!@hasField(T, "groups"))
-            @compileError("Expects component type to have field: groups: ?GroupKind");
-    }
-    return struct {
-        pub fn getGroups(id: Index) ?api.GroupKind {
-            const c = adapter.pool.items.get(id) orelse return null;
-            return c.groups;
-        }
-
-        pub fn withGroupAspect(self: *T, aspect: api.GroupAspect) *T {
-            return addToGroup(self, aspect);
-        }
-
-        pub fn addToGroup(self: *T, aspect: api.GroupAspect) *T {
-            if (self.groups == null)
-                self.groups = api.GroupAspectGroup.newKind();
-
-            if (self.groups) |*g|
-                g.addAspect(aspect);
-
-            return self;
-        }
-
-        pub fn removeFromGroup(self: *T, group: api.GroupAspect) *T {
-            if (self.groups) |g|
-                g.removeAspect(group);
-
-            return self;
-        }
-
-        pub fn isInGroup(self: *T, group: api.GroupAspect) bool {
-            const g = self.groups orelse return false;
-            return g.hasAspect(group);
-        }
-
-        fn processGroup(group: api.GroupAspect, f: *const fn (*T) void) void {
-            var next = adapter.pool.items.slots.nextSetBit(0);
-            while (next) |i| {
-                const c = adapter.pool.items.get(i) orelse continue;
-                const g = c.groups orelse continue;
-                if (g.hasAspect(group))
-                    f(c);
-
-                next = adapter.pool.items.slots.nextSetBit(i + 1);
-            }
-        }
-    };
-}
-
-fn SubscriptionMixin(comptime _: type, comptime adapter: anytype, comptime _: Context) type {
-    return struct {
-        pub fn subscribe(listener: ComponentListener) void {
-            if (adapter.pool.eventDispatch) |*ed| ed.register(listener);
-        }
-
-        pub fn unsubscribe(listener: ComponentListener) void {
-            if (adapter.pool.eventDispatch) |*ed| ed.unregister(listener);
-        }
-    };
-}
-
-fn NameMappingMixin(comptime T: type, comptime adapter: anytype, comptime context: Context) type {
-    comptime {
-        if (!@hasField(T, "name"))
-            @compileError("Expects component type to have field: name: ?String");
-    }
-
-    return struct {
-        pub fn existsName(name: String) bool {
-            if (adapter.pool.name_mapping) |*nm|
-                return nm.contains(name);
-            return false;
-        }
-
-        pub fn idByName(name: String) Index {
-            return idByNameOptional(name) orelse missName(name);
-        }
-
-        pub fn idByNameOptional(name: String) ?Index {
-            if (adapter.pool.name_mapping) |*nm|
-                return nm.get(name);
-            return null;
-        }
-
-        pub fn byName(name: String) ?*T {
-            if (adapter.pool.name_mapping) |*nm| {
-                if (nm.get(name)) |id|
-                    return adapter.pool.items.get(id);
-            }
-            return null;
-        }
-
-        pub fn referenceByName(name: String, owned: bool) ?api.CRef {
-            if (adapter.pool.name_mapping) |*nm| {
-                if (nm.get(name)) |id| {
-                    return .{
-                        .type = T.aspect,
-                        .id = id,
-                        .activation = if (context.activation) T.activateById else null,
-                        .dispose = if (owned) T.disposeById else null,
-                    };
-                }
-            }
-            return null;
-        }
-
-        pub fn disposeByName(name: String) void {
-            if (adapter.pool.name_mapping) |*nm| {
-                if (nm.get(name)) |id| adapter.pool.clear(id);
-            }
-        }
-
-        inline fn missName(name: String) void {
-            utils.panic(api.ALLOC, "no component with name: {s}", .{name});
-        }
-    };
-}
-
-fn ActivationMixin(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
-    return struct {
-        pub fn activateById(id: Index, active: bool) void {
-            adapter.pool.activate(id, active);
-        }
-
-        pub fn activateByName(name: String, active: bool) void {
-            if (adapter.pool.name_mapping) |*nm| {
-                if (nm.get(name)) |id| {
-                    adapter.pool.activate(id, active);
-                }
-            }
-        }
-        pub fn isActiveById(index: Index) bool {
-            if (adapter.pool.active_mapping) |am| return am.isSet(index);
-            return false;
-        }
-
-        pub fn isActiveByName(name: String) bool {
-            if (adapter.pool.name_mapping) |*nm| {
-                if (nm.get(name)) |id| {
-                    return adapter.pool.active_mapping.isSet(id);
-                }
-            }
-            return false;
-        }
-
-        pub fn isActive(self: T) bool {
-            return adapter.pool.active_mapping.?.isSet(self.id);
-        }
-
-        pub fn getWhenActiveById(id: Index) ?*T {
-            if (adapter.pool.active_mapping) |*am| {
-                if (am.isSet(id)) {
-                    return adapter.pool.items.get(id).?;
-                }
-            }
-            return null;
-        }
-
-        pub fn getWhenActiveByName(name: String) ?*T {
-            if (adapter.pool.name_mapping) |*nm| {
-                const id = nm.get(name) orelse return null;
-                if (adapter.pool.active_mapping) |*am| {
-                    if (am.isSet(id)) {
-                        return adapter.pool.items.get(id).?;
-                    }
-                }
-            }
-            return null;
-        }
-
-        pub fn activeCount() usize {
-            return adapter.pool.active_mapping.?.count();
-        }
-
-        pub fn nextActiveId(id: Index) ?Index {
-            return adapter.pool.active_mapping.?.nextSetBit(id);
-        }
-
-        pub fn activate(self: *T) *T {
-            if (self.id == UNDEF_INDEX)
-                return self;
-
-            activateById(self.id, true);
-            return self;
-        }
-
-        pub fn processActive(f: *const fn (*T) void) void {
-            if (adapter.pool.active_mapping) |*am| {
-                var next = am.nextSetBit(0);
-                while (next) |i| {
-                    if (adapter.pool.items.get(i)) |c| f(c);
-                    next = am.nextSetBit(i + 1);
-                }
-            }
-        }
-    };
-}
-
-fn ControlMixin(comptime T: type, comptime adapter: anytype, comptime _: Context) type {
-    return struct {
-        pub fn withActiveControl(self: *T, update: api.CallFunction, name: ?String) *T {
-            return withControl(self, update, name, true);
-        }
-
-        pub fn withControl(self: *T, update: api.CallFunction, name: ?String, active: bool) *T {
-            if (adapter.pool.control_mapping) |*cm| {
-                const c_sub = api.VoidControl.new(.{ .name = name }, update);
-                cm.map(self.id, c_sub.id);
-                api.Control.activateById(c_sub.id, active);
-            }
-            return self;
-        }
-
-        pub fn withActiveControlOf(self: *T, subtype: anytype) *T {
-            return withControlOf(self, subtype, true);
-        }
-
-        pub fn withControlOf(self: *T, subtype: anytype, active: bool) *T {
-            if (adapter.pool.control_mapping) |*cm| {
-                const c_subtype_type = @TypeOf(subtype);
-                const c_subtype = c_subtype_type.new(subtype, c_subtype_type.update);
-                cm.map(self.id, c_subtype.id);
-
-                if (@hasDecl(c_subtype_type, "initForComponent"))
-                    c_subtype_type.initForComponent(self.id);
-
-                api.Control.activateById(c_subtype.id, active);
-            }
-            return self;
-        }
-
-        pub fn applyControlById(self: *T, control_id: Index) *T {
-            if (adapter.pool.control_mapping) |*cm| {
-                const c = api.Control.byId(control_id);
-                if (c.component_type == T.aspect)
-                    cm.map(self.id, c.id);
-            }
-
-            return self;
-        }
-
-        pub fn applyControlByName(self: *T, name: String) *T {
-            if (adapter.pool.control_mapping) |*cm| {
-                if (api.Control.byName(name)) |c| {
-                    if (c.component_type == T.aspect)
-                        cm.map(self.id, c.id);
-                }
-            }
-            return self;
-        }
-    };
-}
-
-//////////////////////////////////////////////////////////////
-//// Component Pooling
-//////////////////////////////////////////////////////////////
-
-fn ComponentPool(comptime T: type) type {
-
-    // component type constraints and function references
-    const has_subscribe: bool = @hasDecl(T, "subscribe");
-    const has_active_mapping: bool = @hasDecl(T, "activeCount");
-    const has_name_mapping: bool = @hasField(T, "name");
-    const has_control_mapping: bool = @hasDecl(T, "withControl");
-
-    // component type init/deinit functions
     const has_component_type_init: bool = @hasDecl(T, "componentTypeInit");
     const has_component_type_deinit: bool = @hasDecl(T, "componentTypeDeinit");
-
-    // component member function interceptors
     const has_construct: bool = @hasDecl(T, "construct");
-    const has_activation: bool = @hasDecl(T, "activation");
     const has_destruct = @hasDecl(T, "destruct");
-
-    comptime {
-        if (@typeInfo(T) != .Struct)
-            @compileError("Expects component type is a struct.");
-        if (!@hasDecl(T, "COMPONENT_TYPE_NAME"))
-            @compileError("Expects component type to have field: COMPONENT_TYPE_NAME: String, that defines a unique name of the component type.");
-        if (!@hasField(T, "id"))
-            @compileError("Expects component type to have field: id: Index, that holds the index-id of the component");
-    }
 
     return struct {
         const Self = @This();
 
-        // ensure type based singleton
+        var pool: utils.DynArray(T) = undefined;
         var _type_init = false;
 
-        var items: utils.DynArray(T) = undefined;
-        // mappings
-        var active_mapping: ?utils.BitSet = null;
-        var name_mapping: ?std.StringHashMap(Index) = null;
-        var control_mapping: ?utils.DynIndexMap = null;
-        // events
-        var eventDispatch: ?utils.EventDispatch(ComponentEvent) = null;
+        pub var component_name: String = undefined;
+        pub var aspect: api.ComponentAspect = undefined;
 
-        pub fn init() void {
+        pub fn init(name: String) void {
+            defer _type_init = true;
             if (_type_init)
                 return;
 
-            errdefer Self.deinit();
+            std.debug.print("FIREFLY : INFO: initialize component: {s}\n", .{name});
+
             defer {
                 _ = COMPONENT_INTERFACE_TABLE.add(ComponentTypeInterface{
-                    .activate = Self.activate,
-                    .clear = Self.clear,
+                    .activate = if (has_activation) ActivationMixin(T).set else null,
+                    .clear = clear,
                     .deinit = Self.deinit,
                     .to_string = toString,
                 });
-                _type_init = true;
             }
 
-            items = utils.DynArray(T).new(api.COMPONENT_ALLOC);
-            api.ComponentAspectGroup.applyAspect(T, T.COMPONENT_TYPE_NAME);
+            component_name = name;
+            pool = utils.DynArray(T).new(api.COMPONENT_ALLOC);
+            api.ComponentAspectGroup.applyAspect(Self, name);
 
-            if (has_active_mapping)
-                active_mapping = utils.BitSet.newEmpty(api.COMPONENT_ALLOC, 64);
-
-            if (has_subscribe or T.allowSubtypes())
-                eventDispatch = utils.EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
-
-            if (has_name_mapping)
-                name_mapping = std.StringHashMap(Index).init(api.COMPONENT_ALLOC);
+            if (has_activation)
+                ActivationMixin(T).init();
+            if (has_naming)
+                NameMappingMixin(T).init();
+            if (has_subscription)
+                SubscriptionMixin(T).init();
+            if (has_grouping)
+                GroupingMixin(T).init();
+            if (has_control)
+                ControlMixin(T).init();
+            if (has_subtypes)
+                SubTypingMixin(T).init();
 
             if (has_component_type_init) {
                 T.componentTypeInit() catch
                     std.log.err("Failed to initialize component of type: {any}", .{T});
             }
-
-            if (has_control_mapping) {
-                control_mapping = utils.DynIndexMap.new(api.COMPONENT_ALLOC);
-                api.subscribeUpdate(update);
-            }
         }
 
-        /// Release all allocated memory.
-        pub fn deinit() void {
+        fn deinit() void {
             defer _type_init = false;
             if (!_type_init)
                 return;
 
+            std.debug.print("FIREFLY : INFO: deinitialize component: {s}\n", .{component_name});
+
             clearAll();
+
             if (has_component_type_deinit)
                 T.componentTypeDeinit();
 
-            items.deinit();
-            if (active_mapping) |*am|
-                am.deinit();
-            active_mapping = null;
+            pool.deinit();
+            pool = undefined;
 
-            if (eventDispatch) |*ed|
-                ed.deinit();
-            eventDispatch = null;
-
-            if (name_mapping) |*nm|
-                nm.deinit();
-            name_mapping = null;
-
-            if (has_control_mapping)
-                api.unsubscribeUpdate(update);
-            if (control_mapping) |*cm|
-                cm.deinit();
-            control_mapping = null;
+            if (has_activation)
+                ActivationMixin(T).deinit();
+            if (has_naming)
+                NameMappingMixin(T).deinit();
+            if (has_subscription)
+                SubscriptionMixin(T).deinit();
+            if (has_grouping)
+                GroupingMixin(T).deinit();
+            if (has_control)
+                ControlMixin(T).deinit();
+            if (has_subtypes)
+                SubTypingMixin(T).deinit();
         }
 
-        fn update(_: api.UpdateEvent) void {
-            if (control_mapping) |cm| {
-                var iterator = cm.mapping.iterator();
-                while (iterator.next()) |e| {
-                    const c_id = e.key_ptr.*;
-
-                    if (active_mapping) |am|
-                        if (!am.isSet(c_id)) continue;
-
-                    for (0..e.value_ptr.size_pointer) |i| {
-                        const control_id = e.value_ptr.items[i];
-                        var control = api.Control.byId(control_id);
-                        control.call_context.id_1 = c_id;
-                        control.update(&control.call_context);
-                    }
-                }
-            }
+        pub fn size() usize {
+            return pool.slots.count();
         }
 
-        fn register(c: T) *T {
-            const id = items.add(c);
-            const result = items.get(id) orelse unreachable;
+        pub fn new(t: T) *T {
+            if (has_subtypes)
+                @panic("Use new on specific subtype");
+
+            return register(t);
+        }
+
+        fn register(t: T) *T {
+            const id = pool.add(t);
+            const result: *T = pool.get(id) orelse unreachable;
 
             result.id = id;
-            if (name_mapping) |*nm| {
+            if (has_naming) {
                 if (result.name) |n| {
-                    if (nm.contains(n))
+                    if (NameMappingMixin(T).mapping.contains(n))
                         utils.panic(api.ALLOC, "Component name already exists: {s}", .{n});
-                    nm.put(n, id) catch unreachable;
+                    NameMappingMixin(T).mapping.put(n, id) catch unreachable;
                 }
             }
 
             if (has_construct)
                 result.construct();
 
-            notify(ComponentEvent.Type.CREATED, id);
+            if (has_subscription)
+                SubscriptionMixin(T).notify(ComponentEvent.Type.CREATED, id);
+
             return result;
         }
 
-        fn activate(id: Index, a: bool) void {
-            if (active_mapping) |*am| {
-                if ((a and am.isSet(id)) or (!a and !am.isSet(id)))
-                    return; // already active or inactive
-
-                am.setValue(id, a);
-
-                if (has_activation)
-                    if (items.get(id)) |v| v.activation(a);
-                notify(if (a) ComponentEvent.Type.ACTIVATED else ComponentEvent.Type.DEACTIVATING, id);
-            }
+        pub fn exists(id: Index) bool {
+            return pool.exists(id);
         }
 
-        pub fn clearAll() void {
+        pub fn byId(id: Index) *T {
+            return pool.get(id).?;
+        }
+
+        pub fn getReference(id: Index, owned: bool) ?api.CRef {
+            _ = pool.get(id) orelse return null;
+            return .{
+                .type = aspect,
+                .id = id,
+                .is_valid = isRefValid,
+                .activation = if (has_activation) ActivationMixin(T).set else null,
+                .dispose = if (owned) dispose else null,
+            };
+        }
+
+        fn isRefValid(id: Index) bool {
+            if (!_type_init)
+                return false;
+
+            return pool.exists(id);
+        }
+
+        pub fn nextId(id: Index) ?Index {
+            return pool.slots.nextSetBit(id);
+        }
+
+        pub fn dispose(id: Index) void {
+            if (id != UNDEF_INDEX)
+                clear(id);
+        }
+
+        fn clearAll() void {
             var i: Index = 0;
-            while (items.slots.nextSetBit(i)) |next| {
+            while (pool.slots.nextSetBit(i)) |next| {
                 clear(next);
                 i = next + 1;
             }
@@ -635,46 +285,453 @@ fn ComponentPool(comptime T: type) type {
             if (id == UNDEF_INDEX)
                 return;
 
-            if (active_mapping) |*am| {
-                if (am.isSet(id))
-                    activate(id, false);
-                notify(ComponentEvent.Type.DISPOSING, id);
-            }
+            if (has_activation)
+                ActivationMixin(T).set(id, false);
 
-            if (items.get(id)) |val| {
+            if (has_subscription)
+                SubscriptionMixin(T).notify(ComponentEvent.Type.DISPOSING, id);
+
+            if (pool.get(id)) |t| {
                 if (has_destruct)
-                    val.destruct();
+                    t.destruct();
 
-                if (name_mapping) |*nm| {
-                    if (val.name) |n| {
-                        _ = nm.remove(n);
-                        val.name = null;
+                if (has_naming) {
+                    if (t.name) |n| {
+                        _ = NameMappingMixin(T).mapping.remove(n);
+                        t.name = null;
                     }
                 }
 
-                val.id = UNDEF_INDEX;
-                if (active_mapping) |*am|
-                    am.setValue(id, false);
-                items.delete(id);
+                t.id = UNDEF_INDEX;
+                pool.delete(id);
             }
         }
 
         fn toString(string_buffer: *utils.StringBuffer) void {
-            string_buffer.print("\n  {s} size: {d}", .{ T.COMPONENT_TYPE_NAME, items.slots.count() });
-            var next = items.slots.nextSetBit(0);
+            string_buffer.print("\n  {s} size: {d}", .{ component_name, pool.slots.count() });
+            var next = pool.slots.nextSetBit(0);
             while (next) |i| {
+                next = pool.slots.nextSetBit(i + 1);
                 var active = "(x)";
-                if (active_mapping) |*am| {
-                    if (am.isSet(i)) active = "(a)";
+                if (has_activation) {
+                    if (ActivationMixin(T).mapping.isSet(i)) active = "(a)";
                 }
-                string_buffer.print("\n    {s} {any}", .{ active, items.get(i) });
-                next = items.slots.nextSetBit(i + 1);
+                string_buffer.print("\n    {s} {any}", .{ active, pool.get(i) });
+            }
+        }
+    };
+}
+
+pub fn ActivationMixin(comptime T: type) type {
+    if (@typeInfo(T) != .Struct)
+        @compileError("Expects component type is a struct.");
+    if (!@hasDecl(T, "Component"))
+        @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
+
+    const has_activation_function: bool = @hasDecl(T, "activation");
+    const has_subscription: bool = @hasDecl(T, "Subscription");
+    const has_naming: bool = @hasDecl(T, "Naming");
+    const mixin = Mixin(T);
+
+    return struct {
+        var mapping: utils.BitSet = undefined;
+        var _init = false;
+
+        fn init() void {
+            defer _init = true;
+            if (_init) return;
+            _ = @typeName(T); // NOTE: if this is not touched here, memoization brakes for some unknown reason
+            mapping = utils.BitSet.newEmpty(api.COMPONENT_ALLOC, 64);
+        }
+
+        fn deinit() void {
+            defer _init = false;
+            if (!_init) return;
+            mapping.deinit();
+            mapping = undefined;
+        }
+
+        fn set(id: Index, active: bool) void {
+            if ((active and mapping.isSet(id)) or (!active and !mapping.isSet(id)))
+                return; // already active or inactive
+
+            mapping.setValue(id, active);
+
+            if (has_activation_function)
+                mixin.byId(id).activation(active);
+
+            if (has_subscription)
+                SubscriptionMixin(T).notify(if (active) ComponentEvent.Type.ACTIVATED else ComponentEvent.Type.DEACTIVATING, id);
+        }
+
+        pub fn activate(id: Index) void {
+            set(id, true);
+        }
+
+        pub fn deactivate(id: Index) void {
+            set(id, false);
+        }
+
+        pub fn activateByName(name: String) void {
+            setByName(name, true);
+        }
+
+        pub fn deactivateByName(name: String) void {
+            setByName(name, false);
+        }
+
+        fn setByName(name: String, active: bool) void {
+            if (has_naming)
+                if (NameMappingMixin(T).getIdOpt(name)) |id|
+                    set(id, active);
+        }
+
+        pub fn isActive(id: Index) bool {
+            return mapping.isSet(id);
+        }
+
+        pub fn isActiveByName(name: String) bool {
+            if (has_naming) {
+                if (NameMappingMixin(T).getIdOpt(name)) |id|
+                    return mapping.isSet(id);
+            }
+            return false;
+        }
+
+        pub fn byId(id: Index) ?*T {
+            if (mapping.isSet(id))
+                return mixin.byId(id);
+            return null;
+        }
+
+        pub fn count() usize {
+            return mapping.count();
+        }
+
+        pub fn nextId(id: Index) ?Index {
+            return mapping.nextSetBit(id);
+        }
+
+        pub fn process(f: *const fn (*T) void) void {
+            var next = nextId(0);
+            while (next) |i| {
+                next = nextId(i + 1);
+                f(mixin.byId(i));
+            }
+        }
+    };
+}
+
+pub fn NameMappingMixin(comptime T: type) type {
+    if (@typeInfo(T) != .Struct)
+        @compileError("Expects component type is a struct.");
+    if (!@hasDecl(T, "Component"))
+        @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
+    if (!@hasField(T, "name"))
+        @compileError("Expects component type to have optional field: name: ?String, that holds name of the component instance");
+
+    const mixin = Mixin(T);
+
+    return struct {
+        pub var mapping: std.StringHashMap(Index) = undefined;
+        var _init = false;
+
+        fn init() void {
+            defer _init = true;
+            if (_init) return;
+            _ = @typeName(T); // NOTE: if this is not touched here, memoization brakes for some unknown reason
+            mapping = std.StringHashMap(Index).init(api.COMPONENT_ALLOC);
+        }
+
+        fn deinit() void {
+            defer _init = false;
+            if (!_init) return;
+            mapping.deinit();
+            mapping = undefined;
+        }
+
+        pub fn exists(name: String) bool {
+            return mapping.contains(name);
+        }
+
+        pub fn getId(name: String) Index {
+            return getIdOpt(name) orelse missName(name);
+        }
+
+        pub fn getIdOpt(name: String) ?Index {
+            return mapping.get(name);
+        }
+
+        pub fn byName(name: String) ?*T {
+            if (getIdOpt(name)) |id|
+                return mixin.byId(id);
+            return null;
+        }
+
+        pub fn getReference(name: String, owned: bool) ?api.CRef {
+            if (getIdOpt(name)) |id|
+                return mixin.getReference(id, owned);
+            return null;
+        }
+
+        pub fn dispose(name: String) void {
+            if (getIdOpt(name)) |id|
+                return mixin.dispose(id);
+        }
+
+        inline fn missName(name: String) void {
+            utils.panic(api.ALLOC, "no component with name: {s}", .{name});
+        }
+    };
+}
+
+pub fn SubscriptionMixin(comptime T: type) type {
+    if (@typeInfo(T) != .Struct)
+        @panic("Expects component type is a struct.");
+    if (!@hasDecl(T, "Component"))
+        @panic("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
+
+    return struct {
+        var dispatcher: utils.EventDispatch(ComponentEvent) = undefined;
+        var _init = false;
+
+        fn init() void {
+            defer _init = true;
+            if (_init)
+                return;
+            _ = @typeName(T); // NOTE: if this is not touched here, memoization brakes for some unknown reason
+            //std.debug.print("************* Init SubscriptionMixin for: {any} {s}\n", .{ @intFromPtr(&dispatcher), @typeName(T) });
+            dispatcher = utils.EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
+        }
+
+        fn deinit() void {
+            defer _init = false;
+            if (!_init) return;
+            //std.debug.print("************** Deinit SubscriptionMixin for: {s}\n", .{@typeName(T)});
+            dispatcher.deinit();
+            dispatcher = undefined;
+        }
+
+        pub fn subscribe(listener: ComponentListener) void {
+            //std.debug.print("************** Subscribe for: {s}\n", .{@typeName(T)});
+            //std.debug.print("************** Subscribe listener for dispatcher: {any}\n", .{@intFromPtr(&dispatcher)});
+            //std.debug.print("************** Subscribe init is: {any}\n", .{_init});
+            if (_init) {
+                dispatcher.register(listener);
+            }
+        }
+
+        pub fn unsubscribe(listener: ComponentListener) void {
+            if (_init) {
+                dispatcher.unregister(listener);
             }
         }
 
         fn notify(event_type: ComponentEvent.Type, id: Index) void {
-            if (eventDispatch) |*ed|
-                ed.notify(.{ .event_type = event_type, .c_id = id });
+            //std.debug.print("************* Notify for: {any} {s}\n", .{ @intFromPtr(&dispatcher), @typeName(T) });
+            //_ = @typeName(T);
+            if (_init) {
+                dispatcher.notify(.{ .event_type = event_type, .c_id = id });
+            }
+        }
+    };
+}
+
+pub fn GroupingMixin(comptime T: type) type {
+    if (@typeInfo(T) != .Struct)
+        @compileError("Expects component type is a struct.");
+    if (!@hasDecl(T, "Component"))
+        @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
+    if (!@hasDecl(T, "Grouping"))
+        @compileError("Expects component type to have declaration: const Grouping = GroupingMixin(T).");
+    if (!@hasField(T, "groups"))
+        @compileError("Expects component type to have optional field: groups: ?api.GroupKind, that holds the group aspects of component instance");
+
+    const mixin = Mixin(T);
+
+    return struct {
+        var _init = false;
+
+        fn init() void {
+            defer _init = true;
+            if (_init) return;
+            _ = @typeName(T); // NOTE: if this is not touched here, memoization brakes for some unknown reason
+        }
+
+        fn deinit() void {
+            defer _init = false;
+            if (!_init) return;
+        }
+
+        pub fn get(id: Index) ?api.GroupKind {
+            const c = mixin.byId(id) orelse return null;
+            return c.groups;
+        }
+
+        pub fn add(id: Index, aspect: api.GroupAspect) void {
+            var comp: *T = mixin.byId(id);
+            if (comp.groups == null)
+                comp.groups = api.GroupAspectGroup.newKind();
+
+            if (comp.groups) |*g|
+                g.addAspect(aspect);
+        }
+
+        pub fn remove(id: Index, aspect: api.GroupAspect) void {
+            const comp: *T = mixin.byId(id);
+            if (comp.groups) |g|
+                g.removeAspect(aspect);
+        }
+
+        pub fn isInGroup(id: Index, aspect: api.GroupAspect) void {
+            const comp: *T = mixin.byId(id);
+            if (comp.groups) |g|
+                return g.isIn(aspect);
+            return false;
+        }
+
+        fn process(group: api.GroupAspect, f: *const fn (*T) void) void {
+            var next = mixin.nextId(0);
+            while (next) |i| {
+                next = mixin.nextId(i + 1);
+                const c = mixin.byId(i) orelse continue;
+                const g = c.groups orelse continue;
+                if (g.hasAspect(group))
+                    f(c);
+            }
+        }
+    };
+}
+
+pub fn ControlMixin(comptime T: type) type {
+    if (@typeInfo(T) != .Struct)
+        @compileError("Expects component type is a struct.");
+    if (!@hasDecl(T, "Component"))
+        @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
+    if (!@hasDecl(T, "Control"))
+        @compileError("Expects component type to have declaration: const Control = ControlMixin(T).");
+
+    const has_activation: bool = @hasDecl(T, "Activation");
+    const mixin = Mixin(T);
+    const activation_mixin = ActivationMixin(T);
+    const control_mixin = Mixin(api.Control);
+
+    return struct {
+        var indexes: utils.DynIndexMap = undefined;
+        var _init = false;
+
+        fn init() void {
+            defer _init = true;
+            if (_init) return;
+            _ = @typeName(T); // NOTE: if this is not touched here, memoization brakes for some unknown reason
+            indexes = utils.DynIndexMap.new(api.COMPONENT_ALLOC);
+            api.subscribeUpdate(_update);
+        }
+
+        fn deinit() void {
+            defer _init = false;
+            if (!_init) return;
+            api.unsubscribeUpdate(_update);
+            indexes.deinit();
+            indexes = undefined;
+        }
+
+        pub fn addActive(id: Index, update: api.CallFunction, name: ?String) void {
+            add(id, update, name, true);
+        }
+
+        pub fn add(id: Index, update: api.CallFunction, name: ?String, active: bool) void {
+            const c_sub = api.VoidControl.new(
+                .{ .name = name },
+                update,
+            );
+            indexes.map(id, c_sub.id);
+            ActivationMixin(api.Control).set(c_sub.id, active);
+        }
+
+        pub fn addActiveOf(id: Index, subtype: anytype) void {
+            addOf(id, subtype, true);
+        }
+
+        pub fn addOf(id: Index, subtype: anytype, active: bool) void {
+            const c_subtype_type = @TypeOf(subtype);
+            const c_subtype = c_subtype_type.new(subtype, c_subtype_type.update);
+            indexes.map(id, c_subtype.id);
+
+            if (@hasDecl(c_subtype_type, "initForComponent"))
+                c_subtype_type.initForComponent(id);
+
+            ActivationMixin(api.Control).set(c_subtype.id, active);
+        }
+
+        pub fn addById(id: Index, control_id: Index) void {
+            const c: *api.Control = control_mixin.byId(control_id);
+            if (c.controlled_component_type == T.aspect)
+                indexes.map(id, c.id);
+        }
+
+        pub fn addByName(id: Index, name: String) void {
+            const c: *api.Control = api.Control.naming.byName(name) orelse return;
+            if (c.controlled_component_type == mixin.aspect)
+                indexes.map(id, c.id);
+        }
+
+        fn _update(_: api.UpdateEvent) void {
+            var iterator = indexes.mapping.iterator();
+            while (iterator.next()) |e| {
+                const c_id = e.key_ptr.*;
+
+                if (has_activation and !activation_mixin.isActive(c_id))
+                    continue;
+
+                for (0..e.value_ptr.size_pointer) |i| {
+                    const control_id = e.value_ptr.items[i];
+                    var control: *api.Control = control_mixin.byId(control_id);
+                    control.call_context.id_1 = c_id;
+                    control.update(&control.call_context);
+                }
+            }
+        }
+    };
+}
+
+pub fn SubTypingMixin(comptime T: type) type {
+    comptime {
+        if (@typeInfo(T) != .Struct)
+            @compileError("Expects component type is a struct.");
+        if (!@hasDecl(T, "Component"))
+            @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
+    }
+
+    const has_naming: bool = @hasDecl(T, "Naming");
+
+    return struct {
+        var _init = false;
+
+        fn init() void {
+            defer _init = true;
+            if (_init) return;
+            _ = @typeName(T); // NOTE: if this is not touched here, memoization brakes for some unknown reason
+        }
+
+        fn deinit() void {
+            defer _init = false;
+            if (!_init) return;
+        }
+
+        pub fn register(comptime SubType: type) void {
+            ComponentSubType(T, SubType).init();
+        }
+
+        pub fn dataById(id: Index, comptime SubType: type) ?@TypeOf(SubType) {
+            return SubType.dataById(id);
+        }
+
+        pub fn dataByName(name: String, comptime SubType: type) ?@TypeOf(SubType) {
+            if (has_naming)
+                return null;
+
+            return SubType.dataByName(name);
         }
     };
 }
@@ -683,16 +740,21 @@ fn ComponentPool(comptime T: type) type {
 //// Component Subtype
 //////////////////////////////////////////////////////////////////////////
 
+const SubComponentTypeInterface = struct {
+    deinit: api.DeinitFunction,
+};
+var SUB_COMPONENT_INTERFACE_TABLE: utils.DynArray(SubComponentTypeInterface) = undefined;
+
 pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
-    comptime {
-        if (!T.allowSubtypes())
-            @compileError("Component of type does not support subtypes");
-    }
+    // comptime {
+    //     if (!T.allowSubtypes())
+    //         @compileError("Component of type does not support subtypes");
+    // }
     return struct {
         const subtype = ComponentSubType(T, SubType);
 
         pub fn newSubType(t: T, st: SubType) *SubType {
-            const id = T.reg(t).id;
+            const id = T.Component.register(t).id;
             const result = subtype.data.getOrPut(id) catch unreachable;
             if (result.found_existing)
                 utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{id});
@@ -707,15 +769,15 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
         }
 
         pub fn activateById(id: Index, active: bool) void {
-            T.activateById(id, active);
+            T.Activation.set(id, active);
         }
 
         pub fn activate(self: *SubType) void {
-            T.activateById(self.id, true);
+            T.Activation.set(self.id, true);
         }
 
         pub fn deactivate(self: *SubType) void {
-            T.activateById(self.id, false);
+            T.Activation.set(self.id, false);
         }
 
         pub fn byId(id: Index) *SubType {
@@ -723,22 +785,22 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
         }
 
         pub fn existsByName(name: String) bool {
-            return T.existsName(name);
+            return T.Naming.exists(name);
         }
 
         pub fn byName(name: String) ?*SubType {
-            if (T.byName(name)) |c|
+            if (T.Naming.byName(name)) |c|
                 return subtype.data.getPtr(c.id);
 
             return null;
         }
 
         pub fn idByName(name: String) ?Index {
-            return T.idByName(name);
+            return T.Naming.getIdOpt(name);
         }
 
         pub fn activateByName(name: String, active: bool) void {
-            T.activateByName(name, active);
+            T.Activation.setByName(name, active);
         }
 
         pub fn idIterator() std.AutoHashMap(Index, SubType).KeyIterator {
@@ -747,24 +809,22 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
     };
 }
 
-const SubComponentTypeInterface = struct {
-    deinit: api.DeinitFunction,
-};
-var SUB_COMPONENT_INTERFACE_TABLE: utils.DynArray(SubComponentTypeInterface) = undefined;
-
 fn ComponentSubType(comptime T: type, comptime SubType: type) type {
     comptime {
         if (@typeInfo(SubType) != .Struct)
             @compileError("Expects component sub type is a struct.");
         if (!@hasField(SubType, "id"))
             @compileError("Expects component sub type to have field: id: Index, that holds the index-id of the component");
+        if (!@hasDecl(T, "Subscription"))
+            @compileError("Expects component type to have declaration: const Subscription = SubscriptionMixin(T).");
     }
     return struct {
         pub var data: std.AutoHashMap(Index, SubType) = undefined;
+
         fn init() void {
             data = std.AutoHashMap(Index, SubType).init(api.COMPONENT_ALLOC);
             // subscribe to T and dispatch activation and dispose
-            T.subscribe(notifyComponentChange);
+            T.Subscription.subscribe(notifyComponentChange);
             // create and register SubComponentTypeInterface
             _ = SUB_COMPONENT_INTERFACE_TABLE.add(.{
                 .deinit = _deinit,
@@ -773,7 +833,7 @@ fn ComponentSubType(comptime T: type, comptime SubType: type) type {
 
         fn _deinit() void {
             // unsubscribe from base Component events
-            T.unsubscribe(notifyComponentChange);
+            T.Subscription.unsubscribe(notifyComponentChange);
             // destruct and clear subtype data
             if (@hasDecl(SubType, "destruct")) {
                 var it = data.iterator();

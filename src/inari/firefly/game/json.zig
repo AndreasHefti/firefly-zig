@@ -23,22 +23,22 @@ pub fn init() void {
     if (initialized)
         return;
 
-    _ = api.Task.new(.{
+    _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_TILE_SET,
         .function = loadTileSetFromJSON,
     });
 
-    _ = api.Task.new(.{
+    _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_TILE_MAPPING,
         .function = loadTileMappingFromJSON,
     });
 
-    _ = api.Task.new(.{
+    _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_ROOM,
         .function = loadRoomFromJSON,
     });
 
-    _ = api.Task.new(.{
+    _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_WORLD,
         .function = loadWorldFromJSON,
     });
@@ -50,9 +50,9 @@ pub fn deinit() void {
         return;
 
     // dispose tasks
-    api.Task.disposeByName(game.Tasks.JSON_LOAD_ROOM);
-    api.Task.disposeByName(game.Tasks.JSON_LOAD_TILE_MAPPING);
-    api.Task.disposeByName(game.Tasks.JSON_LOAD_TILE_SET);
+    api.Task.Naming.dispose(game.Tasks.JSON_LOAD_ROOM);
+    api.Task.Naming.dispose(game.Tasks.JSON_LOAD_TILE_MAPPING);
+    api.Task.Naming.dispose(game.Tasks.JSON_LOAD_TILE_SET);
 }
 
 //////////////////////////////////////////////////////////////
@@ -76,7 +76,7 @@ pub const JSONResourceHandle = struct {
     free_json_resource: bool,
 
     pub fn new(a_id: Index) JSONResourceHandle {
-        var attrs = api.Attributes.byId(a_id);
+        var attrs = api.Attributes.Component.byId(a_id);
         if (attrs.get(game.TaskAttributes.FILE_RESOURCE)) |file| {
             return .{
                 .json_resource = firefly.api.loadFromFile(file),
@@ -176,15 +176,15 @@ fn loadTileSetFromJSON(ctx: *api.CallContext) void {
         const tile_set_id = loadTileSet(jsonTileSet);
 
         if (ctx.c_ref_callback) |callback|
-            callback(game.TileSet.referenceById(tile_set_id, true).?, ctx);
+            callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
     }
 }
 
 fn loadTileSet(jsonTileSet: JSONTileSet) Index {
     // check if tile set already exists. If so, do nothing
     // TODO hot reload here?
-    if (game.TileSet.existsName(jsonTileSet.name))
-        return game.TileSet.idByName(jsonTileSet.name);
+    if (game.TileSet.Naming.exists(jsonTileSet.name))
+        return game.TileSet.Naming.getId(jsonTileSet.name);
 
     // check texture and load or create if needed
     if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
@@ -203,7 +203,7 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
         utils.panic(api.ALLOC, "Failed to find/load texture: {any}", .{jsonTileSet.texture});
 
     // create TileSet from jsonTileSet
-    var tile_set = game.TileSet.new(.{
+    var tile_set = game.TileSet.Component.new(.{
         .name = api.NamePool.alloc(jsonTileSet.name),
         .texture_name = api.NamePool.alloc(jsonTileSet.texture.name).?,
         .tile_width = jsonTileSet.tile_width,
@@ -364,19 +364,19 @@ fn loadTileMappingFromJSON(ctx: *api.CallContext) void {
         );
 
         if (ctx.c_ref_callback) |callback|
-            callback(game.TileMapping.referenceById(tile_mapping_id, true).?, ctx);
+            callback(game.TileMapping.Component.getReference(tile_mapping_id, true).?, ctx);
     }
 }
 
 fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
     // check if tile map with name already exits. If so, do nothing
     // TODO hot reload here?
-    if (game.TileMapping.existsName(jsonTileMapping.name))
-        return game.TileMapping.idByName(jsonTileMapping.name);
+    if (game.TileMapping.Naming.exists(jsonTileMapping.name))
+        return game.TileMapping.Naming.getId(jsonTileMapping.name);
 
     // prepare view
-    const view_id = graphics.View.idByName(view_name);
-    var tile_mapping = game.TileMapping.new(.{
+    const view_id = graphics.View.Naming.getId(view_name);
+    var tile_mapping = game.TileMapping.Component.new(.{
         .name = api.NamePool.alloc(jsonTileMapping.name),
         .view_id = view_id,
     });
@@ -388,7 +388,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 
     for (0..jsonTileMapping.tile_sets.len) |i| {
         var tile_set_def = jsonTileMapping.tile_sets[i];
-        if (!game.TileSet.existsName(tile_set_def.resource.name)) {
+        if (!game.TileSet.Naming.exists(tile_set_def.resource.name)) {
             utils.panic(
                 api.ALLOC,
                 "No File defined for missing resource: {s}",
@@ -414,7 +414,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
         if (tile_set_def.code_offset == null)
             tile_set_def.code_offset = code_offset;
 
-        code_offset = code_offset + game.TileSet.byName(tile_set_def.resource.name).?.tile_templates.size();
+        code_offset = code_offset + game.TileSet.Naming.byName(tile_set_def.resource.name).?.tile_templates.size();
     }
 
     // process tile layer
@@ -423,10 +423,10 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 
         // get involved layer, if name exists but layer not yet, create one
         var layer_id: ?Index = null;
-        if (graphics.Layer.existsName(layer_mapping.layer_name)) {
-            layer_id = graphics.Layer.idByName(layer_mapping.layer_name);
+        if (graphics.Layer.Naming.exists(layer_mapping.layer_name)) {
+            layer_id = graphics.Layer.Naming.getId(layer_mapping.layer_name);
         } else {
-            layer_id = graphics.Layer.new(.{
+            layer_id = graphics.Layer.Component.new(.{
                 .name = api.NamePool.alloc(layer_mapping.layer_name),
                 .view_id = view_id,
                 .order = i,
@@ -664,7 +664,7 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
 
     // add composite owned reference if requested
     if (ctx.c_ref_callback) |callback| {
-        if (api.Composite.referenceById(room.id, true)) |ref| {
+        if (api.Composite.Component.getReference(room.id, true)) |ref| {
             var r = ref;
             r.activation = null;
             callback(r, ctx);

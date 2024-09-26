@@ -104,6 +104,7 @@ pub const ActionResult = enum {
 pub const CRef = struct {
     type: ComponentAspect,
     id: Index,
+    is_valid: *const fn (Index) bool,
     activation: ?*const fn (Index, bool) void,
     dispose: ?*const fn (Index) void,
 };
@@ -146,17 +147,17 @@ pub fn init(context: InitContext) !void {
 
     NamePool.init();
     Component.init();
-    composite.init();
     Timer.init();
     system.init();
 
     // register api based components and entity components
-    Component.registerComponent(Entity);
-    Component.registerComponent(Attributes);
+    Component.registerComponent(Attributes, "Attributes");
+    Component.registerComponent(Entity, "Entity");
     EComponent.registerEntityComponent(EMultiplier);
 
     asset.init();
     control.init();
+    composite.init();
 }
 
 pub fn deinit() void {
@@ -224,16 +225,6 @@ pub const NamePool = struct {
         defer ALLOC.free(formatted);
         return alloc(formatted).?;
     }
-
-    // pub fn concat(s1: String, s2: String, delimiter: ?String) String {
-    //     const c = if (delimiter) |d|
-    //         std.fmt.allocPrint(ALLOC, "{s}{s}{s}", .{ s1, d, s2 }) catch unreachable
-    //     else
-    //         std.fmt.allocPrint(ALLOC, "{s}{s}", .{ s1, s2 }) catch unreachable;
-
-    //     defer ALLOC.free(c);
-    //     return alloc(c).?;
-    // }
 
     pub fn getCName(name: ?String) ?CString {
         if (name) |n| {
@@ -343,52 +334,52 @@ pub fn AttributeMixin(comptime T: type) type {
         pub fn deinitAttributes(self: *T) void {
             if (has_attributes_id) {
                 if (self.attributes_id) |id|
-                    Attributes.disposeById(id);
+                    Attributes.Component.dispose(id);
                 self.attributes_id = null;
             } else if (has_call_context) {
                 if (self.call_context.attributes_id) |id|
-                    Attributes.disposeById(id);
+                    Attributes.Component.dispose(id);
                 self.call_context.attributes_id = null;
             }
         }
 
         pub fn getAttributes(self: *T) ?*Attributes {
             if (getAttributesId(self, true)) |id|
-                return Attributes.byId(id);
+                return Attributes.Component.byId(id);
             return null;
         }
 
         pub fn getAttribute(self: *T, name: String) ?String {
             if (getAttributesId(self, true)) |id|
-                return Attributes.byId(id)._dict.get(name);
+                return Attributes.Component.byId(id)._dict.get(name);
             return null;
         }
 
         pub fn setAttribute(self: *T, name: String, value: String) void {
             if (getAttributesId(self, true)) |id|
-                Attributes.byId(id).set(name, value);
+                Attributes.Component.byId(id).set(name, value);
         }
 
         pub fn setAllAttributes(self: *T, attributes: *Attributes) void {
             if (getAttributesId(self, true)) |id|
-                Attributes.byId(id).setAll(attributes);
+                Attributes.Component.byId(id).setAll(attributes);
         }
 
         pub fn setAllAttributesById(self: *T, attributes_id: ?Index) void {
             if (attributes_id) |aid|
                 if (getAttributesId(self, true)) |id|
-                    Attributes.byId(id).setAll(Attributes.byId(aid));
+                    Attributes.Component.byId(id).setAll(Attributes.Component.byId(aid));
         }
 
         fn getAttributesId(self: *T, create: bool) ?Index {
             if (has_attributes_id) {
                 if (self.attributes_id == null and create)
-                    self.attributes_id = Attributes.new(.{ .name = getAttributesName(self) }).id;
+                    self.attributes_id = Attributes.Component.new(.{ .name = getAttributesName(self) }).id;
 
                 return self.attributes_id;
             } else if (has_call_context) {
                 if (self.call_context.attributes_id == null and create)
-                    self.call_context.attributes_id = Attributes.new(.{ .name = getAttributesName(self) }).id;
+                    self.call_context.attributes_id = Attributes.Component.new(.{ .name = getAttributesName(self) }).id;
 
                 return self.call_context.attributes_id;
             }
@@ -405,11 +396,8 @@ pub fn AttributeMixin(comptime T: type) type {
 }
 
 pub const Attributes = struct {
-    pub usingnamespace Component.Mixin(Attributes, .{
-        .name = "Attributes",
-        .activation = false,
-        .subscription = false,
-    });
+    pub const Component = firefly.api.Component.Mixin(Attributes);
+    pub const Naming = firefly.api.Component.NameMappingMixin(Attributes);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -429,7 +417,7 @@ pub const Attributes = struct {
     }
 
     pub fn newWith(name: ?String, attributes: anytype) *Attributes {
-        var result: *Attributes = Attributes.new(.{ .name = name });
+        var result: *Attributes = Attributes.Component.new(.{ .name = name });
 
         inline for (attributes) |v| {
             const t = @typeInfo(@TypeOf(v[1]));
@@ -527,7 +515,7 @@ pub fn CallContextMixin(comptime T: type) type {
                 self.call_context.caller_name = self.name;
 
             if (init_attributes)
-                self.call_context.attributes_id = Attributes.new(.{ .name = Self.getAttributesName(self) }).id;
+                self.call_context.attributes_id = Attributes.Component.new(.{ .name = Self.getAttributesName(self) }).id;
         }
 
         pub fn deinitCallContext(self: *T) void {
@@ -594,13 +582,13 @@ pub const CallContext = struct {
 
     inline fn getAttrs(self: *CallContext) *Attributes {
         if (self.attributes_id) |id|
-            return Attributes.byId(id);
+            return Attributes.Component.byId(id);
         @panic("No Attributes initialized");
     }
 
     pub fn deinit(self: *CallContext) void {
         if (self.attributes_id) |aid|
-            Attributes.disposeById(aid);
+            Attributes.Component.dispose(aid);
         self.attributes_id = null;
     }
 };

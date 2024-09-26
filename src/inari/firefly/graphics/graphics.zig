@@ -65,8 +65,8 @@ pub fn init(_: firefly.api.InitContext) !void {
         return;
 
     // register Assets sub types
-    api.Asset.registerSubtype(Texture);
-    api.Asset.registerSubtype(Shader);
+    api.Asset.Subtypes.register(Texture);
+    api.Asset.Subtypes.register(Shader);
 
     // init sub packages
     try view.init();
@@ -169,7 +169,7 @@ pub fn ViewLayerComponentRendererMixin(comptime T: type, comptime CType: type) t
         }
 
         pub fn componentRegistration(id: Index, register: bool) void {
-            const comp = CType.byId(id);
+            const comp = CType.Component.byId(id);
             if (register)
                 components.add(comp.view_id, comp.layer_id, id)
             else

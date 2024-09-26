@@ -26,8 +26,8 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    api.Asset.registerSubtype(SpriteSet);
-    api.Component.registerComponent(SpriteTemplate);
+    api.Asset.Subtypes.register(SpriteSet);
+    api.Component.registerComponent(SpriteTemplate, "SpriteTemplate");
     api.EComponent.registerEntityComponent(ESprite);
     DefaultSpriteRenderer.init();
 }
@@ -43,17 +43,12 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const SpriteTemplate = struct {
-    pub usingnamespace api.Component.Mixin(
-        @This(),
-        .{
-            .name = "SpriteTemplate",
-            .activation = false,
-            .subscription = false,
-        },
-    );
+    pub const Component = api.Component.Mixin(SpriteTemplate);
+    pub const Naming = api.Component.NameMappingMixin(SpriteTemplate);
 
     id: Index = utils.UNDEF_INDEX,
     name: ?String = null,
+
     texture_name: String,
     texture_bounds: RectF,
     texture_binding: BindingId = utils.UNDEF_INDEX,
@@ -74,11 +69,11 @@ pub const SpriteTemplate = struct {
     }
 
     pub fn componentTypeInit() !void {
-        api.Asset.subscribe(notifyAssetEvent);
+        api.Asset.Subscription.subscribe(notifyAssetEvent);
     }
 
     pub fn componentTypeDeinit() void {
-        api.Asset.unsubscribe(notifyAssetEvent);
+        api.Asset.Subscription.unsubscribe(notifyAssetEvent);
     }
 
     pub fn construct(self: *SpriteTemplate) void {
@@ -93,8 +88,8 @@ pub const SpriteTemplate = struct {
         if (e.c_id) |id| {
             switch (e.event_type) {
                 .ACTIVATED => onTextureLoad(graphics.Texture.byId(id)),
-                .DEACTIVATING => onTextureClose(api.Asset.byId(id).name.?),
-                .DISPOSING => onTextureDispose(api.Asset.byId(id).name.?),
+                .DEACTIVATING => onTextureClose(api.Asset.Component.byId(id).name.?),
+                .DISPOSING => onTextureDispose(api.Asset.Component.byId(id).name.?),
                 else => {},
             }
         }
@@ -102,36 +97,33 @@ pub const SpriteTemplate = struct {
 
     fn onTextureLoad(texture: *graphics.Texture) void {
         if (texture._binding) |b| {
-            var next = SpriteTemplate.nextId(0);
+            var next = SpriteTemplate.Component.nextId(0);
             while (next) |id| {
-                var template = SpriteTemplate.byId(id);
+                next = SpriteTemplate.Component.nextId(id + 1);
+                var template = SpriteTemplate.Component.byId(id);
                 if (firefly.utils.stringEquals(template.texture_name, texture.name))
                     template.texture_binding = b.id;
-
-                next = SpriteTemplate.nextId(id + 1);
             }
         }
     }
 
     fn onTextureClose(name: String) void {
-        var next = SpriteTemplate.nextId(0);
+        var next = SpriteTemplate.Component.nextId(0);
         while (next) |id| {
-            var template = SpriteTemplate.byId(id);
+            next = SpriteTemplate.Component.nextId(id + 1);
+            var template = SpriteTemplate.Component.byId(id);
             if (firefly.utils.stringEquals(template.texture_name, name))
                 template.texture_binding = utils.UNDEF_INDEX;
-
-            next = SpriteTemplate.nextId(id + 1);
         }
     }
 
     fn onTextureDispose(name: String) void {
-        var next = SpriteTemplate.nextId(0);
+        var next = SpriteTemplate.Component.nextId(0);
         while (next) |id| {
-            const template = SpriteTemplate.byId(id);
+            next = SpriteTemplate.Component.nextId(id + 1);
+            const template = SpriteTemplate.Component.byId(id);
             if (firefly.utils.stringEquals(template.texture_name, name))
-                SpriteTemplate.disposeById(id);
-
-            next = SpriteTemplate.nextId(id + 1);
+                SpriteTemplate.Component.dispose(id);
         }
     }
 
@@ -256,7 +248,7 @@ pub const SpriteSet = struct {
                 for (0..width) |x| { // 0..width
                     if (res._stamps.get(y * width + x)) |stamp| {
                         // use the stamp merged with default stamp
-                        res._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                        res._loaded_sprite_template_refs.add(SpriteTemplate.Component.new(.{
                             .name = getMapName(stamp.name, default_prefix, x, y),
                             .texture_name = res.texture_name,
                             .texture_bounds = stamp.sprite_dim.?,
@@ -265,7 +257,7 @@ pub const SpriteSet = struct {
                         }).id);
                     } else {
                         // use the default stamp
-                        res._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                        res._loaded_sprite_template_refs.add(SpriteTemplate.Component.new(.{
                             .name = getMapName(null, default_prefix, x, y),
                             .texture_name = res.texture_name,
                             .texture_bounds = RectF{
@@ -287,7 +279,7 @@ pub const SpriteSet = struct {
             while (next) |i| {
                 if (res._stamps.get(i)) |stamp| {
                     if (stamp.sprite_dim) |s_dim| {
-                        res._loaded_sprite_template_refs.add(SpriteTemplate.new(.{
+                        res._loaded_sprite_template_refs.add(SpriteTemplate.Component.new(.{
                             .name = getMapName(stamp.name, default_prefix, i, null),
                             .texture_name = res.texture_name,
                             .texture_bounds = s_dim,
@@ -303,7 +295,7 @@ pub const SpriteSet = struct {
 
     fn close(res: *SpriteSet) void {
         for (res._loaded_sprite_template_refs.items) |index|
-            SpriteTemplate.disposeById(index);
+            SpriteTemplate.Component.dispose(index);
         res._loaded_sprite_template_refs.clear();
     }
 
@@ -335,7 +327,7 @@ pub const DefaultSpriteRenderer = struct {
             const es: *ESprite = ESprite.byId(id).?;
             const trans: *graphics.ETransform = graphics.ETransform.byId(id).?;
 
-            const sprite_template: *SpriteTemplate = SpriteTemplate.byId(es.template_id);
+            const sprite_template: *SpriteTemplate = SpriteTemplate.Component.byId(es.template_id);
             const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
             firefly.api.rendering.renderSprite(
                 sprite_template.texture_binding,

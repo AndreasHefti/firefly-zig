@@ -13,13 +13,14 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(Condition);
-    api.Component.registerComponent(Task);
-    api.Component.registerComponent(Trigger);
-    api.Component.registerComponent(Control);
-    Control.registerSubtype(VoidControl);
-    api.Component.registerComponent(StateEngine);
-    api.Component.registerComponent(EntityStateEngine);
+    api.Component.registerComponent(Condition, "Condition");
+    api.Component.registerComponent(Task, "Task");
+    api.Component.registerComponent(Trigger, "Trigger");
+    api.Component.registerComponent(Control, "Control");
+    api.Component.registerComponent(StateEngine, "StateEngine");
+    api.Component.registerComponent(EntityStateEngine, "EntityStateEngine");
+
+    Control.Subtypes.register(VoidControl);
     api.EComponent.registerEntityComponent(EState);
     StateSystem.init();
     EntityStateSystem.init();
@@ -36,25 +37,22 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////////////////
 /// A generic condition that uses a api.RegPredicate to check
 pub const Condition = struct {
-    pub usingnamespace api.Component.Mixin(Condition, .{
-        .name = "Condition",
-        .activation = false,
-        .subscription = false,
-    });
+    pub const Component = api.Component.Mixin(Condition);
+    pub const Naming = api.Component.NameMappingMixin(Condition);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     check: api.CallPredicate,
 
     pub fn functionById(id: Index) api.CallPredicate {
-        return Condition.byId(id).f;
+        return Component.byId(id).f;
     }
 
     pub fn functionByName(name: String) api.CallPredicate {
-        return Condition.byName(name).?.check;
+        return Naming.byName(name).?.check;
     }
 
-    pub fn createAND(comptime f1: api.CallPredicate, comptime f2: api.RegPredicate) api.CallPredicate {
+    pub fn createAND(comptime f1: api.CallPredicate, comptime f2: api.CallPredicate) api.CallPredicate {
         return struct {
             fn check(reg: *api.CallContext) bool {
                 return f1(reg) and f2(reg);
@@ -76,18 +74,20 @@ pub const Condition = struct {
 //////////////////////////////////////////////////////////////////////////
 
 pub const Control = struct {
-    pub usingnamespace api.Component.Mixin(Control, .{
-        .name = "Control",
-        .grouping = true,
-        .subtypes = true,
-    });
+    pub const Component = api.Component.Mixin(Control);
+    pub const Naming = api.Component.NameMappingMixin(Control);
+    pub const Activation = api.Component.ActivationMixin(Control);
+    pub const Grouping = api.Component.GroupingMixin(Control);
+    pub const Subscription = api.Component.SubscriptionMixin(Control);
+    pub const Subtypes = api.Component.SubTypingMixin(Control);
+
     pub usingnamespace api.CallContextMixin(Control);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
     groups: ?api.GroupKind = null,
-
     controlled_component_type: api.ComponentAspect,
+
     call_context: api.CallContext = undefined,
     update: api.CallFunction,
 
@@ -125,9 +125,10 @@ pub fn ControlSubTypeMixin(comptime T: type, comptime ControlledType: type) type
 }
 
 pub const VoidControl = struct {
+    pub usingnamespace ControlSubTypeMixin(VoidControl, VoidControl);
+
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    pub usingnamespace ControlSubTypeMixin(VoidControl, VoidControl);
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -135,11 +136,8 @@ pub const VoidControl = struct {
 //////////////////////////////////////////////////////////////////////////
 
 pub const Task = struct {
-    pub usingnamespace api.Component.Mixin(Task, .{
-        .name = "Task",
-        .activation = false,
-        .subscription = false,
-    });
+    pub const Component = api.Component.Mixin(Task);
+    pub const Naming = api.Component.NameMappingMixin(Task);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -166,34 +164,34 @@ pub const Task = struct {
 
     pub fn runTaskById(task_id: Index) void {
         var ctx = api.CallContext{};
-        Task.byId(task_id).runWith(&ctx, false);
+        Component.byId(task_id).runWith(&ctx, false);
     }
 
     pub fn runOwnedTaskById(task_id: Index, context: *api.CallContext) void {
-        Task.byId(task_id).runWith(context, true);
+        Component.byId(task_id).runWith(context, true);
     }
 
     pub fn runTaskByIdWith(task_id: Index, context: api.CallContext) void {
         var ctx = context;
-        Task.byId(task_id).runWith(&ctx, false);
+        Component.byId(task_id).runWith(&ctx, false);
     }
 
     pub fn runTaskByName(task_name: String) void {
-        if (Task.byName(task_name)) |task| {
+        if (Naming.byName(task_name)) |task| {
             var ctx = api.CallContext{};
             task.runWith(&ctx, false);
         }
     }
 
     pub fn runTaskByNameWith(task_name: String, context: api.CallContext) void {
-        if (Task.byName(task_name)) |task| {
+        if (Naming.byName(task_name)) |task| {
             var ctx = context;
             task.runWith(&ctx, false);
         } else utils.panic(api.ALLOC, "No Task with name {s} found!", .{task_name});
     }
 
     pub fn runOwnedTaskByName(task_name: String, context: *api.CallContext) void {
-        if (Task.byName(task_name)) |task| {
+        if (Naming.byName(task_name)) |task| {
             task.runWith(context, true);
         }
     }
@@ -207,7 +205,7 @@ pub const Task = struct {
             context.deinit();
 
         if (self.run_once)
-            Task.disposeById(self.id);
+            Task.Component.dispose(self.id);
     }
 
     pub fn format(
@@ -224,9 +222,10 @@ pub const Task = struct {
 };
 
 pub const Trigger = struct {
-    pub usingnamespace api.Component.Mixin(Trigger, .{
-        .name = "Trigger",
-    });
+    pub const Component = api.Component.Mixin(Trigger);
+    pub const Naming = api.Component.NameMappingMixin(Trigger);
+    pub const Activation = api.Component.ActivationMixin(Trigger);
+
     pub usingnamespace api.CallContextMixin(Trigger);
 
     id: Index = UNDEF_INDEX,
@@ -253,13 +252,12 @@ pub const Trigger = struct {
     }
 
     fn update(_: api.UpdateEvent) void {
-        var next = Trigger.nextActiveId(0);
+        var next = Activation.nextId(0);
         while (next) |i| {
-            const trigger = Trigger.byId(i);
+            next = Activation.nextId(i + 1);
+            const trigger = Component.byId(i);
             if (trigger.condition(&trigger.call_context))
-                Task.byId(trigger.task_ref).runWith(&trigger.call_context, true);
-
-            next = Trigger.nextActiveId(i + 1);
+                Task.Component.byId(trigger.task_ref).runWith(&trigger.call_context, true);
         }
     }
 };
@@ -288,11 +286,16 @@ pub const State = struct {
 //////////////////////////////////////////////////////////////
 
 pub const StateEngine = struct {
-    pub usingnamespace api.Component.Mixin(StateEngine, .{ .name = "StateEngine" });
+    pub const Component = api.Component.Mixin(StateEngine);
+    pub const Naming = api.Component.NameMappingMixin(StateEngine);
+    pub const Activation = api.Component.ActivationMixin(StateEngine);
+    pub const Subscription = api.Component.SubscriptionMixin(StateEngine);
+
     pub usingnamespace api.CallContextMixin(StateEngine);
 
     id: Index = UNDEF_INDEX,
     name: ?String,
+
     states: utils.DynArray(State) = undefined,
     call_context: api.CallContext = undefined,
     current_state: ?*State = null,
@@ -345,7 +348,11 @@ pub const StateEngine = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EntityStateEngine = struct {
-    pub usingnamespace api.Component.Mixin(EntityStateEngine, .{ .name = "EntityStateEngine" });
+    pub const Component = api.Component.Mixin(EntityStateEngine);
+    pub const Naming = api.Component.NameMappingMixin(EntityStateEngine);
+    pub const Activation = api.Component.ActivationMixin(EntityStateEngine);
+    pub const Subscription = api.Component.SubscriptionMixin(EntityStateEngine);
+
     pub usingnamespace api.CallContextMixin(EntityStateEngine);
 
     id: Index = UNDEF_INDEX,
@@ -398,7 +405,7 @@ pub const StateSystem = struct {
     pub usingnamespace api.SystemMixin(StateSystem);
 
     pub fn update(_: api.UpdateEvent) void {
-        StateEngine.processActive(processEngine);
+        StateEngine.Activation.process(processEngine);
     }
 
     fn processEngine(state_engine: *StateEngine) void {
@@ -437,7 +444,7 @@ pub const EntityStateSystem = struct {
     }
 
     inline fn processEntity(entity: *EState) void {
-        const state_engine = EntityStateEngine.byId(entity.state_engine_ref);
+        const state_engine = EntityStateEngine.Component.byId(entity.state_engine_ref);
         state_engine.call_context.id_2 = if (entity.current_state) |s| s.id else UNDEF_INDEX;
         var next = state_engine.states.slots.nextSetBit(0);
         while (next) |i| {

@@ -44,41 +44,43 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    const sprite = SpriteTemplate.new(.{
+    const sprite = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
     var x: Float = 10;
-    _ = Entity.new(.{})
+    const player = Entity.Component.new(.{})
         .withControl(control, null, true)
         .withComponent(ETransform{ .position = .{ x, 0 } })
         .withComponent(ESprite{ .template_id = sprite.id })
         .withComponent(EMovement{ .gravity = .{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.3, .integrator = firefly.physics.EulerIntegrator })
         .withComponent(EContactScan{ .collision_resolver = DebugCollisionResolver })
         .withConstraint(.{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true })
-        .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }), .color = .{ 0, 0, 255, 255 } })
-        .activate();
+        .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }), .color = .{ 0, 0, 255, 255 } });
+    Entity.Activation.activate(player.id);
+
     x += 50;
 
-    _ = Entity.new(.{})
+    _ = Entity.Component.new(.{})
         .withComponent(ETransform{ .position = .{ x, 200 } })
         .withComponent(ESprite{ .template_id = sprite.id })
         .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
         .activate();
 
     // tile grid
-    const tile = Entity.new(.{ .name = "TestEntity" })
+    const tile = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{})
         .withComponent(ETile{ .sprite_template_id = sprite.id })
         .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
         .activate();
 
-    var tile_grid: *TileGrid = TileGrid.new(.{
+    var tile_grid: *TileGrid = TileGrid.Component.new(.{
         .name = "TileGrid1",
         .world_position = PosF{ 50, 300 },
         .dimensions = .{ 10, 3, 32, 32 },
-    }).activate();
+    });
+    TileGrid.Activation.activate(tile_grid.id);
 
     for (0..3) |y| {
         for (0..10) |_x|

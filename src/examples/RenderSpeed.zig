@@ -27,7 +27,7 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     }).id;
@@ -40,7 +40,7 @@ fn init() void {
         pos[i][1] = rx.float(Float) * 400;
     }
 
-    _ = Entity.new(.{ .name = "TestEntity" })
+    _ = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(ESprite{ .template_id = sprite_id })
         .withComponent(EMultiplier{ .positions = pos })

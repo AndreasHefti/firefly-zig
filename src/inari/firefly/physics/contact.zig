@@ -24,9 +24,15 @@ pub fn init() void {
         return;
 
     Contact.init();
-    api.Component.registerComponent(ContactConstraint);
+
+    // register components
+    api.Component.registerComponent(ContactConstraint, "ContactConstraint");
+
+    // register entity components
     api.EComponent.registerEntityComponent(EContact);
     api.EComponent.registerEntityComponent(EContactScan);
+
+    // init systems
     ContactSystem.init();
     ContactGizmosRenderer.init();
     ContactScanGizmosRenderer.init();
@@ -210,7 +216,9 @@ pub const Contact = struct {
 //////////////////////////////////////////////////////////////
 pub const ContactCallbackFunction = *const fn (entity_id: Index, contacts: *ContactScan) bool;
 pub const ContactConstraint = struct {
-    pub usingnamespace api.Component.Mixin(ContactConstraint, .{ .name = "ContactConstraint" });
+    pub const Component = api.Component.Mixin(ContactConstraint);
+    pub const Naming = api.Component.NameMappingMixin(ContactConstraint);
+    pub const Activation = api.Component.ActivationMixin(ContactConstraint);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -488,7 +496,7 @@ pub const DebugCollisionResolver: CollisionResolver = .{
 };
 
 fn debugCollisionResolver(entity_id: Index, _: ?Index) void {
-    const entity = api.Entity.byId(entity_id);
+    const entity = api.Entity.Component.byId(entity_id);
     const transform = graphics.ETransform.byId(entity_id).?;
     const scans = EContactScan.byId(entity_id).?;
 
@@ -497,7 +505,7 @@ fn debugCollisionResolver(entity_id: Index, _: ?Index) void {
     std.debug.print("Transform: {any}\n\n", .{transform});
     var next = scans.constraints.nextSetBit(0);
     while (next) |i| {
-        const constraint = ContactConstraint.byId(i);
+        const constraint = ContactConstraint.Component.byId(i);
         std.debug.print("Contact Constraint: \n{any}\n\n", .{constraint});
         next = scans.constraints.nextSetBit(i + 1);
     }
@@ -546,20 +554,20 @@ pub const EContactScan = struct {
     pub fn clear(self: *EContactScan) void {
         var next = self.constraints.nextSetBit(0);
         while (next) |i| {
-            ContactConstraint.byId(i).clear();
+            ContactConstraint.Component.byId(i).clear();
             next = self.constraints.nextSetBit(i + 1);
         }
     }
 
     pub fn withConstraint(self: *EContactScan, constraint: ContactConstraint) *EContactScan {
-        self.constraints.set(ContactConstraint.new(constraint).id);
+        self.constraints.set(ContactConstraint.Component.new(constraint).id);
         return self;
     }
 
     pub fn hasAnyContact(self: *EContactScan) bool {
         var next = self.constraints.nextSetBit(0);
         while (next) |i| {
-            if (ContactConstraint.byId(i).scan.hasAnyContact())
+            if (ContactConstraint.Component.byId(i).scan.hasAnyContact())
                 return true;
             next = self.constraints.nextSetBit(i + 1);
         }
@@ -670,7 +678,7 @@ pub const ContactSystem = struct {
         var has_any_contact = false;
         var next_constraint = e_scan.constraints.nextSetBit(0);
         while (next_constraint) |i| {
-            const constraint = ContactConstraint.byId(i);
+            const constraint = ContactConstraint.Component.byId(i);
             const has_contact = applyScanForConstraint(e_scan.id, view_id, constraint);
             if (has_contact) {
                 if (constraint.callback) |callback| {
@@ -760,14 +768,13 @@ pub const ContactSystem = struct {
         layer_id: ?Index,
     ) bool {
         var has_any_contact = false;
-        var next = graphics.TileGrid.nextActiveId(0);
+        var next = graphics.TileGrid.Activation.nextId(0);
         while (next) |i| {
-            const tile_grid = graphics.TileGrid.byId(i);
+            next = graphics.TileGrid.Activation.nextId(i + 1);
+            const tile_grid = graphics.TileGrid.Component.byId(i);
             if (graphics.ViewLayerMapping.match(tile_grid.view_id, view_id, tile_grid.layer_id, layer_id)) {
-                var it = tile_grid.getIteratorWorldClipF(world_contact_bounds) orelse {
-                    next = graphics.TileGrid.nextActiveId(i + 1);
+                var it = tile_grid.getIteratorWorldClipF(world_contact_bounds) orelse
                     continue;
-                };
 
                 while (it.next()) |entity_id| {
                     const has_contact = constraint.scanEntity(
@@ -778,8 +785,6 @@ pub const ContactSystem = struct {
                     has_any_contact = has_any_contact or has_contact;
                 }
             }
-
-            next = graphics.TileGrid.nextActiveId(i + 1);
         }
 
         return has_any_contact;
@@ -848,7 +853,7 @@ pub const ContactScanGizmosRenderer = struct {
             var si = scans.constraints.nextSetBit(0);
             while (si) |next_s| {
                 si = scans.constraints.nextSetBit(next_s + 1);
-                const constraint = ContactConstraint.byId(next_s);
+                const constraint = ContactConstraint.Component.byId(next_s);
                 if (constraint.bounds.circle) |circle| {
                     shape_type = api.ShapeType.CIRCLE;
                     v[0] = circle[0];

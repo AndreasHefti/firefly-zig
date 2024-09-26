@@ -12,7 +12,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(System);
+    api.Component.registerComponent(System, "System");
 }
 
 pub fn deinit() void {
@@ -22,10 +22,13 @@ pub fn deinit() void {
 }
 
 pub const System = struct {
-    pub usingnamespace api.Component.Mixin(System, .{ .name = "System", .subscription = false });
-    // struct fields of a System
+    pub const Component = api.Component.Mixin(System);
+    pub const Naming = api.Component.NameMappingMixin(System);
+    pub const Activation = api.Component.ActivationMixin(System);
+
     id: Index = UNDEF_INDEX,
     name: ?String = null,
+
     onActivation: ?*const fn (bool) void = null,
     onDestruct: *const fn () void,
 
@@ -94,10 +97,6 @@ pub fn EntityUpdateMixin(comptime T: type) type {
     };
 }
 
-// pub fn ComponentUpdateMixin(comptime T: type, comptime CType: type) type {
-
-// }
-
 pub fn SystemMixin(comptime T: type) type {
     const has_render_order: bool = @hasDecl(T, "render_order");
     const has_view_render_order: bool = @hasDecl(T, "view_render_order");
@@ -129,7 +128,7 @@ pub fn SystemMixin(comptime T: type) type {
             if (component_ref != null)
                 return;
 
-            component_ref = System.new(.{
+            component_ref = System.Component.new(.{
                 .name = @typeName(T),
                 .onActivation = activation,
                 .onDestruct = destruct,
@@ -144,16 +143,16 @@ pub fn SystemMixin(comptime T: type) type {
         pub fn disposeSystem() void {
             if (component_ref) |id| {
                 defer component_ref = null;
-                System.disposeById(id);
+                System.Component.dispose(id);
             }
         }
 
         pub fn activate() void {
-            System.activateById(component_ref.?, true);
+            System.Activation.activate(component_ref.?);
         }
 
         pub fn deactivate() void {
-            System.activateById(component_ref.?, false);
+            System.Activation.deactivate(component_ref.?);
         }
 
         fn destruct() void {
@@ -204,13 +203,13 @@ pub fn SystemMixin(comptime T: type) type {
         fn activation(active: bool) void {
             if (active) {
                 std.debug.print("FIREFLY : INFO: Activate System: {?s}\n", .{
-                    System.byId(component_ref.?).name,
+                    System.Component.byId(component_ref.?).name,
                 });
                 if (has_entity_registration) {
-                    api.Entity.subscribe(notifyEntityChange);
+                    api.Entity.Subscription.subscribe(notifyEntityChange);
                 }
                 if (has_component_registration) {
-                    T.component_register_type.subscribe(notifyComponentChange);
+                    T.component_register_type.Subscription.subscribe(notifyComponentChange);
                 }
                 if (has_update_event_subscription) {
                     if (has_update_order) {
@@ -234,14 +233,14 @@ pub fn SystemMixin(comptime T: type) type {
                     }
                 }
             } else {
-                std.debug.print("FIREFLY : INFO: Activate System: {?s}\n", .{
-                    System.byId(component_ref.?).name,
+                std.debug.print("FIREFLY : INFO: Deactivate System: {?s}\n", .{
+                    System.Component.byId(component_ref.?).name,
                 });
                 if (has_entity_registration) {
-                    api.Entity.unsubscribe(notifyEntityChange);
+                    api.Entity.Subscription.unsubscribe(notifyEntityChange);
                 }
                 if (has_component_registration) {
-                    T.component_register_type.unsubscribe(notifyComponentChange);
+                    T.component_register_type.Subscription.unsubscribe(notifyComponentChange);
                 }
                 if (has_update_event_subscription) {
                     firefly.api.unsubscribeUpdate(T.update);

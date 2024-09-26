@@ -9,30 +9,25 @@ const Vector2f = firefly.utils.Vector2f;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
 
 pub const Entity = struct {
-    pub usingnamespace api.Component.Mixin(Entity, .{
-        .name = "Entity",
-        .control = true,
-        .grouping = true,
-    });
+    pub const Component = api.Component.Mixin(Entity);
+    pub const Naming = api.Component.NameMappingMixin(Entity);
+    pub const Activation = api.Component.ActivationMixin(Entity);
+    pub const Subscription = api.Component.SubscriptionMixin(Entity);
+    pub const Control = api.Component.ControlMixin(Entity);
+    pub const Grouping = api.Component.GroupingMixin(Entity);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    kind: api.EComponentKind = undefined,
     groups: ?api.GroupKind = null,
 
+    kind: api.EComponentKind = undefined,
+
     pub fn componentTypeInit() !void {
-        if (@This().isInitialized())
-            return;
-
         std.debug.print("FIREFLY: INFO: Size Of Entity: {d}\n", .{@sizeOf(Entity)});
-
         try EComponent.init();
     }
 
     pub fn componentTypeDeinit() void {
-        if (!@This().isInitialized())
-            return;
-
         EComponent.deinit();
     }
 
@@ -47,6 +42,36 @@ pub const Entity = struct {
             next = INTERFACE_TABLE.slots.nextSetBit(i + 1);
         }
         self.kind = undefined;
+    }
+
+    pub fn withControl(self: *Entity, update: api.CallFunction, name: ?String, active: bool) *Entity {
+        Control.add(self.id, update, name, active);
+        return self;
+    }
+
+    pub fn withControlOf(self: *Entity, subtype: anytype, active: bool) *Entity {
+        Control.addOf(self.id, subtype, active);
+        return self;
+    }
+
+    pub fn addToGroup(self: *Entity, aspect: api.GroupAspect) *Entity {
+        Grouping.add(self.id, aspect);
+        return self;
+    }
+
+    pub fn removeFromGroup(self: *Entity, aspect: api.GroupAspect) *Entity {
+        Grouping.remove(self.id, aspect);
+        return self;
+    }
+
+    pub fn activate(self: *Entity) *Entity {
+        Activation.activate(self.id);
+        return self;
+    }
+
+    pub fn deactivate(self: *Entity) *Entity {
+        Activation.deactivate(self.id);
+        return self;
     }
 
     pub fn hasComponent(self: *Entity, entity_component_type: anytype) bool {
@@ -69,14 +94,6 @@ pub const Entity = struct {
 
     pub fn activation(self: *Entity, active: bool) void {
         EComponent.activateEntityComponents(self, active);
-    }
-
-    pub fn deactivate(self: *Entity) *Entity {
-        if (self.id == UNDEF_INDEX)
-            return self;
-
-        Entity.activateById(self.id, false);
-        return self;
     }
 
     pub fn format(
@@ -103,7 +120,7 @@ pub const EntityTypeCondition = struct {
     dismiss_kind: ?api.EComponentKind = null,
 
     pub fn check(self: *EntityTypeCondition, id: Index) bool {
-        const e_kind = Entity.byId(id).kind;
+        const e_kind = Entity.Component.byId(id).kind;
         if (self.accept_kind) |ak| {
             if (self.dismiss_kind) |dk| {
                 if (e_kind.hasAnyAspect(dk)) {
@@ -172,7 +189,7 @@ pub const EComponent = struct {
             }
 
             pub fn byName(name: String) ?*T {
-                if (Entity.byName(name)) |e|
+                if (Entity.Naming.byName(name)) |e|
                     return byId(e.id);
                 return null;
             }
@@ -182,7 +199,7 @@ pub const EComponent = struct {
             }
 
             pub fn entity(self: *T) *Entity {
-                return Entity.byId(self.id);
+                return Entity.Component.byId(self.id);
             }
 
             pub fn withComponent(self: *T, c: anytype) *@TypeOf(c) {
@@ -190,7 +207,9 @@ pub const EComponent = struct {
             }
 
             pub fn activate(self: *T) *Entity {
-                return self.entity().activate();
+                const e = self.entity();
+                Entity.Activation.activate(e.id);
+                return e;
             }
         };
     }

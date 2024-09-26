@@ -19,8 +19,8 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Asset.registerSubtype(Sound);
-    api.Asset.registerSubtype(Music);
+    api.Asset.Subtypes.register(Sound);
+    api.Asset.Subtypes.register(Music);
 }
 
 pub fn deinit() void {

@@ -33,7 +33,7 @@ var rndx = std.rand.DefaultPrng.init(32);
 const random = rndx.random();
 
 fn init() void {
-    firefly.api.System.activateByName("ContactSystem", false);
+    firefly.api.System.Activation.deactivateByName("ContactSystem");
 
     Texture.new(.{
         .name = "TestTexture",
@@ -41,23 +41,23 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     }).id;
 
     // This is just to test registering conditions works as expected (can also be assigned directly below)
-    _ = api.Condition.new(.{ .name = "right down", .check = rightDown });
-    _ = api.Condition.new(.{ .name = "right up", .check = rightUp });
-    _ = api.Condition.new(.{ .name = "left down", .check = leftDown });
-    _ = api.Condition.new(.{ .name = "left up", .check = leftUp });
+    _ = api.Condition.Component.new(.{ .name = "right down", .check = rightDown });
+    _ = api.Condition.Component.new(.{ .name = "right up", .check = rightUp });
+    _ = api.Condition.Component.new(.{ .name = "left down", .check = leftDown });
+    _ = api.Condition.Component.new(.{ .name = "left up", .check = leftUp });
 
-    const state_engine = EntityStateEngine.new(.{ .name = "MoveX" })
+    const state_engine = EntityStateEngine.Component.new(.{ .name = "MoveX" })
         .withState(.{ .id = 1, .name = "right down", .condition = api.Condition.functionByName("right down") })
         .withState(.{ .id = 2, .name = "right up", .condition = api.Condition.functionByName("right up") })
         .withState(.{ .id = 3, .name = "left down", .condition = api.Condition.functionByName("left down") })
-        .withState(.{ .id = 4, .name = "left up", .condition = api.Condition.functionByName("left up") })
-        .activate();
+        .withState(.{ .id = 4, .name = "left up", .condition = api.Condition.functionByName("left up") });
+    EntityStateEngine.Activation.activate(state_engine.id);
 
     for (0..10000) |_| {
         createEntity(state_engine, sprite_id);
@@ -67,7 +67,7 @@ fn init() void {
 fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
     const vx = random.float(Float) * 200 + 1;
     const vy = random.float(Float) * 200 + 1;
-    const entity_id = Entity.new(.{})
+    const entity_id = Entity.Component.new(.{})
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(ESprite{ .template_id = sprite_id })
         .withComponent(EMovement{

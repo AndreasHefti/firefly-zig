@@ -36,7 +36,7 @@ pub fn init() !void {
     platformer.init();
     //  GlobalStack.init();
 
-    api.Control.registerSubtype(SimplePivotCamera);
+    api.Control.Subtypes.register(SimplePivotCamera);
 
     MaterialTypes.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
     MaterialTypes.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");
@@ -50,10 +50,10 @@ pub fn init() !void {
     ContactTypes.ROOM_TRANSITION = physics.ContactTypeAspectGroup.getAspect("ROOM_TRANSITION");
 
     // conditions
-    _ = api.Condition.new(.{ .name = Conditions.GOES_WEST, .check = goesEast });
-    _ = api.Condition.new(.{ .name = Conditions.GOES_EAST, .check = goesWest });
-    _ = api.Condition.new(.{ .name = Conditions.GOES_NORTH, .check = goesNorth });
-    _ = api.Condition.new(.{ .name = Conditions.GOES_SOUTH, .check = goesSouth });
+    _ = api.Condition.Component.new(.{ .name = Conditions.GOES_WEST, .check = goesEast });
+    _ = api.Condition.Component.new(.{ .name = Conditions.GOES_EAST, .check = goesWest });
+    _ = api.Condition.Component.new(.{ .name = Conditions.GOES_NORTH, .check = goesNorth });
+    _ = api.Condition.Component.new(.{ .name = Conditions.GOES_SOUTH, .check = goesSouth });
 }
 
 pub fn deinit() void {
@@ -170,10 +170,10 @@ pub fn resumeGame() void {
 }
 
 fn pause(p: bool) void {
-    var next = api.Entity.nextId(0);
+    var next = api.Entity.Component.nextId(0);
     while (next) |i| {
-        next = api.Entity.nextId(i + 1);
-        var entity = api.Entity.byId(i);
+        next = api.Entity.Component.nextId(i + 1);
+        var entity = api.Entity.Component.byId(i);
         var groups = entity.groups orelse continue;
         if (groups.hasAspect(Groups.PAUSEABLE)) {
             entity.activation(!p);
@@ -225,7 +225,7 @@ pub const SimplePivotCamera = struct {
     }
 
     pub fn adjust(self: *SimplePivotCamera, view_id: Index) void {
-        var view = graphics.View.byId(view_id);
+        var view = graphics.View.Component.byId(view_id);
         const move = getMove(self, view);
         view.moveProjection(
             .{
@@ -239,7 +239,7 @@ pub const SimplePivotCamera = struct {
 
     pub fn update(ctx: *api.CallContext) void {
         const self = @This().byId(ctx.caller_id);
-        var view = graphics.View.byId(ctx.id_1);
+        var view = graphics.View.Component.byId(ctx.id_1);
         const move = getMove(self, view);
 
         if (@abs(move[0]) > 0.1 or @abs(move[1]) > 0.1) {
@@ -254,7 +254,7 @@ pub const SimplePivotCamera = struct {
                 if (view.ordered_active_layer) |ol| {
                     var next = ol.slots.nextSetBit(0);
                     while (next) |i| {
-                        var layer = firefly.graphics.Layer.byId(i);
+                        var layer = firefly.graphics.Layer.Component.byId(i);
                         if (layer.parallax) |parallax| {
                             if (layer.offset) |*off| {
                                 off[0] = -view.projection.position[0] * parallax[0];

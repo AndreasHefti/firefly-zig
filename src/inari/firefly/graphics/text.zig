@@ -25,7 +25,7 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    api.Asset.registerSubtype(Font);
+    api.Asset.Subtypes.register(Font);
     api.EComponent.registerEntityComponent(EText);
     DefaultTextRenderer.init();
 }

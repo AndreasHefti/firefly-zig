@@ -36,16 +36,15 @@ fn example() void {
         Engine.CoreSystems.SPRITE_RENDERER,
     });
 
-    _ = Entity.new(.{ .name = "TestEntity4" })
+    _ = Entity.Component.new(.{ .name = "TestEntity4" })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
         .withComponent(EShape{
         .shape_type = ShapeType.CIRCLE,
         .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 50 }),
         .color = .{ 150, 150, 150, 100 },
-    })
-        .activate();
+    }).activate();
 
-    _ = Entity.new(.{ .name = "TestEntity1" })
+    _ = Entity.Component.new(.{ .name = "TestEntity1" })
         .withComponent(ETransform{
         .position = .{ 0, 0 },
         .pivot = .{ 100, 100 },
@@ -58,10 +57,9 @@ fn example() void {
         .thickness = 5,
         .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
         .color = .{ 255, 0, 0, 255 },
-    })
-        .activate();
+    }).activate();
 
-    _ = Entity.new(.{ .name = "TestEntity2" })
+    _ = Entity.Component.new(.{ .name = "TestEntity2" })
         .withComponent(ETransform{
         .position = .{ 0, 0 },
         .pivot = .{ 100, 100 },
@@ -72,10 +70,9 @@ fn example() void {
         .shape_type = ShapeType.RECTANGLE,
         .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
         .color = .{ 255, 0, 0, 100 },
-    })
-        .activate();
+    }).activate();
 
-    _ = Entity.new(.{ .name = "TestEntity3" })
+    _ = Entity.Component.new(.{ .name = "TestEntity3" })
         .withComponent(ETransform{
         .position = .{ 0, 0 },
         .pivot = .{ 100, 100 },
@@ -89,10 +86,9 @@ fn example() void {
         .color1 = .{ 0, 255, 0, 255 },
         .color2 = .{ 0, 0, 255, 255 },
         .color3 = .{ 255, 255, 255, 0 },
-    })
-        .activate();
+    }).activate();
 
-    _ = Entity.new(.{ .name = "TestEntity5" })
+    _ = Entity.Component.new(.{ .name = "TestEntity5" })
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
         .{ 400, 310 },
@@ -106,8 +102,7 @@ fn example() void {
         .shape_type = ShapeType.CIRCLE,
         .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 10 }),
         .color = .{ 150, 150, 150, 100 },
-    })
-        .activate();
+    }).activate();
 
     Texture.new(.{
         .name = "TestTexture",
@@ -115,12 +110,12 @@ fn example() void {
         .is_mipmap = false,
     }).load();
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     }).id;
 
-    _ = Entity.new(.{ .name = "TestEntitySprite" })
+    _ = Entity.Component.new(.{ .name = "TestEntitySprite" })
         .withComponent(ETransform{
         .position = .{ 64, 164 },
         .scale = .{ 4, 4 },

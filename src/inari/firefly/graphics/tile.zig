@@ -27,7 +27,8 @@ pub fn init() !void {
         return;
 
     BasicTileTypes.UNDEFINED = graphics.TileTypeAspectGroup.getAspect("UNDEFINED");
-    api.Component.registerComponent(TileGrid);
+
+    api.Component.registerComponent(TileGrid, "TileGrid");
     api.EComponent.registerEntityComponent(ETile);
     DefaultTileGridRenderer.init();
 }
@@ -83,9 +84,10 @@ pub const ETile = struct {
 //////////////////////////////////////////////////////////////
 
 pub const TileGrid = struct {
-    pub usingnamespace api.Component.Mixin(TileGrid, .{
-        .name = "TileGrid",
-    });
+    pub const Component = api.Component.Mixin(TileGrid);
+    pub const Naming = api.Component.NameMappingMixin(TileGrid);
+    pub const Activation = api.Component.ActivationMixin(TileGrid);
+    pub const Subscription = api.Component.SubscriptionMixin(TileGrid);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -215,7 +217,7 @@ pub const TileGrid = struct {
     pub inline fn getIteratorForProjection(self: *TileGrid, projection: *const api.Projection) ?Iterator {
         var offset: utils.Vector2f = projection.position;
         if (self.layer_id) |lid| {
-            if (graphics.Layer.byId(lid).offset) |l_off| {
+            if (graphics.Layer.Component.byId(lid).offset) |l_off| {
                 offset -= l_off;
             }
         }
@@ -345,7 +347,7 @@ pub const DefaultTileGridRenderer = struct {
         while (i) |grid_id| {
             i = components.nextSetBit(grid_id + 1);
 
-            var tile_grid: *TileGrid = TileGrid.byId(grid_id);
+            var tile_grid: *TileGrid = TileGrid.Component.byId(grid_id);
             var iterator = tile_grid.getIteratorForProjection(event.projection.?) orelse continue;
 
             firefly.api.rendering.addOffset(tile_grid.world_position);
@@ -356,7 +358,7 @@ pub const DefaultTileGridRenderer = struct {
 
                 const tile = ETile.byId(entity_id) orelse continue;
                 const trans = graphics.ETransform.byId(entity_id) orelse continue;
-                const sprite_template: *graphics.SpriteTemplate = graphics.SpriteTemplate.byId(tile.sprite_template_id);
+                const sprite_template = graphics.SpriteTemplate.Component.byId(tile.sprite_template_id);
                 api.rendering.renderSprite(
                     sprite_template.texture_binding,
                     sprite_template.texture_bounds,

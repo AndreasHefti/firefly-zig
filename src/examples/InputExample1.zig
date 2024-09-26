@@ -30,12 +30,12 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     }).id;
 
-    _ = Entity.new(.{ .name = "TestEntity" })
+    _ = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
         .withComponent(ESprite{ .template_id = sprite_id })
         .activate();
@@ -54,7 +54,7 @@ fn init() void {
 }
 
 fn update(_: UpdateEvent) void {
-    if (Entity.byName("TestEntity")) |entity| {
+    if (Entity.Naming.byName("TestEntity")) |entity| {
         if (firefly.api.input.checkButtonPressed(InputButtonType.UP))
             ETransform.byId(entity.id).?.position[1] -= 1;
         if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN))

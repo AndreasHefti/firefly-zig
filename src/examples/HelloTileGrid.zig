@@ -23,7 +23,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 fn loadWithView() void {
     //firefly.api.rendering.setRenderBatch(1, 81920);
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     }).id;
@@ -34,16 +34,17 @@ fn loadWithView() void {
         .is_mipmap = false,
     }).load();
 
-    const tile = Entity.new(.{ .name = "TestEntity" })
+    const tile = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{})
         .withComponent(ETile{ .sprite_template_id = sprite_id })
         .activate();
 
-    var tile_grid: *TileGrid = TileGrid.new(.{
+    var tile_grid: *TileGrid = TileGrid.Component.new(.{
         .name = "TileGrid1",
         .world_position = PosF{ 0, 0 },
         .dimensions = .{ 10, 10, 32, 32 },
-    }).activate();
+    });
+    TileGrid.Activation.activate(tile_grid.id);
 
     for (0..10) |y| {
         for (0..10) |x|
@@ -54,7 +55,7 @@ fn loadWithView() void {
 }
 
 fn update(_: firefly.api.UpdateEvent) void {
-    if (TileGrid.byName("TileGrid1")) |grid| {
+    if (TileGrid.Naming.byName("TileGrid1")) |grid| {
         grid.world_position[0] += 2;
         grid.world_position[1] += 2;
     }

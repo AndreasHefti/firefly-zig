@@ -13,7 +13,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(Composite);
+    api.Component.registerComponent(Composite, "Composite");
 }
 
 pub fn deinit() void {
@@ -45,19 +45,21 @@ pub const CompositeTaskRef = struct {
 };
 
 pub const Composite = struct {
-    pub usingnamespace api.Component.Mixin(Composite, .{
-        .name = "Composite",
-        .subtypes = true,
-    });
+    pub const Component = api.Component.Mixin(Composite);
+    pub const Naming = api.Component.NameMappingMixin(Composite);
+    pub const Activation = api.Component.ActivationMixin(Composite);
+    pub const Subscription = api.Component.SubscriptionMixin(Composite);
+    pub const Subtypes = api.Component.SubTypingMixin(Composite);
+
     pub usingnamespace api.AttributeMixin(Composite);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    loaded: bool = false,
 
     attributes_id: ?Index = null,
     task_refs: utils.DynArray(CompositeTaskRef) = undefined,
     _loaded_components: utils.DynArray(api.CRef) = undefined,
+    loaded: bool = false,
 
     pub fn construct(self: *Composite) void {
         self.task_refs = utils.DynArray(CompositeTaskRef).newWithRegisterSize(
@@ -81,7 +83,7 @@ pub const Composite = struct {
             next = self.task_refs.slots.nextSetBit(i + 1);
             if (self.task_refs.get(i)) |ref| {
                 if (ref.attributes_id) |a_id|
-                    api.Attributes.disposeById(a_id);
+                    api.Attributes.Component.dispose(a_id);
                 ref.attributes_id = null;
             }
         }
@@ -136,14 +138,16 @@ pub const Composite = struct {
             return;
 
         // first deactivate if still active
-        Composite.activateById(self.id, false);
+        Composite.Activation.deactivate(self.id);
         // run dispose tasks if defined
         self.runTasks(.UNLOAD);
         // dispose all owned references that still available
         var next = self._loaded_components.slots.nextSetBit(0);
         while (next) |i| {
             if (self._loaded_components.get(i)) |ref|
-                if (ref.dispose) |d| d(ref.id);
+                if (ref.is_valid(ref.id))
+                    if (ref.dispose) |d| d(ref.id);
+
             next = self._loaded_components.slots.nextSetBit(i + 1);
         }
         self._loaded_components.clear();
@@ -155,8 +159,9 @@ pub const Composite = struct {
         var next = self._loaded_components.slots.nextSetBit(0);
         while (next) |i| {
             if (self._loaded_components.get(i)) |ref| {
-                if (ref.activation) |a|
-                    a(ref.id, active);
+                if (ref.is_valid(ref.id))
+                    if (ref.activation) |a|
+                        a(ref.id, active);
             }
 
             next = self._loaded_components.slots.nextSetBit(i + 1);
@@ -165,7 +170,7 @@ pub const Composite = struct {
 
     fn callRefCallback(c_ref: api.CRef, context: ?*api.CallContext) void {
         if (context) |c|
-            _ = Composite.byId(c.caller_id)._loaded_components.add(c_ref);
+            _ = Composite.Component.byId(c.caller_id)._loaded_components.add(c_ref);
     }
 
     fn runTasks(self: *Composite, life_cycle: CompositeLifeCycle) void {
@@ -183,12 +188,12 @@ pub const Composite = struct {
                 };
 
                 const task_id = if (tr.task_name) |name|
-                    api.Task.idByName(name)
+                    api.Task.Naming.getId(name)
                 else
                     tr.task_ref;
 
                 if (task_id) |id| {
-                    var task = api.Task.byId(id);
+                    var task = api.Task.Component.byId(id);
                     const delete = task.run_once;
                     task.runWith(&ctx, true);
                     if (delete)
@@ -213,16 +218,16 @@ pub fn CompositeMixin(comptime T: type) type {
         }
 
         pub fn setAttribute(self: *T, name: String, value: String) void {
-            api.Composite.byId(self.id).setAttribute(name, value);
+            api.Composite.Component.byId(self.id).setAttribute(name, value);
         }
 
         pub fn getAttribute(self: *T, name: String) ?String {
-            return api.Composite.byId(self.id).getAttribute(name);
+            return api.Composite.Component.byId(self.id).getAttribute(name);
         }
 
         pub fn withTask(self: *T, task: api.Task, life_cycle: CompositeLifeCycle, attributes_id: ?Index) *T {
             checkInCreationState(self);
-            self.addTaskById(api.Task.new(task).id, life_cycle, attributes_id);
+            self.addTaskById(api.Task.Component.new(task).id, life_cycle, attributes_id);
             return self;
         }
 
@@ -233,7 +238,7 @@ pub fn CompositeMixin(comptime T: type) type {
 
         pub fn addTaskById(self: *T, task_id: Index, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
             checkInCreationState(self);
-            _ = api.Composite.byId(self.id).withTaskRef(.{
+            _ = api.Composite.Component.byId(self.id).withTaskRef(.{
                 .task_ref = task_id,
                 .life_cycle = life_cycle,
                 .attributes_id = attributes_id,
@@ -243,7 +248,7 @@ pub fn CompositeMixin(comptime T: type) type {
         pub fn addTaskByName(self: *T, task_name: String, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
             checkInCreationState(self);
 
-            _ = api.Composite.byId(self.id).withTaskRef(.{
+            _ = api.Composite.Component.byId(self.id).withTaskRef(.{
                 .task_name = task_name,
                 .life_cycle = life_cycle,
                 .attributes_id = attributes_id,
@@ -251,7 +256,7 @@ pub fn CompositeMixin(comptime T: type) type {
         }
 
         fn checkInCreationState(self: *T) void {
-            if (Composite.byName(self.name)) |composite|
+            if (Composite.Naming.byName(self.name)) |composite|
                 if (composite.loaded)
                     utils.panic(api.ALLOC, "Composite is already loaded: {s}", .{self.name});
         }

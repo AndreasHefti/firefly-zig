@@ -16,7 +16,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 pub fn init() void {
-    var intro_scene = graphics.Scene.new(.{
+    var intro_scene = graphics.Scene.Component.new(.{
         .init_function = sceneInit,
         .delete_after_run = true,
         .callback = sceneEnd,
@@ -35,7 +35,7 @@ fn sceneInit(_: *api.CallContext) void {
 
     const screen = api.window.getWindowData();
 
-    _ = api.Entity.new(.{ .name = "IntroSprite" })
+    _ = api.Entity.Component.new(.{ .name = "IntroSprite" })
         .withComponent(graphics.ETransform{
         .position = .{
             @as(Float, @floatFromInt(screen.width)) / 2 - 390 / 2,
@@ -46,7 +46,7 @@ fn sceneInit(_: *api.CallContext) void {
         .rotation = 0,
     })
         .withComponent(graphics.ESprite{
-        .template_id = graphics.SpriteTemplate.new(.{
+        .template_id = graphics.SpriteTemplate.Component.new(.{
             .texture_name = "IntroTexture",
             .texture_bounds = .{ 0, 0, 390, 50 },
         }).id,

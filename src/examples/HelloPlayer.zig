@@ -45,7 +45,7 @@ fn init() void {
     firefly.physics.ContactSystem.activate();
 
     // view with two layer
-    var view = graphics.View.new(.{
+    const view = graphics.View.Component.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
         .scale = .{ scale, scale },
@@ -56,7 +56,8 @@ fn init() void {
         },
     });
 
-    _ = view.withControlOf(
+    _ = graphics.View.Control.addOf(
+        view.id,
         game.SimplePivotCamera{
             .name = cam_name,
             .pixel_perfect = false,
@@ -112,20 +113,20 @@ fn init() void {
 
 var player_pos_ptr: *utils.PosF = undefined;
 fn create_player(_: *api.CallContext) void {
-    const sprite_id = graphics.SpriteTemplate.new(.{
+    const sprite_id = graphics.SpriteTemplate.Component.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },
     }).id;
 
     // create player entity
-    _ = api.Entity.new(.{ .name = "Player" })
+    _ = api.Entity.Component.new(.{ .name = "Player" })
         .withComponent(graphics.ETransform{
         .position = .{ 32, 32 },
         .pivot = .{ 0, 0 },
     })
         .withComponent(graphics.EView{
-        .view_id = graphics.View.idByName(view_name),
-        .layer_id = graphics.Layer.idByName(layer2),
+        .view_id = graphics.View.Naming.getId(view_name),
+        .layer_id = graphics.Layer.Naming.getId(layer2),
     })
         .withComponent(graphics.ESprite{ .template_id = sprite_id })
         .withComponent(physics.EMovement{
@@ -138,21 +139,23 @@ fn create_player(_: *api.CallContext) void {
         .withComponent(physics.EContactScan{
         .collision_resolver = game.PlatformerCollisionResolver.new(.{
             .contact_bounds = .{ 4, 1, 8, 14 },
-            .view_id = graphics.View.idByName(view_name),
-            .layer_id = graphics.Layer.idByName(layer2),
+            .view_id = graphics.View.Naming.getId(view_name),
+            .layer_id = graphics.Layer.Naming.getId(layer2),
         }),
     })
         .entity()
-        .withActiveControlOf(game.SimplePlatformerHorizontalMoveControl{
-        .button_left = api.InputButtonType.LEFT,
-        .button_right = api.InputButtonType.RIGHT,
-    })
-        .withActiveControlOf(game.SimplePlatformerJumpControl{
+        .withControlOf(
+        game.SimplePlatformerHorizontalMoveControl{
+            .button_left = api.InputButtonType.LEFT,
+            .button_right = api.InputButtonType.RIGHT,
+        },
+        true,
+    )
+        .withControlOf(game.SimplePlatformerJumpControl{
         .jump_button = api.InputButtonType.FIRE_1,
         .jump_impulse = 100,
         .double_jump = true,
-    })
-        .activate();
+    }, true).activate();
 
     // apply player position as pivot for camera
     var cam = game.SimplePivotCamera.byName(cam_name).?;

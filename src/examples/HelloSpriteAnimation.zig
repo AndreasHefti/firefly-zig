@@ -28,19 +28,19 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    const sid1 = SpriteTemplate.new(.{
+    const sid1 = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).id;
-    const sid2 = SpriteTemplate.new(.{
+    const sid2 = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipX().id;
-    const sid3 = SpriteTemplate.new(.{
+    const sid3 = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipY().flipX().id;
-    const sid4 = SpriteTemplate.new(.{
+    const sid4 = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipY().id;
@@ -52,7 +52,7 @@ fn init() void {
     _ = animation.withFrame(sid3, 1000);
     _ = animation.withFrame(sid4, 1000);
 
-    _ = Entity.new(.{ .name = "TestEntity" })
+    _ = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{
         .position = .{ 100, 100 },
         .scale = .{ 2, 2 },
@@ -68,28 +68,28 @@ fn init() void {
     )
         .entity().activate();
 
-    _ = Entity.new(.{ .name = "TestEntity1" })
+    _ = Entity.Component.new(.{ .name = "TestEntity1" })
         .withComponent(ETransform{
         .position = .{ 100, 200 },
         .scale = .{ 2, 2 },
     })
         .withComponent(ESprite{ .template_id = sid1 })
         .entity().activate();
-    _ = Entity.new(.{ .name = "TestEntity2" })
+    _ = Entity.Component.new(.{ .name = "TestEntity2" })
         .withComponent(ETransform{
         .position = .{ 150, 200 },
         .scale = .{ 2, 2 },
     })
         .withComponent(ESprite{ .template_id = sid2 })
         .entity().activate();
-    _ = Entity.new(.{ .name = "TestEntity3" })
+    _ = Entity.Component.new(.{ .name = "TestEntity3" })
         .withComponent(ETransform{
         .position = .{ 200, 200 },
         .scale = .{ 2, 2 },
     })
         .withComponent(ESprite{ .template_id = sid3 })
         .entity().activate();
-    _ = Entity.new(.{ .name = "TestEntity4" })
+    _ = Entity.Component.new(.{ .name = "TestEntity4" })
         .withComponent(ETransform{
         .position = .{ 250, 200 },
         .scale = .{ 2, 2 },

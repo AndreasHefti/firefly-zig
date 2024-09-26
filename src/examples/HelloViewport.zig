@@ -20,7 +20,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn loadWithView() void {
-    const viewId = View.new(.{
+    const viewId = View.Component.new(.{
         .name = "TestView",
 
         // transform is used when rendering the texture to the screen (or another texture)
@@ -44,13 +44,12 @@ fn loadWithView() void {
             .zoom = 2,
             .rotation = 0,
         },
-    })
-        .withControl(view_control, null, true)
-        .id;
+    }).id;
 
-    View.activateById(viewId, true);
+    View.Control.add(viewId, view_control, null, true);
+    View.Activation.activate(viewId);
 
-    const sprite_id = SpriteTemplate.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     })
@@ -64,7 +63,7 @@ fn loadWithView() void {
         .is_mipmap = false,
     }).load();
 
-    _ = Entity.new(.{ .name = "TestEntity" })
+    _ = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{})
         .withComponent(EView{ .view_id = viewId })
         .withComponent(ESprite{ .template_id = sprite_id })
@@ -72,7 +71,7 @@ fn loadWithView() void {
 }
 
 fn view_control(ctx: *firefly.api.CallContext) void {
-    var view = View.byId(ctx.caller_id);
+    var view = View.Component.byId(ctx.caller_id);
     view.projection.position[0] -= 0.1;
     view.projection.position[1] -= 0.1;
     view.position[0] += 1;

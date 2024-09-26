@@ -45,7 +45,7 @@ fn init() void {
     // view component
     // two layers get automatically applied when loading the room tile maps
     // see JSON file: resources/example_tilemap1.json
-    var view = graphics.View.new(.{
+    const view = graphics.View.Component.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
         .scale = .{ scale, scale },
@@ -58,7 +58,8 @@ fn init() void {
     });
 
     // Room camera control with parallax scrolling according to layer data
-    _ = view.withControlOf(
+    _ = graphics.View.Control.addOf(
+        view.id,
         game.SimplePivotCamera{
             .name = "Camera1",
             .pixel_perfect = false,
@@ -77,10 +78,10 @@ fn init() void {
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_RIGHT, api.InputButtonType.RIGHT);
     // add Control to view for key input
     // key input is moving the invisible pivot point of the camera when the Room is active
-    _ = view.withControl(pivot_control, "KeyControl", false);
+    graphics.View.Control.add(view.id, pivot_control, "KeyControl", false);
 
     // crate start scene
-    _ = graphics.Scene.new(.{
+    _ = graphics.Scene.Component.new(.{
         .name = start_scene_name,
         .update_action = startSceneAction,
         .scheduler = api.Timer.getScheduler(20),
@@ -128,13 +129,13 @@ var color: *utils.Color = undefined;
 fn startSceneAction(ctx: *api.CallContext) void {
     if (!start_scene_init) {
         // create overlay entity
-        const entity = api.Entity.new(.{ .name = "StartSceneEntity" })
+        const entity = api.Entity.Component.new(.{ .name = "StartSceneEntity" })
             .withComponent(graphics.ETransform{
             .scale = .{ screen_width, screen_height },
         })
             .withComponent(graphics.EView{
-            .view_id = graphics.View.idByName(view_name),
-            .layer_id = graphics.Layer.idByName(layer2),
+            .view_id = graphics.View.Naming.getId(view_name),
+            .layer_id = graphics.Layer.Naming.getId(layer2),
         })
             .withComponent(graphics.EShape{
             .blend_mode = api.BlendMode.ALPHA,
@@ -150,8 +151,8 @@ fn startSceneAction(ctx: *api.CallContext) void {
     color[3] -= @min(10, color[3]);
 
     if (color[3] <= 0) {
-        api.Entity.disposeByName("StartSceneEntity");
-        api.Control.activateByName("KeyControl", true);
+        api.Entity.Naming.dispose("StartSceneEntity");
+        api.Control.Activation.activateByName("KeyControl");
         ctx.result = api.ActionResult.Success;
     } else {
         ctx.result = api.ActionResult.Running;

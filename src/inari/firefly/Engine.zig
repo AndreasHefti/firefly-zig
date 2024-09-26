@@ -48,21 +48,21 @@ pub const CoreSystems = struct {
 
 pub fn reorderSystems(new_order: []const String) void {
     for (new_order) |name| {
-        firefly.api.System.activateByName(name, false);
+        firefly.api.System.Activation.deactivateByName(name);
     }
     for (new_order) |name| {
-        firefly.api.System.activateByName(name, true);
+        firefly.api.System.Activation.activateByName(name);
     }
 }
 
 pub fn reorderAllSystems(new_order: []const String) void {
-    var next = firefly.api.System.nextActiveId(0);
+    var next = firefly.api.System.Activation.nextId(0);
     while (next) |id| {
-        firefly.api.System.activateById(id, false);
-        next = firefly.api.System.nextActiveId(id + 1);
+        firefly.api.System.Activation.deactivate(id);
+        next = firefly.api.System.Activation.nextId(id + 1);
     }
     for (new_order) |name| {
-        firefly.api.System.activateByName(name, true);
+        firefly.api.System.Activation.activateByName(name);
     }
 }
 

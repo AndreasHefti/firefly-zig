@@ -107,11 +107,14 @@ pub const BitSet = struct {
             return null;
 
         var i = index;
-        var is_set = self.unmanaged.isSet(i);
+        var is_set = false;
         while (!is_set) {
-            i -= 1;
-            if (i >= 0) return null;
-            is_set = self.unmanaged.isSet(i);
+            if (i == 0) {
+                return if (self.unmanaged.isSet(i)) 0 else null;
+            } else {
+                i -= 1;
+                is_set = self.unmanaged.isSet(i);
+            }
         }
         return i;
     }

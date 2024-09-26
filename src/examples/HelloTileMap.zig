@@ -33,7 +33,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 
 fn init() void {
     // view, layer are auto-created by tile mapping if not present
-    _ = graphics.View.new(.{
+    _ = graphics.View.Component.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
         .projection = .{
@@ -67,5 +67,5 @@ fn init() void {
     );
 
     // activate
-    game.TileMapping.activateByName("TileMapRoom1", true);
+    game.TileMapping.Activation.activateByName("TileMapRoom1");
 }

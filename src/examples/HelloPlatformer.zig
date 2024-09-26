@@ -52,7 +52,7 @@ fn init() void {
 
     // create view with two layer
     // TODO this must be done by World activation later on
-    _ = graphics.View.new(.{
+    _ = graphics.View.Component.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
         .scale = .{ scale, scale },
@@ -100,12 +100,12 @@ fn roomLoaded(room_id: Index) void {
 }
 
 fn playerLoadTask(_: *api.CallContext) void {
-    var view = graphics.View.byName(view_name) orelse return;
+    const view = graphics.View.Naming.byName(view_name) orelse return;
     var player = game.Player.byName(player_name) orelse return;
     player._view_id = view.id;
 
     // single sprite for this player
-    const sprite_id = graphics.SpriteTemplate.new(.{
+    const sprite_id = graphics.SpriteTemplate.Component.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },
     }).id;
@@ -116,17 +116,17 @@ fn playerLoadTask(_: *api.CallContext) void {
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // create player entity with normal gravity movement, controller and collision scans
-    player._entity_id = api.Entity.new(.{
+    player._entity_id = api.Entity.Component.new(.{
         .name = player_name,
     })
-        .withGroupAspect(game.Groups.PAUSEABLE)
+        .addToGroup(game.Groups.PAUSEABLE)
         .withComponent(graphics.ETransform{
         .position = .{ 32, 32 },
         .pivot = .{ 0, 0 },
     })
         .withComponent(graphics.EView{
-        .view_id = graphics.View.idByName(view_name),
-        .layer_id = graphics.Layer.idByName(layer2),
+        .view_id = graphics.View.Naming.getId(view_name),
+        .layer_id = graphics.Layer.Naming.getId(layer2),
     })
         .withComponent(graphics.ESprite{ .template_id = sprite_id })
         .withComponent(physics.EMovement{
@@ -139,34 +139,35 @@ fn playerLoadTask(_: *api.CallContext) void {
         .withComponent(physics.EContactScan{ .collision_resolver = game.PlatformerCollisionResolver.new(
         .{
             .contact_bounds = .{ 4, 1, 8, 14 },
-            .view_id = graphics.View.idByName(view_name),
-            .layer_id = graphics.Layer.idByName(layer2),
+            .view_id = graphics.View.Naming.getId(view_name),
+            .layer_id = graphics.Layer.Naming.getId(layer2),
         },
     ) })
         .withConstraint(.{
         .name = "Room_Transition",
-        .layer_id = graphics.Layer.idByName(layer2),
+        .layer_id = graphics.Layer.Naming.getId(layer2),
         .bounds = .{ .rect = .{ 6, 6, 4, 4 } },
         .type_filter = physics.ContactTypeKind.of(.{game.ContactTypes.ROOM_TRANSITION}),
         .full_scan = true,
         .callback = game.TransitionContactCallback,
     })
         .entity()
-        .withActiveControlOf(game.SimplePlatformerHorizontalMoveControl{
+        .withControlOf(game.SimplePlatformerHorizontalMoveControl{
         .button_left = api.InputButtonType.LEFT,
         .button_right = api.InputButtonType.RIGHT,
-    })
-        .withActiveControlOf(game.SimplePlatformerJumpControl{
+    }, true)
+        .withControlOf(game.SimplePlatformerJumpControl{
         .jump_button = api.InputButtonType.FIRE_1,
         .jump_impulse = 140,
         .double_jump = true,
-    })
+    }, true)
         .id;
     player._move = physics.EMovement.byId(player._entity_id).?;
     player._transform = graphics.ETransform.byId(player._entity_id).?;
 
     // create camera control
-    _ = view.withControlOf(
+    graphics.View.Control.addOf(
+        view.id,
         game.SimplePivotCamera{
             .name = cam_name,
             .pivot = &player._transform.position,
@@ -177,5 +178,6 @@ fn playerLoadTask(_: *api.CallContext) void {
         },
         true,
     );
+
     player._cam_id = game.SimplePivotCamera.idByName(cam_name).?;
 }

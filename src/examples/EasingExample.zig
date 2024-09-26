@@ -31,7 +31,7 @@ fn init() void {
         .is_mipmap = false,
     }).load();
 
-    _ = SpriteTemplate.new(.{
+    _ = SpriteTemplate.Component.new(.{
         .name = "Sprite",
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
@@ -65,14 +65,14 @@ fn init() void {
 }
 
 fn create(name: String, easing: Easing) void {
-    _ = Entity.new(.{})
+    _ = Entity.Component.new(.{})
         .withComponent(ETransform{ .position = .{ 10, ypos } })
         .withComponent(EText{ .text = @ptrCast(name), .size = 20, .char_spacing = 2 })
         .activate();
 
-    _ = Entity.new(.{})
+    _ = Entity.Component.new(.{})
         .withComponent(ETransform{ .position = .{ 200, ypos } })
-        .withComponent(ESprite{ .template_id = SpriteTemplate.byName("Sprite").?.id })
+        .withComponent(ESprite{ .template_id = SpriteTemplate.Naming.byName("Sprite").?.id })
         .withComponent(EAnimation{})
         .withAnimation(
         .{ .duration = 5000, .looping = true, .inverse_on_loop = true, .active_on_init = true },

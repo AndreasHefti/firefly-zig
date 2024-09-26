@@ -98,7 +98,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    const viewId = View.new(.{
+    const viewId = View.Component.new(.{
         .name = "TestView",
         .position = .{ 0, 0 },
         .projection = .{
@@ -107,7 +107,7 @@ fn init() void {
         },
     }).id;
 
-    View.activateById(viewId, true);
+    View.Activation.activate(viewId);
 
     firefly.api.Task.runTaskByNameWith(
         firefly.game.Tasks.JSON_LOAD_TILE_SET,
@@ -118,8 +118,8 @@ fn init() void {
             },
         ),
     );
-    var tile_set: *TileSet = TileSet.byName("TestTileSet").?;
-    TileSet.activateByName("TestTileSet", true);
+    var tile_set: *TileSet = TileSet.Naming.byName("TestTileSet").?;
+    TileSet.Activation.activate(tile_set.id);
 
     var next = tile_set.tile_templates.slots.nextSetBit(0);
     var x: usize = 50;
@@ -150,7 +150,7 @@ fn createTile(
     y: Float,
     view_id: Index,
 ) void {
-    var entity = Entity.new(.{ .name = tile_template.name })
+    var entity = Entity.Component.new(.{ .name = tile_template.name })
         .withComponent(ETransform{ .position = .{ x, y } })
         .withComponent(EView{ .view_id = view_id })
         .withComponent(ESprite{ .template_id = tile_template._sprite_template_id.? });

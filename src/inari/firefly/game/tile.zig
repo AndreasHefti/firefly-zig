@@ -27,8 +27,8 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(TileSet);
-    api.Component.registerComponent(TileMapping);
+    api.Component.registerComponent(TileSet, "TileSet");
+    api.Component.registerComponent(TileMapping, "TileMapping");
 }
 
 pub fn deinit() void {
@@ -93,18 +93,15 @@ pub const TileTemplate = struct {
 };
 
 pub const TileSet = struct {
-    pub usingnamespace api.Component.Mixin(
-        @This(),
-        .{
-            .name = "TileSet",
-            .subscription = false,
-        },
-    );
+    pub const Component = api.Component.Mixin(TileSet);
+    pub const Naming = api.Component.NameMappingMixin(TileSet);
+    pub const Activation = api.Component.ActivationMixin(TileSet);
 
     var contact_mask_cache: std.StringHashMap(utils.BitMask) = undefined;
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
+
     texture_name: String,
     tile_width: Float,
     tile_height: Float,
@@ -161,7 +158,7 @@ pub const TileSet = struct {
         graphics.Texture.byName(self.texture_name).?.load();
         if (graphics.Texture.byName(self.texture_name)) |tex| {
             // load image of texture to CPU
-            const st = graphics.SpriteTemplate.byId(tile_template._sprite_template_id.?);
+            const st = graphics.SpriteTemplate.Component.byId(tile_template._sprite_template_id.?);
             var image: api.ImageBinding = firefly.api.rendering.loadImageRegionFromTexture(
                 tex._binding.?.id,
                 st.texture_bounds,
@@ -196,7 +193,7 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                var st: *graphics.SpriteTemplate = graphics.SpriteTemplate.new(.{
+                var st: *graphics.SpriteTemplate = graphics.SpriteTemplate.Component.new(.{
                     .name = tt.name,
                     .texture_name = self.texture_name,
                     .texture_bounds = .{
@@ -217,7 +214,7 @@ pub const TileSet = struct {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            var ast: *graphics.SpriteTemplate = graphics.SpriteTemplate.new(.{
+                            var ast = graphics.SpriteTemplate.Component.new(.{
                                 .texture_name = self.texture_name,
                                 .texture_bounds = .{
                                     frame.sprite_data.texture_pos[0],
@@ -248,14 +245,14 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                graphics.SpriteTemplate.disposeById(tt._sprite_template_id.?);
+                graphics.SpriteTemplate.Component.dispose(tt._sprite_template_id.?);
                 tt._sprite_template_id = null;
                 // cleanup animation if defined
                 if (tt.animation) |*animations| {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            graphics.SpriteTemplate.disposeById(frame._sprite_template_id.?);
+                            graphics.SpriteTemplate.Component.dispose(frame._sprite_template_id.?);
                             frame._sprite_template_id = null;
                         }
                         next_a = animations.slots.nextSetBit(ii + 1);
@@ -300,18 +297,14 @@ pub const TileGridData = struct {
 };
 
 pub const TileMapping = struct {
-    pub usingnamespace api.Component.Mixin(
-        @This(),
-        .{
-            .name = "TileMapping",
-            .subscription = false,
-        },
-    );
+    pub const Component = api.Component.Mixin(TileMapping);
+    pub const Naming = api.Component.NameMappingMixin(TileMapping);
+    pub const Activation = api.Component.ActivationMixin(TileMapping);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    view_id: Index = UNDEF_INDEX,
 
+    view_id: Index = UNDEF_INDEX,
     tile_layer_data: utils.DynArray(TileLayerData) = undefined,
     tile_grid_data: utils.DynArray(TileGridData) = undefined,
     layer_entity_mapping: utils.DynArray(utils.DynIndexArray) = undefined,
@@ -369,16 +362,16 @@ pub const TileMapping = struct {
 
     fn _activate(self: *TileMapping) void {
         // activate view, if nor already active
-        graphics.View.activateById(self.view_id, true);
+        graphics.View.Activation.activate(self.view_id);
         // create entities vor all tiles of layer based tile sets
         // for all TileLayerData ...
         var next = self.tile_layer_data.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_layer_data.get(i)) |layer_mapping| {
                 // get involved layer
-                if (firefly.graphics.Layer.byName(layer_mapping.layer)) |layer| {
+                if (graphics.Layer.Naming.byName(layer_mapping.layer)) |layer| {
                     // activates the layer if not already active
-                    _ = layer.activate();
+                    graphics.Layer.Activation.activate(layer.id);
                     // add new code -> entity mapping for layer if not existing
                     if (!self.layer_entity_mapping.exists(layer.id))
                         _ = self.layer_entity_mapping.set(
@@ -400,8 +393,8 @@ pub const TileMapping = struct {
                     while (next_ts) |ii| {
                         const tile_set_mapping: *TileSetMapping = layer_mapping.tile_set_mappings.get(ii).?;
                         var code = tile_set_mapping.code_offset;
-                        if (TileSet.byName(tile_set_mapping.tile_set_name)) |tile_set| {
-                            _ = tile_set.activate();
+                        if (TileSet.Naming.byName(tile_set_mapping.tile_set_name)) |tile_set| {
+                            TileSet.Activation.activate(tile_set.id);
 
                             // for all TileTemplates in TileSet
                             var next_ti = tile_set.tile_templates.slots.nextSetBit(0);
@@ -409,7 +402,7 @@ pub const TileMapping = struct {
                                 if (tile_set.tile_templates.get(ti)) |tile_template| {
 
                                     // create entity from TileTemplate for specific view and layer and add code mapping
-                                    const entity = api.Entity.new(.{
+                                    const entity = api.Entity.Component.new(.{
                                         .name = api.NamePool.format("{s}_{s}", .{ tile_template.name.?, layer_mapping.layer }),
                                         .groups = api.GroupKind.fromStringList(tile_template.groups),
                                     })
@@ -427,7 +420,7 @@ pub const TileMapping = struct {
                                     addAnimationData(entity, tile_template);
                                     // set code -> entity id mapping for layer
                                     entity_mapping.set(code, entity.id);
-                                    _ = entity.activate();
+                                    api.Entity.Activation.activate(entity.id);
                                 }
                                 next_ti = tile_set.tile_templates.slots.nextSetBit(ti + 1);
                                 code += 1;
@@ -447,8 +440,8 @@ pub const TileMapping = struct {
             next = self.tile_grid_data.slots.nextSetBit(i + 1);
 
             const tile_grid_data = self.tile_grid_data.get(i).?;
-            const layer_id = graphics.Layer.idByName(tile_grid_data.layer);
-            var tile_grid = graphics.TileGrid.new(.{
+            const layer_id = graphics.Layer.Naming.getId(tile_grid_data.layer);
+            var tile_grid = graphics.TileGrid.Component.new(.{
                 .name = tile_grid_data.name,
                 .view_id = self.view_id,
                 .layer_id = layer_id,
@@ -470,7 +463,7 @@ pub const TileMapping = struct {
                 }
             }
 
-            _ = tile_grid.activate();
+            graphics.TileGrid.Activation.activate(tile_grid.id);
         }
     }
 
@@ -518,7 +511,7 @@ pub const TileMapping = struct {
         while (next) |i| {
             if (self.layer_entity_mapping.get(i)) |entity_mapping| {
                 for (0..entity_mapping.size_pointer) |ii|
-                    api.Entity.disposeById(entity_mapping.items[ii]);
+                    api.Entity.Component.dispose(entity_mapping.items[ii]);
                 entity_mapping.deinit();
             }
             next = self.layer_entity_mapping.slots.nextSetBit(i + 1);
@@ -530,7 +523,7 @@ pub const TileMapping = struct {
         while (next) |i| {
             next = self.tile_grid_data.slots.nextSetBit(i + 1);
             const tile_grid_data = self.tile_grid_data.get(i).?;
-            firefly.graphics.TileGrid.disposeByName(tile_grid_data.name);
+            firefly.graphics.TileGrid.Naming.dispose(tile_grid_data.name);
         }
     }
 };
