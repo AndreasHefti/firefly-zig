@@ -73,7 +73,7 @@ fn init() void {
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // create new Room
-    var room = game.Room.new(.{
+    var room = game.Room.Component.new(.{
         .name = "Test Room1",
         .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
     })
@@ -158,7 +158,7 @@ fn create_player(_: *api.CallContext) void {
     }, true).activate();
 
     // apply player position as pivot for camera
-    var cam = game.SimplePivotCamera.byName(cam_name).?;
+    var cam = game.SimplePivotCamera.Component.byName(cam_name).?;
     player_pos_ptr = &graphics.ETransform.byName("Player").?.position;
     cam.pivot = player_pos_ptr;
 }

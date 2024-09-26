@@ -19,7 +19,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     string_buffer.print("\n", .{});
     firefly.api.EComponentAspectGroup.print(&string_buffer);
     string_buffer.print("\n", .{});
-    firefly.api.AssetAspectGroup.print(&string_buffer);
+    firefly.api.SubTypeAspectGroup.print(&string_buffer);
     string_buffer.print("\n", .{});
     firefly.physics.MovementAspectGroup.print(&string_buffer);
     string_buffer.print("\n", .{});

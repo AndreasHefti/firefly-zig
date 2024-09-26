@@ -65,8 +65,8 @@ pub fn init(_: firefly.api.InitContext) !void {
         return;
 
     // register Assets sub types
-    api.Asset.Subtypes.register(Texture);
-    api.Asset.Subtypes.register(Shader);
+    api.Asset.Subtypes.register(Texture, "Texture");
+    api.Asset.Subtypes.register(Shader, "Shader");
 
     // init sub packages
     try view.init();
@@ -189,7 +189,7 @@ pub fn ViewLayerComponentRendererMixin(comptime T: type, comptime CType: type) t
 //////////////////////////////////////////////////////////////
 
 pub const Shader = struct {
-    pub usingnamespace firefly.api.AssetMixin(Shader, "Shader");
+    pub const Component = api.Component.SubTypeMixin(api.Asset, Shader);
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -270,7 +270,7 @@ pub const Shader = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Texture = struct {
-    pub usingnamespace firefly.api.AssetMixin(Texture, "Texture");
+    pub const Component = api.Component.SubTypeMixin(api.Asset, Texture);
 
     id: Index = UNDEF_INDEX,
     name: String,

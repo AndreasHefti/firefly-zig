@@ -104,11 +104,11 @@ fn example() void {
         .color = .{ 150, 150, 150, 100 },
     }).activate();
 
-    Texture.new(.{
+    Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
-    }).load();
+    });
 
     const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",

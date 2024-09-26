@@ -22,11 +22,11 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    Texture.new(.{
+    Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/atlas1616.png",
         .is_mipmap = false,
-    }).load();
+    });
 
     const sid1 = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",

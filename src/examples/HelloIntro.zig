@@ -27,11 +27,11 @@ pub fn init() void {
 }
 
 fn sceneInit(_: *api.CallContext) void {
-    graphics.Texture.new(.{
+    _ = graphics.Texture.Component.newActive(.{
         .name = "IntroTexture",
         .resource = "resources/inari.png",
         .is_mipmap = false,
-    }).load();
+    });
 
     const screen = api.window.getWindowData();
 

@@ -35,11 +35,11 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    Texture.new(.{
+    Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
-    }).load();
+    });
 
     const sprite = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",

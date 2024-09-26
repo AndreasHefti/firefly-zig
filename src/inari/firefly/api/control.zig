@@ -20,7 +20,7 @@ pub fn init() void {
     api.Component.registerComponent(StateEngine, "StateEngine");
     api.Component.registerComponent(EntityStateEngine, "EntityStateEngine");
 
-    Control.Subtypes.register(VoidControl);
+    Control.Subtypes.register(VoidControl, "VoidControl");
     api.EComponent.registerEntityComponent(EState);
     StateSystem.init();
     EntityStateSystem.init();
@@ -99,36 +99,28 @@ pub const Control = struct {
         self.deinitCallContext();
         self.groups = null;
     }
+
+    pub fn createForSubType(subtype: anytype) *Control {
+        const c_subtype_type = @TypeOf(subtype);
+        const update = if (@hasDecl(c_subtype_type, "update")) c_subtype_type.update else subtype.update;
+        const name = if (@hasField(c_subtype_type, "name")) subtype.name else @typeName(c_subtype_type);
+        return Component.newForSubType(.{
+            .name = name,
+            .update = update,
+            .controlled_component_type = if (@hasDecl(c_subtype_type, "controlledComponentType"))
+                c_subtype_type.controlledComponentType()
+            else
+                api.ComponentAspectGroup.getAspect("VoidControl"),
+        });
+    }
 };
 
-pub fn ControlSubTypeMixin(comptime T: type, comptime ControlledType: type) type {
-    return struct {
-        pub const component_type = ControlledType;
-        pub usingnamespace firefly.api.SubTypeMixin(Control, T);
-
-        pub fn new(subtype: T, update: api.CallFunction) *T {
-            if (!initialized) @panic("Not Initialized");
-
-            return @This().newSubType(
-                Control{
-                    .name = if (@hasField(T, "name")) subtype.name else null,
-                    .update = update,
-                    .controlled_component_type = if (@hasDecl(ControlledType, "aspect"))
-                        ControlledType.aspect
-                    else
-                        api.ComponentAspectGroup.getAspect("VoidControl"),
-                },
-                subtype,
-            );
-        }
-    };
-}
-
 pub const VoidControl = struct {
-    pub usingnamespace ControlSubTypeMixin(VoidControl, VoidControl);
+    pub const Component = api.Component.SubTypeMixin(api.Control, VoidControl);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
+    update: api.CallFunction,
 };
 
 //////////////////////////////////////////////////////////////////////////

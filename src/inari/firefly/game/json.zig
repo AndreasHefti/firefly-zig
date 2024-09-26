@@ -187,19 +187,19 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
         return game.TileSet.Naming.getId(jsonTileSet.name);
 
     // check texture and load or create if needed
-    if (!graphics.Texture.existsByName(jsonTileSet.texture.name)) {
+    if (!graphics.Texture.Component.existsByName(jsonTileSet.texture.name)) {
         if (jsonTileSet.texture.load_task) |lt| {
             api.Task.runTaskByName(lt);
         } else {
-            _ = graphics.Texture.new(.{
+            _ = graphics.Texture.Component.newActive(.{
                 .name = api.NamePool.alloc(jsonTileSet.texture.name).?,
                 .resource = api.NamePool.alloc(jsonTileSet.texture.file).?,
                 .is_mipmap = false,
-            }).load();
+            });
         }
     }
     // check Texture exists now
-    if (!graphics.Texture.existsByName(jsonTileSet.texture.name))
+    if (!graphics.Texture.Component.existsByName(jsonTileSet.texture.name))
         utils.panic(api.ALLOC, "Failed to find/load texture: {any}", .{jsonTileSet.texture});
 
     // create TileSet from jsonTileSet
@@ -579,10 +579,10 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
     checkFileType(jsonRoom, JSONFileTypes.ROOM);
     // check if tile map with name already exits. If so, do nothing
     // TODO hot reload here?
-    if (game.Room.byName(jsonRoom.name) != null)
+    if (game.Room.Component.byName(jsonRoom.name) != null)
         return;
 
-    const room = game.Room.new(.{
+    const room = game.Room.Component.new(.{
         .name = api.NamePool.alloc(jsonRoom.name).?,
         .bounds = utils.parseRectF(jsonRoom.bounds).?,
         .start_scene_ref = api.NamePool.alloc(jsonRoom.start_scene),
@@ -760,7 +760,7 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
     checkFileType(jsonWorld, JSONFileTypes.WORLD);
 
     const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
-    var world: *game.World = game.World.new(.{
+    var world: *game.World = game.World.Component.new(.{
         .name = api.NamePool.alloc(jsonWorld.name).?,
     });
 

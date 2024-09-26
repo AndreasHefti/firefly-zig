@@ -28,11 +28,11 @@ fn loadWithView() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     }).id;
 
-    Texture.new(.{
+    Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
-    }).load();
+    });
 
     const tile = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{})

@@ -28,8 +28,8 @@ pub fn init() void {
         return;
 
     PlatformerCollisionResolver.init();
-    api.Control.Subtypes.register(SimplePlatformerHorizontalMoveControl);
-    api.Control.Subtypes.register(SimplePlatformerJumpControl);
+    api.Control.Subtypes.register(SimplePlatformerHorizontalMoveControl, "SimplePlatformerHorizontalMoveControl");
+    api.Control.Subtypes.register(SimplePlatformerJumpControl, "SimplePlatformerJumpControl");
 }
 
 pub fn deinit() void {
@@ -362,7 +362,7 @@ pub const PlatformerCollisionResolver = struct {
 //////////////////////////////////////////////////////////////
 
 pub const SimplePlatformerHorizontalMoveControl = struct {
-    pub usingnamespace api.ControlSubTypeMixin(SimplePlatformerHorizontalMoveControl, api.Entity);
+    pub const Component = api.Component.SubTypeMixin(api.Control, SimplePlatformerHorizontalMoveControl);
 
     id: Index = UNDEF_INDEX,
     run_velocity_step: Float = 5,
@@ -372,8 +372,12 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
     button_left: api.InputButtonType = api.InputButtonType.LEFT,
     button_right: api.InputButtonType = api.InputButtonType.RIGHT,
 
+    pub fn controlledComponentType() api.ComponentAspect {
+        return api.Entity.Component.aspect;
+    }
+
     pub fn update(ctx: *api.CallContext) void {
-        const self = @This().byId(ctx.caller_id);
+        const self = Component.byId(ctx.caller_id);
         var move = physics.EMovement.byId(ctx.id_1) orelse return;
 
         if (!self.move_on_air and !move.on_ground)
@@ -411,7 +415,7 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
 //////////////////////////////////////////////////////////////
 
 pub const SimplePlatformerJumpControl = struct {
-    pub usingnamespace api.ControlSubTypeMixin(SimplePlatformerJumpControl, api.Entity);
+    pub const Component = api.Component.SubTypeMixin(api.Control, SimplePlatformerJumpControl);
 
     id: Index = UNDEF_INDEX,
     jump_button: api.InputButtonType = api.InputButtonType.FIRE_1,
@@ -422,8 +426,12 @@ pub const SimplePlatformerJumpControl = struct {
 
     _off_ground: u8 = 0,
 
+    pub fn controlledComponentType() api.ComponentAspect {
+        return api.Entity.Component.aspect;
+    }
+
     pub fn update(ctx: *api.CallContext) void {
-        const self = @This().byId(ctx.caller_id);
+        const self = Component.byId(ctx.caller_id);
         var move = physics.EMovement.byId(ctx.id_1) orelse return;
 
         // measure off ground time to achieve jump_tolerance and
@@ -456,8 +464,5 @@ pub const SimplePlatformerJumpControl = struct {
                 move.flag(MovFlags.DOUBLE_JUMP, true);
             }
         }
-
-        // if (move.kind._mask != 0)
-        //     std.debug.print("move aspects: {any}\n", .{move.kind});
     }
 };

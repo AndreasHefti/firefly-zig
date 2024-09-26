@@ -28,9 +28,9 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Composite.Subtypes.register(World);
-    api.Composite.Subtypes.register(Room);
-    api.Composite.Subtypes.register(Player);
+    api.Composite.Subtypes.register(World, "World");
+    api.Composite.Subtypes.register(Room, "Room");
+    api.Composite.Subtypes.register(Player, "Player");
     api.EComponent.registerEntityComponent(ERoomTransition);
 
     _ = api.Task.Component.new(.{
@@ -56,6 +56,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const Player = struct {
+    pub const Component = api.Component.SubTypeMixin(api.Composite, Player);
     pub usingnamespace api.CompositeMixin(Player);
 
     id: Index = UNDEF_INDEX,
@@ -74,7 +75,7 @@ pub const Player = struct {
             return;
 
         api.Composite.Component.byId(self.id).load();
-        var cam = game.SimplePivotCamera.byId(self._cam_id);
+        var cam = game.SimplePivotCamera.Component.byId(self._cam_id);
         cam.pivot = &self._transform.position;
         api.Entity.Activation.activate(self._entity_id);
         game.pauseGame();
@@ -86,6 +87,7 @@ pub const Player = struct {
 //////////////////////////////////////////////////////////////
 
 pub const World = struct {
+    pub const Component = api.Component.SubTypeMixin(api.Composite, World);
     pub usingnamespace api.CompositeMixin(World);
 
     id: Index = UNDEF_INDEX,
@@ -127,6 +129,7 @@ pub const RoomState = enum {
 pub const RoomCallback = *const fn (room_id: Index) void;
 
 pub const Room = struct {
+    pub const Component = api.Component.SubTypeMixin(api.Composite, Room);
     pub usingnamespace api.CompositeMixin(Room);
 
     id: Index = UNDEF_INDEX,
@@ -180,7 +183,7 @@ pub const Room = struct {
         player_ref: String,
         callback: ?RoomCallback,
     ) void {
-        if (Room.byName(room_name)) |room|
+        if (Room.Component.byName(room_name)) |room|
             room.start(player_ref, callback);
     }
 
@@ -210,10 +213,10 @@ pub const Room = struct {
         self.state = .STARTING;
 
         // load player if needed and init camera
-        const player = game.Player.byName(player_ref);
+        const player = game.Player.Component.byName(player_ref);
         if (player) |p| {
             p.load();
-            var cam = game.SimplePivotCamera.byId(p._cam_id);
+            var cam = game.SimplePivotCamera.Component.byId(p._cam_id);
             cam.snap_to_bounds = self.bounds;
             cam.adjust(p._view_id);
         }
@@ -235,7 +238,7 @@ pub const Room = struct {
     }
 
     fn runRoom(ctx: *api.CallContext) void {
-        var room = Room.byId(ctx.caller_id);
+        var room = Room.Component.byId(ctx.caller_id);
         defer room._run_callback = null;
 
         room.state = .RUNNING;
@@ -298,7 +301,7 @@ pub const Room = struct {
     }
 
     fn unloadRoomCallback(room_id: Index) void {
-        var room = Room.byId(room_id);
+        var room = Room.Component.byId(room_id);
         defer room._unload_callback = null;
 
         if (api.Composite.Naming.byName(room.name)) |composite|
@@ -311,7 +314,7 @@ pub const Room = struct {
     }
 
     fn stopRoomCallback(ctx: *api.CallContext) void {
-        var room = Room.byId(ctx.caller_id);
+        var room = Room.Component.byId(ctx.caller_id);
         defer room._stop_callback = null;
 
         api.Composite.Activation.deactivateByName(room.name);
@@ -321,9 +324,9 @@ pub const Room = struct {
     }
 
     pub fn getActiveRoomForPlayer(player_ref: String) ?*Room {
-        var it = Room.idIterator();
+        var it = Room.Component.idIterator();
         while (it.next()) |r_id| {
-            const room = Room.byId(r_id.*);
+            const room = Room.Component.byId(r_id.*);
             if (room.player_ref) |p|
                 if ((room.state == RoomState.RUNNING or room.state == RoomState.STARTING or room.state == RoomState.STOPPING) and
                     utils.stringEquals(p, player_ref)) return room;
@@ -435,7 +438,7 @@ fn roomUnloadedCallback(_: Index) void {
     const target_transition = TransitionState.target_transition.?;
 
     // activate new room also load room if not loaded
-    if (Room.byName(target_room_name)) |target_room| {
+    if (Room.Component.byName(target_room_name)) |target_room| {
         target_room.activateRoom();
 
         // set player position adjust cam

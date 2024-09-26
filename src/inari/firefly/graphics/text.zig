@@ -25,7 +25,7 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    api.Asset.Subtypes.register(Font);
+    api.Asset.Subtypes.register(Font, "Font");
     api.EComponent.registerEntityComponent(EText);
     DefaultTextRenderer.init();
 }
@@ -41,7 +41,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const Font = struct {
-    pub usingnamespace firefly.api.AssetMixin(Font, "Font");
+    pub const Component = api.Component.SubTypeMixin(api.Asset, Font);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,

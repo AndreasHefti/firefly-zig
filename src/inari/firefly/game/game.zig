@@ -36,7 +36,7 @@ pub fn init() !void {
     platformer.init();
     //  GlobalStack.init();
 
-    api.Control.Subtypes.register(SimplePivotCamera);
+    api.Control.Subtypes.register(SimplePivotCamera, "SimplePivotCameraS");
 
     MaterialTypes.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
     MaterialTypes.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");
@@ -208,7 +208,7 @@ pub const SimplePlatformerJumpControl = platformer.SimplePlatformerJumpControl;
 //////////////////////////////////////////////////////////////
 
 pub const SimplePivotCamera = struct {
-    pub usingnamespace api.ControlSubTypeMixin(SimplePivotCamera, graphics.View);
+    pub const Component = api.Component.SubTypeMixin(api.Control, SimplePivotCamera);
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -218,6 +218,10 @@ pub const SimplePivotCamera = struct {
     offset: Vector2f = .{ 0, 0 },
     enable_parallax: bool = false,
     velocity_relative_to_pivot: Vector2f = .{ 1, 1 },
+
+    pub fn controlledComponentType() api.ComponentAspect {
+        return graphics.View.Component.aspect;
+    }
 
     pub fn setPivot(self: *SimplePivotCamera, view_id: Index, pivot: *PosF) void {
         self.pivot = pivot;
@@ -238,7 +242,7 @@ pub const SimplePivotCamera = struct {
     }
 
     pub fn update(ctx: *api.CallContext) void {
-        const self = @This().byId(ctx.caller_id);
+        const self = Component.byId(ctx.caller_id);
         var view = graphics.View.Component.byId(ctx.id_1);
         const move = getMove(self, view);
 

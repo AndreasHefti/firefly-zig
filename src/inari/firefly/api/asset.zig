@@ -34,7 +34,10 @@ pub const Asset = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
-    asset_type: api.AssetAspect,
+
+    pub fn createForSubType(SubType: anytype) *Asset {
+        return api.Asset.Component.newForSubType(.{ .name = SubType.name });
+    }
 
     pub fn load(self: *Asset) void {
         Activation.byId(self.id, true);
@@ -44,33 +47,3 @@ pub const Asset = struct {
         Activation.byId(self.id, false);
     }
 };
-
-pub fn AssetMixin(comptime T: type, comptime type_name: String) type {
-    return struct {
-        pub usingnamespace firefly.api.SubTypeMixin(api.Asset, T);
-
-        pub const ASSET_TYPE_NAME = type_name;
-
-        pub fn isOfType(asset: *Asset) bool {
-            return firefly.utils.stringEquals(asset.asset_type.name, ASSET_TYPE_NAME);
-        }
-
-        pub fn new(subtype: T) *T {
-            return @This().newSubType(
-                Asset{
-                    .name = subtype.name,
-                    .asset_type = api.AssetAspectGroup.getAspect(ASSET_TYPE_NAME),
-                },
-                subtype,
-            );
-        }
-
-        pub fn load(self: *T) void {
-            Asset.Activation.activate(self.id);
-        }
-
-        pub fn close(self: *T) void {
-            Asset.Activation.deactivate(self.id);
-        }
-    };
-}

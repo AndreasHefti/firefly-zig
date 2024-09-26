@@ -96,6 +96,10 @@ pub const Composite = struct {
         self.deinitAttributes();
     }
 
+    pub fn createForSubType(SubType: anytype) *Composite {
+        return Component.newForSubType(.{ .name = SubType.name });
+    }
+
     pub fn withTask(
         self: *Composite,
         task: api.Task,
@@ -206,17 +210,6 @@ pub const Composite = struct {
 
 pub fn CompositeMixin(comptime T: type) type {
     return struct {
-        pub usingnamespace firefly.api.SubTypeMixin(Composite, T);
-
-        pub fn new(subType: T) *T {
-            return T.newSubType(
-                api.Composite{
-                    .name = subType.name,
-                },
-                subType,
-            );
-        }
-
         pub fn setAttribute(self: *T, name: String, value: String) void {
             api.Composite.Component.byId(self.id).setAttribute(name, value);
         }

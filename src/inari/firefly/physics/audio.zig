@@ -19,8 +19,8 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Asset.Subtypes.register(Sound);
-    api.Asset.Subtypes.register(Music);
+    api.Asset.Subtypes.register(Sound, "Sound");
+    api.Asset.Subtypes.register(Music, "Music");
 }
 
 pub fn deinit() void {
@@ -140,7 +140,7 @@ pub const AudioPlayer = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Sound = struct {
-    pub usingnamespace firefly.api.AssetMixin(Sound, "Sound");
+    pub const Component = api.Component.SubTypeMixin(api.Asset, Sound);
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -172,7 +172,7 @@ pub const Sound = struct {
 //////////////////////////////////////////////////////////////
 
 pub const Music = struct {
-    pub usingnamespace firefly.api.AssetMixin(Music, "Music");
+    pub const Component = api.Component.SubTypeMixin(api.Asset, Music);
 
     id: Index = UNDEF_INDEX,
     name: String,

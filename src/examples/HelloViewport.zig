@@ -57,11 +57,11 @@ fn loadWithView() void {
         .flipY()
         .id;
 
-    Texture.new(.{
+    Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
-    }).load();
+    });
 
     _ = Entity.Component.new(.{ .name = "TestEntity" })
         .withComponent(ETransform{})

@@ -21,11 +21,11 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 fn init() void {
     firefly.api.rendering.setRenderBatch(1, 181920);
 
-    Texture.new(.{
+    Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
-    }).load();
+    });
 
     const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",

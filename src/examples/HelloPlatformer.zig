@@ -81,7 +81,7 @@ fn init() void {
     game.World.loadByName("World1");
 
     //create player with load task (active room will load and activate the player when started)
-    var player = game.Player.new(.{ .name = player_name });
+    var player = game.Player.Component.new(.{ .name = player_name });
     _ = player.withTask(
         api.Task{
             .run_once = true,
@@ -96,12 +96,12 @@ fn init() void {
 }
 
 fn roomLoaded(room_id: Index) void {
-    std.debug.print("Room running!!! test_attribute1={?s} \n", .{game.Room.byId(room_id).getAttribute("test_attribute1")});
+    std.debug.print("Room running!!! test_attribute1={?s} \n", .{game.Room.Component.byId(room_id).getAttribute("test_attribute1")});
 }
 
 fn playerLoadTask(_: *api.CallContext) void {
     const view = graphics.View.Naming.byName(view_name) orelse return;
-    var player = game.Player.byName(player_name) orelse return;
+    var player = game.Player.Component.byName(player_name) orelse return;
     player._view_id = view.id;
 
     // single sprite for this player
@@ -179,5 +179,5 @@ fn playerLoadTask(_: *api.CallContext) void {
         true,
     );
 
-    player._cam_id = game.SimplePivotCamera.idByName(cam_name).?;
+    player._cam_id = game.SimplePivotCamera.Component.idByName(cam_name).?;
 }

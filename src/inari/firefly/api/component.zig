@@ -111,8 +111,6 @@ pub fn print(string_buffer: *utils.StringBuffer) void {
 pub fn Mixin(comptime T: type) type {
     if (@typeInfo(T) != .Struct)
         @compileError("Expects component type is a struct.");
-    // if (!@hasDecl(T, "Component"))
-    //     @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
     if (!@hasField(T, "id"))
         @compileError("Expects component type to have field: id: Index, that holds the index-id of the component instance");
 
@@ -213,6 +211,10 @@ pub fn Mixin(comptime T: type) type {
             if (has_subtypes)
                 @panic("Use new on specific subtype");
 
+            return register(t);
+        }
+
+        pub fn newForSubType(t: T) *T {
             return register(t);
         }
 
@@ -438,7 +440,9 @@ pub fn NameMappingMixin(comptime T: type) type {
 
         fn init() void {
             defer _init = true;
-            if (_init) return;
+            if (_init)
+                return;
+
             _ = @typeName(T); // NOTE: if this is not touched here, memoization brakes for some unknown reason
             mapping = std.StringHashMap(Index).init(api.COMPONENT_ALLOC);
         }
@@ -499,23 +503,21 @@ pub fn SubscriptionMixin(comptime T: type) type {
             defer _init = true;
             if (_init)
                 return;
+
             _ = @typeName(T); // NOTE: if this is not touched here, memoization brakes for some unknown reason
-            //std.debug.print("************* Init SubscriptionMixin for: {any} {s}\n", .{ @intFromPtr(&dispatcher), @typeName(T) });
             dispatcher = utils.EventDispatch(ComponentEvent).new(api.COMPONENT_ALLOC);
         }
 
         fn deinit() void {
             defer _init = false;
-            if (!_init) return;
-            //std.debug.print("************** Deinit SubscriptionMixin for: {s}\n", .{@typeName(T)});
+            if (!_init)
+                return;
+
             dispatcher.deinit();
             dispatcher = undefined;
         }
 
         pub fn subscribe(listener: ComponentListener) void {
-            //std.debug.print("************** Subscribe for: {s}\n", .{@typeName(T)});
-            //std.debug.print("************** Subscribe listener for dispatcher: {any}\n", .{@intFromPtr(&dispatcher)});
-            //std.debug.print("************** Subscribe init is: {any}\n", .{_init});
             if (_init) {
                 dispatcher.register(listener);
             }
@@ -528,8 +530,6 @@ pub fn SubscriptionMixin(comptime T: type) type {
         }
 
         fn notify(event_type: ComponentEvent.Type, id: Index) void {
-            //std.debug.print("************* Notify for: {any} {s}\n", .{ @intFromPtr(&dispatcher), @typeName(T) });
-            //_ = @typeName(T);
             if (_init) {
                 dispatcher.notify(.{ .event_type = event_type, .c_id = id });
             }
@@ -641,10 +641,11 @@ pub fn ControlMixin(comptime T: type) type {
         }
 
         pub fn add(id: Index, update: api.CallFunction, name: ?String, active: bool) void {
-            const c_sub = api.VoidControl.new(
-                .{ .name = name },
-                update,
-            );
+            const c_sub = api.VoidControl.Component.new(.{
+                .name = name,
+                .update = update,
+            });
+
             indexes.map(id, c_sub.id);
             ActivationMixin(api.Control).set(c_sub.id, active);
         }
@@ -655,7 +656,7 @@ pub fn ControlMixin(comptime T: type) type {
 
         pub fn addOf(id: Index, subtype: anytype, active: bool) void {
             const c_subtype_type = @TypeOf(subtype);
-            const c_subtype = c_subtype_type.new(subtype, c_subtype_type.update);
+            const c_subtype = c_subtype_type.Component.new(subtype);
             indexes.map(id, c_subtype.id);
 
             if (@hasDecl(c_subtype_type, "initForComponent"))
@@ -699,6 +700,8 @@ pub fn SubTypingMixin(comptime T: type) type {
     comptime {
         if (@typeInfo(T) != .Struct)
             @compileError("Expects component type is a struct.");
+        if (!@hasDecl(T, "createForSubType"))
+            @compileError("Expects component type to have function: createForSubType(SubType) *T, used to create Component for Subtype.");
         if (!@hasDecl(T, "Component"))
             @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
     }
@@ -719,8 +722,8 @@ pub fn SubTypingMixin(comptime T: type) type {
             if (!_init) return;
         }
 
-        pub fn register(comptime SubType: type) void {
-            ComponentSubType(T, SubType).init();
+        pub fn register(comptime SubType: type, name: String) void {
+            SubTypeMixin(T, SubType).init(name);
         }
 
         pub fn dataById(id: Index, comptime SubType: type) ?@TypeOf(SubType) {
@@ -746,82 +749,21 @@ const SubComponentTypeInterface = struct {
 var SUB_COMPONENT_INTERFACE_TABLE: utils.DynArray(SubComponentTypeInterface) = undefined;
 
 pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
-    // comptime {
-    //     if (!T.allowSubtypes())
-    //         @compileError("Component of type does not support subtypes");
-    // }
+    if (!@hasDecl(T, "Subscription"))
+        @compileError("Expects component type to have declaration: const Subscription = SubscriptionMixin(T).");
+
     return struct {
-        const subtype = ComponentSubType(T, SubType);
+        var _init = false;
+        var data: std.AutoHashMap(Index, SubType) = undefined;
 
-        pub fn newSubType(t: T, st: SubType) *SubType {
-            const id = T.Component.register(t).id;
-            const result = subtype.data.getOrPut(id) catch unreachable;
-            if (result.found_existing)
-                utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{id});
+        pub var sub_type_type: api.SubTypeAspect = undefined;
 
-            result.value_ptr.* = st;
-            result.value_ptr.*.id = id;
+        fn init(name: String) void {
+            defer _init = true;
+            if (_init)
+                return;
 
-            if (@hasDecl(SubType, "construct"))
-                result.value_ptr.*.construct();
-
-            return result.value_ptr;
-        }
-
-        pub fn activateById(id: Index, active: bool) void {
-            T.Activation.set(id, active);
-        }
-
-        pub fn activate(self: *SubType) void {
-            T.Activation.set(self.id, true);
-        }
-
-        pub fn deactivate(self: *SubType) void {
-            T.Activation.set(self.id, false);
-        }
-
-        pub fn byId(id: Index) *SubType {
-            return subtype.data.getPtr(id).?;
-        }
-
-        pub fn existsByName(name: String) bool {
-            return T.Naming.exists(name);
-        }
-
-        pub fn byName(name: String) ?*SubType {
-            if (T.Naming.byName(name)) |c|
-                return subtype.data.getPtr(c.id);
-
-            return null;
-        }
-
-        pub fn idByName(name: String) ?Index {
-            return T.Naming.getIdOpt(name);
-        }
-
-        pub fn activateByName(name: String, active: bool) void {
-            T.Activation.setByName(name, active);
-        }
-
-        pub fn idIterator() std.AutoHashMap(Index, SubType).KeyIterator {
-            return subtype.data.keyIterator();
-        }
-    };
-}
-
-fn ComponentSubType(comptime T: type, comptime SubType: type) type {
-    comptime {
-        if (@typeInfo(SubType) != .Struct)
-            @compileError("Expects component sub type is a struct.");
-        if (!@hasField(SubType, "id"))
-            @compileError("Expects component sub type to have field: id: Index, that holds the index-id of the component");
-        if (!@hasDecl(T, "Subscription"))
-            @compileError("Expects component type to have declaration: const Subscription = SubscriptionMixin(T).");
-    }
-    return struct {
-        pub var data: std.AutoHashMap(Index, SubType) = undefined;
-
-        fn init() void {
+            sub_type_type = api.SubTypeAspectGroup.getAspect(name);
             data = std.AutoHashMap(Index, SubType).init(api.COMPONENT_ALLOC);
             // subscribe to T and dispatch activation and dispose
             T.Subscription.subscribe(notifyComponentChange);
@@ -832,6 +774,10 @@ fn ComponentSubType(comptime T: type, comptime SubType: type) type {
         }
 
         fn _deinit() void {
+            defer _init = false;
+            if (!_init)
+                return;
+
             // unsubscribe from base Component events
             T.Subscription.unsubscribe(notifyComponentChange);
             // destruct and clear subtype data
@@ -843,6 +789,64 @@ fn ComponentSubType(comptime T: type, comptime SubType: type) type {
 
             data.deinit();
             data = undefined;
+        }
+
+        pub fn newActive(st: SubType) void {
+            ActivationMixin(T).activate(new(st).id);
+        }
+
+        pub fn new(st: SubType) *SubType {
+            const subtype: *T = T.createForSubType(st);
+            const result = data.getOrPut(subtype.id) catch unreachable;
+            if (result.found_existing)
+                utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{subtype.id});
+
+            result.value_ptr.* = st;
+            result.value_ptr.*.id = subtype.id;
+
+            if (@hasDecl(SubType, "construct"))
+                result.value_ptr.*.construct();
+
+            return result.value_ptr;
+        }
+
+        pub fn activateById(id: Index) void {
+            ActivationMixin(T).activate(id);
+        }
+
+        pub fn deactivateById(id: Index) void {
+            ActivationMixin(T).deactivate(id);
+        }
+
+        pub fn byId(id: Index) *SubType {
+            return data.getPtr(id).?;
+        }
+
+        pub fn existsByName(name: String) bool {
+            return NameMappingMixin(T).exists(name);
+        }
+
+        pub fn byName(name: String) ?*SubType {
+            if (NameMappingMixin(T).byName(name)) |c|
+                return data.getPtr(c.id);
+
+            return null;
+        }
+
+        pub fn idByName(name: String) ?Index {
+            return NameMappingMixin(T).getIdOpt(name);
+        }
+
+        pub fn activateByName(name: String) void {
+            ActivationMixin(T).activateByName(name);
+        }
+
+        pub fn deactivateByName(name: String) void {
+            ActivationMixin(T).deactivateByName(name);
+        }
+
+        pub fn idIterator() std.AutoHashMap(Index, SubType).KeyIterator {
+            return data.keyIterator();
         }
 
         fn notifyComponentChange(event: ComponentEvent) void {

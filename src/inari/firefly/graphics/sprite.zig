@@ -26,7 +26,7 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    api.Asset.Subtypes.register(SpriteSet);
+    api.Asset.Subtypes.register(SpriteSet, "SpriteSet");
     api.Component.registerComponent(SpriteTemplate, "SpriteTemplate");
     api.EComponent.registerEntityComponent(ESprite);
     DefaultSpriteRenderer.init();
@@ -77,7 +77,7 @@ pub const SpriteTemplate = struct {
     }
 
     pub fn construct(self: *SpriteTemplate) void {
-        if (graphics.Texture.byName(self.texture_name)) |tex| {
+        if (graphics.Texture.Component.byName(self.texture_name)) |tex| {
             if (tex._binding) |b| {
                 self.texture_binding = b.id;
             }
@@ -87,7 +87,7 @@ pub const SpriteTemplate = struct {
     fn notifyAssetEvent(e: api.ComponentEvent) void {
         if (e.c_id) |id| {
             switch (e.event_type) {
-                .ACTIVATED => onTextureLoad(graphics.Texture.byId(id)),
+                .ACTIVATED => onTextureLoad(graphics.Texture.Component.byId(id)),
                 .DEACTIVATING => onTextureClose(api.Asset.Component.byId(id).name.?),
                 .DISPOSING => onTextureDispose(api.Asset.Component.byId(id).name.?),
                 else => {},
@@ -184,7 +184,7 @@ pub const SpriteStamp = struct {
 };
 
 pub const SpriteSet = struct {
-    pub usingnamespace firefly.api.AssetMixin(SpriteSet, "SpriteSet");
+    pub const Component = api.Component.SubTypeMixin(api.Asset, SpriteSet);
 
     _stamps: utils.DynArray(SpriteStamp) = undefined,
     _loaded_sprite_template_refs: utils.DynIndexArray = undefined,

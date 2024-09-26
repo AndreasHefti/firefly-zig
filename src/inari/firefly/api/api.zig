@@ -53,20 +53,9 @@ pub var input: IInputAPI() = undefined;
 pub var audio: IAudioAPI() = undefined;
 
 pub const Asset = asset.Asset;
-pub const AssetAspectGroup = utils.AspectGroup("Asset");
-pub const AssetKind = AssetAspectGroup.Kind;
-pub const AssetAspect = AssetAspectGroup.Aspect;
-pub const AssetMixin = asset.AssetMixin;
 pub const Component = component;
-pub const ComponentAspectGroup = utils.AspectGroup("ComponentType");
-pub const GroupKind = GroupAspectGroup.Kind;
-pub const GroupAspect = GroupAspectGroup.Aspect;
 pub const ComponentEvent = component.ComponentEvent;
 pub const ComponentListener = component.ComponentListener;
-pub const ComponentKind = ComponentAspectGroup.Kind;
-pub const ComponentAspect = ComponentAspectGroup.Aspect;
-pub const GroupAspectGroup = utils.AspectGroup("ComponentGroup");
-pub const SubTypeMixin = component.SubTypeMixin;
 pub const Condition = control.Condition;
 pub const System = system.System;
 pub const SystemMixin = system.SystemMixin;
@@ -77,13 +66,9 @@ pub const Entity = entity.Entity;
 pub const EntityTypeCondition = entity.EntityTypeCondition;
 pub const EMultiplier = entity.EMultiplier;
 pub const EComponent = entity.EComponent;
-pub const EComponentAspectGroup = utils.AspectGroup("EComponent");
-pub const EComponentKind = EComponentAspectGroup.Kind;
-pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const Task = control.Task;
 pub const Trigger = control.Trigger;
 pub const Control = control.Control;
-pub const ControlSubTypeMixin = control.ControlSubTypeMixin;
 pub const VoidControl = control.VoidControl;
 pub const Composite = composite.Composite;
 pub const CompositeLifeCycle = composite.CompositeLifeCycle;
@@ -94,6 +79,22 @@ pub const EntityStateEngine = control.EntityStateEngine;
 pub const EState = control.EState;
 pub const StateSystem = control.StateSystem;
 pub const EntityStateSystem = control.EntityStateSystem;
+
+pub const ComponentAspectGroup = utils.AspectGroup("ComponentType");
+pub const ComponentKind = ComponentAspectGroup.Kind;
+pub const ComponentAspect = ComponentAspectGroup.Aspect;
+
+pub const SubTypeAspectGroup = utils.AspectGroup("ComponentSubType");
+pub const SubTypeKind = SubTypeAspectGroup.Kind;
+pub const SubTypeAspect = SubTypeAspectGroup.Aspect;
+
+pub const GroupAspectGroup = utils.AspectGroup("ComponentGroup");
+pub const GroupKind = GroupAspectGroup.Kind;
+pub const GroupAspect = GroupAspectGroup.Aspect;
+
+pub const EComponentAspectGroup = utils.AspectGroup("EComponent");
+pub const EComponentKind = EComponentAspectGroup.Kind;
+pub const EComponentAspect = EComponentAspectGroup.Aspect;
 
 pub const ActionResult = enum {
     Running,
