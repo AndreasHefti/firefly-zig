@@ -105,7 +105,7 @@ fn init() void {
             .width = 600,
             .height = 400,
         },
-    }).id;
+    });
 
     View.Activation.activate(viewId);
 
@@ -150,10 +150,11 @@ fn createTile(
     y: Float,
     view_id: Index,
 ) void {
-    var entity = Entity.Component.new(.{ .name = tile_template.name })
+    const eid = Entity.build(.{ .name = tile_template.name })
         .withComponent(ETransform{ .position = .{ x, y } })
         .withComponent(EView{ .view_id = view_id })
-        .withComponent(ESprite{ .template_id = tile_template._sprite_template_id.? });
+        .withComponent(ESprite{ .template_id = tile_template._sprite_template_id.? })
+        .getId();
 
     if (tile_set.createContactMaskFromImage(tile_template)) |mask| {
         var vert: std.ArrayList(Float) = std.ArrayList(Float).init(firefly.api.ALLOC);
@@ -168,13 +169,13 @@ fn createTile(
             }
         }
 
-        _ = entity.withComponent(EShape{
+        EShape.Component.new(eid, .{
             .shape_type = firefly.api.ShapeType.POINT,
             .vertices = firefly.api.ALLOC.dupe(Float, vert.items) catch unreachable,
             .color = .{ 255, 0, 0, 255 },
         });
     } else if (tile_template.contact_material_type) |_| {
-        _ = entity.withComponent(EShape{
+        EShape.Component.new(eid, .{
             .shape_type = firefly.api.ShapeType.RECTANGLE,
             .vertices = firefly.api.allocFloatArray(.{ 16, 16, 16, 16 }),
             .color = .{ 255, 0, 0, 255 },
@@ -190,8 +191,8 @@ fn createTile(
             next = frames.slots.nextSetBit(i + 1);
         }
 
-        _ = entity.withComponent(EAnimation{})
-            .withAnimation(
+        EAnimation.addToComponent(
+            eid,
             .{ .duration = list._duration, .looping = true, .active_on_init = true },
             IndexFrameIntegration{
                 .timeline = list,
@@ -200,5 +201,5 @@ fn createTile(
         );
     }
 
-    _ = entity.activate();
+    Entity.Activation.activate(eid);
 }

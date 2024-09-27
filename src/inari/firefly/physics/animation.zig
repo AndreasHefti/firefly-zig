@@ -26,7 +26,7 @@ pub fn init() void {
     AnimationSystem.registerAnimationType(EasedValueIntegration);
     AnimationSystem.registerAnimationType(EasedColorIntegration);
     AnimationSystem.registerAnimationType(IndexFrameIntegration);
-    api.EComponent.registerEntityComponent(EAnimation);
+    api.Entity.registerComponent(EAnimation, "EAnimation");
 }
 
 pub fn deinit() void {
@@ -249,7 +249,7 @@ fn AnimationResolver(comptime Integration: type) type {
 //////////////////////////////////////////////////////////////
 
 pub const EAnimation = struct {
-    pub usingnamespace api.EComponent.Mixin(@This(), "EAnimation");
+    pub const Component = api.EntityComponentMixin(EAnimation);
 
     id: Index = UNDEF_INDEX,
     animations: utils.BitSet = undefined,
@@ -268,14 +268,17 @@ pub const EAnimation = struct {
         finish_callback: ?*const fn () void = null,
     };
 
-    pub fn withAnimation(
-        self: *EAnimation,
+    pub fn addToComponent(
+        entity_id: Index,
         animation: AnimationTemplate,
         integration: anytype,
-    ) *EAnimation {
+    ) void {
+        if (!api.Entity.hasEntityComponent(entity_id, Component.aspect))
+            Component.new(entity_id, .{});
+
         var i = integration;
-        i.init(self.id);
-        self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
+        i.init(entity_id);
+        const animation_id = AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
             animation.duration,
             animation.looping,
             animation.inverse_on_loop,
@@ -283,9 +286,28 @@ pub const EAnimation = struct {
             animation.loop_callback,
             animation.finish_callback,
             i,
-        )));
-        return self;
+        ));
+        Component.byId(entity_id).?.animations.set(animation_id);
     }
+
+    // pub fn withAnimation(
+    //     self: *EAnimation,
+    //     animation: AnimationTemplate,
+    //     integration: anytype,
+    // ) *EAnimation {
+    //     var i = integration;
+    //     i.init(self.id);
+    //     self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
+    //         animation.duration,
+    //         animation.looping,
+    //         animation.inverse_on_loop,
+    //         animation.reset_on_finish,
+    //         animation.loop_callback,
+    //         animation.finish_callback,
+    //         i,
+    //     )));
+    //     return self;
+    // }
 
     pub fn activation(self: *EAnimation, active: bool) void {
         var next = self.animations.nextSetBit(0);

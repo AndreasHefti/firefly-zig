@@ -45,7 +45,7 @@ fn init() void {
     firefly.physics.ContactSystem.activate();
 
     // view with two layer
-    const view = graphics.View.Component.new(.{
+    const view_id = graphics.View.Component.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
         .scale = .{ scale, scale },
@@ -57,7 +57,7 @@ fn init() void {
     });
 
     _ = graphics.View.Control.addOf(
-        view.id,
+        view_id,
         game.SimplePivotCamera{
             .name = cam_name,
             .pixel_perfect = false,
@@ -116,10 +116,10 @@ fn create_player(_: *api.CallContext) void {
     const sprite_id = graphics.SpriteTemplate.Component.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },
-    }).id;
+    });
 
     // create player entity
-    _ = api.Entity.Component.new(.{ .name = "Player" })
+    _ = api.Entity.build(.{ .name = "Player" })
         .withComponent(graphics.ETransform{
         .position = .{ 32, 32 },
         .pivot = .{ 0, 0 },
@@ -143,7 +143,6 @@ fn create_player(_: *api.CallContext) void {
             .layer_id = graphics.Layer.Naming.getId(layer2),
         }),
     })
-        .entity()
         .withControlOf(
         game.SimplePlatformerHorizontalMoveControl{
             .button_left = api.InputButtonType.LEFT,
@@ -159,6 +158,6 @@ fn create_player(_: *api.CallContext) void {
 
     // apply player position as pivot for camera
     var cam = game.SimplePivotCamera.Component.byName(cam_name).?;
-    player_pos_ptr = &graphics.ETransform.byName("Player").?.position;
+    player_pos_ptr = &graphics.ETransform.Component.byName("Player").?.position;
     cam.pivot = player_pos_ptr;
 }

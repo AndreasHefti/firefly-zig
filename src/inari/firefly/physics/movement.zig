@@ -21,7 +21,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.EComponent.registerEntityComponent(EMovement);
+    api.Entity.registerComponent(EMovement, "EMovement");
     MovementSystem.init();
 
     MovFlags.ON_SLOPE_UP = physics.MovementAspectGroup.getAspect("ON_SLOPE_UP");
@@ -95,7 +95,7 @@ pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: 
 //////////////////////////////////////////////////////////////
 
 pub const EMovement = struct {
-    pub usingnamespace api.EComponent.Mixin(@This(), "EMovement");
+    pub const Component = api.EntityComponentMixin(EMovement);
 
     id: Index = UNDEF_INDEX,
     kind: physics.MovementKind = undefined,
@@ -173,7 +173,7 @@ pub fn SimpleStepIntegrator(movement: *EMovement, delta_time_seconds: Float) boo
     adjustVelocity(movement);
 
     if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        if (graphics.ETransform.byId(movement.id)) |transform| {
+        if (graphics.ETransform.Component.byId(movement.id)) |transform| {
             transform.move(
                 movement.velocity[0] * delta_time_seconds,
                 movement.velocity[1] * delta_time_seconds,
@@ -213,7 +213,7 @@ pub fn EulerIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
     adjustVelocity(movement);
 
     if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        if (graphics.ETransform.byId(movement.id)) |transform| {
+        if (graphics.ETransform.Component.byId(movement.id)) |transform| {
             transform.move(
                 movement.velocity[0] * delta_time_seconds,
                 movement.velocity[1] * delta_time_seconds,
@@ -299,7 +299,7 @@ pub const MovementSystem = struct {
         moved.clear();
         var next = components.nextSetBit(0);
         while (next) |i| {
-            if (EMovement.byId(i)) |m| {
+            if (EMovement.Component.byId(i)) |m| {
                 if (m.active) {
                     if (m.update_scheduler) |scheduler| {
                         if (scheduler.needs_update) {

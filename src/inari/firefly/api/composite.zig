@@ -220,7 +220,7 @@ pub fn CompositeMixin(comptime T: type) type {
 
         pub fn withTask(self: *T, task: api.Task, life_cycle: CompositeLifeCycle, attributes_id: ?Index) *T {
             checkInCreationState(self);
-            self.addTaskById(api.Task.Component.new(task).id, life_cycle, attributes_id);
+            self.addTaskById(api.Task.Component.new(task), life_cycle, attributes_id);
             return self;
         }
 

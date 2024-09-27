@@ -203,7 +203,7 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
         utils.panic(api.ALLOC, "Failed to find/load texture: {any}", .{jsonTileSet.texture});
 
     // create TileSet from jsonTileSet
-    var tile_set = game.TileSet.Component.new(.{
+    var tile_set = game.TileSet.Component.create(.{
         .name = api.NamePool.alloc(jsonTileSet.name),
         .texture_name = api.NamePool.alloc(jsonTileSet.texture.name).?,
         .tile_width = jsonTileSet.tile_width,
@@ -376,7 +376,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 
     // prepare view
     const view_id = graphics.View.Naming.getId(view_name);
-    var tile_mapping = game.TileMapping.Component.new(.{
+    var tile_mapping = game.TileMapping.Component.create(.{
         .name = api.NamePool.alloc(jsonTileMapping.name),
         .view_id = view_id,
     });
@@ -430,11 +430,11 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
                 .name = api.NamePool.alloc(layer_mapping.layer_name),
                 .view_id = view_id,
                 .order = i,
-            }).id;
+            });
         }
 
         // create tile layer data
-        var tile_layer_data: *game.TileLayerData = tile_mapping.withTileLayerData(.{
+        var tile_layer_data = tile_mapping.withTileLayerData(.{
             .layer = api.NamePool.alloc(layer_mapping.layer_name).?,
             .tint = utils.parseColor(layer_mapping.tint_color).?,
             .blend = BlendMode.byName(layer_mapping.blend_mode),

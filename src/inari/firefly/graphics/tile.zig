@@ -29,7 +29,7 @@ pub fn init() !void {
     BasicTileTypes.UNDEFINED = graphics.TileTypeAspectGroup.getAspect("UNDEFINED");
 
     api.Component.registerComponent(TileGrid, "TileGrid");
-    api.EComponent.registerEntityComponent(ETile);
+    api.Entity.registerComponent(ETile, "ETile");
     DefaultTileGridRenderer.init();
 }
 
@@ -52,7 +52,7 @@ pub const BasicTileTypes = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETile = struct {
-    pub usingnamespace api.EComponent.Mixin(@This(), "ETile");
+    pub const Component = api.EntityComponentMixin(ETile);
 
     id: Index = UNDEF_INDEX,
     sprite_template_id: Index = UNDEF_INDEX,
@@ -67,7 +67,7 @@ pub const ETile = struct {
 
     pub const Property = struct {
         pub fn FrameId(id: Index) *Index {
-            return &ETile.byId(id).?.sprite_template_id;
+            return &ETile.Component.byId(id).?.sprite_template_id;
         }
         pub fn TintColor(id: Index) *Color {
             var tile = ETile.byId(id).?;
@@ -356,8 +356,8 @@ pub const DefaultTileGridRenderer = struct {
                 if (entity_id == UNDEF_INDEX)
                     continue;
 
-                const tile = ETile.byId(entity_id) orelse continue;
-                const trans = graphics.ETransform.byId(entity_id) orelse continue;
+                const tile = ETile.Component.byId(entity_id) orelse continue;
+                const trans = graphics.ETransform.Component.byId(entity_id) orelse continue;
                 const sprite_template = graphics.SpriteTemplate.Component.byId(tile.sprite_template_id);
                 api.rendering.renderSprite(
                     sprite_template.texture_binding,

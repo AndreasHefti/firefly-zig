@@ -33,7 +33,6 @@ pub fn main() !void {
     try @import("examples/HelloRoom.zig").run(init_context);
     try @import("examples/HelloPlayer.zig").run(init_context);
     try @import("examples/HelloPlatformer.zig").run(init_context);
-    //try @import("examples/TestSpriteAndShapeWithProjectionZoom.zig").run(init_context);
 }
 
 test "API Tests" {

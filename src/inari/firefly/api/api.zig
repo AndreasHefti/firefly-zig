@@ -63,9 +63,9 @@ pub const EntityUpdateMixin = system.EntityUpdateMixin;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
+pub const EntityComponentMixin = entity.EntityComponentMixin;
 pub const EntityTypeCondition = entity.EntityTypeCondition;
 pub const EMultiplier = entity.EMultiplier;
-pub const EComponent = entity.EComponent;
 pub const Task = control.Task;
 pub const Trigger = control.Trigger;
 pub const Control = control.Control;
@@ -150,11 +150,12 @@ pub fn init(context: InitContext) !void {
     Component.init();
     Timer.init();
     system.init();
+    entity.init();
 
     // register api based components and entity components
     Component.registerComponent(Attributes, "Attributes");
     Component.registerComponent(Entity, "Entity");
-    EComponent.registerEntityComponent(EMultiplier);
+    Entity.registerComponent(EMultiplier, "EMultiplier");
 
     asset.init();
     control.init();
@@ -171,6 +172,8 @@ pub fn deinit() void {
     system.deinit();
     composite.deinit();
     Component.deinit();
+    entity.deinit();
+
     rendering.deinit();
     rendering = undefined;
     window.deinit();
@@ -375,12 +378,12 @@ pub fn AttributeMixin(comptime T: type) type {
         fn getAttributesId(self: *T, create: bool) ?Index {
             if (has_attributes_id) {
                 if (self.attributes_id == null and create)
-                    self.attributes_id = Attributes.Component.new(.{ .name = getAttributesName(self) }).id;
+                    self.attributes_id = Attributes.Component.new(.{ .name = getAttributesName(self) });
 
                 return self.attributes_id;
             } else if (has_call_context) {
                 if (self.call_context.attributes_id == null and create)
-                    self.call_context.attributes_id = Attributes.Component.new(.{ .name = getAttributesName(self) }).id;
+                    self.call_context.attributes_id = Attributes.Component.new(.{ .name = getAttributesName(self) });
 
                 return self.call_context.attributes_id;
             }
@@ -418,7 +421,7 @@ pub const Attributes = struct {
     }
 
     pub fn newWith(name: ?String, attributes: anytype) *Attributes {
-        var result: *Attributes = Attributes.Component.new(.{ .name = name });
+        var result = Attributes.Component.create(.{ .name = name });
 
         inline for (attributes) |v| {
             const t = @typeInfo(@TypeOf(v[1]));
@@ -516,7 +519,7 @@ pub fn CallContextMixin(comptime T: type) type {
                 self.call_context.caller_name = self.name;
 
             if (init_attributes)
-                self.call_context.attributes_id = Attributes.Component.new(.{ .name = Self.getAttributesName(self) }).id;
+                self.call_context.attributes_id = Attributes.Component.new(.{ .name = Self.getAttributesName(self) });
         }
 
         pub fn deinitCallContext(self: *T) void {

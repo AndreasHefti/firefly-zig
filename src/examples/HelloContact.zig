@@ -44,38 +44,38 @@ fn init() void {
         .is_mipmap = false,
     });
 
-    const sprite = SpriteTemplate.Component.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
     var x: Float = 10;
-    const player = Entity.Component.new(.{})
+    Entity.build(.{})
         .withControl(control, null, true)
         .withComponent(ETransform{ .position = .{ x, 0 } })
-        .withComponent(ESprite{ .template_id = sprite.id })
+        .withComponent(ESprite{ .template_id = sprite_id })
         .withComponent(EMovement{ .gravity = .{ 2, firefly.physics.Gravity }, .mass = 1, .mass_factor = 0.3, .integrator = firefly.physics.EulerIntegrator })
         .withComponent(EContactScan{ .collision_resolver = DebugCollisionResolver })
-        .withConstraint(.{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true })
-        .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }), .color = .{ 0, 0, 255, 255 } });
-    Entity.Activation.activate(player.id);
+        .addToComponent(EContactScan, .{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true })
+        .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }), .color = .{ 0, 0, 255, 255 } })
+        .activate();
 
     x += 50;
 
-    _ = Entity.Component.new(.{})
+    Entity.build(.{})
         .withComponent(ETransform{ .position = .{ x, 200 } })
-        .withComponent(ESprite{ .template_id = sprite.id })
+        .withComponent(ESprite{ .template_id = sprite_id })
         .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
         .activate();
 
     // tile grid
-    const tile = Entity.Component.new(.{ .name = "TestEntity" })
+    const tile = Entity.build(.{ .name = "TestEntity" })
         .withComponent(ETransform{})
-        .withComponent(ETile{ .sprite_template_id = sprite.id })
+        .withComponent(ETile{ .sprite_template_id = sprite_id })
         .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
-        .activate();
+        .activateGet();
 
-    var tile_grid: *TileGrid = TileGrid.Component.new(.{
+    var tile_grid = TileGrid.Component.create(.{
         .name = "TileGrid1",
         .world_position = PosF{ 50, 300 },
         .dimensions = .{ 10, 3, 32, 32 },
@@ -89,8 +89,8 @@ fn init() void {
 }
 
 fn control(ctx: *firefly.api.CallContext) void {
-    const scan = EContactScan.byId(ctx.caller_id) orelse return;
-    const shape = EShape.byId(ctx.caller_id) orelse return;
+    const scan = EContactScan.Component.byId(ctx.caller_id) orelse return;
+    const shape = EShape.Component.byId(ctx.caller_id) orelse return;
 
     if (scan.hasAnyContact()) {
         shape.color[0] = 255;

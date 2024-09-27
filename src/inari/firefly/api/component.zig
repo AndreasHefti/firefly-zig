@@ -207,11 +207,15 @@ pub fn Mixin(comptime T: type) type {
             return pool.slots.count();
         }
 
-        pub fn new(t: T) *T {
+        pub fn create(t: T) *T {
+            return byId(new(t));
+        }
+
+        pub fn new(t: T) Index {
             if (has_subtypes)
                 @panic("Use new on specific subtype");
 
-            return register(t);
+            return register(t).id;
         }
 
         pub fn newForSubType(t: T) *T {

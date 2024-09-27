@@ -31,7 +31,7 @@ pub fn init() void {
     api.Composite.Subtypes.register(World, "World");
     api.Composite.Subtypes.register(Room, "Room");
     api.Composite.Subtypes.register(Player, "Player");
-    api.EComponent.registerEntityComponent(ERoomTransition);
+    api.Entity.registerComponent(ERoomTransition, "ERoomTransition");
 
     _ = api.Task.Component.new(.{
         .name = game.Tasks.ROOM_TRANSITION_BUILDER,
@@ -341,7 +341,7 @@ pub const Room = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ERoomTransition = struct {
-    pub usingnamespace api.EComponent.Mixin(ERoomTransition, "ERoomTransition");
+    pub const Component = api.EntityComponentMixin(ERoomTransition);
 
     id: Index = UNDEF_INDEX,
     condition: ?api.CallPredicate = null,
@@ -370,7 +370,7 @@ fn createRoomTransition(ctx: *api.CallContext) void {
         else => "NONE",
     };
 
-    const trans_entity_id = api.Entity.Component.new(.{ .name = name })
+    const trans_entity_id = api.Entity.build(.{ .name = name })
         .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
         .withComponent(graphics.EView{ .view_id = view_id, .layer_id = layer_id })
         .withComponent(physics.EContact{
@@ -383,7 +383,7 @@ fn createRoomTransition(ctx: *api.CallContext) void {
         .target_transition = target_transition_name,
         .orientation = orientation,
     })
-        .activate().id;
+        .activateGetId();
 
     // add transition entity as owned reference if requested
     if (ctx.c_ref_callback) |callback|
@@ -406,10 +406,10 @@ pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan
     const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return false;
     const transition_id = c.entity_id;
     const player = api.Entity.Component.byId(player_id);
-    const player_transform = graphics.ETransform.byId(player_id) orelse return false;
-    const move = physics.EMovement.byId(player_id) orelse return false;
-    const transition = ERoomTransition.byId(transition_id) orelse return false;
-    const transition_transform = graphics.ETransform.byId(transition_id) orelse return false;
+    const player_transform = graphics.ETransform.Component.byId(player_id) orelse return false;
+    const move = physics.EMovement.Component.byId(player_id) orelse return false;
+    const transition = ERoomTransition.Component.byId(transition_id) orelse return false;
+    const transition_transform = graphics.ETransform.Component.byId(transition_id) orelse return false;
 
     switch (transition.orientation) {
         .EAST => if (move.velocity[0] <= 0) return false,
@@ -443,9 +443,9 @@ fn roomUnloadedCallback(_: Index) void {
 
         // set player position adjust cam
         const player = api.Entity.Component.byId(player_id);
-        const player_transform = graphics.ETransform.byId(player_id) orelse return;
-        const player_movement = physics.EMovement.byId(player_id) orelse return;
-        const target_transition_transform = graphics.ETransform.byName(target_transition) orelse return;
+        const player_transform = graphics.ETransform.Component.byId(player_id) orelse return;
+        const player_movement = physics.EMovement.Component.byId(player_id) orelse return;
+        const target_transition_transform = graphics.ETransform.Component.byName(target_transition) orelse return;
 
         player_movement.on_ground = false;
         player_transform.moveTo(
@@ -480,7 +480,7 @@ pub const SimpleRoomTransitionScene = struct {
         const name = ctx.string(game.TaskAttributes.NAME);
         const entry = !ctx.boolean("exit");
 
-        var scene = graphics.Scene.Component.new(.{
+        var scene = graphics.Scene.Component.create(.{
             .name = name,
             .init_function = entityInit,
             .dispose_function = disposeEntity,
@@ -498,7 +498,7 @@ pub const SimpleRoomTransitionScene = struct {
         const entry = !ctx.boolean("exit");
 
         if (graphics.View.Naming.byName(view_name)) |view| {
-            ctx.id_1 = api.Entity.Component.new(.{ .name = name })
+            ctx.id_1 = api.Entity.build(.{ .name = name })
                 .withComponent(graphics.ETransform{
                 .scale = .{ view.projection.width, view.projection.height },
             })
@@ -512,7 +512,7 @@ pub const SimpleRoomTransitionScene = struct {
                 .shape_type = api.ShapeType.RECTANGLE,
                 .fill = true,
                 .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
-            }).activate().id;
+            }).activateGetId();
         }
     }
 
@@ -523,7 +523,7 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn entryAction(ctx: *api.CallContext) void {
-        if (graphics.EShape.byId(ctx.id_1)) |shape| {
+        if (graphics.EShape.Component.byId(ctx.id_1)) |shape| {
             shape.color[3] -= @min(20, shape.color[3]);
             if (shape.color[3] <= 0)
                 ctx.result = .Success
@@ -533,7 +533,7 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn exitAction(ctx: *api.CallContext) void {
-        if (graphics.EShape.byId(ctx.id_1)) |shape| {
+        if (graphics.EShape.Component.byId(ctx.id_1)) |shape| {
             shape.color[3] = @min(255, @as(usize, @intCast(shape.color[3])) + 20);
             if (shape.color[3] >= 255)
                 ctx.result = .Success

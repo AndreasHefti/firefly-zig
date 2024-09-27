@@ -34,8 +34,8 @@ pub fn init() !void {
     api.Component.registerComponent(Scene, "Scene");
 
     // register entity components
-    api.EComponent.registerEntityComponent(EView);
-    api.EComponent.registerEntityComponent(ETransform);
+    api.Entity.registerComponent(EView, "EView");
+    api.Entity.registerComponent(ETransform, "ETransform");
 }
 
 pub fn deinit() void {
@@ -364,7 +364,7 @@ pub const Layer = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EView = struct {
-    pub usingnamespace api.EComponent.Mixin(EView, "EView");
+    pub const Component = api.EntityComponentMixin(EView);
 
     id: Index = UNDEF_INDEX,
     view_id: Index = UNDEF_INDEX,
@@ -389,13 +389,17 @@ pub const EView = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ETransform = struct {
-    pub usingnamespace api.EComponent.Mixin(ETransform, "ETransform");
+    pub const Component = api.EntityComponentMixin(ETransform);
 
     id: Index = UNDEF_INDEX,
     position: PosF = .{ 0, 0 },
     pivot: ?PosF = null,
     scale: ?PosF = null,
     rotation: ?Float = null,
+
+    pub fn add(entity_id: Index, c: ETransform) void {
+        Component.new(entity_id, c);
+    }
 
     pub fn move(self: *ETransform, x: Float, y: Float) void {
         self.position[0] += x;
@@ -435,19 +439,19 @@ pub const ETransform = struct {
 
     pub const Property = struct {
         pub fn XPos(id: Index) *Float {
-            return &ETransform.byId(id).?.position[0];
+            return &ETransform.Component.byId(id).?.position[0];
         }
         pub fn YPos(id: Index) *Float {
-            return &ETransform.byId(id).?.position[1];
+            return &ETransform.Component.byId(id).?.position[1];
         }
         pub fn XScale(id: Index) *Float {
-            return &ETransform.byId(id).?.getScale()[1];
+            return &ETransform.Component.byId(id).?.getScale()[1];
         }
         pub fn YScale(id: Index) *Float {
-            return &ETransform.byId(id).?.getScale()[1];
+            return &ETransform.Component.byId(id).?.getScale()[1];
         }
         pub fn Rotation(id: Index) *Float {
-            return ETransform.byId(id).?.getRotation();
+            return ETransform.Component.byId(id).?.getRotation();
         }
     };
 };

@@ -91,7 +91,7 @@ _ = Entity.new(.{ .name = "TestEntity" })
         .easing = Easing.Linear,
         .property_ref = ETransform.Property.Rotation,
     },
-).entity().activate();
+).activate();
 ```
 
  ## Platformer essentials and Room loading from JSON file now working:

@@ -21,7 +21,8 @@ pub fn init() void {
     api.Component.registerComponent(EntityStateEngine, "EntityStateEngine");
 
     Control.Subtypes.register(VoidControl, "VoidControl");
-    api.EComponent.registerEntityComponent(EState);
+    api.Entity.registerComponent(EState, "EState");
+
     StateSystem.init();
     EntityStateSystem.init();
 }
@@ -377,7 +378,7 @@ pub const EntityStateEngine = struct {
 };
 
 pub const EState = struct {
-    pub usingnamespace api.EComponent.Mixin(@This(), "EState");
+    pub const Component = api.EntityComponentMixin(EState);
 
     id: Index = UNDEF_INDEX,
     state_engine_ref: Index = undefined,
@@ -430,7 +431,7 @@ pub const EntityStateSystem = struct {
     pub fn updateEntities(components: *utils.BitSet) void {
         var next = components.nextSetBit(0);
         while (next) |i| {
-            if (EState.byId(i)) |e| processEntity(e);
+            if (EState.Component.byId(i)) |e| processEntity(e);
             next = components.nextSetBit(i + 1);
         }
     }

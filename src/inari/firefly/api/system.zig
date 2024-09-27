@@ -132,7 +132,7 @@ pub fn SystemMixin(comptime T: type) type {
                 .name = @typeName(T),
                 .onActivation = activation,
                 .onDestruct = destruct,
-            }).id;
+            });
 
             if (@hasDecl(T, "systemMixinInit"))
                 T.systemMixinInit();

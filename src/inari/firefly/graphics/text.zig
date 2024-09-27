@@ -26,7 +26,7 @@ pub fn init() !void {
         return;
 
     api.Asset.Subtypes.register(Font, "Font");
-    api.EComponent.registerEntityComponent(EText);
+    api.Entity.registerComponent(EText, "EText");
     DefaultTextRenderer.init();
 }
 
@@ -77,7 +77,7 @@ pub const Font = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EText = struct {
-    pub usingnamespace api.EComponent.Mixin(@This(), "EText");
+    pub const Component = api.EntityComponentMixin(EText);
 
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
@@ -112,8 +112,8 @@ pub const DefaultTextRenderer = struct {
         var i = entities.nextSetBit(0);
         while (i) |id| {
             // render the sprite
-            if (EText.byId(id)) |text| {
-                const trans = graphics.ETransform.byId(id).?;
+            if (EText.Component.byId(id)) |text| {
+                const trans = graphics.ETransform.Component.byId(id).?;
                 firefly.api.rendering.renderText(
                     text.font_id,
                     text.text,

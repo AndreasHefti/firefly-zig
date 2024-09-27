@@ -41,7 +41,7 @@ fn init() void {
             .height = room_pixel_height,
             .zoom = zoom,
         },
-    }).id;
+    });
 
     // load atlas and create tile set with task
     firefly.api.Task.runTaskByNameWith(

@@ -44,7 +44,7 @@ fn init() void {
     const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    }).id;
+    });
 
     // This is just to test registering conditions works as expected (can also be assigned directly below)
     _ = api.Condition.Component.new(.{ .name = "right down", .check = rightDown });
@@ -52,7 +52,7 @@ fn init() void {
     _ = api.Condition.Component.new(.{ .name = "left down", .check = leftDown });
     _ = api.Condition.Component.new(.{ .name = "left up", .check = leftUp });
 
-    const state_engine = EntityStateEngine.Component.new(.{ .name = "MoveX" })
+    const state_engine = EntityStateEngine.Component.create(.{ .name = "MoveX" })
         .withState(.{ .id = 1, .name = "right down", .condition = api.Condition.functionByName("right down") })
         .withState(.{ .id = 2, .name = "right up", .condition = api.Condition.functionByName("right up") })
         .withState(.{ .id = 3, .name = "left down", .condition = api.Condition.functionByName("left down") })
@@ -67,7 +67,7 @@ fn init() void {
 fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
     const vx = random.float(Float) * 200 + 1;
     const vy = random.float(Float) * 200 + 1;
-    const entity_id = Entity.Component.new(.{})
+    const entity_id = Entity.build(.{})
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(ESprite{ .template_id = sprite_id })
         .withComponent(EMovement{
@@ -77,26 +77,26 @@ fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
         .adjust_ground = false,
     })
         .withComponent(EState{ .state_engine_ref = state_engine.id })
-        .activate().id;
+        .activateGetId();
 
     // just the initial state
-    EState.byId(entity_id).?.current_state =
+    EState.Component.byId(entity_id).?.current_state =
         if (vx > 0 and vy > 0) state_engine.states.get(0).? else if (vx > 0 and vy < 0) state_engine.states.get(1).? else if (vx < 0 and vy > 0) state_engine.states.get(2).? else state_engine.states.get(3).?;
 }
 
 inline fn changeX(entity_id: Index) void {
-    var m = EMovement.byId(entity_id).?;
+    var m = EMovement.Component.byId(entity_id).?;
     m.velocity[0] *= -1;
 }
 
 inline fn changeY(entity_id: Index) void {
-    var m = EMovement.byId(entity_id).?;
+    var m = EMovement.Component.byId(entity_id).?;
     m.velocity[1] *= -1;
 }
 
 // 1
 fn rightDown(ctx: *api.CallContext) bool {
-    const trans = ETransform.byId(ctx.id_1) orelse return false;
+    const trans = ETransform.Component.byId(ctx.id_1) orelse return false;
     if ((trans.position[0] < min_x and ctx.id_2 == 3) or (trans.position[1] < min_y and ctx.id_2 == 2)) {
         if (ctx.id_2 == 3) changeX(ctx.id_1) else changeY(ctx.id_1);
         return true;
@@ -106,7 +106,7 @@ fn rightDown(ctx: *api.CallContext) bool {
 
 // 2
 fn rightUp(ctx: *api.CallContext) bool {
-    const trans = ETransform.byId(ctx.id_1) orelse return false;
+    const trans = ETransform.Component.byId(ctx.id_1) orelse return false;
     if ((trans.position[0] < min_x and ctx.id_2 == 4) or (trans.position[1] > max_y and ctx.id_2 == 1)) {
         if (ctx.id_2 == 4) changeX(ctx.id_1) else changeY(ctx.id_1);
         return true;
@@ -116,7 +116,7 @@ fn rightUp(ctx: *api.CallContext) bool {
 
 // 3
 fn leftDown(ctx: *api.CallContext) bool {
-    const trans = ETransform.byId(ctx.id_1) orelse return false;
+    const trans = ETransform.Component.byId(ctx.id_1) orelse return false;
     if ((trans.position[0] > max_x and ctx.id_2 == 1) or (trans.position[1] < min_y and ctx.id_2 == 4)) {
         if (ctx.id_2 == 1) changeX(ctx.id_1) else changeY(ctx.id_1);
         return true;
@@ -126,7 +126,7 @@ fn leftDown(ctx: *api.CallContext) bool {
 
 // 4
 fn leftUp(ctx: *api.CallContext) bool {
-    const trans = ETransform.byId(ctx.id_1) orelse return false;
+    const trans = ETransform.Component.byId(ctx.id_1) orelse return false;
     if ((trans.position[0] > max_x and ctx.id_2 == 2) or (trans.position[1] > max_y and ctx.id_2 == 3)) {
         if (ctx.id_2 == 2) changeX(ctx.id_1) else changeY(ctx.id_1);
         return true;

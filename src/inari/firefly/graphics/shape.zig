@@ -20,7 +20,7 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    api.EComponent.registerEntityComponent(EShape);
+    api.Entity.registerComponent(EShape, "EShape");
     DefaultShapeRenderer.init();
 }
 
@@ -35,7 +35,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////
 
 pub const EShape = struct {
-    pub usingnamespace api.EComponent.Mixin(@This(), "EShape");
+    pub const Component = api.EntityComponentMixin(EShape);
 
     id: Index = UNDEF_INDEX,
 
@@ -77,8 +77,8 @@ pub const DefaultShapeRenderer = struct {
         var i = entities.nextSetBit(0);
         while (i) |id| {
             // render the shape
-            const es = EShape.byId(id).?;
-            const trans = graphics.ETransform.byId(id).?;
+            const es = EShape.Component.byId(id).?;
+            const trans = graphics.ETransform.Component.byId(id).?;
             firefly.api.rendering.renderShape(
                 es.shape_type,
                 es.vertices,

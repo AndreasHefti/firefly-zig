@@ -129,6 +129,8 @@ pub fn AspectGroup(comptime group_name: String) type {
                 return aspect.*;
             } else if (@hasDecl(aspect, "aspect")) {
                 return getAspectFromAnytype(aspect.aspect);
+            } else if (@hasDecl(aspect, "Component")) {
+                return getAspectFromAnytype(aspect.Component);
             } else {
                 return null;
             }

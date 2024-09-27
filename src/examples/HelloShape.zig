@@ -36,7 +36,7 @@ fn example() void {
         Engine.CoreSystems.SPRITE_RENDERER,
     });
 
-    _ = Entity.Component.new(.{ .name = "TestEntity4" })
+    Entity.build(.{ .name = "TestEntity4" })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
         .withComponent(EShape{
         .shape_type = ShapeType.CIRCLE,
@@ -44,7 +44,7 @@ fn example() void {
         .color = .{ 150, 150, 150, 100 },
     }).activate();
 
-    _ = Entity.Component.new(.{ .name = "TestEntity1" })
+    Entity.build(.{ .name = "TestEntity1" })
         .withComponent(ETransform{
         .position = .{ 0, 0 },
         .pivot = .{ 100, 100 },
@@ -59,7 +59,7 @@ fn example() void {
         .color = .{ 255, 0, 0, 255 },
     }).activate();
 
-    _ = Entity.Component.new(.{ .name = "TestEntity2" })
+    Entity.build(.{ .name = "TestEntity2" })
         .withComponent(ETransform{
         .position = .{ 0, 0 },
         .pivot = .{ 100, 100 },
@@ -72,7 +72,7 @@ fn example() void {
         .color = .{ 255, 0, 0, 100 },
     }).activate();
 
-    _ = Entity.Component.new(.{ .name = "TestEntity3" })
+    Entity.build(.{ .name = "TestEntity3" })
         .withComponent(ETransform{
         .position = .{ 0, 0 },
         .pivot = .{ 100, 100 },
@@ -88,7 +88,7 @@ fn example() void {
         .color3 = .{ 255, 255, 255, 0 },
     }).activate();
 
-    _ = Entity.Component.new(.{ .name = "TestEntity5" })
+    Entity.build(.{ .name = "TestEntity5" })
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
         .{ 400, 310 },
@@ -113,9 +113,9 @@ fn example() void {
     const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    }).id;
+    });
 
-    _ = Entity.Component.new(.{ .name = "TestEntitySprite" })
+    Entity.build(.{ .name = "TestEntitySprite" })
         .withComponent(ETransform{
         .position = .{ 64, 164 },
         .scale = .{ 4, 4 },

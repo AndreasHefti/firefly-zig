@@ -16,27 +16,31 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 pub fn init() void {
-    var intro_scene = graphics.Scene.Component.new(.{
+    var intro_scene = graphics.Scene.Component.create(.{
         .init_function = sceneInit,
         .delete_after_run = true,
         .callback = sceneEnd,
         .update_action = sceneRun,
     });
-    //intro_scene.activate();
     intro_scene.run();
 }
 
 fn sceneInit(_: *api.CallContext) void {
-    _ = graphics.Texture.Component.newActive(.{
+    graphics.Texture.Component.newActive(.{
         .name = "IntroTexture",
         .resource = "resources/inari.png",
         .is_mipmap = false,
     });
 
+    const sprite_id = graphics.SpriteTemplate.Component.new(.{
+        .texture_name = "IntroTexture",
+        .texture_bounds = .{ 0, 0, 390, 50 },
+    });
+
     const screen = api.window.getWindowData();
 
-    _ = api.Entity.Component.new(.{ .name = "IntroSprite" })
-        .withComponent(graphics.ETransform{
+    const eid = api.Entity.Component.new(.{ .name = "IntroSprite" });
+    graphics.ETransform.add(eid, .{
         .position = .{
             @as(Float, @floatFromInt(screen.width)) / 2 - 390 / 2,
             @as(Float, @floatFromInt(screen.height)) / 2 - 50 / 2,
@@ -44,28 +48,29 @@ fn sceneInit(_: *api.CallContext) void {
         .scale = .{ 1, 1 },
         .pivot = .{ 0, 0 },
         .rotation = 0,
-    })
-        .withComponent(graphics.ESprite{
-        .template_id = graphics.SpriteTemplate.Component.new(.{
-            .texture_name = "IntroTexture",
-            .texture_bounds = .{ 0, 0, 390, 50 },
-        }).id,
+    });
+    graphics.ESprite.add(eid, .{
+        .template_id = sprite_id,
         .tint_color = .{ 255, 255, 255, 0 },
-    })
-        .withComponent(physics.EAnimation{})
-        .withAnimation(
-        .{ .duration = 3000, .active_on_init = true },
+    });
+    physics.EAnimation.addToComponent(
+        eid,
+        .{
+            .duration = 3000,
+            .active_on_init = true,
+        },
         physics.EasedColorIntegration{
             .start_value = .{ 255, 255, 255, 0 },
             .end_value = .{ 255, 255, 255, 255 },
             .easing = utils.Easing.Linear,
             .property_ref = graphics.ESprite.Property.TintColor,
         },
-    ).activate();
+    );
+    api.Entity.Activation.activate(eid);
 }
 
 fn sceneRun(ctx: *api.CallContext) void {
-    if (graphics.ESprite.byName("IntroSprite")) |sprite| {
+    if (graphics.ESprite.Component.byName("IntroSprite")) |sprite| {
         if (sprite.tint_color.?[3] >= 254)
             ctx.result = api.ActionResult.Success
         else

@@ -44,12 +44,12 @@ fn loadWithView() void {
             .zoom = 2,
             .rotation = 0,
         },
-    }).id;
+    });
 
     View.Control.add(viewId, view_control, null, true);
     View.Activation.activate(viewId);
 
-    const sprite_id = SpriteTemplate.Component.new(.{
+    const sprite_id = SpriteTemplate.Component.create(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     })
@@ -63,7 +63,7 @@ fn loadWithView() void {
         .is_mipmap = false,
     });
 
-    _ = Entity.Component.new(.{ .name = "TestEntity" })
+    Entity.build(.{ .name = "TestEntity" })
         .withComponent(ETransform{})
         .withComponent(EView{ .view_id = viewId })
         .withComponent(ESprite{ .template_id = sprite_id })

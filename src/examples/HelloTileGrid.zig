@@ -26,7 +26,7 @@ fn loadWithView() void {
     const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    }).id;
+    });
 
     Texture.Component.newActive(.{
         .name = "TestTexture",
@@ -34,12 +34,12 @@ fn loadWithView() void {
         .is_mipmap = false,
     });
 
-    const tile = Entity.Component.new(.{ .name = "TestEntity" })
+    const tile = Entity.build(.{ .name = "TestEntity" })
         .withComponent(ETransform{})
         .withComponent(ETile{ .sprite_template_id = sprite_id })
-        .activate();
+        .activateGet();
 
-    var tile_grid: *TileGrid = TileGrid.Component.new(.{
+    var tile_grid = TileGrid.Component.create(.{
         .name = "TileGrid1",
         .world_position = PosF{ 0, 0 },
         .dimensions = .{ 10, 10, 32, 32 },

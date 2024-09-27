@@ -130,9 +130,9 @@ pub fn EntityRendererMixin(comptime T: type) type {
 
         pub fn entityRegistration(id: Index, register: bool) void {
             if (register)
-                entities.addWithEView(EView.byId(id), id)
+                entities.addWithEView(EView.Component.byId(id), id)
             else
-                entities.removeWithEView(EView.byId(id), id);
+                entities.removeWithEView(EView.Component.byId(id), id);
         }
 
         pub fn renderView(e: ViewRenderEvent) void {

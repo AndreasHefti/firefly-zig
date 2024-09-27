@@ -33,9 +33,9 @@ fn init() void {
     const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    }).id;
+    });
 
-    _ = Entity.Component.new(.{ .name = "TestEntity" })
+    Entity.build(.{ .name = "TestEntity" })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
         .withComponent(ESprite{ .template_id = sprite_id })
         .activate();
@@ -56,12 +56,12 @@ fn init() void {
 fn update(_: UpdateEvent) void {
     if (Entity.Naming.byName("TestEntity")) |entity| {
         if (firefly.api.input.checkButtonPressed(InputButtonType.UP))
-            ETransform.byId(entity.id).?.position[1] -= 1;
+            ETransform.Component.byId(entity.id).?.position[1] -= 1;
         if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN))
-            ETransform.byId(entity.id).?.position[1] += 1;
+            ETransform.Component.byId(entity.id).?.position[1] += 1;
         if (firefly.api.input.checkButtonPressed(InputButtonType.LEFT))
-            ETransform.byId(entity.id).?.position[0] -= 1;
+            ETransform.Component.byId(entity.id).?.position[0] -= 1;
         if (firefly.api.input.checkButtonPressed(InputButtonType.RIGHT))
-            ETransform.byId(entity.id).?.position[0] += 1;
+            ETransform.Component.byId(entity.id).?.position[0] += 1;
     }
 }

@@ -65,19 +65,16 @@ fn init() void {
 }
 
 fn create(name: String, easing: Easing) void {
-    _ = Entity.Component.new(.{})
+    Entity.build(.{})
         .withComponent(ETransform{ .position = .{ 10, ypos } })
         .withComponent(EText{ .text = @ptrCast(name), .size = 20, .char_spacing = 2 })
         .activate();
 
-    _ = Entity.Component.new(.{})
+    Entity.build(.{})
         .withComponent(ETransform{ .position = .{ 200, ypos } })
         .withComponent(ESprite{ .template_id = SpriteTemplate.Naming.byName("Sprite").?.id })
-        .withComponent(EAnimation{})
-        .withAnimation(
-        .{ .duration = 5000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
-        EasedValueIntegration{ .start_value = 200, .end_value = 500, .easing = easing, .property_ref = ETransform.Property.XPos },
-    ).entity().activate();
+        .addToComponent2(EAnimation, .{ .duration = 5000, .looping = true, .inverse_on_loop = true, .active_on_init = true }, EasedValueIntegration{ .start_value = 200, .end_value = 500, .easing = easing, .property_ref = ETransform.Property.XPos })
+        .activate();
 
     ypos += 35;
 }

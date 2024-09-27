@@ -45,7 +45,7 @@ fn init() void {
     // view component
     // two layers get automatically applied when loading the room tile maps
     // see JSON file: resources/example_tilemap1.json
-    const view = graphics.View.Component.new(.{
+    const view_id = graphics.View.Component.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
         .scale = .{ scale, scale },
@@ -59,7 +59,7 @@ fn init() void {
 
     // Room camera control with parallax scrolling according to layer data
     _ = graphics.View.Control.addOf(
-        view.id,
+        view_id,
         game.SimplePivotCamera{
             .name = "Camera1",
             .pixel_perfect = false,
@@ -78,7 +78,7 @@ fn init() void {
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_RIGHT, api.InputButtonType.RIGHT);
     // add Control to view for key input
     // key input is moving the invisible pivot point of the camera when the Room is active
-    graphics.View.Control.add(view.id, pivot_control, "KeyControl", false);
+    graphics.View.Control.add(view_id, pivot_control, "KeyControl", false);
 
     // crate start scene
     _ = graphics.Scene.Component.new(.{
@@ -129,7 +129,7 @@ var color: *utils.Color = undefined;
 fn startSceneAction(ctx: *api.CallContext) void {
     if (!start_scene_init) {
         // create overlay entity
-        const entity = api.Entity.Component.new(.{ .name = "StartSceneEntity" })
+        const entity_id = api.Entity.build(.{ .name = "StartSceneEntity" })
             .withComponent(graphics.ETransform{
             .scale = .{ screen_width, screen_height },
         })
@@ -143,8 +143,8 @@ fn startSceneAction(ctx: *api.CallContext) void {
             .shape_type = api.ShapeType.RECTANGLE,
             .fill = true,
             .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
-        }).activate();
-        color = &graphics.EShape.byId(entity.id).?.color;
+        }).activateGetId();
+        color = &graphics.EShape.Component.byId(entity_id).?.color;
         start_scene_init = true;
     }
 

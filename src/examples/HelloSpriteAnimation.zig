@@ -31,16 +31,16 @@ fn init() void {
     const sid1 = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
-    }).id;
-    const sid2 = SpriteTemplate.Component.new(.{
+    });
+    const sid2 = SpriteTemplate.Component.create(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipX().id;
-    const sid3 = SpriteTemplate.Component.new(.{
+    const sid3 = SpriteTemplate.Component.create(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipY().flipX().id;
-    const sid4 = SpriteTemplate.Component.new(.{
+    const sid4 = SpriteTemplate.Component.create(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipY().id;
@@ -52,48 +52,38 @@ fn init() void {
     _ = animation.withFrame(sid3, 1000);
     _ = animation.withFrame(sid4, 1000);
 
-    _ = Entity.Component.new(.{ .name = "TestEntity" })
-        .withComponent(ETransform{
-        .position = .{ 100, 100 },
-        .scale = .{ 2, 2 },
-    })
+    Entity.build(.{ .name = "TestEntity" })
+        .withComponent(ETransform{ .position = .{ 100, 100 }, .scale = .{ 2, 2 } })
         .withComponent(ESprite{ .template_id = sid1 })
-        .withComponent(EAnimation{})
-        .withAnimation(
-        .{ .duration = animation._duration, .looping = true, .active_on_init = true },
-        IndexFrameIntegration{
-            .timeline = animation,
-            .property_ref = ESprite.Property.FrameId,
-        },
-    )
-        .entity().activate();
+        .addToComponent2(EAnimation, .{ .duration = animation._duration, .looping = true, .active_on_init = true }, IndexFrameIntegration{ .timeline = animation, .property_ref = ESprite.Property.FrameId })
+        .activate();
 
-    _ = Entity.Component.new(.{ .name = "TestEntity1" })
+    Entity.build(.{ .name = "TestEntity1" })
         .withComponent(ETransform{
         .position = .{ 100, 200 },
         .scale = .{ 2, 2 },
     })
         .withComponent(ESprite{ .template_id = sid1 })
-        .entity().activate();
-    _ = Entity.Component.new(.{ .name = "TestEntity2" })
+        .activate();
+    Entity.build(.{ .name = "TestEntity2" })
         .withComponent(ETransform{
         .position = .{ 150, 200 },
         .scale = .{ 2, 2 },
     })
         .withComponent(ESprite{ .template_id = sid2 })
-        .entity().activate();
-    _ = Entity.Component.new(.{ .name = "TestEntity3" })
+        .activate();
+    Entity.build(.{ .name = "TestEntity3" })
         .withComponent(ETransform{
         .position = .{ 200, 200 },
         .scale = .{ 2, 2 },
     })
         .withComponent(ESprite{ .template_id = sid3 })
-        .entity().activate();
-    _ = Entity.Component.new(.{ .name = "TestEntity4" })
+        .activate();
+    Entity.build(.{ .name = "TestEntity4" })
         .withComponent(ETransform{
         .position = .{ 250, 200 },
         .scale = .{ 2, 2 },
     })
         .withComponent(ESprite{ .template_id = sid4 })
-        .entity().activate();
+        .activate();
 }

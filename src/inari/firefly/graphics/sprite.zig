@@ -28,7 +28,7 @@ pub fn init() !void {
 
     api.Asset.Subtypes.register(SpriteSet, "SpriteSet");
     api.Component.registerComponent(SpriteTemplate, "SpriteTemplate");
-    api.EComponent.registerEntityComponent(ESprite);
+    api.Entity.registerComponent(ESprite, "ESprite");
     DefaultSpriteRenderer.init();
 }
 
@@ -145,12 +145,16 @@ pub const SpriteTemplate = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ESprite = struct {
-    pub usingnamespace api.EComponent.Mixin(@This(), "ESprite");
+    pub const Component = api.EntityComponentMixin(ESprite);
 
     id: Index = utils.UNDEF_INDEX,
     template_id: Index = utils.UNDEF_INDEX,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
+
+    pub fn add(entity_id: Index, c: ESprite) void {
+        Component.new(entity_id, c);
+    }
 
     pub fn destruct(self: *ESprite) void {
         self.template_id = utils.UNDEF_INDEX;
@@ -160,10 +164,10 @@ pub const ESprite = struct {
 
     pub const Property = struct {
         pub fn FrameId(id: Index) *Index {
-            return &ESprite.byId(id).?.template_id;
+            return &ESprite.Component.byId(id).?.template_id;
         }
         pub fn TintColor(id: Index) *Color {
-            var sprite = ESprite.byId(id).?;
+            var sprite = ESprite.Component.byId(id).?;
             if (sprite.tint_color == null)
                 sprite.tint_color = Color{ 255, 255, 255, 255 };
 
@@ -254,7 +258,7 @@ pub const SpriteSet = struct {
                             .texture_bounds = stamp.sprite_dim.?,
                             ._flippedX = stamp.flip_x,
                             ._flippedY = stamp.flip_y,
-                        }).id);
+                        }));
                     } else {
                         // use the default stamp
                         res._loaded_sprite_template_refs.add(SpriteTemplate.Component.new(.{
@@ -268,7 +272,7 @@ pub const SpriteSet = struct {
                             },
                             ._flippedX = default_stamp.flip_x,
                             ._flippedY = default_stamp.flip_y,
-                        }).id);
+                        }));
                     }
                 }
             }
@@ -285,7 +289,7 @@ pub const SpriteSet = struct {
                             .texture_bounds = s_dim,
                             ._flippedX = stamp.flip_x,
                             ._flippedY = stamp.flip_y,
-                        }).id);
+                        }));
                     }
                 }
                 next = res._stamps.slots.nextSetBit(i + 1);
@@ -324,11 +328,11 @@ pub const DefaultSpriteRenderer = struct {
         var i = entities.nextSetBit(0);
         while (i) |id| {
             // render the sprite
-            const es: *ESprite = ESprite.byId(id).?;
-            const trans: *graphics.ETransform = graphics.ETransform.byId(id).?;
+            const es = ESprite.Component.byId(id).?;
+            const trans = graphics.ETransform.Component.byId(id).?;
 
-            const sprite_template: *SpriteTemplate = SpriteTemplate.Component.byId(es.template_id);
-            const multi = if (api.EMultiplier.byId(id)) |m| m.positions else null;
+            const sprite_template = SpriteTemplate.Component.byId(es.template_id);
+            const multi = if (api.EMultiplier.Component.byId(id)) |m| m.positions else null;
             firefly.api.rendering.renderSprite(
                 sprite_template.texture_binding,
                 sprite_template.texture_bounds,

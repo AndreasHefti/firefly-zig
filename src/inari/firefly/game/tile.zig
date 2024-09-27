@@ -194,7 +194,7 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                var st: *graphics.SpriteTemplate = graphics.SpriteTemplate.Component.new(.{
+                var st = graphics.SpriteTemplate.Component.create(.{
                     .name = tt.name,
                     .texture_name = self.texture_name,
                     .texture_bounds = .{
@@ -215,7 +215,7 @@ pub const TileSet = struct {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            var ast = graphics.SpriteTemplate.Component.new(.{
+                            var ast = graphics.SpriteTemplate.Component.create(.{
                                 .texture_name = self.texture_name,
                                 .texture_bounds = .{
                                     frame.sprite_data.texture_pos[0],
@@ -403,7 +403,7 @@ pub const TileMapping = struct {
                                 if (tile_set.tile_templates.get(ti)) |tile_template| {
 
                                     // create entity from TileTemplate for specific view and layer and add code mapping
-                                    const entity = api.Entity.Component.new(.{
+                                    const entity = api.Entity.build(.{
                                         .name = api.NamePool.format("{s}_{s}", .{ tile_template.name.?, layer_mapping.layer }),
                                         .groups = api.GroupKind.fromStringList(tile_template.groups),
                                     })
@@ -413,7 +413,7 @@ pub const TileMapping = struct {
                                         .sprite_template_id = tile_template._sprite_template_id.?,
                                         .tint_color = layer_mapping.tint,
                                         .blend_mode = layer_mapping.blend,
-                                    }).entity();
+                                    }).get();
 
                                     // add contact if needed
                                     addContactData(entity, tile_set, tile_template);
@@ -442,7 +442,7 @@ pub const TileMapping = struct {
 
             const tile_grid_data = self.tile_grid_data.get(i).?;
             const layer_id = graphics.Layer.Naming.getId(tile_grid_data.layer);
-            var tile_grid = graphics.TileGrid.Component.new(.{
+            var tile_grid = graphics.TileGrid.Component.create(.{
                 .name = tile_grid_data.name,
                 .view_id = self.view_id,
                 .layer_id = layer_id,
@@ -470,16 +470,8 @@ pub const TileMapping = struct {
 
     fn addContactData(entity: *api.Entity, tile_set: *TileSet, tile_template: *TileTemplate) void {
         const material_type = tile_template.contact_material_type orelse return;
-
-        _ = entity.withComponent(physics.EContact{
-            .bounds = .{
-                .rect = .{
-                    0,
-                    0,
-                    tile_set.tile_width,
-                    tile_set.tile_height,
-                },
-            },
+        physics.EContact.Component.new(entity.id, .{
+            .bounds = .{ .rect = .{ 0, 0, tile_set.tile_width, tile_set.tile_height } },
             .material = material_type,
             .mask = tile_set.createContactMaskFromImage(tile_template),
         });
@@ -495,8 +487,8 @@ pub const TileMapping = struct {
                 next = frames.slots.nextSetBit(i + 1);
             }
 
-            _ = entity.withComponent(physics.EAnimation{})
-                .withAnimation(
+            physics.EAnimation.addToComponent(
+                entity.id,
                 .{ .duration = list._duration, .looping = true, .active_on_init = true },
                 physics.IndexFrameIntegration{
                     .timeline = list,

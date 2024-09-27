@@ -27,9 +27,9 @@ fn init() void {
     const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    }).id;
+    });
 
-    _ = Entity.Component.new(.{ .name = "TestEntity" })
+    Entity.build(.{ .name = "TestEntity" })
         .withComponent(ETransform{ .position = .{ 100, 100 }, .scale = .{ 1.2, 1.2 }, .pivot = .{ 16, 16 }, .rotation = 45 })
         .withComponent(ESprite{ .template_id = sprite_id })
         .withComponent(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{

@@ -41,12 +41,12 @@ fn init() void {
         .is_mipmap = false,
     });
 
-    const sprite = SpriteTemplate.Component.new(.{
+    const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    const view = View.Component.new(.{
+    const view = View.Component.create(.{
         .name = "TestView",
         .position = .{ 20, 40 },
         .pivot = .{ 0, 0 },
@@ -65,12 +65,12 @@ fn init() void {
         },
     });
 
-    const entity = Entity.Component.new(.{ .name = "TestEntity" })
+    const entity = Entity.build(.{ .name = "TestEntity" })
         .withControl(entity_control, "PlayerControl", true)
         .withComponent(EView{ .view_id = view.id })
         .withComponent(ETransform{ .position = .{ 100, 100 } })
-        .withComponent(ESprite{ .template_id = sprite.id })
-        .activate();
+        .withComponent(ESprite{ .template_id = sprite_id })
+        .activateGet();
 
     View.Control.addActiveOf(
         view.id,
@@ -78,7 +78,7 @@ fn init() void {
             .name = "Camera1",
             .pixel_perfect = false,
             .snap_to_bounds = .{ -100, -100, 800, 800 },
-            .pivot = &ETransform.byId(entity.id).?.position,
+            .pivot = &ETransform.Component.byId(entity.id).?.position,
             .offset = .{ 16, 16 },
             .velocity_relative_to_pivot = .{ 0.1, 0.1 },
         },
@@ -91,25 +91,13 @@ fn init() void {
 
     View.Activation.activate(view.id);
 
-    _ = Entity.Component.new(.{ .name = "RefEntity" })
-        .withComponent(EView{ .view_id = view.id })
-        .withComponent(ETransform{ .position = .{ 100, 100 } })
-        .withComponent(ESprite{ .template_id = sprite.id })
-        .withComponent(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
-        .{ 50, 50 },
-        .{ 200, 50 },
-        .{ 50, 150 },
-        .{ 200, 150 },
-        .{ 300, 250 },
-        .{ 400, 350 },
-        .{ 500, 450 },
-        .{ 200, 450 },
-        .{ 300, 350 },
-        .{ 400, 250 },
-        .{ 500, 150 },
-    }) }).activate();
+    const eid = Entity.Component.new(.{ .name = "RefEntity" });
+    EView.Component.new(eid, .{ .view_id = view.id });
+    ETransform.Component.new(eid, .{ .position = .{ 100, 100 } });
+    EMultiplier.Component.new(eid, .{ .positions = firefly.api.allocVec2FArray([_]Vector2f{ .{ 50, 50 }, .{ 200, 50 }, .{ 50, 150 }, .{ 200, 150 }, .{ 300, 250 }, .{ 400, 350 }, .{ 500, 450 }, .{ 200, 450 }, .{ 300, 350 }, .{ 400, 250 }, .{ 500, 150 } }) });
+    Entity.Activation.activate(eid);
 
-    _ = Entity.Component.new(.{ .name = "Border" })
+    Entity.build(.{ .name = "Border" })
         .withComponent(EView{ .view_id = view.id })
         .withComponent(ETransform{ .position = .{ 0, 0 } })
         .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .vertices = firefly.api.allocFloatArray([_]Float{ -100, -100, 800, 800 }), .fill = false, .thickness = 2, .color = .{ 150, 0, 0, 255 } })
@@ -119,11 +107,11 @@ fn init() void {
 const speed = 2;
 fn entity_control(ctx: *firefly.api.CallContext) void {
     if (firefly.api.input.checkButtonPressed(InputButtonType.UP))
-        ETransform.byId(ctx.caller_id).?.position[1] -= speed;
+        ETransform.Component.byId(ctx.caller_id).?.position[1] -= speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN))
-        ETransform.byId(ctx.caller_id).?.position[1] += speed;
+        ETransform.Component.byId(ctx.caller_id).?.position[1] += speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.LEFT))
-        ETransform.byId(ctx.caller_id).?.position[0] -= speed;
+        ETransform.Component.byId(ctx.caller_id).?.position[0] -= speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.RIGHT))
-        ETransform.byId(ctx.caller_id).?.position[0] += speed;
+        ETransform.Component.byId(ctx.caller_id).?.position[0] += speed;
 }

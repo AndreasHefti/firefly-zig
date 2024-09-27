@@ -29,18 +29,15 @@ fn _Example_One_Entity_No_Views() void {
     const sprite_id = SpriteTemplate.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    }).id;
+    });
 
-    _ = Entity.Component.new(.{ .name = "TestEntity" })
-        .withComponent(ETransform{
-        .position = .{ 64, 164 },
-        .scale = .{ 4, 4 },
-        .pivot = .{ 16, 16 },
-        .rotation = 180,
-    })
+    Entity.build(.{ .name = "TestEntity" })
+        .withComponent(
+        ETransform{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 },
+    )
         .withComponent(ESprite{ .template_id = sprite_id })
-        .withComponent(EAnimation{})
-        .withAnimation(
+        .addToComponent2(
+        EAnimation,
         .{ .duration = 1000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
         EasedValueIntegration{
             .start_value = 164.0,
@@ -49,7 +46,8 @@ fn _Example_One_Entity_No_Views() void {
             .property_ref = ETransform.Property.XPos,
         },
     )
-        .withAnimation(
+        .addToComponent2(
+        EAnimation,
         .{ .duration = 2000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
         EasedValueIntegration{
             .start_value = 0.0,
@@ -57,7 +55,7 @@ fn _Example_One_Entity_No_Views() void {
             .easing = Easing.Linear,
             .property_ref = ETransform.Property.Rotation,
         },
-    ).entity().activate();
+    ).activate();
 
     AnimationSystem.setLoopCallbackById(1, loopCallback1);
 }
