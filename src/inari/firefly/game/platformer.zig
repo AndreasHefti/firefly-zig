@@ -28,8 +28,8 @@ pub fn init() void {
         return;
 
     PlatformerCollisionResolver.init();
-    api.Control.Subtypes.register(SimplePlatformerHorizontalMoveControl, "SimplePlatformerHorizontalMoveControl");
-    api.Control.Subtypes.register(SimplePlatformerJumpControl, "SimplePlatformerJumpControl");
+    api.Component.Subtype.register(api.Control, SimplePlatformerHorizontalMoveControl, "SimplePlatformerHorizontalMoveControl");
+    api.Component.Subtype.register(api.Control, SimplePlatformerJumpControl, "SimplePlatformerJumpControl");
 }
 
 pub fn deinit() void {

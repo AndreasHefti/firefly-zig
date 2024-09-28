@@ -26,10 +26,10 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    api.Asset.Subtypes.register(SpriteSet, "SpriteSet");
-    api.Component.registerComponent(SpriteTemplate, "SpriteTemplate");
+    api.Component.Subtype.register(api.Asset, SpriteSet, "SpriteSet");
+    api.Component.register(SpriteTemplate, "SpriteTemplate");
     api.Entity.registerComponent(ESprite, "ESprite");
-    DefaultSpriteRenderer.init();
+    api.System.register(DefaultSpriteRenderer);
 }
 
 pub fn deinit() void {
@@ -319,8 +319,8 @@ pub const SpriteSet = struct {
 //////////////////////////////////////////////////////////////
 
 pub const DefaultSpriteRenderer = struct {
-    pub usingnamespace api.SystemMixin(DefaultSpriteRenderer);
-    pub usingnamespace graphics.EntityRendererMixin(DefaultSpriteRenderer);
+    pub const System = api.SystemMixin(DefaultSpriteRenderer);
+    pub const EntityRenderer = graphics.EntityRendererMixin(DefaultSpriteRenderer);
 
     pub const accept = .{ graphics.ETransform, ESprite };
 

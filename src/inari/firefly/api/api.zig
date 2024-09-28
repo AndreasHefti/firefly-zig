@@ -59,7 +59,7 @@ pub const ComponentListener = component.ComponentListener;
 pub const Condition = control.Condition;
 pub const System = system.System;
 pub const SystemMixin = system.SystemMixin;
-pub const EntityUpdateMixin = system.EntityUpdateMixin;
+pub const EntityUpdateSystemMixin = entity.EntityUpdateSystemMixin;
 pub const Timer = timer;
 pub const UpdateScheduler = timer.UpdateScheduler;
 pub const Entity = entity.Entity;
@@ -153,8 +153,8 @@ pub fn init(context: InitContext) !void {
     entity.init();
 
     // register api based components and entity components
-    Component.registerComponent(Attributes, "Attributes");
-    Component.registerComponent(Entity, "Entity");
+    Component.register(Attributes, "Attributes");
+    Component.register(Entity, "Entity");
     Entity.registerComponent(EMultiplier, "EMultiplier");
 
     asset.init();

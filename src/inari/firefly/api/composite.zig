@@ -13,7 +13,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(Composite, "Composite");
+    api.Component.register(Composite, "Composite");
 }
 
 pub fn deinit() void {

@@ -27,8 +27,8 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(TileSet, "TileSet");
-    api.Component.registerComponent(TileMapping, "TileMapping");
+    api.Component.register(TileSet, "TileSet");
+    api.Component.register(TileMapping, "TileMapping");
 }
 
 pub fn deinit() void {

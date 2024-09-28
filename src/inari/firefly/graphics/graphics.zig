@@ -65,8 +65,8 @@ pub fn init(_: firefly.api.InitContext) !void {
         return;
 
     // register Assets sub types
-    api.Asset.Subtypes.register(Texture, "Texture");
-    api.Asset.Subtypes.register(Shader, "Shader");
+    api.Component.Subtype.register(api.Asset, Texture, "Texture");
+    api.Component.Subtype.register(api.Asset, Shader, "Shader");
 
     // init sub packages
     try view.init();
@@ -111,7 +111,7 @@ pub fn EntityRendererMixin(comptime T: type) type {
         pub var entity_condition: ?api.EntityTypeCondition = null;
         pub var entities: ViewLayerMapping = undefined;
 
-        pub fn systemMixinInit() void {
+        pub fn init() void {
             entities = ViewLayerMapping.new();
             if (@hasDecl(T, "accept") or @hasDecl(T, "dismiss")) {
                 entity_condition = api.EntityTypeCondition{
@@ -122,7 +122,7 @@ pub fn EntityRendererMixin(comptime T: type) type {
             }
         }
 
-        pub fn systemMixinDeinit() void {
+        pub fn deinit() void {
             entity_condition = undefined;
             entities.deinit();
             entities = undefined;
@@ -147,7 +147,7 @@ pub fn EntityRendererMixin(comptime T: type) type {
 //// ComponentRendererMixin useful for component renderer systems
 //////////////////////////////////////////////////////////////
 
-pub fn ViewLayerComponentRendererMixin(comptime T: type, comptime CType: type) type {
+pub fn ComponentRendererMixin(comptime T: type, comptime CType: type) type {
     return struct {
         comptime {
             if (@typeInfo(T) != .Struct)
@@ -159,11 +159,11 @@ pub fn ViewLayerComponentRendererMixin(comptime T: type, comptime CType: type) t
         pub const component_register_type = CType;
         pub var components: ViewLayerMapping = undefined;
 
-        pub fn systemMixinInit() void {
+        pub fn init() void {
             components = ViewLayerMapping.new();
         }
 
-        pub fn systemMixinDeinit() void {
+        pub fn deinit() void {
             components.deinit();
             components = undefined;
         }

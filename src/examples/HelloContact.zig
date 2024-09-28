@@ -37,7 +37,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    firefly.physics.ContactSystem.activate();
+    firefly.physics.ContactSystem.System.activate();
     Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

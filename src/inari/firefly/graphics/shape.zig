@@ -21,7 +21,7 @@ pub fn init() !void {
         return;
 
     api.Entity.registerComponent(EShape, "EShape");
-    DefaultShapeRenderer.init();
+    api.System.register(DefaultShapeRenderer);
 }
 
 pub fn deinit() void {
@@ -68,8 +68,8 @@ pub const EShape = struct {
 //////////////////////////////////////////////////////////////
 
 pub const DefaultShapeRenderer = struct {
-    pub usingnamespace api.SystemMixin(DefaultShapeRenderer);
-    pub usingnamespace graphics.EntityRendererMixin(DefaultShapeRenderer);
+    pub const System = api.SystemMixin(DefaultShapeRenderer);
+    pub const EntityRenderer = graphics.EntityRendererMixin(DefaultShapeRenderer);
 
     pub const accept = .{ graphics.ETransform, EShape };
 

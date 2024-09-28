@@ -16,11 +16,11 @@ pub fn init() void {
     if (INIT)
         return;
 
-    COMPONENT_INTERFACE_TABLE = utils.DynArray(ComponentTypeInterface).newWithRegisterSize(
+    TYPE_REFERENCES = utils.DynArray(TypeReference).newWithRegisterSize(
         api.COMPONENT_ALLOC,
         20,
     );
-    SUB_COMPONENT_INTERFACE_TABLE = utils.DynArray(SubComponentTypeInterface).newWithRegisterSize(
+    Subtype.TYPE_REFERENCES = utils.DynArray(Subtype.TypeReference).newWithRegisterSize(
         api.COMPONENT_ALLOC,
         20,
     );
@@ -32,28 +32,28 @@ pub fn deinit() void {
         return;
 
     // deinit all registered component pools
-    var next = COMPONENT_INTERFACE_TABLE.slots.prevSetBit(COMPONENT_INTERFACE_TABLE.size());
+    var next = TYPE_REFERENCES.slots.prevSetBit(TYPE_REFERENCES.size());
     while (next) |i| {
-        if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| {
+        if (TYPE_REFERENCES.get(i)) |interface| {
             interface.deinit();
-            COMPONENT_INTERFACE_TABLE.delete(i);
+            TYPE_REFERENCES.delete(i);
         }
-        next = COMPONENT_INTERFACE_TABLE.slots.prevSetBit(i);
+        next = TYPE_REFERENCES.slots.prevSetBit(i);
     }
-    COMPONENT_INTERFACE_TABLE.deinit();
-    COMPONENT_INTERFACE_TABLE = undefined;
+    TYPE_REFERENCES.deinit();
+    TYPE_REFERENCES = undefined;
 
     // deinit all registered sub-component types
-    next = SUB_COMPONENT_INTERFACE_TABLE.slots.prevSetBit(SUB_COMPONENT_INTERFACE_TABLE.size());
+    next = Subtype.TYPE_REFERENCES.slots.prevSetBit(Subtype.TYPE_REFERENCES.size());
     while (next) |i| {
-        if (SUB_COMPONENT_INTERFACE_TABLE.get(i)) |interface| {
+        if (Subtype.TYPE_REFERENCES.get(i)) |interface| {
             interface.deinit();
-            SUB_COMPONENT_INTERFACE_TABLE.delete(i);
+            Subtype.TYPE_REFERENCES.delete(i);
         }
-        next = SUB_COMPONENT_INTERFACE_TABLE.slots.prevSetBit(i);
+        next = Subtype.TYPE_REFERENCES.slots.prevSetBit(i);
     }
-    SUB_COMPONENT_INTERFACE_TABLE.deinit();
-    SUB_COMPONENT_INTERFACE_TABLE = undefined;
+    Subtype.TYPE_REFERENCES.deinit();
+    Subtype.TYPE_REFERENCES = undefined;
 }
 
 //////////////////////////////////////////////////////////////
@@ -83,24 +83,24 @@ pub const ComponentEvent = struct {
 //// Component API
 //////////////////////////////////////////////////////////////
 
-const ComponentTypeInterface = struct {
+const TypeReference = struct {
     activate: ?*const fn (Index, bool) void,
     clear: *const fn (Index) void,
     deinit: api.DeinitFunction,
     to_string: *const fn (*utils.StringBuffer) void,
 };
-var COMPONENT_INTERFACE_TABLE: utils.DynArray(ComponentTypeInterface) = undefined;
+var TYPE_REFERENCES: utils.DynArray(TypeReference) = undefined;
 
-pub fn registerComponent(comptime T: type, comptime name: String) void {
+pub fn register(comptime T: type, comptime name: String) void {
     Mixin(T).init(name);
 }
 
 pub fn print(string_buffer: *utils.StringBuffer) void {
     string_buffer.print("\nComponents:", .{});
-    var next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(0);
+    var next = TYPE_REFERENCES.slots.nextSetBit(0);
     while (next) |i| {
-        if (COMPONENT_INTERFACE_TABLE.get(i)) |interface| interface.to_string(string_buffer);
-        next = COMPONENT_INTERFACE_TABLE.slots.nextSetBit(i + 1);
+        if (TYPE_REFERENCES.get(i)) |interface| interface.to_string(string_buffer);
+        next = TYPE_REFERENCES.slots.nextSetBit(i + 1);
     }
 }
 
@@ -145,7 +145,7 @@ pub fn Mixin(comptime T: type) type {
             std.debug.print("FIREFLY : INFO: initialize component: {s}\n", .{name});
 
             defer {
-                _ = COMPONENT_INTERFACE_TABLE.add(ComponentTypeInterface{
+                _ = TYPE_REFERENCES.add(TypeReference{
                     .activate = if (has_activation) ActivationMixin(T).set else null,
                     .clear = clear,
                     .deinit = Self.deinit,
@@ -217,11 +217,11 @@ pub fn Mixin(comptime T: type) type {
             if (has_subtypes)
                 @panic("Use new on specific subtype");
 
-            return register(t).id;
+            return @This().register(t).id;
         }
 
         pub fn newForSubType(t: T) *T {
-            return register(t);
+            return @This().register(t);
         }
 
         fn register(t: T) *T {
@@ -852,10 +852,6 @@ pub fn SubTypingMixin(comptime T: type) type {
             if (!_init) return;
         }
 
-        pub fn register(comptime SubType: type, name: String) void {
-            SubTypeMixin(T, SubType).init(name);
-        }
-
         pub fn dataById(id: Index, comptime SubType: type) ?@TypeOf(SubType) {
             return SubType.dataById(id);
         }
@@ -873,10 +869,16 @@ pub fn SubTypingMixin(comptime T: type) type {
 //// Component Subtype
 //////////////////////////////////////////////////////////////////////////
 
-const SubComponentTypeInterface = struct {
-    deinit: api.DeinitFunction,
+pub const Subtype = struct {
+    const TypeReference = struct {
+        deinit: api.DeinitFunction,
+    };
+    var TYPE_REFERENCES: utils.DynArray(Subtype.TypeReference) = undefined;
+
+    pub fn register(comptime T: type, comptime SubType: type, name: String) void {
+        SubTypeMixin(T, SubType).init(name);
+    }
 };
-var SUB_COMPONENT_INTERFACE_TABLE: utils.DynArray(SubComponentTypeInterface) = undefined;
 
 pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
     if (!@hasDecl(T, "Subscription"))
@@ -897,8 +899,8 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
             data = std.AutoHashMap(Index, SubType).init(api.COMPONENT_ALLOC);
             // subscribe to T and dispatch activation and dispose
             T.Subscription.subscribe(notifyComponentChange);
-            // create and register SubComponentTypeInterface
-            _ = SUB_COMPONENT_INTERFACE_TABLE.add(.{
+            // create and register TypeReference
+            _ = Subtype.TYPE_REFERENCES.add(.{
                 .deinit = _deinit,
             });
         }

@@ -28,9 +28,9 @@ pub fn init() !void {
 
     BasicTileTypes.UNDEFINED = graphics.TileTypeAspectGroup.getAspect("UNDEFINED");
 
-    api.Component.registerComponent(TileGrid, "TileGrid");
+    api.Component.register(TileGrid, "TileGrid");
     api.Entity.registerComponent(ETile, "ETile");
-    DefaultTileGridRenderer.init();
+    api.System.register(DefaultTileGridRenderer);
 }
 
 pub fn deinit() void {
@@ -339,8 +339,8 @@ pub const TileGrid = struct {
 //////////////////////////////////////////////////////////////
 
 pub const DefaultTileGridRenderer = struct {
-    pub usingnamespace api.SystemMixin(DefaultTileGridRenderer);
-    pub usingnamespace graphics.ViewLayerComponentRendererMixin(DefaultTileGridRenderer, TileGrid);
+    pub const System = api.SystemMixin(DefaultTileGridRenderer);
+    pub const ComponentRenderer = graphics.ComponentRendererMixin(DefaultTileGridRenderer, TileGrid);
 
     pub fn renderComponents(components: *firefly.utils.BitSet, event: graphics.ViewRenderEvent) void {
         var i = components.nextSetBit(0);

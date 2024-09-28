@@ -42,7 +42,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    firefly.physics.ContactSystem.activate();
+    firefly.physics.ContactSystem.System.activate();
 
     // view with two layer
     const view_id = graphics.View.Component.new(.{

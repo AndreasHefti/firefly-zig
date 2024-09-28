@@ -22,13 +22,13 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(Animation, "Animation");
-    Animation.Subtypes.register(EasedValueIntegrator, "EasedValueIntegrator");
-    Animation.Subtypes.register(EasedColorIntegrator, "EasedColorIntegrator");
-    Animation.Subtypes.register(IndexFrameIntegrator, "IndexFrameIntegrator");
-    Animation.Subtypes.register(BezierCurveIntegrator, "BezierCurveIntegrator");
+    api.Component.register(Animation, "Animation");
+    api.Component.Subtype.register(Animation, EasedValueIntegrator, "EasedValueIntegrator");
+    api.Component.Subtype.register(Animation, EasedColorIntegrator, "EasedColorIntegrator");
+    api.Component.Subtype.register(Animation, IndexFrameIntegrator, "IndexFrameIntegrator");
+    api.Component.Subtype.register(Animation, BezierCurveIntegrator, "BezierCurveIntegrator");
     api.Entity.registerComponent(EAnimation, "EAnimation");
-    AnimationSystem.init();
+    api.System.register(AnimationSystem);
 }
 
 pub fn deinit() void {
@@ -152,16 +152,9 @@ pub const IntegratorRef = struct {
 // //////////////////////////////////////////////////////////////
 
 pub const AnimationSystem = struct {
-    pub usingnamespace api.SystemMixin(AnimationSystem);
+    pub const System = api.SystemMixin(AnimationSystem);
 
-    pub fn systemActivation(active: bool) void {
-        if (active)
-            firefly.Engine.subscribeUpdate(update)
-        else
-            firefly.Engine.unsubscribeUpdate(update);
-    }
-
-    fn update(_: api.UpdateEvent) void {
+    pub fn update(_: api.UpdateEvent) void {
         Animation.Activation.process(Animation.update);
     }
 };

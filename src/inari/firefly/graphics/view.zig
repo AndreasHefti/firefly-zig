@@ -26,12 +26,12 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    ViewRenderer.init();
+    api.System.register(ViewRenderer);
 
     // register components
-    api.Component.registerComponent(Layer, "Layer");
-    api.Component.registerComponent(View, "View");
-    api.Component.registerComponent(Scene, "Scene");
+    api.Component.register(Layer, "Layer");
+    api.Component.register(View, "View");
+    api.Component.register(Scene, "Scene");
 
     // register entity components
     api.Entity.registerComponent(EView, "EView");
@@ -571,9 +571,8 @@ pub const Scene = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ViewRenderer = struct {
-    pub usingnamespace api.SystemMixin(ViewRenderer);
+    pub const System = api.SystemMixin(ViewRenderer);
     var VIEW_RENDER_EVENT = api.ViewRenderEvent{};
-    pub const render_order = 0;
 
     pub fn render(event: api.RenderEvent) void {
         if (event.type != firefly.api.RenderEventType.RENDER)

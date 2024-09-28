@@ -28,9 +28,10 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Composite.Subtypes.register(World, "World");
-    api.Composite.Subtypes.register(Room, "Room");
-    api.Composite.Subtypes.register(Player, "Player");
+    api.Component.Subtype.register(api.Composite, World, "World");
+    api.Component.Subtype.register(api.Composite, Room, "Room");
+    api.Component.Subtype.register(api.Composite, Player, "Player");
+
     api.Entity.registerComponent(ERoomTransition, "ERoomTransition");
 
     _ = api.Task.Component.new(.{

@@ -13,7 +13,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(Asset, "Asset");
+    api.Component.register(Asset, "Asset");
 }
 
 pub fn deinit() void {

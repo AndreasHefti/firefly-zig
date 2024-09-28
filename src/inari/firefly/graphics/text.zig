@@ -25,9 +25,9 @@ pub fn init() !void {
     if (initialized)
         return;
 
-    api.Asset.Subtypes.register(Font, "Font");
+    api.Component.Subtype.register(api.Asset, Font, "Font");
     api.Entity.registerComponent(EText, "EText");
-    DefaultTextRenderer.init();
+    api.System.register(DefaultTextRenderer);
 }
 
 pub fn deinit() void {
@@ -103,8 +103,8 @@ pub const EText = struct {
 //////////////////////////////////////////////////////////////
 
 pub const DefaultTextRenderer = struct {
-    pub usingnamespace api.SystemMixin(DefaultTextRenderer);
-    pub usingnamespace graphics.EntityRendererMixin(DefaultTextRenderer);
+    pub const System = api.SystemMixin(DefaultTextRenderer);
+    pub const EntityRenderer = graphics.EntityRendererMixin(DefaultTextRenderer);
 
     pub const accept = .{ graphics.ETransform, EText };
 

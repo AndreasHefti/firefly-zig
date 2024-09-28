@@ -26,16 +26,16 @@ pub fn init() void {
     Contact.init();
 
     // register components
-    api.Component.registerComponent(ContactConstraint, "ContactConstraint");
+    api.Component.register(ContactConstraint, "ContactConstraint");
 
     // register entity components
     api.Entity.registerComponent(EContact, "EContact");
     api.Entity.registerComponent(EContactScan, "EContactScan");
 
     // init systems
-    ContactSystem.init();
-    ContactGizmosRenderer.init();
-    ContactScanGizmosRenderer.init();
+    api.System.register(ContactSystem);
+    api.System.register(ContactGizmosRenderer);
+    api.System.register(ContactScanGizmosRenderer);
 }
 
 pub fn deinit() void {
@@ -625,7 +625,7 @@ pub const IContactMap = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ContactSystem = struct {
-    pub usingnamespace api.SystemMixin(ContactSystem);
+    pub const System = api.SystemMixin(ContactSystem);
     pub var entity_condition: api.EntityTypeCondition = undefined;
 
     var simple_mapping: utils.BitSet = undefined;
@@ -645,7 +645,7 @@ pub const ContactSystem = struct {
         entity_condition = undefined;
     }
 
-    pub fn systemActivation(active: bool) void {
+    pub fn activation(active: bool) void {
         if (active) {
             physics.subscribeMovement(processMoved);
         } else {
@@ -800,8 +800,8 @@ pub const ContactSystem = struct {
 //////////////////////////////////////////////////////////////
 
 pub const ContactGizmosRenderer = struct {
-    pub usingnamespace api.SystemMixin(ContactGizmosRenderer);
-    pub usingnamespace graphics.EntityRendererMixin(ContactGizmosRenderer);
+    pub const System = api.SystemMixin(ContactGizmosRenderer);
+    pub const EntityRenderer = graphics.EntityRendererMixin(ContactGizmosRenderer);
 
     pub const accept = .{ graphics.ETransform, EContact };
     pub const dismiss = .{graphics.ETile};
@@ -836,8 +836,8 @@ pub const ContactGizmosRenderer = struct {
 };
 
 pub const ContactScanGizmosRenderer = struct {
-    pub usingnamespace api.SystemMixin(ContactScanGizmosRenderer);
-    pub usingnamespace graphics.EntityRendererMixin(ContactScanGizmosRenderer);
+    pub const System = api.SystemMixin(ContactScanGizmosRenderer);
+    pub const EntityRenderer = graphics.EntityRendererMixin(ContactScanGizmosRenderer);
 
     pub const accept = .{ graphics.ETransform, EContactScan };
     pub var color: utils.Color = .{ 0, 255, 0, 255 };

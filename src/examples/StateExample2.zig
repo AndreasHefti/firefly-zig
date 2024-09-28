@@ -33,7 +33,7 @@ var rndx = std.rand.DefaultPrng.init(32);
 const random = rndx.random();
 
 fn init() void {
-    firefly.api.System.Activation.deactivateByName("ContactSystem");
+    firefly.physics.ContactSystem.System.deactivate();
 
     Texture.Component.newActive(.{
         .name = "TestTexture",

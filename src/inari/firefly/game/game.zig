@@ -34,9 +34,8 @@ pub fn init() !void {
     world.init();
     json.init();
     platformer.init();
-    //  GlobalStack.init();
 
-    api.Control.Subtypes.register(SimplePivotCamera, "SimplePivotCameraS");
+    api.Component.Subtype.register(api.Control, SimplePivotCamera, "SimplePivotCamera");
 
     MaterialTypes.NONE = physics.ContactMaterialAspectGroup.getAspect("NONE");
     MaterialTypes.TERRAIN = physics.ContactMaterialAspectGroup.getAspect("TERRAIN");

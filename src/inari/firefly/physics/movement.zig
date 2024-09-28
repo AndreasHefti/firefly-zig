@@ -22,7 +22,7 @@ pub fn init() void {
         return;
 
     api.Entity.registerComponent(EMovement, "EMovement");
-    MovementSystem.init();
+    api.System.register(MovementSystem);
 
     MovFlags.ON_SLOPE_UP = physics.MovementAspectGroup.getAspect("ON_SLOPE_UP");
     MovFlags.ON_SLOPE_DOWN = physics.MovementAspectGroup.getAspect("ON_SLOPE_DOWN");
@@ -267,12 +267,12 @@ pub fn adjustVelocity(movement: *EMovement) void {
 }
 
 //////////////////////////////////////////////////////////////
-//// Move System
+//// Movement System
 //////////////////////////////////////////////////////////////
 
 pub const MovementSystem = struct {
-    pub usingnamespace api.SystemMixin(MovementSystem);
-    pub usingnamespace api.EntityUpdateMixin(MovementSystem);
+    pub const System = api.SystemMixin(MovementSystem);
+    pub const EntityUpdate = api.EntityUpdateSystemMixin(MovementSystem);
 
     pub const accept = .{EMovement};
 

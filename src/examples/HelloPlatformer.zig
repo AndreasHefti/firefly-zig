@@ -46,9 +46,9 @@ var pivot: utils.PosF = .{ 0, 0 };
 fn init() void {
 
     // needed systems that are not active by default
-    firefly.physics.ContactSystem.activate();
-    firefly.physics.ContactGizmosRenderer.activate();
-    firefly.physics.ContactScanGizmosRenderer.activate();
+    firefly.physics.ContactSystem.System.activate();
+    firefly.physics.ContactGizmosRenderer.System.activate();
+    firefly.physics.ContactScanGizmosRenderer.System.activate();
 
     // create view with two layer
     // TODO this must be done by World activation later on

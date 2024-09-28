@@ -13,18 +13,16 @@ pub fn init() void {
     if (initialized)
         return;
 
-    api.Component.registerComponent(Condition, "Condition");
-    api.Component.registerComponent(Task, "Task");
-    api.Component.registerComponent(Trigger, "Trigger");
-    api.Component.registerComponent(Control, "Control");
-    api.Component.registerComponent(StateEngine, "StateEngine");
-    api.Component.registerComponent(EntityStateEngine, "EntityStateEngine");
-
-    Control.Subtypes.register(VoidControl, "VoidControl");
+    api.Component.register(Condition, "Condition");
+    api.Component.register(Task, "Task");
+    api.Component.register(Trigger, "Trigger");
+    api.Component.register(Control, "Control");
+    api.Component.register(StateEngine, "StateEngine");
+    api.Component.register(EntityStateEngine, "EntityStateEngine");
+    api.Component.Subtype.register(Control, VoidControl, "VoidControl");
     api.Entity.registerComponent(EState, "EState");
-
-    StateSystem.init();
-    EntityStateSystem.init();
+    api.System.register(StateSystem);
+    api.System.register(EntityStateSystem);
 }
 
 pub fn deinit() void {
@@ -374,7 +372,7 @@ pub const EState = struct {
 //////////////////////////////////////////////////////////////
 
 pub const StateSystem = struct {
-    pub usingnamespace api.SystemMixin(StateSystem);
+    pub const System = api.SystemMixin(StateSystem);
 
     pub fn update(_: api.UpdateEvent) void {
         StateEngine.Activation.process(processEngine);
@@ -403,8 +401,8 @@ pub const StateSystem = struct {
 };
 
 pub const EntityStateSystem = struct {
-    pub usingnamespace api.SystemMixin(EntityStateSystem);
-    pub usingnamespace api.EntityUpdateMixin(EntityStateSystem);
+    pub const System = api.SystemMixin(EntityStateSystem);
+    pub const EntityUpdate = api.EntityUpdateSystemMixin(EntityStateSystem);
     pub const accept = .{EState};
 
     pub fn updateEntities(components: *utils.BitSet) void {

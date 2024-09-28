@@ -375,3 +375,45 @@ pub const EMultiplier = struct {
         Component.new(entity_id, c);
     }
 };
+
+pub fn EntityUpdateSystemMixin(comptime T: type) type {
+    return struct {
+        comptime {
+            if (@typeInfo(T) != .Struct)
+                @compileError("Expects component type is a struct.");
+            if (!@hasDecl(T, "updateEntities"))
+                @compileError("Expects type has fn: updateEntities(*utils.BitSet)");
+        }
+
+        pub var entity_condition: api.EntityTypeCondition = undefined;
+        pub var entities: firefly.utils.BitSet = undefined;
+
+        pub fn init() void {
+            entities = firefly.utils.BitSet.new(api.ALLOC);
+            if (@hasDecl(T, "accept") or @hasDecl(T, "dismiss")) {
+                entity_condition = api.EntityTypeCondition{
+                    .accept_kind = if (@hasDecl(T, "accept")) api.EComponentAspectGroup.newKindOf(T.accept) else null,
+                    .accept_full_only = if (@hasDecl(T, "accept_full_only")) T.accept_full_only else true,
+                    .dismiss_kind = if (@hasDecl(T, "dismiss")) api.EComponentAspectGroup.newKindOf(T.dismiss) else null,
+                };
+            }
+        }
+
+        pub fn deinit() void {
+            entity_condition = undefined;
+            entities.deinit();
+            entities = undefined;
+        }
+
+        pub fn entityRegistration(id: Index, register: bool) void {
+            if (!entity_condition.check(id))
+                return;
+
+            entities.setValue(id, register);
+        }
+
+        pub fn update(_: api.UpdateEvent) void {
+            T.updateEntities(&entities);
+        }
+    };
+}
