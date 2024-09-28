@@ -767,7 +767,7 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
     if (jsonWorld.room_transitions) |room_transitions| {
         for (0..room_transitions.len) |i| {
             var attributes: *api.Attributes = api.Attributes.newWith(
-                room_transitions[i].name,
+                api.NamePool.alloc(room_transitions[i].name),
                 .{
                     .{ game.TaskAttributes.NAME, room_transitions[i].name },
                     .{ game.TaskAttributes.VIEW_NAME, view_name },

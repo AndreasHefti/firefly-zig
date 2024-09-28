@@ -480,14 +480,14 @@ pub const SimpleRoomTransitionScene = struct {
         const name = ctx.string(game.TaskAttributes.NAME);
         const entry = !ctx.boolean("exit");
 
-        var scene = graphics.Scene.Component.create(.{
+        const scene_id = graphics.Scene.Component.new(.{
             .name = name,
             .init_function = entityInit,
             .dispose_function = disposeEntity,
             .update_action = if (entry) entryAction else exitAction,
         });
 
-        scene.setAllAttributesById(ctx.attributes_id);
+        graphics.Scene.CallContext.Attributes.setAllAttributesById(scene_id, ctx.attributes_id);
     }
 
     fn entityInit(ctx: *api.CallContext) void {

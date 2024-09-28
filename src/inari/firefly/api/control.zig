@@ -81,8 +81,8 @@ pub const Control = struct {
     pub const Grouping = api.Component.GroupingMixin(Control);
     pub const Subscription = api.Component.SubscriptionMixin(Control);
     pub const Subtypes = api.Component.SubTypingMixin(Control);
-
-    pub usingnamespace api.CallContextMixin(Control);
+    pub const CallContext = api.Component.CallContextMixin(Control);
+    pub const init_attributes = true;
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -91,15 +91,6 @@ pub const Control = struct {
 
     call_context: api.CallContext = undefined,
     update: api.CallFunction,
-
-    pub fn construct(self: *Control) void {
-        self.initCallContext(true);
-    }
-
-    pub fn destruct(self: *Control) void {
-        self.deinitCallContext();
-        self.groups = null;
-    }
 
     pub fn createForSubType(subtype: anytype) *Control {
         const c_subtype_type = @TypeOf(subtype);
@@ -218,8 +209,8 @@ pub const Trigger = struct {
     pub const Component = api.Component.Mixin(Trigger);
     pub const Naming = api.Component.NameMappingMixin(Trigger);
     pub const Activation = api.Component.ActivationMixin(Trigger);
-
-    pub usingnamespace api.CallContextMixin(Trigger);
+    pub const CallContext = api.Component.CallContextMixin(Trigger);
+    pub const init_attributes = true;
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -234,14 +225,6 @@ pub const Trigger = struct {
 
     pub fn componentTypeDeinit() void {
         firefly.api.unsubscribeUpdate(update);
-    }
-
-    pub fn construct(self: *Trigger) void {
-        self.initCallContext(true);
-    }
-
-    pub fn destruct(self: *Trigger) void {
-        self.deinitCallContext();
     }
 
     fn update(_: api.UpdateEvent) void {
@@ -283,8 +266,8 @@ pub const StateEngine = struct {
     pub const Naming = api.Component.NameMappingMixin(StateEngine);
     pub const Activation = api.Component.ActivationMixin(StateEngine);
     pub const Subscription = api.Component.SubscriptionMixin(StateEngine);
-
-    pub usingnamespace api.CallContextMixin(StateEngine);
+    pub const CallContext = api.Component.CallContextMixin(StateEngine);
+    pub const init_attributes = true;
 
     id: Index = UNDEF_INDEX,
     name: ?String,
@@ -296,12 +279,10 @@ pub const StateEngine = struct {
 
     pub fn construct(self: *StateEngine) void {
         self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable;
-        self.initCallContext(true);
     }
 
     pub fn destruct(self: *StateEngine) void {
         self.states.deinit();
-        self.deinitCallContext();
     }
 
     pub fn withState(self: *StateEngine, state: State) *StateEngine {
@@ -345,8 +326,8 @@ pub const EntityStateEngine = struct {
     pub const Naming = api.Component.NameMappingMixin(EntityStateEngine);
     pub const Activation = api.Component.ActivationMixin(EntityStateEngine);
     pub const Subscription = api.Component.SubscriptionMixin(EntityStateEngine);
-
-    pub usingnamespace api.CallContextMixin(EntityStateEngine);
+    pub const CallContext = api.Component.CallContextMixin(EntityStateEngine);
+    pub const init_attributes = true;
 
     id: Index = UNDEF_INDEX,
     name: ?String,
@@ -355,12 +336,10 @@ pub const EntityStateEngine = struct {
 
     pub fn construct(self: *EntityStateEngine) void {
         self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
-        self.initCallContext(true);
     }
 
     pub fn destruct(self: *EntityStateEngine) void {
         self.states.deinit();
-        self.deinitCallContext();
     }
 
     pub fn withState(self: *EntityStateEngine, state: State) *EntityStateEngine {

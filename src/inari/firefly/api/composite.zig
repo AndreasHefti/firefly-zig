@@ -50,8 +50,8 @@ pub const Composite = struct {
     pub const Activation = api.Component.ActivationMixin(Composite);
     pub const Subscription = api.Component.SubscriptionMixin(Composite);
     pub const Subtypes = api.Component.SubTypingMixin(Composite);
-
-    pub usingnamespace api.AttributeMixin(Composite);
+    pub const Attributes = api.Component.AttributeMixin(Composite);
+    pub const init_attributes = true;
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -70,8 +70,6 @@ pub const Composite = struct {
             api.COMPONENT_ALLOC,
             3,
         );
-
-        self.createAttributes();
     }
 
     pub fn destruct(self: *Composite) void {
@@ -93,7 +91,6 @@ pub const Composite = struct {
 
         self._loaded_components.deinit();
         self._loaded_components = undefined;
-        self.deinitAttributes();
     }
 
     pub fn createForSubType(SubType: anytype) *Composite {
@@ -211,11 +208,11 @@ pub const Composite = struct {
 pub fn CompositeMixin(comptime T: type) type {
     return struct {
         pub fn setAttribute(self: *T, name: String, value: String) void {
-            api.Composite.Component.byId(self.id).setAttribute(name, value);
+            api.Composite.Attributes.setAttribute(self.id, name, value);
         }
 
         pub fn getAttribute(self: *T, name: String) ?String {
-            return api.Composite.Component.byId(self.id).getAttribute(name);
+            return api.Composite.Attributes.getAttribute(self.id, name);
         }
 
         pub fn withTask(self: *T, task: api.Task, life_cycle: CompositeLifeCycle, attributes_id: ?Index) *T {

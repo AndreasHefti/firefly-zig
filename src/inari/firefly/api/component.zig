@@ -117,6 +117,8 @@ pub fn Mixin(comptime T: type) type {
     const has_activation: bool = @hasDecl(T, "Activation");
     const has_naming: bool = @hasDecl(T, "Naming");
     const has_subscription: bool = @hasDecl(T, "Subscription");
+    const has_call_context: bool = @hasDecl(T, "CallContext");
+    const has_attributes: bool = @hasDecl(T, "Attributes");
     const has_grouping: bool = @hasDecl(T, "Grouping");
     const has_control: bool = @hasDecl(T, "Control");
     const has_subtypes: bool = @hasDecl(T, "Subtypes");
@@ -231,9 +233,16 @@ pub fn Mixin(comptime T: type) type {
                 if (result.name) |n| {
                     if (NameMappingMixin(T).mapping.contains(n))
                         utils.panic(api.ALLOC, "Component name already exists: {s}", .{n});
+
                     NameMappingMixin(T).mapping.put(n, id) catch unreachable;
                 }
             }
+
+            if (has_call_context)
+                CallContextMixin(T).construct(result);
+
+            if (has_attributes)
+                AttributeMixin(T).construct(result);
 
             if (has_construct)
                 result.construct();
@@ -275,6 +284,9 @@ pub fn Mixin(comptime T: type) type {
         }
 
         pub fn dispose(id: Index) void {
+            if (!_type_init)
+                return;
+
             if (id != UNDEF_INDEX)
                 clear(id);
         }
@@ -300,6 +312,12 @@ pub fn Mixin(comptime T: type) type {
             if (pool.get(id)) |t| {
                 if (has_destruct)
                     t.destruct();
+
+                if (has_call_context)
+                    CallContextMixin(T).destruct(t);
+
+                if (has_attributes)
+                    AttributeMixin(T).destruct(t);
 
                 if (has_naming) {
                     if (t.name) |n| {
@@ -536,6 +554,114 @@ pub fn SubscriptionMixin(comptime T: type) type {
         fn notify(event_type: ComponentEvent.Type, id: Index) void {
             if (_init) {
                 dispatcher.notify(.{ .event_type = event_type, .c_id = id });
+            }
+        }
+    };
+}
+
+pub fn CallContextMixin(comptime T: type) type {
+    if (@typeInfo(T) != .Struct)
+        @compileError("Expects component type is a struct.");
+    if (!@hasField(T, "call_context"))
+        @compileError("Expects component type to have field: call_context: api.CallContext, that holds the call context for a component");
+
+    return struct {
+        pub const Attributes = AttributeMixin(T);
+
+        fn construct(self: *T) void {
+            self.call_context = .{
+                .caller_id = self.id,
+            };
+            if (@hasField(T, "name"))
+                self.call_context.caller_name = self.name;
+
+            Attributes.construct(self);
+        }
+
+        fn destruct(self: *T) void {
+            Attributes.destruct(self);
+        }
+    };
+}
+
+pub fn AttributeMixin(comptime T: type) type {
+    const has_attributes_id: bool = @hasField(T, "attributes_id");
+    const has_call_context: bool = @hasField(T, "call_context");
+
+    if (!has_attributes_id and !has_call_context)
+        @panic("Expecting type has one of the following fields: attributes_id: ?Index, call_context: CallContext");
+    if (!@hasField(T, "id"))
+        @panic("Expecting type has fields: id: Index");
+
+    return struct {
+        fn construct(self: *T) void {
+            if (@hasDecl(T, "init_attributes")) {
+                const name = getAttributesName(self);
+                if (T.init_attributes) {
+                    if (has_call_context) {
+                        self.call_context.attributes_id = api.Attributes.Component.new(.{ .name = name });
+                    } else if (has_attributes_id) {
+                        self.attributes_id = api.Attributes.Component.new(.{ .name = name });
+                    }
+                }
+            }
+        }
+
+        fn getAttributesName(self: *T) ?String {
+            return api.NamePool.format("{s}_{d}_{?s}", .{
+                if (@hasDecl(T, "aspect")) T.aspect.name else @typeName(T),
+                self.id,
+                self.name,
+            });
+        }
+
+        fn destruct(self: *T) void {
+            if (T.init_attributes) {
+                if (has_call_context) {
+                    if (self.call_context.attributes_id) |aid|
+                        api.Attributes.Component.dispose(aid);
+                    self.call_context.attributes_id = null;
+                } else if (has_attributes_id) {
+                    if (self.attributes_id) |aid|
+                        api.Attributes.Component.dispose(aid);
+                    self.attributes_id = null;
+                }
+            }
+        }
+
+        pub fn getAttributes(component_id: Index) ?*api.Attributes {
+            if (getAttributesId(component_id)) |id|
+                return api.Attributes.Component.byId(id);
+            return null;
+        }
+
+        pub fn getAttribute(component_id: Index, name: String) ?String {
+            if (getAttributesId(component_id)) |id|
+                return api.Attributes.Component.byId(id)._dict.get(name);
+            return null;
+        }
+
+        pub fn setAttribute(component_id: Index, name: String, value: String) void {
+            if (getAttributesId(component_id)) |id|
+                api.Attributes.Component.byId(id).set(name, value);
+        }
+
+        pub fn setAllAttributes(component_id: Index, attributes: *api.Attributes) void {
+            if (getAttributesId(component_id)) |id|
+                api.Attributes.Component.byId(id).setAll(attributes);
+        }
+
+        pub fn setAllAttributesById(component_id: Index, attributes_id: ?Index) void {
+            if (attributes_id) |aid|
+                if (getAttributesId(component_id)) |id|
+                    api.Attributes.Component.byId(id).setAll(api.Attributes.Component.byId(aid));
+        }
+
+        fn getAttributesId(component_id: Index) ?Index {
+            if (has_attributes_id) {
+                return T.Component.byId(component_id).attributes_id;
+            } else if (has_call_context) {
+                return T.Component.byId(component_id).call_context.attributes_id;
             }
         }
     };

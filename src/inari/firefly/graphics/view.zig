@@ -465,8 +465,8 @@ pub const Scene = struct {
     pub const Naming = api.Component.NameMappingMixin(Scene);
     pub const Activation = api.Component.ActivationMixin(Scene);
     pub const Subscription = api.Component.SubscriptionMixin(Scene);
-
-    pub usingnamespace api.CallContextMixin(Scene);
+    pub const CallContext = api.Component.CallContextMixin(Scene);
+    pub const init_attributes = true;
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -488,14 +488,6 @@ pub const Scene = struct {
 
     pub fn componentTypeDeinit() void {
         firefly.api.unsubscribeUpdate(update);
-    }
-
-    pub fn construct(self: *Scene) void {
-        self.initCallContext(true);
-    }
-
-    pub fn destruct(self: *Scene) void {
-        self.deinitCallContext();
     }
 
     pub fn withUpdateAction(self: *Scene, action: api.CallFunction) *Scene {

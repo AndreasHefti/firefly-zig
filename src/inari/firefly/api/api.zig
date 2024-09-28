@@ -167,10 +167,10 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
+    composite.deinit();
     asset.deinit();
     control.deinit();
     system.deinit();
-    composite.deinit();
     Component.deinit();
     entity.deinit();
 
@@ -319,86 +319,6 @@ pub const PropertyIterator = struct {
 //// Attributes
 //////////////////////////////////////////////////////////////
 
-pub fn AttributeMixin(comptime T: type) type {
-    const has_attributes_id: bool = @hasField(T, "attributes_id");
-    const has_call_context: bool = @hasField(T, "call_context");
-
-    if (!has_attributes_id and !has_call_context)
-        @panic("Expecting type has one of the following fields: attributes_id: ?Index, call_context: CallContext");
-    // if (has_attributes_id and @TypeOf(T.attributes_id) != .Optional)
-    //     @panic("Expecting type has fields: attributes_id of optional type ?Index");
-    if (!@hasField(T, "id"))
-        @panic("Expecting type has fields: id: Index");
-
-    return struct {
-        pub fn createAttributes(self: *T) void {
-            _ = getAttributesId(self, true);
-        }
-
-        pub fn deinitAttributes(self: *T) void {
-            if (has_attributes_id) {
-                if (self.attributes_id) |id|
-                    Attributes.Component.dispose(id);
-                self.attributes_id = null;
-            } else if (has_call_context) {
-                if (self.call_context.attributes_id) |id|
-                    Attributes.Component.dispose(id);
-                self.call_context.attributes_id = null;
-            }
-        }
-
-        pub fn getAttributes(self: *T) ?*Attributes {
-            if (getAttributesId(self, true)) |id|
-                return Attributes.Component.byId(id);
-            return null;
-        }
-
-        pub fn getAttribute(self: *T, name: String) ?String {
-            if (getAttributesId(self, true)) |id|
-                return Attributes.Component.byId(id)._dict.get(name);
-            return null;
-        }
-
-        pub fn setAttribute(self: *T, name: String, value: String) void {
-            if (getAttributesId(self, true)) |id|
-                Attributes.Component.byId(id).set(name, value);
-        }
-
-        pub fn setAllAttributes(self: *T, attributes: *Attributes) void {
-            if (getAttributesId(self, true)) |id|
-                Attributes.Component.byId(id).setAll(attributes);
-        }
-
-        pub fn setAllAttributesById(self: *T, attributes_id: ?Index) void {
-            if (attributes_id) |aid|
-                if (getAttributesId(self, true)) |id|
-                    Attributes.Component.byId(id).setAll(Attributes.Component.byId(aid));
-        }
-
-        fn getAttributesId(self: *T, create: bool) ?Index {
-            if (has_attributes_id) {
-                if (self.attributes_id == null and create)
-                    self.attributes_id = Attributes.Component.new(.{ .name = getAttributesName(self) });
-
-                return self.attributes_id;
-            } else if (has_call_context) {
-                if (self.call_context.attributes_id == null and create)
-                    self.call_context.attributes_id = Attributes.Component.new(.{ .name = getAttributesName(self) });
-
-                return self.call_context.attributes_id;
-            }
-        }
-
-        fn getAttributesName(self: *T) ?String {
-            return NamePool.format("{s}_{d}_{?s}", .{
-                if (@hasDecl(T, "aspect")) T.aspect.name else @typeName(T),
-                self.id,
-                self.name,
-            });
-        }
-    };
-}
-
 pub const Attributes = struct {
     pub const Component = firefly.api.Component.Mixin(Attributes);
     pub const Naming = firefly.api.Component.NameMappingMixin(Attributes);
@@ -500,33 +420,6 @@ pub const Attributes = struct {
 //////////////////////////////////////////////////////////////
 //// CallContext
 //////////////////////////////////////////////////////////////
-
-pub fn CallContextMixin(comptime T: type) type {
-    const has_call_context: bool = @hasField(T, "call_context");
-
-    if (!has_call_context)
-        @panic("Expecting type has field: call_context");
-
-    return struct {
-        pub usingnamespace AttributeMixin(T);
-        const Self = @This();
-
-        pub fn initCallContext(self: *T, init_attributes: bool) void {
-            self.call_context = .{
-                .caller_id = self.id,
-            };
-            if (@hasField(T, "name"))
-                self.call_context.caller_name = self.name;
-
-            if (init_attributes)
-                self.call_context.attributes_id = Attributes.Component.new(.{ .name = Self.getAttributesName(self) });
-        }
-
-        pub fn deinitCallContext(self: *T) void {
-            self.deinitAttributes();
-        }
-    };
-}
 
 pub const CallContext = struct {
     caller_id: Index = UNDEF_INDEX,
