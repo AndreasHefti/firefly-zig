@@ -20,6 +20,9 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn _Example_One_Entity_No_Views() void {
+    firefly.graphics.View.screen_projection.clear_color = .{ 0, 0, 0, 0 };
+    firefly.api.window.setOpacity(0.5);
+
     Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

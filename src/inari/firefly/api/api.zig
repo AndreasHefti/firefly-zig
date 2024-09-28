@@ -1057,14 +1057,24 @@ pub fn IWindowAPI() type {
         getMonitorHeight: *const fn (CInt) CInt = undefined,
 
         openWindow: *const fn (WindowData) void = undefined,
-        hasWindowClosed: *const fn () bool = undefined,
+        isWindowReady: *const fn () bool = undefined,
         getWindowData: *const fn () *WindowData = undefined,
         closeWindow: *const fn () void = undefined,
+
+        hasWindowClosed: *const fn () bool = undefined,
+        isWindowResized: *const fn () bool = undefined,
+        isWindowFullscreen: *const fn () bool = undefined,
+        isWindowHidden: *const fn () bool = undefined,
+        isWindowMinimized: *const fn () bool = undefined,
+        isWindowMaximized: *const fn () bool = undefined,
+        isWindowFocused: *const fn () bool = undefined,
+        isWindowState: *const fn (CUInt) bool = undefined,
 
         showFPS: *const fn (CInt, CInt) void = undefined,
         toggleFullscreen: *const fn () void = undefined,
         toggleBorderlessWindowed: *const fn () void = undefined,
         setWindowFlags: *const fn ([]WindowFlag) void = undefined,
+        setOpacity: *const fn (o: Float) void = undefined,
 
         deinit: DeinitFunction = undefined,
 
