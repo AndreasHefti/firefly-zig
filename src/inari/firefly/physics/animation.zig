@@ -22,11 +22,13 @@ pub fn init() void {
     if (initialized)
         return;
 
-    AnimationSystem.init();
-    AnimationSystem.registerAnimationType(EasedValueIntegration);
-    AnimationSystem.registerAnimationType(EasedColorIntegration);
-    AnimationSystem.registerAnimationType(IndexFrameIntegration);
+    api.Component.registerComponent(Animation, "Animation");
+    Animation.Subtypes.register(EasedValueIntegrator, "EasedValueIntegrator");
+    Animation.Subtypes.register(EasedColorIntegrator, "EasedColorIntegrator");
+    Animation.Subtypes.register(IndexFrameIntegrator, "IndexFrameIntegrator");
+    Animation.Subtypes.register(BezierCurveIntegrator, "BezierCurveIntegrator");
     api.Entity.registerComponent(EAnimation, "EAnimation");
+    AnimationSystem.init();
 }
 
 pub fn deinit() void {
@@ -36,213 +38,133 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////
-//// Animation API
+//// Animation Component
 //////////////////////////////////////////////////////////////
 
-pub const IAnimation = struct {
+pub const Animation = struct {
+    pub const Component = api.Component.Mixin(Animation);
+    pub const Naming = api.Component.NameMappingMixin(Animation);
+    pub const Activation = api.Component.ActivationMixin(Animation);
+    pub const Subscription = api.Component.SubscriptionMixin(Animation);
+    pub const Subtypes = api.Component.SubTypingMixin(Animation);
+
     id: Index = UNDEF_INDEX,
     name: ?String = null,
 
-    animation: *anyopaque = undefined,
+    // animation settings
+    duration: usize = 0,
+    looping: bool = false,
+    inverse_on_loop: bool = false,
+    reset_on_finish: bool = true,
+    active_on_init: bool = true,
 
-    fn_activate: *const fn (Index, bool) void = undefined,
-    fn_suspend_it: *const fn (Index) void = undefined,
-    fn_set_loop_callback: *const fn (Index, *const fn (usize) void) void = undefined,
-    fn_set_finish_callback: *const fn (Index, *const fn () void) void = undefined,
-    fn_reset: *const fn (Index) void = undefined,
-    fn_dispose: *const fn (Index) void = undefined,
-};
+    // callbacks
+    loop_callback: ?*const fn (usize) void = null,
+    finish_callback: ?*const fn () void = null,
 
-const AnimationTypeReference = struct {
-    _update_all: *const fn () void = undefined,
-    _deinit: *const fn () void = undefined,
-};
+    // internal state
+    _suspending: bool = false,
+    _t_normalized: Float = 0,
+    _inverted: bool = false,
+    _loop_count: usize = 0,
+    _integrator_ref: IntegratorRef = undefined,
 
-pub fn Animation(comptime Integration: type) type {
-    return struct {
-        const Self = @This();
+    pub fn construct(self: *Animation) void {
+        if (self.active_on_init)
+            Animation.Activation.activate(self.id);
+    }
 
-        // type state
-        var initialized = false;
-        var animations: utils.DynArray(Self) = undefined;
+    pub fn new(
+        animation: Animation,
+        integrator: anytype,
+        component_id: ?Index,
+    ) void {
+        const i_type = @TypeOf(integrator);
+        const aid = i_type.Component.create(animation, integrator).id;
+        if (component_id) |cid|
+            Component.byId(aid).initForComponent(cid);
+    }
 
-        // object properties
-        duration: usize = 0,
-        looping: bool = false,
-        inverse_on_loop: bool = false,
-        reset_on_finish: bool = true,
-        active_on_init: bool = true,
-        integration: Integration = undefined,
+    pub fn resetById(id: Index) void {
+        Component.byId(id).reset();
+    }
 
-        // callbacks
-        loop_callback: ?*const fn (usize) void = null,
-        finish_callback: ?*const fn () void = null,
-
-        // internal state
-        _active: bool = false,
-        _suspending: bool = false,
-        _t_normalized: Float = 0,
-        _inverted: bool = false,
-        _loop_count: usize = 0,
-
-        fn init() AnimationTypeReference {
-            defer Self.initialized = true;
-            if (Self.initialized)
-                @panic("Animation Type already initialized: " ++ @typeName(Integration));
-
-            animations = utils.DynArray(Self).new(firefly.api.COMPONENT_ALLOC);
-            return AnimationTypeReference{
-                ._update_all = Self.updateAll,
-                ._deinit = Self.deinit,
-            };
+    pub fn reset(self: *Animation) void {
+        self._loop_count = 0;
+        self._t_normalized = 0.0;
+        if (self.active_on_init) {
+            Animation.Activation.activate(self.id);
+        } else {
+            Animation.Activation.deactivate(self.id);
         }
+    }
 
-        fn deinit() void {
-            defer Self.initialized = false;
-            if (!Self.initialized)
+    pub fn suspendById(id: Index) void {
+        Component.byId(id).suspendIt();
+    }
+
+    pub fn suspendIt(self: *Animation) void {
+        self._suspending = true;
+    }
+
+    pub fn initForComponent(self: *Animation, c_id: Index) void {
+        self._integrator_ref.init(self.id, c_id);
+    }
+
+    fn update(self: *Animation) void {
+        self._t_normalized += 1.0 * firefly.utils.usize_f32(api.Timer.d_time) / firefly.utils.usize_f32(self.duration);
+        if (self._t_normalized >= 1.0) {
+            self._t_normalized = 0.0;
+            if (self._suspending or !self.looping) {
+                finish(self);
                 return;
-
-            var next = animations.slots.nextSetBit(0);
-            while (next) |i| {
-                dispose(i);
-                next = animations.slots.nextSetBit(i + 1);
-            }
-            animations.clear();
-            animations.deinit();
-        }
-
-        pub fn new(
-            duration: usize,
-            looping: bool,
-            inverse_on_loop: bool,
-            reset_on_finish: bool,
-            loop_callback: ?*const fn (usize) void,
-            finish_callback: ?*const fn () void,
-            integration: Integration,
-        ) IAnimation {
-            const _new = Self{
-                .duration = duration,
-                .looping = looping,
-                .inverse_on_loop = inverse_on_loop,
-                .reset_on_finish = reset_on_finish,
-                .loop_callback = loop_callback,
-                .finish_callback = finish_callback,
-                .integration = integration,
-            };
-            const index = animations.add(_new);
-
-            const self = animations.get(index).?;
-            return IAnimation{
-                .id = index,
-                .animation = self,
-                .fn_activate = activate,
-                .fn_suspend_it = suspendIt,
-                .fn_set_loop_callback = withLoopCallback,
-                .fn_set_finish_callback = withFinishCallback,
-                .fn_reset = reset,
-                .fn_dispose = dispose,
-            };
-        }
-
-        pub fn activate(index: Index, active: bool) void {
-            if (animations.get(index)) |a| a._active = active;
-        }
-
-        pub fn reset(index: Index) void {
-            if (animations.get(index)) |a| {
-                a.resetIntegration();
-                a._active = a.active_on_init;
-            }
-        }
-
-        pub fn suspendIt(index: Index) void {
-            if (animations.get(index)) |a| a._suspending = true;
-        }
-
-        fn updateAll() void {
-            var next = animations.slots.nextSetBit(0);
-            while (next) |i| {
-                if (animations.get(i)) |a|
-                    if (a._active) a.update();
-
-                next = animations.slots.nextSetBit(i + 1);
-            }
-        }
-
-        fn update(self: *Self) void {
-            self._t_normalized += 1.0 * firefly.utils.usize_f32(api.Timer.d_time) / firefly.utils.usize_f32(self.duration);
-            if (self._t_normalized >= 1.0) {
-                self._t_normalized = 0.0;
-                if (self._suspending or !self.looping) {
-                    finish(self);
-                    return;
-                } else {
-                    if (self.inverse_on_loop)
-                        self._inverted = !self._inverted;
-                    if (!self._inverted) {
-                        self._loop_count += 1;
-                        if (self.loop_callback) |c| {
-                            c(self._loop_count);
-                        }
+            } else {
+                if (self.inverse_on_loop)
+                    self._inverted = !self._inverted;
+                if (!self._inverted) {
+                    self._loop_count += 1;
+                    if (self.loop_callback) |c| {
+                        c(self._loop_count);
                     }
                 }
             }
-
-            Integration.integrate(self);
         }
 
-        fn finish(self: *Self) void {
-            self._active = false;
-            if (self.reset_on_finish) resetIntegration(self);
-            if (self.finish_callback) |c| c();
-        }
+        self._integrator_ref.integrate(self);
+    }
 
-        fn resetIntegration(self: *Self) void {
-            self._loop_count = 0;
-            self._t_normalized = 0.0;
-        }
+    fn finish(self: *Animation) void {
+        if (self.reset_on_finish)
+            reset(self);
+        if (self.finish_callback) |c|
+            c();
+        Animation.Activation.deactivate(self.id);
+    }
+};
 
-        pub fn integrateAt(self: *Self, t: Float) void {
-            self._t_normalized = t;
-            Integration.integrate(self);
-        }
+pub const IntegratorRef = struct {
+    init: *const fn (animation_id: Index, component_id: Index) void,
+    integrate: *const fn (animation: *Animation) void,
+};
 
-        pub fn withFinishCallback(index: Index, finish_callback: ?*const fn () void) void {
-            if (animations.get(index)) |a| a.finish_callback = finish_callback;
-        }
+// //////////////////////////////////////////////////////////////
+// //// Animation System
+// //////////////////////////////////////////////////////////////
 
-        pub fn withLoopCallback(index: Index, loop_callback: ?*const fn (usize) void) void {
-            if (animations.get(index)) |a| a.loop_callback = loop_callback;
-        }
+pub const AnimationSystem = struct {
+    pub usingnamespace api.SystemMixin(AnimationSystem);
 
-        pub fn dispose(index: Index) void {
-            if (@hasDecl(Integration, "dispose"))
-                animations.get(index).?.integration.dispose();
-            animations.delete(index);
-        }
-    };
-}
+    pub fn systemActivation(active: bool) void {
+        if (active)
+            firefly.Engine.subscribeUpdate(update)
+        else
+            firefly.Engine.unsubscribeUpdate(update);
+    }
 
-fn AnimationResolver(comptime Integration: type) type {
-    return struct {
-        pub fn get(animation_interface: *IAnimation) *Animation(Integration) {
-            return @alignCast(@ptrCast(animation_interface.animation));
-        }
-
-        pub fn byName(name: String) ?*Animation(Integration) {
-            var a = Animation(Integration);
-            var next = a.animations.slots.nextSetBit(0);
-            while (next) |i| {
-                const a_ptr: *IAnimation = a.animations.get(i);
-                if (std.mem.eql(u8, a_ptr.name, name)) {
-                    return get(a_ptr);
-                }
-                next = a.animations.slots.nextSetBit(i + 1);
-            }
-            return null;
-        }
-    };
-}
+    fn update(_: api.UpdateEvent) void {
+        Animation.Activation.process(Animation.update);
+    }
+};
 
 //////////////////////////////////////////////////////////////
 //// EAnimation Entity Component
@@ -258,74 +180,47 @@ pub const EAnimation = struct {
         self.animations = utils.BitSet.new(firefly.api.ENTITY_ALLOC);
     }
 
-    pub const AnimationTemplate = struct {
-        duration: usize,
-        looping: bool = false,
-        inverse_on_loop: bool = false,
-        reset_on_finish: bool = true,
-        active_on_init: bool = true,
-        loop_callback: ?*const fn (usize) void = null,
-        finish_callback: ?*const fn () void = null,
-    };
-
-    pub fn addToComponent(
-        entity_id: Index,
-        animation: AnimationTemplate,
-        integration: anytype,
-    ) void {
-        if (!api.Entity.hasEntityComponent(entity_id, Component.aspect))
-            Component.new(entity_id, .{});
-
-        var i = integration;
-        i.init(entity_id);
-        const animation_id = AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
-            animation.duration,
-            animation.looping,
-            animation.inverse_on_loop,
-            animation.reset_on_finish,
-            animation.loop_callback,
-            animation.finish_callback,
-            i,
-        ));
-        Component.byId(entity_id).?.animations.set(animation_id);
+    pub fn build(a: EAnimation) EAnimationBuilder {
+        return EAnimationBuilder.new(a);
     }
 
-    // pub fn withAnimation(
-    //     self: *EAnimation,
-    //     animation: AnimationTemplate,
-    //     integration: anytype,
-    // ) *EAnimation {
-    //     var i = integration;
-    //     i.init(self.id);
-    //     self.animations.set(AnimationSystem.animation_refs.add(Animation(@TypeOf(integration)).new(
-    //         animation.duration,
-    //         animation.looping,
-    //         animation.inverse_on_loop,
-    //         animation.reset_on_finish,
-    //         animation.loop_callback,
-    //         animation.finish_callback,
-    //         i,
-    //     )));
-    //     return self;
-    // }
+    pub fn add(entity_id: Index, animation: Animation, integrator: anytype) void {
+        const i_type = @TypeOf(integrator);
+        const a_id = i_type.Component.create(animation, integrator).id;
+        const exists = Component.byId(entity_id);
+        if (exists) |c| {
+            c.animations.set(a_id);
+            Animation.Component.byId(a_id).initForComponent(entity_id);
+        } else {
+            Component.new(entity_id, .{});
+            if (Component.byId(entity_id)) |c| {
+                c.animations.set(a_id);
+                Animation.Component.byId(a_id).initForComponent(entity_id);
+            }
+        }
+    }
 
     pub fn activation(self: *EAnimation, active: bool) void {
+        if (!initialized) return;
+
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
             if (active) {
-                AnimationSystem.resetById(i);
+                Animation.resetById(i);
             } else {
-                AnimationSystem.activateById(i, false);
+                Animation.Activation.deactivate(i);
             }
             next = self.animations.nextSetBit(i + 1);
         }
     }
 
     pub fn destruct(self: *EAnimation) void {
-        var next = self.animations.nextSetBit(0);
-        while (next) |i| {
-            AnimationSystem.disposeAnimation(i);
-            next = self.animations.nextSetBit(i + 1);
+        if (initialized) {
+            var next = self.animations.nextSetBit(0);
+            while (next) |i| {
+                Animation.Component.dispose(i);
+                next = self.animations.nextSetBit(i + 1);
+            }
         }
 
         self.animations.deinit();
@@ -333,126 +228,83 @@ pub const EAnimation = struct {
     }
 };
 
-//////////////////////////////////////////////////////////////
-//// Animation Integration System
-//////////////////////////////////////////////////////////////
+pub const EAnimationBuilder = struct {
+    component: EAnimation,
+    animations: utils.BitSet,
 
-pub const AnimationSystem = struct {
-    pub usingnamespace api.SystemMixin(AnimationSystem);
-    var animation_type_refs: utils.DynArray(AnimationTypeReference) = undefined;
-    var animation_refs: utils.DynArray(IAnimation) = undefined;
-
-    pub fn systemInit() void {
-        animation_type_refs = utils.DynArray(AnimationTypeReference).newWithRegisterSize(
-            firefly.api.COMPONENT_ALLOC,
-            10,
-        );
-
-        animation_refs = utils.DynArray(IAnimation).new(firefly.api.COMPONENT_ALLOC);
+    pub fn new(component: EAnimation) EAnimationBuilder {
+        return .{
+            .component = component,
+            .animations = utils.BitSet.new(api.ALLOC),
+        };
     }
 
-    pub fn systemDeinit() void {
-        var next = animation_refs.slots.nextSetBit(0);
+    pub fn addAnimation(
+        self: EAnimationBuilder,
+        animation: Animation,
+        integrator: anytype,
+    ) EAnimationBuilder {
+        var builder = self;
+        const i_type = @TypeOf(integrator);
+
+        const a_id = i_type.Component.create(animation, integrator).id;
+        builder.animations.set(a_id);
+        return builder;
+    }
+
+    pub fn buildForEntity(self: EAnimationBuilder, entity_id: Index) void {
+        var builder = self;
+        EAnimation.Component.new(entity_id, self.component);
+
+        var next = builder.animations.nextSetBit(0);
         while (next) |i| {
-            if (animation_refs.get(i)) |ar| ar.fn_dispose(i);
-            next = animation_refs.slots.nextSetBit(i + 1);
+            next = builder.animations.nextSetBit(i + 1);
+            Animation.Component.byId(i).initForComponent(entity_id);
         }
-        animation_refs.clear();
-        animation_refs.deinit();
-        animation_refs = undefined;
-
-        next = animation_type_refs.slots.nextSetBit(0);
-        while (next) |i| {
-            if (animation_type_refs.get(i)) |ar| ar._deinit();
-            next = animation_type_refs.slots.nextSetBit(i + 1);
-        }
-        animation_type_refs.clear();
-        animation_type_refs.deinit();
-        animation_type_refs = undefined;
-    }
-
-    pub fn systemActivation(active: bool) void {
-        if (active)
-            firefly.Engine.subscribeUpdate(update)
-        else
-            firefly.Engine.unsubscribeUpdate(update);
-    }
-
-    pub fn activateById(id: Index, active: bool) void {
-        if (initialized)
-            if (animation_refs.get(id)) |ar| ar.fn_activate(id, active);
-    }
-
-    pub fn resetById(id: Index) void {
-        if (initialized)
-            if (animation_refs.get(id)) |ar| ar.fn_reset(id);
-    }
-
-    pub fn suspendById(id: Index) void {
-        if (initialized)
-            if (animation_refs.get(id)) |ar| ar.fn_suspend_it(id);
-    }
-
-    pub fn setLoopCallbackById(id: Index, callback: *const fn (usize) void) void {
-        if (initialized)
-            if (animation_refs.get(id)) |ar| ar.fn_set_loop_callback(id, callback);
-    }
-
-    pub fn setFinishCallbackById(id: Index, callback: *const fn (Index) void) void {
-        if (initialized)
-            if (animation_refs.get(id)) |ar| ar.fn_set_finish_callback(id, callback);
-    }
-
-    pub fn registerAnimationType(comptime Integration: type) void {
-        _ = animation_type_refs.add(Animation(Integration).init());
-    }
-
-    fn disposeAnimation(id: Index) void {
-        if (initialized) {
-            if (animation_refs.get(id)) |ar| ar.fn_dispose(id);
-            animation_refs.delete(id);
-        }
-    }
-
-    fn update(_: api.UpdateEvent) void {
-        var next = animation_type_refs.slots.nextSetBit(0);
-        while (next) |i| {
-            if (animation_type_refs.get(i)) |ar| ar._update_all();
-            next = animation_type_refs.slots.nextSetBit(i + 1);
-        }
+        builder.animations.deinit();
     }
 };
 
 //////////////////////////////////////////////////////////////
-//// Eased Value Animation
+//// Eased Value Animation Integrator
 //////////////////////////////////////////////////////////////
 
-pub const EasedValueIntegration = struct {
-    pub const resolver = AnimationResolver(EasedValueIntegration);
+pub const EasedValueIntegrator = struct {
+    pub const Component = api.Component.SubTypeMixin(Animation, EasedValueIntegrator);
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
 
     start_value: Float = 0.0,
     end_value: Float = 0.0,
     easing: Easing = Easing.Linear,
     property_ref: ?*const fn (Index) *Float = null,
     _property: *Float = undefined,
-
     _easing_v: Float = 0,
 
-    pub fn init(self: *EasedValueIntegration, id: Index) void {
-        if (self.property_ref) |i|
-            self._property = i(id);
+    pub fn construct(self: *EasedValueIntegrator) void {
+        Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
+            .init = EasedValueIntegrator.init,
+            .integrate = EasedValueIntegrator.integrate,
+        };
+    }
+
+    fn init(animation_id: Index, component_id: Index) void {
+        var self = EasedValueIntegrator.Component.byId(animation_id);
+        if (self.property_ref) |p_ref|
+            self._property = p_ref(component_id);
 
         self._easing_v = self.end_value - self.start_value;
         self._property.* = self.start_value;
     }
 
-    pub fn integrate(a: *Animation(EasedValueIntegration)) void {
-        const self = a.integration;
+    fn integrate(animation: *Animation) void {
+        var self = EasedValueIntegrator.Component.byId(animation.id);
         self._property.* = @mulAdd(
             Float,
-            if (a._inverted) -self._easing_v else self._easing_v,
-            self.easing.f(a._t_normalized),
-            if (a._inverted) self.end_value else self.start_value,
+            if (animation._inverted) -self._easing_v else self._easing_v,
+            self.easing.f(animation._t_normalized),
+            if (animation._inverted) self.end_value else self.start_value,
         );
     }
 };
@@ -461,8 +313,11 @@ pub const EasedValueIntegration = struct {
 //// Color Value Animation
 //////////////////////////////////////////////////////////////
 
-pub const EasedColorIntegration = struct {
-    pub const resolver = AnimationResolver(EasedColorIntegration);
+pub const EasedColorIntegrator = struct {
+    pub const Component = api.Component.SubTypeMixin(Animation, EasedColorIntegrator);
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
 
     start_value: utils.Color = .{ 0, 0, 0, 255 },
     end_value: utils.Color = .{ 0, 0, 0, 255 },
@@ -472,9 +327,17 @@ pub const EasedColorIntegration = struct {
 
     _norm_range: @Vector(4, Float) = .{ 0, 0, 0, 0 },
 
-    pub fn init(self: *EasedColorIntegration, id: Index) void {
+    pub fn construct(self: *EasedColorIntegrator) void {
+        Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
+            .init = EasedColorIntegrator.init,
+            .integrate = EasedColorIntegrator.integrate,
+        };
+    }
+
+    pub fn init(animation_id: Index, component_id: Index) void {
+        var self = EasedColorIntegrator.Component.byId(animation_id);
         if (self.property_ref) |i|
-            self._property = i(id);
+            self._property = i(component_id);
 
         self._norm_range = .{
             @floatFromInt(self.end_value[0] - self.start_value[0]),
@@ -489,17 +352,17 @@ pub const EasedColorIntegration = struct {
         self._property.*[3] = self.start_value[3];
     }
 
-    pub fn integrate(a: *Animation(EasedColorIntegration)) void {
-        const self = a.integration;
-        const v_normalized: Float = self.easing.f(a._t_normalized);
+    pub fn integrate(animation: *Animation) void {
+        var self = EasedColorIntegrator.Component.byId(animation.id);
+        const v_normalized: Float = self.easing.f(animation._t_normalized);
 
         for (0..4) |slot| {
             if (self._norm_range[slot] != 0)
-                _integrate(self, v_normalized, a._inverted, slot);
+                _integrate(self, v_normalized, animation._inverted, slot);
         }
     }
 
-    inline fn _integrate(self: EasedColorIntegration, v_normalized: Float, inv: bool, slot: usize) void {
+    inline fn _integrate(self: *EasedColorIntegrator, v_normalized: Float, inv: bool, slot: usize) void {
         self._property.*[slot] = @intFromFloat(@mulAdd(
             Float,
             if (inv) -self._norm_range[slot] else self._norm_range[slot],
@@ -510,7 +373,7 @@ pub const EasedColorIntegration = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Index Frame Animation
+//// Index Frame Animation Integrator
 //////////////////////////////////////////////////////////////
 
 pub const IndexFrame = struct {
@@ -595,38 +458,52 @@ pub const IndexFrameList = struct {
     }
 };
 
-pub const IndexFrameIntegration = struct {
-    pub const resolver = AnimationResolver(IndexFrameIntegration);
+pub const IndexFrameIntegrator = struct {
+    pub const Component = api.Component.SubTypeMixin(Animation, IndexFrameIntegrator);
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
 
     timeline: IndexFrameList,
     property_ref: ?*const fn (Index) *Index,
 
     _property: *Index = undefined,
 
-    pub fn init(self: *IndexFrameIntegration, id: Index) void {
-        if (self.property_ref) |ref| {
-            self._property = ref(id);
-        }
+    pub fn construct(self: *IndexFrameIntegrator) void {
+        Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
+            .init = IndexFrameIntegrator.init,
+            .integrate = IndexFrameIntegrator.integrate,
+        };
     }
 
-    pub fn integrate(a: *Animation(IndexFrameIntegration)) void {
-        a.integration._property.* = a.integration.timeline.getAt(
-            a._t_normalized,
-            a._inverted,
-        );
-    }
-
-    pub fn dispose(self: *IndexFrameIntegration) void {
+    pub fn destruct(self: *IndexFrameIntegrator) void {
         self.timeline.deinit();
+    }
+
+    pub fn init(animation_id: Index, component_id: Index) void {
+        var self = IndexFrameIntegrator.Component.byId(animation_id);
+        if (self.property_ref) |ref|
+            self._property = ref(component_id);
+    }
+
+    pub fn integrate(animation: *Animation) void {
+        var self = IndexFrameIntegrator.Component.byId(animation.id);
+        self._property.* = self.timeline.getAt(
+            animation._t_normalized,
+            animation._inverted,
+        );
     }
 };
 
 //////////////////////////////////////////////////////////////
-//// Bezier Curve Animation
+//// Bezier Curve Animation Integrator
 //////////////////////////////////////////////////////////////
 
-pub const BezierCurveIntegration = struct {
-    pub const resolver = AnimationResolver(BezierCurveIntegration);
+pub const BezierCurveIntegrator = struct {
+    pub const Component = api.Component.SubTypeMixin(Animation, BezierCurveIntegrator);
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
 
     bezier_function: utils.CubicBezierFunction = undefined,
     easing: Easing = Easing.Linear,
@@ -638,25 +515,34 @@ pub const BezierCurveIntegration = struct {
     _property_y: *Float = undefined,
     _property_a: *Float = undefined,
 
-    pub fn init(self: *BezierCurveIntegration, id: Index) void {
+    pub fn construct(self: *BezierCurveIntegrator) void {
+        Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
+            .init = BezierCurveIntegrator.init,
+            .integrate = BezierCurveIntegrator.integrate,
+        };
+    }
+
+    pub fn init(animation_id: Index, component_id: Index) void {
+        var self = BezierCurveIntegrator.Component.byId(animation_id);
         if (self.property_ref_x) |i| {
-            self._property_x = i(id);
+            self._property_x = i(component_id);
         }
         if (self.property_ref_y) |i| {
-            self._property_y = i(id);
+            self._property_y = i(component_id);
         }
         if (self.property_ref_a) |i| {
-            self._property_a = i(id);
+            self._property_a = i(component_id);
         }
     }
 
-    pub fn integrate(a: *Animation(BezierCurveIntegration)) void {
-        const pos = a.integration.bezier_function.fp(a.easing(a._t_normalized), a._inverted);
-        a.integration._property_x.* = pos[0];
-        a.integration._property_y.* = pos[1];
-        a.integration._property_a.* = std.math.radiansToDegrees(
+    pub fn integrate(a: *Animation) void {
+        var self = BezierCurveIntegrator.Component.byId(a.id);
+        const pos = self.bezier_function.fp(a.easing(a._t_normalized), a._inverted);
+        self._property_x.* = pos[0];
+        self._property_y.* = pos[1];
+        self._property_a.* = std.math.radiansToDegrees(
             Float,
-            a.integration.bezier_function.fax(
+            self.bezier_function.fax(
                 a.easing(a._t_normalized),
                 a._inverted,
             ),

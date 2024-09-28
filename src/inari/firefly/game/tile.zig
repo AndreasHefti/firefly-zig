@@ -487,13 +487,13 @@ pub const TileMapping = struct {
                 next = frames.slots.nextSetBit(i + 1);
             }
 
-            physics.EAnimation.addToComponent(
-                entity.id,
+            physics.Animation.new(
                 .{ .duration = list._duration, .looping = true, .active_on_init = true },
-                physics.IndexFrameIntegration{
+                physics.IndexFrameIntegrator{
                     .timeline = list,
                     .property_ref = graphics.ETile.Property.FrameId,
                 },
+                entity.id,
             );
         }
     }

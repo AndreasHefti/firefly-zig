@@ -8,7 +8,7 @@ const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const EAnimation = firefly.physics.EAnimation;
 const AnimationSystem = firefly.physics.AnimationSystem;
-const EasedValueIntegration = firefly.physics.EasedValueIntegration;
+const EasedValueIntegrator = firefly.physics.EasedValueIntegrator;
 const Allocator = std.mem.Allocator;
 const Easing = utils.Easing;
 
@@ -32,32 +32,35 @@ fn _Example_One_Entity_No_Views() void {
     });
 
     Entity.build(.{ .name = "TestEntity" })
-        .withComponent(
-        ETransform{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 },
-    )
+        .withComponent(ETransform{ .position = .{ 64, 164 }, .scale = .{ 4, 4 }, .pivot = .{ 16, 16 }, .rotation = 180 })
         .withComponent(ESprite{ .template_id = sprite_id })
-        .addToComponent2(
-        EAnimation,
-        .{ .duration = 1000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
-        EasedValueIntegration{
+        .addFromBuilder(
+        EAnimation.build(.{})
+            .addAnimation(.{
+            .duration = 1000,
+            .looping = true,
+            .inverse_on_loop = true,
+            .active_on_init = true,
+            .loop_callback = loopCallback1,
+        }, EasedValueIntegrator{
             .start_value = 164.0,
             .end_value = 264.0,
             .easing = Easing.Linear,
             .property_ref = ETransform.Property.XPos,
-        },
-    )
-        .addToComponent2(
-        EAnimation,
-        .{ .duration = 2000, .looping = true, .inverse_on_loop = true, .active_on_init = true },
-        EasedValueIntegration{
+        })
+            .addAnimation(.{
+            .duration = 2000,
+            .looping = true,
+            .inverse_on_loop = true,
+            .active_on_init = true,
+        }, EasedValueIntegrator{
             .start_value = 0.0,
             .end_value = 180.0,
             .easing = Easing.Linear,
             .property_ref = ETransform.Property.Rotation,
-        },
-    ).activate();
-
-    AnimationSystem.setLoopCallbackById(1, loopCallback1);
+        }),
+    )
+        .activate();
 }
 
 fn loopCallback1(count: usize) void {

@@ -53,19 +53,15 @@ fn sceneInit(_: *api.CallContext) void {
         .template_id = sprite_id,
         .tint_color = .{ 255, 255, 255, 0 },
     });
-    physics.EAnimation.addToComponent(
-        eid,
-        .{
-            .duration = 3000,
-            .active_on_init = true,
-        },
-        physics.EasedColorIntegration{
-            .start_value = .{ 255, 255, 255, 0 },
-            .end_value = .{ 255, 255, 255, 255 },
-            .easing = utils.Easing.Linear,
-            .property_ref = graphics.ESprite.Property.TintColor,
-        },
-    );
+    physics.EAnimation.add(eid, .{
+        .duration = 3000,
+        .active_on_init = true,
+    }, physics.EasedColorIntegrator{
+        .start_value = .{ 255, 255, 255, 0 },
+        .end_value = .{ 255, 255, 255, 255 },
+        .easing = utils.Easing.Linear,
+        .property_ref = graphics.ESprite.Property.TintColor,
+    });
     api.Entity.Activation.activate(eid);
 }
 
@@ -79,5 +75,6 @@ fn sceneRun(ctx: *api.CallContext) void {
 }
 
 fn sceneEnd(_: *api.CallContext) void {
+    std.debug.print("**************** Intro end!", .{});
     firefly.Engine.registerQuitKey(firefly.api.KeyboardKey.KEY_SPACE);
 }

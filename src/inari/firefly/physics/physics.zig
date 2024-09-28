@@ -12,16 +12,15 @@ const Float = firefly.utils.Float;
 
 pub const Gravity: Float = 9.8;
 
-pub const EasedValueIntegration = animation.EasedValueIntegration;
-pub const EasedColorIntegration = animation.EasedColorIntegration;
-pub const IAnimation = animation.IAnimation;
 pub const Animation = animation.Animation;
 pub const EAnimation = animation.EAnimation;
 pub const AnimationSystem = animation.AnimationSystem;
 pub const IndexFrame = animation.IndexFrame;
 pub const IndexFrameList = animation.IndexFrameList;
-pub const IndexFrameIntegration = animation.IndexFrameIntegration;
-pub const BezierCurveIntegration = animation.BezierCurveIntegration;
+pub const EasedValueIntegrator = animation.EasedValueIntegrator;
+pub const EasedColorIntegrator = animation.EasedColorIntegrator;
+pub const IndexFrameIntegrator = animation.IndexFrameIntegrator;
+pub const BezierCurveIntegrator = animation.BezierCurveIntegrator;
 
 pub const MovFlags = movement.MovFlags;
 pub const EMovement = movement.EMovement;

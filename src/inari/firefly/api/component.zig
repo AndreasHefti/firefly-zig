@@ -704,8 +704,8 @@ pub fn SubTypingMixin(comptime T: type) type {
     comptime {
         if (@typeInfo(T) != .Struct)
             @compileError("Expects component type is a struct.");
-        if (!@hasDecl(T, "createForSubType"))
-            @compileError("Expects component type to have function: createForSubType(SubType) *T, used to create Component for Subtype.");
+        // if (!@hasDecl(T, "createForSubType"))
+        //     @compileError("Expects component type to have function: createForSubType(SubType) *T, used to create Component for Subtype.");
         if (!@hasDecl(T, "Component"))
             @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
     }
@@ -795,18 +795,33 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
             data = undefined;
         }
 
+        pub fn create(base: T, subtype: SubType) *SubType {
+            const base_type: *T = T.Component.register(base);
+            const result = data.getOrPut(base_type.id) catch unreachable;
+            if (result.found_existing)
+                utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{base_type.id});
+
+            result.value_ptr.* = subtype;
+            result.value_ptr.*.id = base_type.id;
+
+            if (@hasDecl(SubType, "construct"))
+                result.value_ptr.*.construct();
+
+            return result.value_ptr;
+        }
+
         pub fn newActive(st: SubType) void {
             ActivationMixin(T).activate(new(st).id);
         }
 
-        pub fn new(st: SubType) *SubType {
-            const subtype: *T = T.createForSubType(st);
-            const result = data.getOrPut(subtype.id) catch unreachable;
+        pub fn new(subtype: SubType) *SubType {
+            const base_type: *T = T.createForSubType(subtype);
+            const result = data.getOrPut(base_type.id) catch unreachable;
             if (result.found_existing)
-                utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{subtype.id});
+                utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{base_type.id});
 
-            result.value_ptr.* = st;
-            result.value_ptr.*.id = subtype.id;
+            result.value_ptr.* = subtype;
+            result.value_ptr.*.id = base_type.id;
 
             if (@hasDecl(SubType, "construct"))
                 result.value_ptr.*.construct();

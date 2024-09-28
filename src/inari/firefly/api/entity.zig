@@ -118,13 +118,13 @@ pub const EntityBuilder = struct {
         return self;
     }
 
-    pub fn addToComponent(self: EntityBuilder, c_type: type, c: anytype) EntityBuilder {
-        c_type.addToComponent(self.entity_id, c);
+    pub fn addFromBuilder(self: EntityBuilder, builder: anytype) EntityBuilder {
+        builder.buildForEntity(self.entity_id);
         return self;
     }
 
-    pub fn addToComponent2(self: EntityBuilder, c_type: type, c1: anytype, c2: anytype) EntityBuilder {
-        c_type.addToComponent(self.entity_id, c1, c2);
+    pub fn addToComponent(self: EntityBuilder, c_type: type, c: anytype) EntityBuilder {
+        c_type.addToComponent(self.entity_id, c);
         return self;
     }
 

@@ -16,7 +16,6 @@ const PosF = utils.PosF;
 const CInt = utils.CInt;
 const Float = utils.Float;
 const String = utils.String;
-const BaseMaterialType = firefly.game.BaseMaterialType;
 const TileTemplate = firefly.game.TileTemplate;
 const TileMapping = firefly.game.TileMapping;
 const View = firefly.graphics.View;
@@ -25,7 +24,7 @@ const EShape = firefly.graphics.EShape;
 const TileAnimationFrame = firefly.game.TileAnimationFrame;
 const IndexFrameList = firefly.physics.IndexFrameList;
 const EAnimation = firefly.physics.EAnimation;
-const IndexFrameIntegration = firefly.physics.IndexFrameIntegration;
+const IndexFrameIntegrator = firefly.physics.IndexFrameIntegrator;
 
 const JSON_TILE_SET: String =
     \\  {
@@ -191,10 +190,10 @@ fn createTile(
             next = frames.slots.nextSetBit(i + 1);
         }
 
-        EAnimation.addToComponent(
+        EAnimation.add(
             eid,
             .{ .duration = list._duration, .looping = true, .active_on_init = true },
-            IndexFrameIntegration{
+            IndexFrameIntegrator{
                 .timeline = list,
                 .property_ref = ESprite.Property.FrameId,
             },

@@ -103,7 +103,7 @@ pub const BitSet = struct {
     }
 
     pub fn prevSetBit(self: Self, index: usize) ?usize {
-        if (index >= self.unmanaged.capacity())
+        if (index >= self.unmanaged.capacity() + 1)
             return null;
 
         var i = index;

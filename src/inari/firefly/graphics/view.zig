@@ -464,7 +464,7 @@ pub const Scene = struct {
     pub const Component = api.Component.Mixin(Scene);
     pub const Naming = api.Component.NameMappingMixin(Scene);
     pub const Activation = api.Component.ActivationMixin(Scene);
-    pub const Subscriptio = api.Component.SubscriptionMixin(Scene);
+    pub const Subscription = api.Component.SubscriptionMixin(Scene);
 
     pub usingnamespace api.CallContextMixin(Scene);
 

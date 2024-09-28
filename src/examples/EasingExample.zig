@@ -7,8 +7,7 @@ const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const EAnimation = firefly.physics.EAnimation;
-const AnimationIntegration = firefly.physics.AnimationIntegration;
-const EasedValueIntegration = firefly.physics.EasedValueIntegration;
+const EasedValueIntegrator = firefly.physics.EasedValueIntegrator;
 const Allocator = std.mem.Allocator;
 const Easing = utils.Easing;
 const String = utils.String;
@@ -73,7 +72,7 @@ fn create(name: String, easing: Easing) void {
     Entity.build(.{})
         .withComponent(ETransform{ .position = .{ 200, ypos } })
         .withComponent(ESprite{ .template_id = SpriteTemplate.Naming.byName("Sprite").?.id })
-        .addToComponent2(EAnimation, .{ .duration = 5000, .looping = true, .inverse_on_loop = true, .active_on_init = true }, EasedValueIntegration{ .start_value = 200, .end_value = 500, .easing = easing, .property_ref = ETransform.Property.XPos })
+        .addFromBuilder(EAnimation.build(.{}).addAnimation(.{ .duration = 5000, .looping = true, .inverse_on_loop = true, .active_on_init = true }, EasedValueIntegrator{ .start_value = 200, .end_value = 500, .easing = easing, .property_ref = ETransform.Property.XPos }))
         .activate();
 
     ypos += 35;
