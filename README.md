@@ -55,51 +55,51 @@ Features:
 
 ``` zig
 Texture.Component.newActive(.{
-        .name = "TestTexture",
-        .resource = "resources/logo.png",
-        .is_mipmap = false,
-    });
+    .name = "TestTexture",
+    .resource = "resources/logo.png",
+    .is_mipmap = false,
+});
 
-    const sprite_id = SpriteTemplate.Component.new(.{
-        .texture_name = "TestTexture",
-        .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    });
+const sprite_id = SpriteTemplate.Component.new(.{
+    .texture_name = "TestTexture",
+    .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
+});
 
-    Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{
-        .position = .{ 64, 164 },
-        .scale = .{ 4, 4 },
-        .pivot = .{ 16, 16 },
-        .rotation = 180,
-    })
-        .withComponent(ESprite{
-        .template_id = sprite_id,
-    })
-        .addFromBuilder(EAnimation.build(.{})
-        .addAnimation(.{
-        .duration = 1000,
-        .looping = true,
-        .inverse_on_loop = true,
-        .active_on_init = true,
-        .loop_callback = loopCallback1,
-    }, EasedValueIntegrator{
-        .start_value = 164.0,
-        .end_value = 264.0,
-        .easing = Easing.Linear,
-        .property_ref = ETransform.Property.XPos,
-    })
-        .addAnimation(.{
-        .duration = 2000,
-        .looping = true,
-        .inverse_on_loop = true,
-        .active_on_init = true,
-    }, EasedValueIntegrator{
-        .start_value = 0.0,
-        .end_value = 180.0,
-        .easing = Easing.Linear,
-        .property_ref = ETransform.Property.Rotation,
-    }))
-        .activate();
+Entity.build(.{ .name = "TestEntity" })
+    .withComponent(ETransform{
+    .position = .{ 64, 164 },
+    .scale = .{ 4, 4 },
+    .pivot = .{ 16, 16 },
+    .rotation = 180,
+})
+    .withComponent(ESprite{
+    .template_id = sprite_id,
+})
+    .addFromBuilder(EAnimation.build(.{})
+    .addAnimation(.{
+    .duration = 1000,
+    .looping = true,
+    .inverse_on_loop = true,
+    .active_on_init = true,
+    .loop_callback = loopCallback1,
+}, EasedValueIntegrator{
+    .start_value = 164.0,
+    .end_value = 264.0,
+    .easing = Easing.Linear,
+    .property_ref = ETransform.Property.XPos,
+})
+    .addAnimation(.{
+    .duration = 2000,
+    .looping = true,
+    .inverse_on_loop = true,
+    .active_on_init = true,
+}, EasedValueIntegrator{
+    .start_value = 0.0,
+    .end_value = 180.0,
+    .easing = Easing.Linear,
+    .property_ref = ETransform.Property.Rotation,
+}))
+    .activate();
 ```
 
  ## Platformer essentials and Room loading from JSON file now working:
