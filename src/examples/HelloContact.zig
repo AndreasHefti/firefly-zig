@@ -75,7 +75,7 @@ fn init() void {
         .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
         .activateGet();
 
-    var tile_grid = TileGrid.Component.create(.{
+    var tile_grid = TileGrid.Component.newGet(.{
         .name = "TileGrid1",
         .world_position = PosF{ 50, 300 },
         .dimensions = .{ 10, 3, 32, 32 },

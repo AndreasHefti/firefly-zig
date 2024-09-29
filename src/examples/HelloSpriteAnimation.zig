@@ -31,15 +31,15 @@ fn init() void {
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     });
-    const sid2 = SpriteTemplate.Component.create(.{
+    const sid2 = SpriteTemplate.Component.newGet(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipX().id;
-    const sid3 = SpriteTemplate.Component.create(.{
+    const sid3 = SpriteTemplate.Component.newGet(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipY().flipX().id;
-    const sid4 = SpriteTemplate.Component.create(.{
+    const sid4 = SpriteTemplate.Component.newGet(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipY().id;

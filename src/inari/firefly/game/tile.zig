@@ -194,7 +194,7 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                var st = graphics.SpriteTemplate.Component.create(.{
+                var st = graphics.SpriteTemplate.Component.newGet(.{
                     .name = tt.name,
                     .texture_name = self.texture_name,
                     .texture_bounds = .{
@@ -215,7 +215,7 @@ pub const TileSet = struct {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            var ast = graphics.SpriteTemplate.Component.create(.{
+                            var ast = graphics.SpriteTemplate.Component.newGet(.{
                                 .texture_name = self.texture_name,
                                 .texture_bounds = .{
                                     frame.sprite_data.texture_pos[0],
@@ -442,7 +442,7 @@ pub const TileMapping = struct {
 
             const tile_grid_data = self.tile_grid_data.get(i).?;
             const layer_id = graphics.Layer.Naming.getId(tile_grid_data.layer);
-            var tile_grid = graphics.TileGrid.Component.create(.{
+            var tile_grid = graphics.TileGrid.Component.newGet(.{
                 .name = tile_grid_data.name,
                 .view_id = self.view_id,
                 .layer_id = layer_id,

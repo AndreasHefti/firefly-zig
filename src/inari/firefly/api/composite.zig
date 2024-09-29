@@ -208,7 +208,7 @@ pub const Composite = struct {
 pub fn CompositeMixin(comptime T: type) type {
     return struct {
         pub fn build(subtype: anytype) CompositeBuilder {
-            return CompositeBuilder{ .id = T.Component.new(subtype).id };
+            return CompositeBuilder{ .id = T.Component.new(subtype) };
         }
 
         pub fn getAttribute(c_id: Index, name: String) ?String {

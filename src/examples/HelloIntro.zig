@@ -16,7 +16,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 pub fn init() void {
-    var intro_scene = graphics.Scene.Component.create(.{
+    var intro_scene = graphics.Scene.Component.newGet(.{
         .init_function = sceneInit,
         .delete_after_run = true,
         .callback = sceneEnd,

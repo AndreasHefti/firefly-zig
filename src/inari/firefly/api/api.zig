@@ -342,7 +342,7 @@ pub const Attributes = struct {
     }
 
     pub fn newWith(name: ?String, attributes: anytype) *Attributes {
-        var result = Attributes.Component.create(.{ .name = name });
+        var result = Attributes.Component.newGet(.{ .name = name });
 
         inline for (attributes) |v| {
             const t = @typeInfo(@TypeOf(v[1]));

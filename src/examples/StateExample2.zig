@@ -52,7 +52,7 @@ fn init() void {
     _ = api.Condition.Component.new(.{ .name = "left down", .check = leftDown });
     _ = api.Condition.Component.new(.{ .name = "left up", .check = leftUp });
 
-    const state_engine = EntityStateEngine.Component.create(.{ .name = "MoveX" })
+    const state_engine = EntityStateEngine.Component.newGet(.{ .name = "MoveX" })
         .withState(.{ .id = 1, .name = "right down", .condition = api.Condition.functionByName("right down") })
         .withState(.{ .id = 2, .name = "right up", .condition = api.Condition.functionByName("right up") })
         .withState(.{ .id = 3, .name = "left down", .condition = api.Condition.functionByName("left down") })

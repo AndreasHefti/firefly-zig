@@ -46,7 +46,7 @@ fn init() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    const view = View.Component.create(.{
+    const view = View.Component.newGet(.{
         .name = "TestView",
         .position = .{ 20, 40 },
         .pivot = .{ 0, 0 },

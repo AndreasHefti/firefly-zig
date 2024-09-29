@@ -209,7 +209,7 @@ pub fn Mixin(comptime T: type) type {
             return pool.slots.count();
         }
 
-        pub fn create(t: T) *T {
+        pub fn newGet(t: T) *T {
             return byId(new(t));
         }
 
@@ -771,13 +771,13 @@ pub fn ControlMixin(comptime T: type) type {
         }
 
         pub fn add(id: Index, update: api.CallFunction, name: ?String, active: bool) void {
-            const c_sub = api.VoidControl.Component.new(.{
+            const c_sub_id = api.VoidControl.Component.new(.{
                 .name = name,
                 .update = update,
             });
 
-            indexes.map(id, c_sub.id);
-            ActivationMixin(api.Control).set(c_sub.id, active);
+            indexes.map(id, c_sub_id);
+            ActivationMixin(api.Control).set(c_sub_id, active);
         }
 
         pub fn addActiveOf(id: Index, subtype: anytype) void {
@@ -786,13 +786,13 @@ pub fn ControlMixin(comptime T: type) type {
 
         pub fn addOf(id: Index, subtype: anytype, active: bool) void {
             const c_subtype_type = @TypeOf(subtype);
-            const c_subtype = c_subtype_type.Component.new(subtype);
-            indexes.map(id, c_subtype.id);
+            const c_sub_id = c_subtype_type.Component.new(subtype);
+            indexes.map(id, c_sub_id);
 
             if (@hasDecl(c_subtype_type, "initForComponent"))
                 c_subtype_type.initForComponent(id);
 
-            ActivationMixin(api.Control).set(c_subtype.id, active);
+            ActivationMixin(api.Control).set(c_sub_id, active);
         }
 
         pub fn addById(id: Index, control_id: Index) void {
@@ -923,27 +923,23 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
             data = undefined;
         }
 
-        pub fn create(base: T, subtype: SubType) *SubType {
-            const base_type: *T = T.Component.register(base);
-            const result = data.getOrPut(base_type.id) catch unreachable;
-            if (result.found_existing)
-                utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{base_type.id});
-
-            result.value_ptr.* = subtype;
-            result.value_ptr.*.id = base_type.id;
-
-            if (@hasDecl(SubType, "construct"))
-                result.value_ptr.*.construct();
-
-            return result.value_ptr;
+        pub fn createSubtype(base: T, subtype: SubType) *SubType {
+            return _register(T.Component.register(base), subtype);
         }
 
         pub fn newActive(st: SubType) void {
-            ActivationMixin(T).activate(new(st).id);
+            ActivationMixin(T).activate(new(st));
         }
 
-        pub fn new(subtype: SubType) *SubType {
-            const base_type: *T = T.createForSubType(subtype);
+        pub fn newGet(subtype: SubType) *SubType {
+            return byId(new(subtype));
+        }
+
+        pub fn new(subtype: SubType) Index {
+            return _register(T.createForSubType(subtype), subtype).id;
+        }
+
+        fn _register(base_type: *T, subtype: SubType) *SubType {
             const result = data.getOrPut(base_type.id) catch unreachable;
             if (result.found_existing)
                 utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{base_type.id});
