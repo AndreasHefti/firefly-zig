@@ -73,6 +73,7 @@ pub const VoidControl = control.VoidControl;
 pub const Composite = composite.Composite;
 pub const CompositeLifeCycle = composite.CompositeLifeCycle;
 pub const CompositeMixin = composite.CompositeMixin;
+pub const CompositeBuilder = composite.CompositeBuilder;
 pub const State = control.State;
 pub const StateEngine = control.StateEngine;
 pub const EntityStateEngine = control.EntityStateEngine;

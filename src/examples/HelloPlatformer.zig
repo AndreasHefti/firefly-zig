@@ -81,8 +81,9 @@ fn init() void {
     game.World.loadByName("World1");
 
     //create player with load task (active room will load and activate the player when started)
-    var player = game.Player.Component.new(.{ .name = player_name });
-    _ = player.withTask(
+    _ = game.Player.Composite
+        .build(.{ .name = player_name })
+        .withTask(
         api.Task{
             .run_once = true,
             .function = playerLoadTask,
@@ -90,13 +91,22 @@ fn init() void {
         api.CompositeLifeCycle.LOAD,
         null,
     );
+    // var player = game.Player.Component.new(.{ .name = player_name });
+    // _ = player.withTask(
+    //     api.Task{
+    //         .run_once = true,
+    //         .function = playerLoadTask,
+    //     },
+    //     api.CompositeLifeCycle.LOAD,
+    //     null,
+    // );
 
     // and just start the Room with the player
     game.Room.startRoom(room1_name, player_name, roomLoaded);
 }
 
 fn roomLoaded(room_id: Index) void {
-    std.debug.print("Room running!!! test_attribute1={?s} \n", .{game.Room.Component.byId(room_id).getAttribute("test_attribute1")});
+    std.debug.print("Room running!!! test_attribute1={?s} \n", .{game.Room.Composite.getAttribute(room_id, "test_attribute1")});
 }
 
 fn playerLoadTask(_: *api.CallContext) void {

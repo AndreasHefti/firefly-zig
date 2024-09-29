@@ -73,7 +73,7 @@ fn init() void {
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // create new Room
-    var room = game.Room.Component.new(.{
+    var room = game.Room.Composite.build(.{
         .name = "Test Room1",
         .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
     })
@@ -106,7 +106,7 @@ fn init() void {
         },
         api.CompositeLifeCycle.ACTIVATE,
         null,
-    );
+    ).buildGet();
 
     room.start("Player", null);
 }

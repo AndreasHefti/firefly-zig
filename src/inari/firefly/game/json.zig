@@ -591,11 +591,12 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
 
     if (jsonRoom.attributes) |a| {
         for (0..a.len) |i|
-            room.setAttribute(a[i].name, a[i].value);
+            game.Room.Composite.setAttribute(room.id, a[i].name, a[i].value);
     }
 
     for (0..jsonRoom.tile_sets.len) |i| {
-        room.addTaskByName(
+        game.Room.Composite.addTaskByName(
+            room.id,
             jsonRoom.tile_sets[i].load_task orelse game.Tasks.JSON_LOAD_TILE_SET,
             api.CompositeLifeCycle.LOAD,
             api.Attributes.newWith(
@@ -608,7 +609,8 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
     }
 
     if (jsonRoom.tile_mapping_file) |tile_mapping_file| {
-        room.addTaskByName(
+        game.Room.Composite.addTaskByName(
+            room.id,
             tile_mapping_file.load_task orelse game.Tasks.JSON_LOAD_TILE_MAPPING,
             api.CompositeLifeCycle.LOAD,
             api.Attributes.newWith(
@@ -623,7 +625,8 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
         const tileMappingJSON = std.json.stringifyAlloc(api.ALLOC, tm, .{}) catch unreachable;
         defer api.ALLOC.free(tileMappingJSON);
 
-        room.addTaskByName(
+        game.Room.Composite.addTaskByName(
+            room.id,
             game.Tasks.JSON_LOAD_TILE_MAPPING,
             api.CompositeLifeCycle.LOAD,
             api.Attributes.newWith(
@@ -654,7 +657,8 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
                     attributes.set(attr[ai].name, attr[ai].value);
             }
 
-            _ = room.addTaskByName(
+            game.Room.Composite.addTaskByName(
+                room.id,
                 api.NamePool.alloc(objects[i].build_task).?,
                 api.CompositeLifeCycle.ACTIVATE,
                 attributes.id,
@@ -760,7 +764,7 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
     checkFileType(jsonWorld, JSONFileTypes.WORLD);
 
     const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
-    var world: *game.World = game.World.Component.new(.{
+    const world: *game.World = game.World.Component.new(.{
         .name = api.NamePool.alloc(jsonWorld.name).?,
     });
 
@@ -779,7 +783,8 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
                     attributes.set(a[ia].name, a[ia].value);
             }
 
-            world.addTaskByName(
+            game.World.Composite.addTaskByName(
+                world.id,
                 game.Tasks.SIMPLE_ROOM_TRANSITION_SCENE_BUILDER,
                 api.CompositeLifeCycle.LOAD, // TODO ACTIVATE?
                 attributes.id,
@@ -789,11 +794,12 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
 
     if (jsonWorld.attributes) |a| {
         for (0..a.len) |i|
-            world.setAttribute(a[i].name, a[i].value);
+            game.World.Composite.setAttribute(world.id, a[i].name, a[i].value);
     }
 
     for (0..jsonWorld.rooms.len) |i| {
-        world.addTaskByName(
+        game.World.Composite.addTaskByName(
+            world.id,
             game.Tasks.JSON_LOAD_ROOM,
             api.CompositeLifeCycle.LOAD,
             api.Attributes.newWith(

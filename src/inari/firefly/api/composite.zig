@@ -207,48 +207,70 @@ pub const Composite = struct {
 
 pub fn CompositeMixin(comptime T: type) type {
     return struct {
-        pub fn setAttribute(self: *T, name: String, value: String) void {
-            api.Composite.Attributes.setAttribute(self.id, name, value);
+        pub fn build(subtype: anytype) CompositeBuilder {
+            return CompositeBuilder{ .id = T.Component.new(subtype).id };
         }
 
-        pub fn getAttribute(self: *T, name: String) ?String {
-            return api.Composite.Attributes.getAttribute(self.id, name);
+        pub fn getAttribute(c_id: Index, name: String) ?String {
+            return api.Composite.Attributes.getAttribute(c_id, name);
         }
 
-        pub fn withTask(self: *T, task: api.Task, life_cycle: CompositeLifeCycle, attributes_id: ?Index) *T {
-            checkInCreationState(self);
-            self.addTaskById(api.Task.Component.new(task), life_cycle, attributes_id);
-            return self;
+        pub fn setAttribute(c_id: Index, name: String, value: String) void {
+            api.Composite.Attributes.setAttribute(c_id, name, value);
         }
 
-        pub fn withTaskByName(self: *T, task_name: String, life_cycle: CompositeLifeCycle, attributes_id: ?Index) *T {
-            self.addTaskByName(task_name, life_cycle, attributes_id);
-            return self;
-        }
-
-        pub fn addTaskById(self: *T, task_id: Index, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
-            checkInCreationState(self);
-            _ = api.Composite.Component.byId(self.id).withTaskRef(.{
+        pub fn addTaskById(c_id: Index, task_id: Index, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
+            checkInCreationState(c_id);
+            _ = api.Composite.Component.byId(c_id).withTaskRef(.{
                 .task_ref = task_id,
                 .life_cycle = life_cycle,
                 .attributes_id = attributes_id,
             });
         }
 
-        pub fn addTaskByName(self: *T, task_name: String, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
-            checkInCreationState(self);
+        pub fn addTaskByName(c_id: Index, task_name: String, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
+            checkInCreationState(c_id);
 
-            _ = api.Composite.Component.byId(self.id).withTaskRef(.{
+            _ = api.Composite.Component.byId(c_id).withTaskRef(.{
                 .task_name = task_name,
                 .life_cycle = life_cycle,
                 .attributes_id = attributes_id,
             });
         }
 
-        fn checkInCreationState(self: *T) void {
-            if (Composite.Naming.byName(self.name)) |composite|
-                if (composite.loaded)
-                    utils.panic(api.ALLOC, "Composite is already loaded: {s}", .{self.name});
+        fn checkInCreationState(c_id: Index) void {
+            const composite = api.Composite.Component.byId(c_id);
+            if (composite.loaded)
+                utils.panic(api.ALLOC, "Composite is already loaded: {?s}", .{composite.name});
         }
+
+        pub const CompositeBuilder = struct {
+            id: Index = UNDEF_INDEX,
+
+            pub fn setAttribute(self: CompositeBuilder, name: String, value: String) CompositeBuilder {
+                CompositeMixin(T).setAttribute(self.id, name, value);
+                return self;
+            }
+
+            pub fn withTask(self: CompositeBuilder, task: api.Task, life_cycle: CompositeLifeCycle, attributes_id: ?Index) CompositeBuilder {
+                CompositeMixin(T).addTaskById(self.id, api.Task.Component.new(task), life_cycle, attributes_id);
+                return self;
+            }
+
+            pub fn withTaskByName(self: CompositeBuilder, task_name: String, life_cycle: CompositeLifeCycle, attributes_id: ?Index) CompositeBuilder {
+                CompositeMixin(T).addTaskByName(self.id, task_name, life_cycle, attributes_id);
+                return self;
+            }
+
+            pub fn build() void {}
+
+            pub fn buildGetId(self: CompositeBuilder) Index {
+                return self.id;
+            }
+
+            pub fn buildGet(self: CompositeBuilder) *T {
+                return T.Component.byId(self.id);
+            }
+        };
     };
 }
