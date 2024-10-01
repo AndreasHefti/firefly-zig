@@ -39,6 +39,7 @@ pub const System = struct {
         name: String,
         deinit: api.DeinitFunction,
         activation: *const fn (bool) void,
+        to_string: *const fn (*utils.StringBuffer) void,
     };
 
     var TYPE_REFERENCES: utils.DynArray(System.TypeReference) = undefined;
@@ -66,6 +67,15 @@ pub const System = struct {
 
     pub fn nextId(index: Index) ?Index {
         return TYPE_REFERENCES.slots.nextSetBit(index);
+    }
+
+    pub fn print(string_buffer: *utils.StringBuffer) void {
+        string_buffer.print("\nSystems:\n", .{});
+        var next = TYPE_REFERENCES.slots.nextSetBit(0);
+        while (next) |i| {
+            if (TYPE_REFERENCES.get(i)) |interface| interface.to_string(string_buffer);
+            next = TYPE_REFERENCES.slots.nextSetBit(i + 1);
+        }
     }
 };
 
@@ -96,6 +106,7 @@ pub fn SystemMixin(comptime T: type) type {
                 .name = system_name,
                 .deinit = @This().deinit,
                 .activation = @This().activation,
+                .to_string = @This().print,
             });
 
             if (@hasDecl(T, "systemInit"))
@@ -278,6 +289,10 @@ pub fn SystemMixin(comptime T: type) type {
                     }
                 }
             }
+        }
+
+        pub fn print(string_buffer: *utils.StringBuffer) void {
+            string_buffer.print("  ({s}) {s}\n", .{ if (system_active) "a" else "x", system_name });
         }
     };
 }

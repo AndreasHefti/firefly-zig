@@ -21,6 +21,7 @@ pub fn main() !void {
     try @import("examples/HelloShape.zig").run(init_context);
     try @import("examples/RenderSpeedRaw.zig").run(init_context);
     try @import("examples/EasingExample.zig").run(init_context);
+    try @import("examples/HelloBezier.zig").run(init_context);
     try @import("examples/RenderSpeed.zig").run(init_context);
     try @import("examples/HelloTileGrid.zig").run(init_context);
     try @import("examples/HelloGravity.zig").run(init_context);

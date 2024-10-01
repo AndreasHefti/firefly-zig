@@ -162,6 +162,14 @@ pub const ESprite = struct {
         self.blend_mode = null;
     }
 
+    pub fn activation(self: *ESprite, active: bool) void {
+        if (active) {
+            // check if template is valid
+            if (self.template_id == UNDEF_INDEX or SpriteTemplate.Component.byId(self.template_id).texture_binding == UNDEF_INDEX)
+                @panic("template_id is undefined");
+        }
+    }
+
     pub const Property = struct {
         pub fn FrameId(id: Index) *Index {
             return &ESprite.Component.byId(id).?.template_id;

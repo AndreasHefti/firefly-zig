@@ -156,4 +156,5 @@ fn playerLoadTask(_: *api.CallContext) void {
     );
 
     player._cam_id = game.SimplePivotCamera.Component.idByName(cam_name).?;
+    firefly.Engine.printState();
 }

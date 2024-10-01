@@ -360,6 +360,11 @@ pub fn isRegionRectF(r1: RectF) bool {
     return r1[2] > 0 and r1[3] > 0;
 }
 
+/// n' = v0+(v1−v0 / r1−r0)(n−r0)
+pub fn transformRange(n: Float, r0: Float, r1: Float, v0: Float, v1: Float) Float {
+    return v0 + ((v1 - v0) / (r1 - r0)) * (n - r0);
+}
+
 /// Color as Vector4u8
 pub const Color = @Vector(4, Byte);
 
@@ -410,10 +415,10 @@ pub const Direction = struct {
 };
 
 fn angleX(v: Vector2f) Float {
-    std.math.atan2(Float, v.y, v.x);
+    return std.math.atan2(v[1], v[0]);
 }
 fn angleY(v: Vector2f) Float {
-    std.math.atan2(Float, v.x, v.y);
+    return std.math.atan2(v[0], v[1]);
 }
 fn radToDeg(r: Float, invert: bool) Float {
     return if (invert)
@@ -966,7 +971,7 @@ pub const CubicBezierFunction = struct {
             vt(self.p0, self.p1, self.p2, self.p3, t);
     }
 
-    pub fn fax(self: *CubicBezierFunction, t: Float, invert: bool) Vector2f {
+    pub fn fax(self: *CubicBezierFunction, t: Float, invert: bool) Float {
         return if (invert)
             ax(self.p3, self.p2, self.p1, self.p0, t)
         else
@@ -1002,6 +1007,13 @@ pub const CubicBezierFunction = struct {
 
         return angleX(s0 * (v1 - v0) + s1 * (v2 - v1) + s2 * (v3 - v2));
     }
+};
+
+pub const BezierSplineSegment = struct {
+    duration: usize,
+    bezier: CubicBezierFunction,
+    easing: Easing = Easing.Linear,
+    normalized_time_range: utils.Vector2f = .{ 0, 1 },
 };
 
 //////////////////////////////////////////////////////////////

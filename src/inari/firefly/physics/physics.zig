@@ -20,7 +20,7 @@ pub const IndexFrameList = animation.IndexFrameList;
 pub const EasedValueIntegrator = animation.EasedValueIntegrator;
 pub const EasedColorIntegrator = animation.EasedColorIntegrator;
 pub const IndexFrameIntegrator = animation.IndexFrameIntegrator;
-pub const BezierCurveIntegrator = animation.BezierCurveIntegrator;
+pub const BezierSplineIntegrator = animation.BezierSplineIntegrator;
 
 pub const MovFlags = movement.MovFlags;
 pub const EMovement = movement.EMovement;

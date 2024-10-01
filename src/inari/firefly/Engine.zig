@@ -177,3 +177,29 @@ pub fn tick() void {
     RENDER_EVENT.type = RenderEventType.POST_RENDER;
     firefly.api.render(RENDER_EVENT);
 }
+
+pub fn printState() void {
+    var writer = firefly.utils.StringBuffer.init(firefly.api.ALLOC);
+    defer writer.deinit();
+
+    dumpState(&writer);
+    std.debug.print("{s}", .{writer.toString()});
+}
+
+pub fn dumpState(writer: anytype) void {
+    firefly.api.System.print(writer);
+    firefly.api.Component.print(writer);
+    writer.print("\n\n", .{});
+    firefly.api.ComponentAspectGroup.print(writer);
+    writer.print("\n", .{});
+    firefly.api.EComponentAspectGroup.print(writer);
+    writer.print("\n", .{});
+    firefly.api.SubTypeAspectGroup.print(writer);
+    writer.print("\n", .{});
+    firefly.physics.MovementAspectGroup.print(writer);
+    writer.print("\n", .{});
+    firefly.physics.ContactMaterialAspectGroup.print(writer);
+    writer.print("\n", .{});
+    firefly.physics.ContactTypeAspectGroup.print(writer);
+    writer.print("\n\n", .{});
+}

@@ -66,6 +66,18 @@ pub const Condition = struct {
             }
         }.check;
     }
+
+    pub fn format(
+        self: Condition,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "Condition[ id:{d} name:{?s} ] ",
+            .{ self.id, self.name },
+        );
+    }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -102,6 +114,18 @@ pub const Control = struct {
             else
                 api.ComponentAspectGroup.getAspect("VoidControl"),
         });
+    }
+
+    pub fn format(
+        self: Control,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "Control[ id:{d} name:{?s} groups:{any} controlled:{any} ] ",
+            .{ self.id, self.name, self.groups, self.controlled_component_type },
+        );
     }
 };
 
@@ -233,6 +257,18 @@ pub const Trigger = struct {
             if (trigger.condition(&trigger.call_context))
                 Task.Component.byId(trigger.task_ref).runWith(&trigger.call_context, true);
         }
+    }
+
+    pub fn format(
+        self: Trigger,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print(
+            "Trigger[ id:{d} name:{?s} task_ref:{?s} ] ",
+            .{ self.id, self.name, if (self.task_ref != UNDEF_INDEX) Task.Component.byId(self.task_ref).name else null },
+        );
     }
 };
 

@@ -9,24 +9,5 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     defer firefly.deinit();
 
     firefly.Engine.reorderSystems(&firefly.Engine.CoreSystems.DEFAULT_SYSTEM_ORDER);
-
-    var string_buffer = StringBuffer.init(firefly.api.ALLOC);
-    defer string_buffer.deinit();
-
-    firefly.api.Component.print(&string_buffer);
-    string_buffer.print("\n\n", .{});
-    firefly.api.ComponentAspectGroup.print(&string_buffer);
-    string_buffer.print("\n", .{});
-    firefly.api.EComponentAspectGroup.print(&string_buffer);
-    string_buffer.print("\n", .{});
-    firefly.api.SubTypeAspectGroup.print(&string_buffer);
-    string_buffer.print("\n", .{});
-    firefly.physics.MovementAspectGroup.print(&string_buffer);
-    string_buffer.print("\n", .{});
-    firefly.physics.ContactMaterialAspectGroup.print(&string_buffer);
-    string_buffer.print("\n", .{});
-    firefly.physics.ContactTypeAspectGroup.print(&string_buffer);
-    string_buffer.print("\n\n", .{});
-
-    std.debug.print("{s}", .{string_buffer.toString()});
+    firefly.Engine.printState();
 }

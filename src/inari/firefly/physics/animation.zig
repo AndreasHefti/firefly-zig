@@ -26,7 +26,7 @@ pub fn init() void {
     api.Component.Subtype.register(Animation, EasedValueIntegrator, "EasedValueIntegrator");
     api.Component.Subtype.register(Animation, EasedColorIntegrator, "EasedColorIntegrator");
     api.Component.Subtype.register(Animation, IndexFrameIntegrator, "IndexFrameIntegrator");
-    api.Component.Subtype.register(Animation, BezierCurveIntegrator, "BezierCurveIntegrator");
+    api.Component.Subtype.register(Animation, BezierSplineIntegrator, "BezierSplineIntegrator");
     api.Entity.registerComponent(EAnimation, "EAnimation");
     api.System.register(AnimationSystem);
 }
@@ -183,12 +183,12 @@ pub const EAnimation = struct {
         const exists = Component.byId(entity_id);
         if (exists) |c| {
             c.animations.set(a_id);
-            Animation.Component.byId(a_id).initForComponent(entity_id);
+            //Animation.Component.byId(a_id).initForComponent(entity_id);
         } else {
             Component.new(entity_id, .{});
             if (Component.byId(entity_id)) |c| {
                 c.animations.set(a_id);
-                Animation.Component.byId(a_id).initForComponent(entity_id);
+                //Animation.Component.byId(a_id).initForComponent(entity_id);
             }
         }
     }
@@ -199,6 +199,7 @@ pub const EAnimation = struct {
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
             if (active) {
+                Animation.Component.byId(i).initForComponent(self.id);
                 Animation.resetById(i);
             } else {
                 Animation.Activation.deactivate(i);
@@ -283,7 +284,7 @@ pub const EasedValueIntegrator = struct {
     }
 
     fn init(animation_id: Index, component_id: Index) void {
-        var self = EasedValueIntegrator.Component.byId(animation_id);
+        var self = Component.byId(animation_id);
         if (self.property_ref) |p_ref|
             self._property = p_ref(component_id);
 
@@ -292,7 +293,7 @@ pub const EasedValueIntegrator = struct {
     }
 
     fn integrate(animation: *Animation) void {
-        var self = EasedValueIntegrator.Component.byId(animation.id);
+        var self = Component.byId(animation.id);
         self._property.* = @mulAdd(
             Float,
             if (animation._inverted) -self._easing_v else self._easing_v,
@@ -346,7 +347,7 @@ pub const EasedColorIntegrator = struct {
     }
 
     pub fn integrate(animation: *Animation) void {
-        var self = EasedColorIntegrator.Component.byId(animation.id);
+        var self = Component.byId(animation.id);
         const v_normalized: Float = self.easing.f(animation._t_normalized);
 
         for (0..4) |slot| {
@@ -474,13 +475,13 @@ pub const IndexFrameIntegrator = struct {
     }
 
     pub fn init(animation_id: Index, component_id: Index) void {
-        var self = IndexFrameIntegrator.Component.byId(animation_id);
+        var self = Component.byId(animation_id);
         if (self.property_ref) |ref|
             self._property = ref(component_id);
     }
 
     pub fn integrate(animation: *Animation) void {
-        var self = IndexFrameIntegrator.Component.byId(animation.id);
+        var self = Component.byId(animation.id);
         self._property.* = self.timeline.getAt(
             animation._t_normalized,
             animation._inverted,
@@ -489,17 +490,19 @@ pub const IndexFrameIntegrator = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Bezier Curve Animation Integrator
+//// Bezier Spline Animation Integrator
 //////////////////////////////////////////////////////////////
 
-pub const BezierCurveIntegrator = struct {
-    pub const Component = api.Component.SubTypeMixin(Animation, BezierCurveIntegrator);
+pub const BezierSplineIntegrator = struct {
+    pub const Component = api.Component.SubTypeMixin(Animation, BezierSplineIntegrator);
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
 
-    bezier_function: utils.CubicBezierFunction = undefined,
-    easing: Easing = Easing.Linear,
+    spline_duration: usize = 0,
+    bezier_spline: utils.DynArray(utils.BezierSplineSegment) = undefined,
+    _current_segment: ?*utils.BezierSplineSegment = null,
+
     property_ref_x: ?*const fn (Index) *Float,
     property_ref_y: ?*const fn (Index) *Float,
     property_ref_a: ?*const fn (Index) *Float,
@@ -508,37 +511,83 @@ pub const BezierCurveIntegrator = struct {
     _property_y: *Float = undefined,
     _property_a: *Float = undefined,
 
-    pub fn construct(self: *BezierCurveIntegrator) void {
+    pub fn construct(self: *BezierSplineIntegrator) void {
         Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
-            .init = BezierCurveIntegrator.init,
-            .integrate = BezierCurveIntegrator.integrate,
+            .init = BezierSplineIntegrator.init,
+            .integrate = BezierSplineIntegrator.integrate,
         };
+        self.bezier_spline = utils.DynArray(utils.BezierSplineSegment).new(api.COMPONENT_ALLOC);
+    }
+
+    pub fn destruct(self: *BezierSplineIntegrator) void {
+        self.bezier_spline.deinit();
+    }
+
+    pub fn addSegment(self: *BezierSplineIntegrator, segment: utils.BezierSplineSegment) void {
+        _ = self.bezier_spline.add(segment);
+        self.spline_duration += segment.duration;
+        calcRanges(self);
+    }
+
+    fn calcRanges(self: *BezierSplineIntegrator) void {
+        var last: Float = 0;
+        var next = self.bezier_spline.slots.nextSetBit(0);
+        while (next) |i| {
+            next = self.bezier_spline.slots.nextSetBit(i + 1);
+            if (self.bezier_spline.get(i)) |segment| {
+                const from = last;
+                last += 1 * utils.usize_f32(segment.duration) / utils.usize_f32(self.spline_duration);
+                segment.normalized_time_range = .{ from, last };
+            }
+        }
     }
 
     pub fn init(animation_id: Index, component_id: Index) void {
-        var self = BezierCurveIntegrator.Component.byId(animation_id);
-        if (self.property_ref_x) |i| {
+        var self = Component.byId(animation_id);
+        if (self.property_ref_x) |i|
             self._property_x = i(component_id);
-        }
-        if (self.property_ref_y) |i| {
+        if (self.property_ref_y) |i|
             self._property_y = i(component_id);
-        }
-        if (self.property_ref_a) |i| {
+        if (self.property_ref_a) |i|
             self._property_a = i(component_id);
-        }
+        Animation.Component.byId(animation_id).duration = self.spline_duration;
     }
 
     pub fn integrate(a: *Animation) void {
-        var self = BezierCurveIntegrator.Component.byId(a.id);
-        const pos = self.bezier_function.fp(a.easing(a._t_normalized), a._inverted);
-        self._property_x.* = pos[0];
-        self._property_y.* = pos[1];
-        self._property_a.* = std.math.radiansToDegrees(
-            Float,
-            self.bezier_function.fax(
-                a.easing(a._t_normalized),
-                a._inverted,
-            ),
-        );
+        const self = Component.byId(a.id);
+        const norm_time: Float = if (a._inverted) 1 - a._t_normalized else a._t_normalized;
+        setCurrentSegment(self, norm_time);
+
+        if (self._current_segment) |s| {
+            const segment_norm_time = utils.transformRange(
+                norm_time,
+                if (a._inverted) s.normalized_time_range[1] else s.normalized_time_range[0],
+                if (a._inverted) s.normalized_time_range[0] else s.normalized_time_range[1],
+                0,
+                1,
+            );
+            const pos = s.bezier.fp(s.easing.f(segment_norm_time), a._inverted);
+            self._property_x.* = pos[0];
+            self._property_y.* = pos[1];
+            self._property_a.* = std.math.radiansToDegrees(s.bezier.fax(s.easing.f(segment_norm_time), a._inverted));
+        }
+    }
+
+    fn setCurrentSegment(self: *BezierSplineIntegrator, time: Float) void {
+        if (self._current_segment) |segment| {
+            if (segment.normalized_time_range[0] <= time and segment.normalized_time_range[1] > time)
+                return;
+        }
+        // find current segment
+        var next = self.bezier_spline.slots.nextSetBit(0);
+        while (next) |i| {
+            next = self.bezier_spline.slots.nextSetBit(i + 1);
+            if (self.bezier_spline.get(i)) |s| {
+                if (s.normalized_time_range[0] <= time and s.normalized_time_range[1] > time) {
+                    self._current_segment = s;
+                    return;
+                }
+            }
+        }
     }
 };
