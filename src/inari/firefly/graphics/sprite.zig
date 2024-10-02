@@ -86,11 +86,13 @@ pub const SpriteTemplate = struct {
 
     fn notifyAssetEvent(e: api.ComponentEvent) void {
         if (e.c_id) |id| {
-            switch (e.event_type) {
-                .ACTIVATED => onTextureLoad(graphics.Texture.Component.byId(id)),
-                .DEACTIVATING => onTextureClose(api.Asset.Component.byId(id).name.?),
-                .DISPOSING => onTextureDispose(api.Asset.Component.byId(id).name.?),
-                else => {},
+            if (api.Asset.Subtypes.isOfType(id, graphics.Texture)) {
+                switch (e.event_type) {
+                    .ACTIVATED => onTextureLoad(graphics.Texture.Component.byId(id)),
+                    .DEACTIVATING => onTextureClose(graphics.Texture.Component.byId(id).name),
+                    .DISPOSING => onTextureDispose(graphics.Texture.Component.byId(id).name),
+                    else => {},
+                }
             }
         }
     }

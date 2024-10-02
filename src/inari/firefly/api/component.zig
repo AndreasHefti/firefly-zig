@@ -213,6 +213,13 @@ pub fn Mixin(comptime T: type) type {
             return byId(new(t));
         }
 
+        pub fn newActive(t: T) Index {
+            const c_id = new(t);
+            if (has_activation)
+                T.Activation.activate(c_id);
+            return c_id;
+        }
+
         pub fn new(t: T) Index {
             if (has_subtypes)
                 @panic("Use new on specific subtype");
@@ -852,6 +859,10 @@ pub fn SubTypingMixin(comptime T: type) type {
             if (!_init) return;
         }
 
+        pub fn isOfType(id: Index, comptime SubType: type) bool {
+            return SubType.Component.exists(id);
+        }
+
         pub fn dataById(id: Index, comptime SubType: type) ?@TypeOf(SubType) {
             return SubType.dataById(id);
         }
@@ -921,6 +932,10 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
 
             data.deinit();
             data = undefined;
+        }
+
+        pub fn exists(id: Index) bool {
+            return data.contains(id);
         }
 
         pub fn createSubtype(base: T, subtype: SubType) *SubType {

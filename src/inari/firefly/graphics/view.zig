@@ -588,6 +588,10 @@ pub const ViewRenderer = struct {
             VIEW_RENDER_EVENT.layer_id = null;
             VIEW_RENDER_EVENT.projection = &View.screen_projection;
             firefly.api.renderView(VIEW_RENDER_EVENT);
+
+            if (View.screen_shader_binding != null)
+                firefly.api.rendering.setActiveShader(null);
+
             firefly.api.rendering.endRendering();
         } else {
             // 1. render objects to all FBOs
@@ -639,6 +643,9 @@ pub const ViewRenderer = struct {
                     );
                 }
             }
+            // reset shader
+            if (View.screen_shader_binding != null)
+                firefly.api.rendering.setActiveShader(null);
             // end rendering to screen
             firefly.api.rendering.endRendering();
         }
@@ -672,6 +679,9 @@ pub const ViewRenderer = struct {
                     if (layer.offset) |o|
                         firefly.api.rendering.addOffset(o * @as(Vector2f, @splat(-1)));
                     it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
+                    // remove layer shader to render engine if set
+                    if (layer.shader_binding != null)
+                        firefly.api.rendering.setActiveShader(null);
                 }
             } else {
                 // we have no layer so only one render call for this view
@@ -680,6 +690,9 @@ pub const ViewRenderer = struct {
                 VIEW_RENDER_EVENT.projection = &view.projection;
                 firefly.api.renderView(VIEW_RENDER_EVENT);
             }
+            // reset shader
+            if (view.shader_binding != null)
+                firefly.api.rendering.setActiveShader(null);
             // end rendering to FBO
             firefly.api.rendering.endRendering();
         }

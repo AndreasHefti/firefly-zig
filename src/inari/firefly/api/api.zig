@@ -822,7 +822,7 @@ pub fn IRenderAPI() type {
         disposeShader: *const fn (BindingId) void = undefined,
         /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
         /// @param shaderId The instance identifier of the shader.
-        setActiveShader: *const fn (BindingId) void = undefined,
+        setActiveShader: *const fn (?BindingId) void = undefined,
 
         bindTexture: *const fn (String, BindingId) void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given

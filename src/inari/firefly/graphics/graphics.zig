@@ -192,7 +192,7 @@ pub const Shader = struct {
     pub const Component = api.Component.SubTypeMixin(api.Asset, Shader);
 
     id: Index = UNDEF_INDEX,
-    name: String,
+    name: ?String = null,
     vertex_shader_resource: ?String = null,
     fragment_shader_resource: ?String = null,
     file_resource: bool = true,

@@ -51,7 +51,6 @@ fn init() void {
     firefly.physics.ContactScanGizmosRenderer.System.activate();
 
     // create view with two layer
-    // TODO this must be done by World activation later on
     _ = graphics.View.Component.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
@@ -91,16 +90,6 @@ fn init() void {
         api.CompositeLifeCycle.LOAD,
         null,
     );
-    // var player = game.Player.Component.new(.{ .name = player_name });
-    // _ = player.withTask(
-    //     api.Task{
-    //         .run_once = true,
-    //         .function = playerLoadTask,
-    //     },
-    //     api.CompositeLifeCycle.LOAD,
-    //     null,
-    // );
-
     // and just start the Room with the player
     game.Room.startRoom(room1_name, player_name, roomLoaded);
 }

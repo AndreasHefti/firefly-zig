@@ -43,27 +43,6 @@ pub fn createRenderAPI() !IRenderAPI() {
     return singleton.?;
 }
 
-const DEFAULT_VERTEX_SHADER: String =
-    \\#version 330
-    \\
-    \\layout (location = 0) in vec3 vertexPosition;
-    \\in vec2 vertexTexCoord;            
-    \\in vec4 vertexColor;
-    \\out vec2 fragTexCoord;             
-    \\out vec4 fragColor;                
-    \\uniform mat4 mvp;            
-    \\      
-    \\void main()                        
-    \\{             
-    \\    fragTexCoord = vertexTexCoord; 
-    \\    fragColor = vertexColor;       
-    \\    gl_Position = mvp*vec4(vertexPosition, 1.0); 
-    \\}
-;
-
-// TODO
-const DEFAULT_FRAGMENT_SHADER: String = "";
-
 const RaylibRenderAPI = struct {
     var initialized = false;
 
@@ -176,7 +155,6 @@ const RaylibRenderAPI = struct {
     var render_textures: DynArray(RenderTexture2D) = undefined;
     var shaders: DynArray(Shader) = undefined;
 
-    var active_shader: ?BindingId = null;
     var active_render_texture: ?BindingId = null;
     var active_clear_color: ?rl.Color = undefined;
 
@@ -364,14 +342,15 @@ const RaylibRenderAPI = struct {
         defer NamePool.freeCNames();
         var shader: Shader = undefined;
         if (file) {
+            std.debug.print("********* shader: {?s}\n", .{vertex_shader});
             shader = rl.LoadShader(
                 NamePool.getCName(vertex_shader orelse EMPTY_STRING).?,
                 NamePool.getCName(fragment_shade orelse EMPTY_STRING).?,
             );
         } else {
             shader = rl.LoadShaderFromMemory(
-                NamePool.getCName(vertex_shader orelse DEFAULT_VERTEX_SHADER).?,
-                NamePool.getCName(fragment_shade orelse DEFAULT_FRAGMENT_SHADER).?,
+                NamePool.getCName(vertex_shader orelse EMPTY_STRING).?,
+                NamePool.getCName(fragment_shade orelse EMPTY_STRING).?,
             );
         }
 
@@ -391,16 +370,15 @@ const RaylibRenderAPI = struct {
         shaders.delete(id);
     }
 
-    fn setActiveShader(binding_id: BindingId) void {
-        if (active_shader != null and active_shader.? != binding_id) {
-            if (active_shader == null) {
-                rl.EndShaderMode();
+    fn setActiveShader(binding_id: ?BindingId) void {
+        if (binding_id) |bid| {
+            if (shaders.get(bid)) |shader| {
+                rl.BeginShaderMode(shader.*);
             } else {
-                if (shaders.get(active_shader.?)) |shader| {
-                    rl.BeginShaderMode(shader.*);
-                }
+                rl.EndShaderMode();
             }
-            active_shader = binding_id;
+        } else {
+            rl.EndShaderMode();
         }
     }
 
@@ -487,6 +465,7 @@ const RaylibRenderAPI = struct {
                 );
             }
         }
+        rl.EndShaderMode();
     }
 
     fn renderSprite(
@@ -891,7 +870,6 @@ const RaylibRenderAPI = struct {
         buffer.print("  shaders: {any}\n\n", .{shaders});
 
         buffer.print("  active_camera: {any}\n", .{active_camera});
-        buffer.print("  active_shader: {any}\n", .{active_shader});
         buffer.print("  active_render_texture: {any}\n", .{active_render_texture});
         buffer.print("  active_clear_color: {any}\n", .{active_clear_color});
     }
