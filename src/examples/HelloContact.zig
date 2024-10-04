@@ -75,7 +75,7 @@ fn init() void {
         .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
         .activateGet();
 
-    var tile_grid = TileGrid.Component.newGet(.{
+    var tile_grid = TileGrid.Component.newAndGet(.{
         .name = "TileGrid1",
         .world_position = PosF{ 50, 300 },
         .dimensions = .{ 10, 3, 32, 32 },
@@ -89,8 +89,8 @@ fn init() void {
 }
 
 fn control(ctx: *firefly.api.CallContext) void {
-    const scan = EContactScan.Component.byId(ctx.caller_id) orelse return;
-    const shape = EShape.Component.byId(ctx.caller_id) orelse return;
+    const scan = EContactScan.Component.byId(ctx.caller_id);
+    const shape = EShape.Component.byId(ctx.caller_id);
 
     if (scan.hasAnyContact()) {
         shape.color[0] = 255;

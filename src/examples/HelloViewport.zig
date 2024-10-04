@@ -49,7 +49,7 @@ fn loadWithView() void {
     View.Control.add(viewId, view_control, null, true);
     View.Activation.activate(viewId);
 
-    const sprite_id = SpriteTemplate.Component.newGet(.{
+    const sprite_id = SpriteTemplate.Component.newAndGet(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     })

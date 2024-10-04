@@ -127,13 +127,13 @@ pub const PlatformerCollisionResolver = struct {
             return;
 
         inst._entity_id = entity_id;
-        inst._transform = graphics.ETransform.Component.byId(entity_id).?;
-        inst._movement = physics.EMovement.Component.byId(entity_id).?;
+        inst._transform = graphics.ETransform.Component.byId(entity_id);
+        inst._movement = physics.EMovement.Component.byId(entity_id);
 
-        if (graphics.EView.Component.byId(entity_id)) |v|
+        if (graphics.EView.Component.byIdOptional(entity_id)) |v|
             inst._view_id = v.view_id;
 
-        var contact_scan = physics.EContactScan.Component.byId(entity_id).?;
+        var contact_scan = physics.EContactScan.Component.byId(entity_id);
         _ = contact_scan.withConstraint(.{
             .name = "PlatformerCollisionResolver",
             .layer_id = inst.layer_id,
@@ -205,7 +205,7 @@ pub const PlatformerCollisionResolver = struct {
         const data = instances.get(instance_id.?) orelse return;
 
         if (data._terrain_constraint_ref.scan.hasAnyContact()) {
-            var move = physics.EMovement.Component.byId(entity_id) orelse return;
+            var move = physics.EMovement.Component.byId(entity_id);
             const pref_ground = move.on_ground;
             move.on_ground = false;
             resolveTerrainContact(data, pref_ground);
@@ -331,7 +331,7 @@ pub const PlatformerCollisionResolver = struct {
     }
 
     fn updateContacts(self: *PlatformerCollisionResolver) void {
-        var contacts: *physics.EContactScan = physics.EContactScan.Component.byId(self._entity_id) orelse return;
+        var contacts: *physics.EContactScan = physics.EContactScan.Component.byId(self._entity_id);
         if (!contacts.hasAnyContact())
             return;
 
@@ -378,7 +378,7 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
 
     pub fn update(ctx: *api.CallContext) void {
         const self = Component.byId(ctx.caller_id);
-        var move = physics.EMovement.Component.byId(ctx.id_1) orelse return;
+        var move = physics.EMovement.Component.byId(ctx.id_1);
 
         if (!self.move_on_air and !move.on_ground)
             return;
@@ -432,7 +432,7 @@ pub const SimplePlatformerJumpControl = struct {
 
     pub fn update(ctx: *api.CallContext) void {
         const self = Component.byId(ctx.caller_id);
-        var move = physics.EMovement.Component.byId(ctx.id_1) orelse return;
+        var move = physics.EMovement.Component.byId(ctx.id_1);
 
         // measure off ground time to achieve jump_tolerance and
         if (move.on_ground) {

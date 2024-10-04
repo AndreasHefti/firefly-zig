@@ -67,14 +67,14 @@ pub const ETile = struct {
 
     pub const Property = struct {
         pub fn FrameId(id: Index) *Index {
-            return &ETile.Component.byId(id).?.sprite_template_id;
+            return &ETile.Component.byId(id).sprite_template_id;
         }
         pub fn TintColor(id: Index) *Color {
-            var tile = ETile.byId(id).?;
+            var tile = ETile.byId(id);
             if (tile.tint_color == null) {
                 tile.tint_color = Color{};
             }
-            return &tile.tint_color.?;
+            return &tile.tint_color;
         }
     };
 };
@@ -356,8 +356,8 @@ pub const DefaultTileGridRenderer = struct {
                 if (entity_id == UNDEF_INDEX)
                     continue;
 
-                const tile = ETile.Component.byId(entity_id) orelse continue;
-                const trans = graphics.ETransform.Component.byId(entity_id) orelse continue;
+                const tile = ETile.Component.byId(entity_id);
+                const trans = graphics.ETransform.Component.byId(entity_id);
                 const sprite_template = graphics.SpriteTemplate.Component.byId(tile.sprite_template_id);
                 api.rendering.renderSprite(
                     sprite_template.texture_binding,

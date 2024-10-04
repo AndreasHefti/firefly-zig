@@ -56,12 +56,12 @@ fn init() void {
 fn update(_: UpdateEvent) void {
     if (Entity.Naming.byName("TestEntity")) |entity| {
         if (firefly.api.input.checkButtonPressed(InputButtonType.UP))
-            ETransform.Component.byId(entity.id).?.position[1] -= 1;
+            ETransform.Component.byId(entity.id).position[1] -= 1;
         if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN))
-            ETransform.Component.byId(entity.id).?.position[1] += 1;
+            ETransform.Component.byId(entity.id).position[1] += 1;
         if (firefly.api.input.checkButtonPressed(InputButtonType.LEFT))
-            ETransform.Component.byId(entity.id).?.position[0] -= 1;
+            ETransform.Component.byId(entity.id).position[0] -= 1;
         if (firefly.api.input.checkButtonPressed(InputButtonType.RIGHT))
-            ETransform.Component.byId(entity.id).?.position[0] += 1;
+            ETransform.Component.byId(entity.id).position[0] += 1;
     }
 }

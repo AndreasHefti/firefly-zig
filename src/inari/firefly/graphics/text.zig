@@ -112,8 +112,8 @@ pub const DefaultTextRenderer = struct {
         var i = entities.nextSetBit(0);
         while (i) |id| {
             // render the sprite
-            if (EText.Component.byId(id)) |text| {
-                const trans = graphics.ETransform.Component.byId(id).?;
+            if (EText.Component.byIdOptional(id)) |text| {
+                const trans = graphics.ETransform.Component.byId(id);
                 firefly.api.rendering.renderText(
                     text.font_id,
                     text.text,

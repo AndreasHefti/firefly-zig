@@ -77,8 +77,8 @@ pub const DefaultShapeRenderer = struct {
         var i = entities.nextSetBit(0);
         while (i) |id| {
             // render the shape
-            const es = EShape.Component.byId(id).?;
-            const trans = graphics.ETransform.Component.byId(id).?;
+            const es = EShape.Component.byId(id);
+            const trans = graphics.ETransform.Component.byId(id);
             firefly.api.rendering.renderShape(
                 es.shape_type,
                 es.vertices,

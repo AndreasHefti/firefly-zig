@@ -39,7 +39,7 @@ fn loadWithView() void {
         .withComponent(ETile{ .sprite_template_id = sprite_id })
         .activateGet();
 
-    var tile_grid = TileGrid.Component.newGet(.{
+    var tile_grid = TileGrid.Component.newAndGet(.{
         .name = "TileGrid1",
         .world_position = PosF{ 0, 0 },
         .dimensions = .{ 10, 10, 32, 32 },

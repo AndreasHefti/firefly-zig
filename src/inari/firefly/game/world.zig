@@ -407,10 +407,10 @@ pub fn TransitionContactCallback(player_id: Index, contact: *physics.ContactScan
     const c = contact.firstContactOfType(game.ContactTypes.ROOM_TRANSITION) orelse return false;
     const transition_id = c.entity_id;
     const player = api.Entity.Component.byId(player_id);
-    const player_transform = graphics.ETransform.Component.byId(player_id) orelse return false;
-    const move = physics.EMovement.Component.byId(player_id) orelse return false;
-    const transition = ERoomTransition.Component.byId(transition_id) orelse return false;
-    const transition_transform = graphics.ETransform.Component.byId(transition_id) orelse return false;
+    const player_transform = graphics.ETransform.Component.byId(player_id);
+    const move = physics.EMovement.Component.byId(player_id);
+    const transition = ERoomTransition.Component.byId(transition_id);
+    const transition_transform = graphics.ETransform.Component.byId(transition_id);
 
     switch (transition.orientation) {
         .EAST => if (move.velocity[0] <= 0) return false,
@@ -444,9 +444,9 @@ fn roomUnloadedCallback(_: Index) void {
 
         // set player position adjust cam
         const player = api.Entity.Component.byId(player_id);
-        const player_transform = graphics.ETransform.Component.byId(player_id) orelse return;
-        const player_movement = physics.EMovement.Component.byId(player_id) orelse return;
-        const target_transition_transform = graphics.ETransform.Component.byName(target_transition) orelse return;
+        const player_transform = graphics.ETransform.Component.byId(player_id);
+        const player_movement = physics.EMovement.Component.byId(player_id);
+        const target_transition_transform = graphics.ETransform.Component.byName(target_transition).?;
 
         player_movement.on_ground = false;
         player_transform.moveTo(
@@ -524,22 +524,20 @@ pub const SimpleRoomTransitionScene = struct {
     }
 
     fn entryAction(ctx: *api.CallContext) void {
-        if (graphics.EShape.Component.byId(ctx.id_1)) |shape| {
-            shape.color[3] -= @min(20, shape.color[3]);
-            if (shape.color[3] <= 0)
-                ctx.result = .Success
-            else
-                ctx.result = .Running;
-        }
+        const shape = graphics.EShape.Component.byId(ctx.id_1);
+        shape.color[3] -= @min(20, shape.color[3]);
+        if (shape.color[3] <= 0)
+            ctx.result = .Success
+        else
+            ctx.result = .Running;
     }
 
     fn exitAction(ctx: *api.CallContext) void {
-        if (graphics.EShape.Component.byId(ctx.id_1)) |shape| {
-            shape.color[3] = @min(255, @as(usize, @intCast(shape.color[3])) + 20);
-            if (shape.color[3] >= 255)
-                ctx.result = .Success
-            else
-                ctx.result = .Running;
-        }
+        const shape = graphics.EShape.Component.byId(ctx.id_1);
+        shape.color[3] = @min(255, @as(usize, @intCast(shape.color[3])) + 20);
+        if (shape.color[3] >= 255)
+            ctx.result = .Success
+        else
+            ctx.result = .Running;
     }
 };

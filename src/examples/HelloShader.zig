@@ -34,16 +34,27 @@ fn example() void {
     });
     firefly.api.Asset.Activation.activate(shader.id);
 
-    const view_id = graphics.View.Component.newActive(.{
-        .name = "View",
-        .position = .{ 0, 0 },
+    const view_id_1 = graphics.View.Component.newActive(.{
+        .name = "View1",
+        .position = .{ 10, 10 },
         .scale = .{ 1, 1 },
         .projection = .{
-            .width = 600,
-            .height = 400,
+            .width = 80,
+            .height = 80,
             .zoom = 1,
         },
         .shader_binding = graphics.Shader.Component.byId(shader.id)._binding.?.id,
+    });
+
+    const view_id_2 = graphics.View.Component.newActive(.{
+        .name = "View2",
+        .position = .{ 100, 10 },
+        .scale = .{ 1, 1 },
+        .projection = .{
+            .width = 80,
+            .height = 80,
+            .zoom = 1,
+        },
     });
 
     Texture.Component.newActive(.{
@@ -57,14 +68,26 @@ fn example() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    _ = firefly.api.Entity.build(.{ .name = "Player" })
+    _ = firefly.api.Entity.build(.{ .name = "Player1" })
         .withComponent(graphics.ETransform{
-        .position = .{ 32, 32 },
+        .position = .{ 0, 0 },
         .pivot = .{ 0, 0 },
         .scale = .{ 2, 2 },
     })
         .withComponent(graphics.EView{
-        .view_id = view_id,
+        .view_id = view_id_1,
+    })
+        .withComponent(graphics.ESprite{ .template_id = sprite_id })
+        .activate();
+
+    _ = firefly.api.Entity.build(.{ .name = "Player2" })
+        .withComponent(graphics.ETransform{
+        .position = .{ 0, 0 },
+        .pivot = .{ 0, 0 },
+        .scale = .{ 2, 2 },
+    })
+        .withComponent(graphics.EView{
+        .view_id = view_id_2,
     })
         .withComponent(graphics.ESprite{ .template_id = sprite_id })
         .activate();

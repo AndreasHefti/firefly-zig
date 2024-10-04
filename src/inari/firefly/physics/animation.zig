@@ -180,16 +180,10 @@ pub const EAnimation = struct {
     pub fn add(entity_id: Index, animation: Animation, integrator: anytype) void {
         const i_type = @TypeOf(integrator);
         const a_id = i_type.Component.createSubtype(animation, integrator).id;
-        const exists = Component.byId(entity_id);
-        if (exists) |c| {
+        if (Component.byIdOptional(entity_id)) |c| {
             c.animations.set(a_id);
-            //Animation.Component.byId(a_id).initForComponent(entity_id);
         } else {
-            Component.new(entity_id, .{});
-            if (Component.byId(entity_id)) |c| {
-                c.animations.set(a_id);
-                //Animation.Component.byId(a_id).initForComponent(entity_id);
-            }
+            Component.newAndGet(entity_id, .{}).animations.set(a_id);
         }
     }
 

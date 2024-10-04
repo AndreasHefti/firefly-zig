@@ -292,12 +292,12 @@ pub const ContactConstraint = struct {
         other_entity: Index,
         other_offset: ?Vector2f,
     ) bool {
-        if (EContact.Component.byId(other_entity)) |e_contact| {
+        if (EContact.Component.byIdOptional(other_entity)) |e_contact| {
             if (!self.match(e_contact.type, e_contact.material))
                 return false;
 
-            const t1 = graphics.ETransform.Component.byId(self_entity).?;
-            const t2 = graphics.ETransform.Component.byId(other_entity).?;
+            const t1 = graphics.ETransform.Component.byId(self_entity);
+            const t2 = graphics.ETransform.Component.byId(other_entity);
             const t2_pos = if (other_offset) |off| t2.position + off else t2.position;
 
             if (intersectContactBounds(&self.scan.bounds, &e_contact.bounds, t1.position, t2_pos)) {
@@ -497,8 +497,8 @@ pub const DebugCollisionResolver: CollisionResolver = .{
 
 fn debugCollisionResolver(entity_id: Index, _: ?Index) void {
     const entity = api.Entity.Component.byId(entity_id);
-    const transform = graphics.ETransform.Component.byId(entity_id).?;
-    const scans = EContactScan.Component.byId(entity_id).?;
+    const transform = graphics.ETransform.Component.byId(entity_id);
+    const scans = EContactScan.Component.byId(entity_id);
 
     std.debug.print("******************************************\n", .{});
     std.debug.print("Resolve collision on entity: {any}\n\n", .{entity});
@@ -560,7 +560,7 @@ pub const EContactScan = struct {
     }
 
     pub fn addToComponent(c_id: Index, constraint: ContactConstraint) void {
-        Component.byId(c_id).?.constraints.set(ContactConstraint.Component.new(constraint));
+        Component.byId(c_id).constraints.set(ContactConstraint.Component.new(constraint));
     }
 
     pub fn withConstraint(self: *EContactScan, constraint: ContactConstraint) *EContactScan {
@@ -664,15 +664,14 @@ pub const ContactSystem = struct {
     fn processMoved(event: physics.MovementEvent) void {
         var next = event.moved.nextSetBit(0);
         while (next) |i| {
-            if (EContactScan.Component.byId(i)) |e_scan|
-                applyScan(e_scan);
             next = event.moved.nextSetBit(i + 1);
+            applyScan(EContactScan.Component.byId(i));
         }
     }
 
     pub fn applyScan(e_scan: *EContactScan) void {
         var view_id: ?Index = null;
-        if (graphics.EView.Component.byId(e_scan.id)) |view|
+        if (graphics.EView.Component.byIdOptional(e_scan.id)) |view|
             view_id = view.view_id;
 
         // clear old scan data
@@ -705,7 +704,7 @@ pub const ContactSystem = struct {
 
         constraint.clear();
 
-        const t1 = graphics.ETransform.Component.byId(entity_id).?;
+        const t1 = graphics.ETransform.Component.byId(entity_id);
         const world_contact_bounds = utils.RectF{
             t1.position[0] + constraint.scan.bounds.rect[0],
             t1.position[1] + constraint.scan.bounds.rect[1],
@@ -815,8 +814,8 @@ pub const ContactGizmosRenderer = struct {
             i = entities.nextSetBit(id + 1);
 
             // render the gizmo
-            const contact: *EContact = EContact.Component.byId(id) orelse continue;
-            const trans: *graphics.ETransform = graphics.ETransform.Component.byId(id) orelse continue;
+            const contact: *EContact = EContact.Component.byId(id);
+            const trans: *graphics.ETransform = graphics.ETransform.Component.byId(id);
             var v = [4]utils.Float{
                 contact.bounds.rect[0],
                 contact.bounds.rect[1],
@@ -852,8 +851,8 @@ pub const ContactScanGizmosRenderer = struct {
             var shape_type: api.ShapeType = api.ShapeType.RECTANGLE;
 
             // render the gizmos
-            const scans: *EContactScan = EContactScan.Component.byId(id) orelse continue;
-            const trans: *graphics.ETransform = graphics.ETransform.Component.byId(id) orelse continue;
+            const scans: *EContactScan = EContactScan.Component.byId(id);
+            const trans: *graphics.ETransform = graphics.ETransform.Component.byId(id);
             var si = scans.constraints.nextSetBit(0);
             while (si) |next_s| {
                 si = scans.constraints.nextSetBit(next_s + 1);

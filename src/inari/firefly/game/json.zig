@@ -203,7 +203,7 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
         utils.panic(api.ALLOC, "Failed to find/load texture: {any}", .{jsonTileSet.texture});
 
     // create TileSet from jsonTileSet
-    var tile_set = game.TileSet.Component.newGet(.{
+    var tile_set = game.TileSet.Component.newAndGet(.{
         .name = api.NamePool.alloc(jsonTileSet.name),
         .texture_name = api.NamePool.alloc(jsonTileSet.texture.name).?,
         .tile_width = jsonTileSet.tile_width,
@@ -376,7 +376,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 
     // prepare view
     const view_id = graphics.View.Naming.getId(view_name);
-    var tile_mapping = game.TileMapping.Component.newGet(.{
+    var tile_mapping = game.TileMapping.Component.newAndGet(.{
         .name = api.NamePool.alloc(jsonTileMapping.name),
         .view_id = view_id,
     });

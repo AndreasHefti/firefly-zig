@@ -144,7 +144,7 @@ fn startSceneAction(ctx: *api.CallContext) void {
             .fill = true,
             .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
         }).activateGetId();
-        color = &graphics.EShape.Component.byId(entity_id).?.color;
+        color = &graphics.EShape.Component.byId(entity_id).color;
         start_scene_init = true;
     }
 

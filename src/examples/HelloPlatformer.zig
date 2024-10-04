@@ -127,8 +127,8 @@ fn playerLoadTask(_: *api.CallContext) void {
         .withControlOf(game.SimplePlatformerJumpControl{ .jump_button = api.InputButtonType.FIRE_1, .jump_impulse = 140, .double_jump = true }, true)
         .getId();
 
-    player._move = physics.EMovement.Component.byId(player._entity_id).?;
-    player._transform = graphics.ETransform.Component.byId(player._entity_id).?;
+    player._move = physics.EMovement.Component.byId(player._entity_id);
+    player._transform = graphics.ETransform.Component.byId(player._entity_id);
 
     // create camera control
     graphics.View.Control.addOf(

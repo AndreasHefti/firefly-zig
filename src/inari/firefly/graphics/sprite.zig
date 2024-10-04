@@ -174,10 +174,10 @@ pub const ESprite = struct {
 
     pub const Property = struct {
         pub fn FrameId(id: Index) *Index {
-            return &ESprite.Component.byId(id).?.template_id;
+            return &ESprite.Component.byId(id).template_id;
         }
         pub fn TintColor(id: Index) *Color {
-            var sprite = ESprite.Component.byId(id).?;
+            var sprite = ESprite.Component.byId(id);
             if (sprite.tint_color == null)
                 sprite.tint_color = Color{ 255, 255, 255, 255 };
 
@@ -338,11 +338,11 @@ pub const DefaultSpriteRenderer = struct {
         var i = entities.nextSetBit(0);
         while (i) |id| {
             // render the sprite
-            const es = ESprite.Component.byId(id).?;
-            const trans = graphics.ETransform.Component.byId(id).?;
+            const es = ESprite.Component.byId(id);
+            const trans = graphics.ETransform.Component.byId(id);
 
             const sprite_template = SpriteTemplate.Component.byId(es.template_id);
-            const multi = if (api.EMultiplier.Component.byId(id)) |m| m.positions else null;
+            const multi = if (api.EMultiplier.Component.byIdOptional(id)) |m| m.positions else null;
             firefly.api.rendering.renderSprite(
                 sprite_template.texture_binding,
                 sprite_template.texture_bounds,

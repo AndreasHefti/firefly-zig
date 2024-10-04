@@ -209,7 +209,7 @@ pub fn Mixin(comptime T: type) type {
             return pool.slots.count();
         }
 
-        pub fn newGet(t: T) *T {
+        pub fn newAndGet(t: T) *T {
             return byId(new(t));
         }
 
@@ -260,12 +260,12 @@ pub fn Mixin(comptime T: type) type {
             return result;
         }
 
-        pub fn exists(id: Index) bool {
-            return pool.exists(id);
-        }
-
         pub fn byId(id: Index) *T {
             return pool.get(id).?;
+        }
+
+        pub fn byIdOptional(id: Index) ?*T {
+            return pool.get(id);
         }
 
         pub fn getReference(id: Index, owned: bool) ?api.CRef {

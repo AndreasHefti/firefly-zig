@@ -444,8 +444,8 @@ pub const EntityStateSystem = struct {
     pub fn updateEntities(components: *utils.BitSet) void {
         var next = components.nextSetBit(0);
         while (next) |i| {
-            if (EState.Component.byId(i)) |e| processEntity(e);
             next = components.nextSetBit(i + 1);
+            processEntity(EState.Component.byId(i));
         }
     }
 

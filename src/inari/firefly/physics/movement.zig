@@ -173,12 +173,11 @@ pub fn SimpleStepIntegrator(movement: *EMovement, delta_time_seconds: Float) boo
     adjustVelocity(movement);
 
     if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        if (graphics.ETransform.Component.byId(movement.id)) |transform| {
-            transform.move(
-                movement.velocity[0] * delta_time_seconds,
-                movement.velocity[1] * delta_time_seconds,
-            );
-        }
+        graphics.ETransform.Component.byId(movement.id).move(
+            movement.velocity[0] * delta_time_seconds,
+            movement.velocity[1] * delta_time_seconds,
+        );
+
         return true;
     }
     return false;
@@ -213,12 +212,11 @@ pub fn EulerIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
     adjustVelocity(movement);
 
     if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        if (graphics.ETransform.Component.byId(movement.id)) |transform| {
-            transform.move(
-                movement.velocity[0] * delta_time_seconds,
-                movement.velocity[1] * delta_time_seconds,
-            );
-        }
+        graphics.ETransform.Component.byId(movement.id).move(
+            movement.velocity[0] * delta_time_seconds,
+            movement.velocity[1] * delta_time_seconds,
+        );
+
         return true;
     }
     return false;
@@ -299,17 +297,16 @@ pub const MovementSystem = struct {
         moved.clear();
         var next = components.nextSetBit(0);
         while (next) |i| {
-            if (EMovement.Component.byId(i)) |m| {
-                if (m.active) {
-                    if (m.update_scheduler) |scheduler| {
-                        if (scheduler.needs_update) {
-                            if (m.integrator(m, dt * (60 / @min(60, scheduler.resolution))))
-                                moved.set(i);
-                        }
-                    } else {
-                        if (m.integrator(m, dt))
+            const m = EMovement.Component.byId(i);
+            if (m.active) {
+                if (m.update_scheduler) |scheduler| {
+                    if (scheduler.needs_update) {
+                        if (m.integrator(m, dt * (60 / @min(60, scheduler.resolution))))
                             moved.set(i);
                     }
+                } else {
+                    if (m.integrator(m, dt))
+                        moved.set(i);
                 }
             }
             next = components.nextSetBit(i + 1);

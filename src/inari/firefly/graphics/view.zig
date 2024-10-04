@@ -439,19 +439,19 @@ pub const ETransform = struct {
 
     pub const Property = struct {
         pub fn XPos(id: Index) *Float {
-            return &ETransform.Component.byId(id).?.position[0];
+            return &ETransform.Component.byId(id).position[0];
         }
         pub fn YPos(id: Index) *Float {
-            return &ETransform.Component.byId(id).?.position[1];
+            return &ETransform.Component.byId(id).position[1];
         }
         pub fn XScale(id: Index) *Float {
-            return &ETransform.Component.byId(id).?.getScale()[1];
+            return &ETransform.Component.byId(id).getScale()[1];
         }
         pub fn YScale(id: Index) *Float {
-            return &ETransform.Component.byId(id).?.getScale()[1];
+            return &ETransform.Component.byId(id).getScale()[1];
         }
         pub fn Rotation(id: Index) *Float {
-            return ETransform.Component.byId(id).?.getRotation();
+            return ETransform.Component.byId(id).getRotation();
         }
     };
 };

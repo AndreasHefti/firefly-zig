@@ -297,7 +297,11 @@ pub fn EntityComponentMixin(comptime T: type) type {
             return pool.slots.count();
         }
 
-        pub fn byId(id: Index) ?*T {
+        pub fn byId(id: Index) *T {
+            return pool.get(id).?;
+        }
+
+        pub fn byIdOptional(id: Index) ?*T {
             return pool.get(id);
         }
 
@@ -308,6 +312,10 @@ pub fn EntityComponentMixin(comptime T: type) type {
         }
 
         pub fn new(entity_id: Index, component: T) void {
+            _ = newAndGet(entity_id, component);
+        }
+
+        pub fn newAndGet(entity_id: Index, component: T) *T {
             checkValidEntityComponentInstance(component);
 
             if (component.id != UNDEF_INDEX)
@@ -321,6 +329,8 @@ pub fn EntityComponentMixin(comptime T: type) type {
 
             if (has_construct)
                 comp.construct();
+
+            return comp;
         }
 
         fn _activate(id: Index, active: bool) void {

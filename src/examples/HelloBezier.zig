@@ -79,9 +79,8 @@ fn init() void {
         .withComponent(EAnimation{})
         .getId();
 
-    if (EAnimation.Component.byId(entity_id)) |e_anim| {
+    if (EAnimation.Component.byIdOptional(entity_id)) |e_anim|
         e_anim.animations.set(anim_id);
-    }
 
     Entity.Activation.activate(entity_id);
 

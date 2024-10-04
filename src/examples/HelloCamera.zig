@@ -46,7 +46,7 @@ fn init() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    const view = View.Component.newGet(.{
+    const view = View.Component.newAndGet(.{
         .name = "TestView",
         .position = .{ 20, 40 },
         .pivot = .{ 0, 0 },
@@ -78,7 +78,7 @@ fn init() void {
             .name = "Camera1",
             .pixel_perfect = false,
             .snap_to_bounds = .{ -100, -100, 800, 800 },
-            .pivot = &ETransform.Component.byId(entity.id).?.position,
+            .pivot = &ETransform.Component.byId(entity.id).position,
             .offset = .{ 16, 16 },
             .velocity_relative_to_pivot = .{ 0.1, 0.1 },
         },
@@ -107,11 +107,11 @@ fn init() void {
 const speed = 2;
 fn entity_control(ctx: *firefly.api.CallContext) void {
     if (firefly.api.input.checkButtonPressed(InputButtonType.UP))
-        ETransform.Component.byId(ctx.caller_id).?.position[1] -= speed;
+        ETransform.Component.byId(ctx.caller_id).position[1] -= speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.DOWN))
-        ETransform.Component.byId(ctx.caller_id).?.position[1] += speed;
+        ETransform.Component.byId(ctx.caller_id).position[1] += speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.LEFT))
-        ETransform.Component.byId(ctx.caller_id).?.position[0] -= speed;
+        ETransform.Component.byId(ctx.caller_id).position[0] -= speed;
     if (firefly.api.input.checkButtonPressed(InputButtonType.RIGHT))
-        ETransform.Component.byId(ctx.caller_id).?.position[0] += speed;
+        ETransform.Component.byId(ctx.caller_id).position[0] += speed;
 }

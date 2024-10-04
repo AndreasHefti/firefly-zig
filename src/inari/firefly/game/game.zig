@@ -137,19 +137,19 @@ pub const Conditions = struct {
 };
 
 fn goesEast(ctx: *api.CallContext) bool {
-    return if (physics.EMovement.Component.byId(ctx.id_1)) |m| m.velocity[0] > 0 else false;
+    return physics.EMovement.Component.byId(ctx.id_1).velocity[0] > 0;
 }
 
 fn goesWest(ctx: *api.CallContext) bool {
-    return if (physics.EMovement.Component.byId(ctx.id_1)) |m| m.velocity[0] < 0 else false;
+    return physics.EMovement.Component.byId(ctx.id_1).velocity[0] < 0;
 }
 
 fn goesNorth(ctx: *api.CallContext) bool {
-    return if (physics.EMovement.Component.byId(ctx.id_1)) |m| m.velocity[1] < 0 else false;
+    return physics.EMovement.Component.byId(ctx.id_1).velocity[1] < 0;
 }
 
 fn goesSouth(ctx: *api.CallContext) bool {
-    return if (physics.EMovement.Component.byId(ctx.id_1)) |m| m.velocity[1] > 0 else false;
+    return physics.EMovement.Component.byId(ctx.id_1).velocity[1] > 0;
 }
 
 pub const SimpleRoomTransitionScene = world.SimpleRoomTransitionScene;
