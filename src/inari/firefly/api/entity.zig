@@ -260,7 +260,7 @@ pub fn EntityComponentMixin(comptime T: type) type {
 
             entity_component_name = name;
             api.EComponentAspectGroup.applyAspect(@This(), name);
-            pool = utils.DynArray(T).new(firefly.api.ENTITY_ALLOC);
+            pool = utils.DynArray(T).newWithRegisterSize(firefly.api.ENTITY_ALLOC, 512);
             _ = INTERFACE_TABLE.add(EComponentTypeInterface{
                 .activate = _activate,
                 .clear = clear,

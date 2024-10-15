@@ -154,7 +154,7 @@ pub fn Mixin(comptime T: type) type {
             }
 
             component_name = name;
-            pool = utils.DynArray(T).new(api.COMPONENT_ALLOC);
+            pool = utils.DynArray(T).newWithRegisterSize(api.COMPONENT_ALLOC, 512);
             api.ComponentAspectGroup.applyAspect(Self, name);
 
             if (has_activation)
