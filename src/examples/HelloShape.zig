@@ -104,6 +104,20 @@ fn example() void {
         .color = .{ 150, 150, 150, 100 },
     }).activate();
 
+    Entity.build(.{ .name = "Triangle" })
+        .withComponent(ETransform{
+        .position = .{ 300, 0 },
+        .pivot = .{ 60, 60 },
+        .scale = .{ 0.5, 0.5 },
+        .rotation = 45,
+    })
+        .withComponent(EShape{
+        .shape_type = ShapeType.TRIANGLE,
+        .fill = true,
+        .vertices = firefly.api.allocFloatArray([_]Float{ 60, 10, 10, 110, 110, 110 }),
+        .color = .{ 255, 255, 255, 255 },
+    }).activate();
+
     Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

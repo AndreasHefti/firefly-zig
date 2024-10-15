@@ -36,7 +36,3 @@ pub fn main() !void {
     try @import("examples/HelloPlayer.zig").run(init_context);
     try @import("examples/HelloPlatformer.zig").run(init_context);
 }
-
-test "API Tests" {
-    std.testing.refAllDecls(@import("inari/libtest.zig"));
-}

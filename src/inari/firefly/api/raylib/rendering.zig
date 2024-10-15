@@ -740,7 +740,7 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    inline fn renderTriangles(
+    fn renderTriangles(
         vertices: []Float,
         color: Color,
         fill: bool,
@@ -762,7 +762,7 @@ const RaylibRenderAPI = struct {
                     @bitCast(color),
                 );
             }
-            i += 5;
+            i += 6;
         }
     }
 
