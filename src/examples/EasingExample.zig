@@ -24,7 +24,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 var ypos: Float = 30;
 
 fn init() void {
-    Texture.Component.newActive(.{
+    _ = Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,

@@ -942,8 +942,10 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
             return _register(T.Component.register(base), subtype);
         }
 
-        pub fn newActive(st: SubType) void {
-            ActivationMixin(T).activate(new(st));
+        pub fn newActive(st: SubType) Index {
+            const id = new(st);
+            ActivationMixin(T).activate(id);
+            return id;
         }
 
         pub fn newGet(subtype: SubType) *SubType {

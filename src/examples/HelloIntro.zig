@@ -26,7 +26,7 @@ pub fn init() void {
 }
 
 fn sceneInit(_: *api.CallContext) void {
-    graphics.Texture.Component.newActive(.{
+    _ = graphics.Texture.Component.newActive(.{
         .name = "IntroTexture",
         .resource = "resources/inari.png",
         .is_mipmap = false,

@@ -28,11 +28,11 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn example() void {
-    const shader = graphics.Shader.Component.newGet(.{
+    const shader_id = graphics.Shader.Component.newActive(.{
         .fragment_shader_resource = "resources/fragBloom.glsl",
         .vertex_shader_resource = "resources/vertBloom.glsl",
     });
-    firefly.api.Asset.Activation.activate(shader.id);
+    firefly.api.Asset.Activation.activate(shader_id);
 
     const view_id_1 = graphics.View.Component.newActive(.{
         .name = "View1",
@@ -43,7 +43,7 @@ fn example() void {
             .height = 80,
             .zoom = 1,
         },
-        .shader_binding = graphics.Shader.Component.byId(shader.id)._binding.?.id,
+        .shader_binding = graphics.Shader.Component.byId(shader_id)._binding.?.id,
     });
 
     const view_id_2 = graphics.View.Component.newActive(.{
@@ -57,7 +57,7 @@ fn example() void {
         },
     });
 
-    Texture.Component.newActive(.{
+    _ = Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,

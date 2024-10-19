@@ -118,7 +118,7 @@ fn example() void {
         .color = .{ 255, 255, 255, 255 },
     }).activate();
 
-    Texture.Component.newActive(.{
+    _ = Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,

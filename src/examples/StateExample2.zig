@@ -35,7 +35,7 @@ const random = rndx.random();
 fn init() void {
     firefly.physics.ContactSystem.System.deactivate();
 
-    Texture.Component.newActive(.{
+    _ = Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,

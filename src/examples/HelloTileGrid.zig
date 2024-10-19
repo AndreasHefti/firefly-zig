@@ -28,7 +28,7 @@ fn loadWithView() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    Texture.Component.newActive(.{
+    _ = Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,

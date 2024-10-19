@@ -57,7 +57,7 @@ fn loadWithView() void {
         .flipY()
         .id;
 
-    Texture.Component.newActive(.{
+    _ = Texture.Component.newActive(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
