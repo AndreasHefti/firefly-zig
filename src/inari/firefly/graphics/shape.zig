@@ -5,6 +5,7 @@ const graphics = firefly.graphics;
 
 const Index = firefly.utils.Index;
 const UNDEF_INDEX = firefly.utils.UNDEF_INDEX;
+const BindingId = api.BindingId;
 const Float = firefly.utils.Float;
 const Color = firefly.utils.Color;
 const BlendMode = firefly.api.BlendMode;
@@ -40,7 +41,6 @@ pub const EShape = struct {
     id: Index = UNDEF_INDEX,
 
     shape_type: ShapeType,
-    // TODO allocation handling is now not optimal
     vertices: []Float,
     fill: bool = true,
     thickness: ?Float = null,
@@ -49,6 +49,7 @@ pub const EShape = struct {
     color1: ?Color = null,
     color2: ?Color = null,
     color3: ?Color = null,
+    shader_binding: ?BindingId = null,
 
     pub fn destruct(self: *EShape) void {
         self.shape_type = ShapeType.POINT;
@@ -60,6 +61,7 @@ pub const EShape = struct {
         self.color1 = null;
         self.color2 = null;
         self.color3 = null;
+        self.shader_binding = null;
     }
 };
 
@@ -76,9 +78,15 @@ pub const DefaultShapeRenderer = struct {
     pub fn renderEntities(entities: *firefly.utils.BitSet, _: graphics.ViewRenderEvent) void {
         var i = entities.nextSetBit(0);
         while (i) |id| {
-            // render the shape
+
+            // Get render data
             const es = EShape.Component.byId(id);
             const trans = graphics.ETransform.Component.byId(id);
+
+            // Set specific shape shader if defines
+            if (es.shader_binding) |sb|
+                firefly.api.rendering.putShaderStack(sb);
+
             firefly.api.rendering.renderShape(
                 es.shape_type,
                 es.vertices,
@@ -94,6 +102,10 @@ pub const DefaultShapeRenderer = struct {
                 es.color2,
                 es.color3,
             );
+
+            // Pop specific shape shader and reactivate previous shader id needed
+            if (es.shader_binding != null)
+                firefly.api.rendering.popShaderStack();
 
             i = entities.nextSetBit(id + 1);
         }

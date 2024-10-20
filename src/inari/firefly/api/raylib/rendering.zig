@@ -28,6 +28,7 @@ const RenderTextureBinding = firefly.api.RenderTextureBinding;
 const Projection = firefly.api.Projection;
 const BindingId = firefly.api.BindingId;
 const DynArray = firefly.utils.DynArray;
+const DynIndexArray = firefly.utils.DynIndexArray;
 const StringBuffer = firefly.utils.StringBuffer;
 const CInt = firefly.utils.CInt;
 const CString = firefly.utils.CString;
@@ -56,8 +57,9 @@ const RaylibRenderAPI = struct {
         textures = DynArray(Texture2D).newWithRegisterSize(firefly.api.ALLOC, 10);
         images = DynArray(Image).newWithRegisterSize(firefly.api.ALLOC, 10);
         render_textures = DynArray(RenderTexture2D).newWithRegisterSize(firefly.api.ALLOC, 10);
-        shaders = DynArray(Shader).newWithRegisterSize(firefly.api.ALLOC, 10);
         fonts = DynArray(Font).newWithRegisterSize(firefly.api.ALLOC, 10);
+        shaders = DynArray(Shader).newWithRegisterSize(firefly.api.ALLOC, 10);
+        shader_stack = DynIndexArray.new(firefly.api.ALLOC, 10);
 
         interface.setRenderBatch = setRenderBatch;
 
@@ -79,7 +81,10 @@ const RaylibRenderAPI = struct {
         interface.createShader = createShader;
         interface.disposeShader = disposeShader;
 
-        interface.setActiveShader = setActiveShader;
+        interface.putShaderStack = putShaderStack;
+        interface.popShaderStack = popShaderStack;
+        interface.clearShaderStack = clearShaderStack;
+
         interface.startRendering = startRendering;
         interface.renderTexture = renderTexture;
         interface.renderSprite = renderSprite;
@@ -120,6 +125,8 @@ const RaylibRenderAPI = struct {
         render_textures.clear();
         render_textures.deinit();
 
+        shader_stack.clear();
+        shader_stack.deinit();
         next = shaders.slots.nextSetBit(0);
         while (next) |i| {
             disposeShader(i);
@@ -154,6 +161,7 @@ const RaylibRenderAPI = struct {
     var fonts: DynArray(Font) = undefined;
     var render_textures: DynArray(RenderTexture2D) = undefined;
     var shaders: DynArray(Shader) = undefined;
+    var shader_stack: DynIndexArray = undefined;
 
     var active_render_texture: ?BindingId = null;
     var active_clear_color: ?rl.Color = undefined;
@@ -370,9 +378,24 @@ const RaylibRenderAPI = struct {
         shaders.delete(id);
     }
 
-    fn setActiveShader(binding_id: ?BindingId) void {
-        if (binding_id) |bid| {
-            if (shaders.get(bid)) |shader| {
+    // raylib default shader settings:
+    // https://github.com/raysan5/raylib/wiki/raylib-default-shader
+
+    fn putShaderStack(binding_id: BindingId) void {
+        if (shaders.get(binding_id)) |shader| {
+            shader_stack.add(binding_id);
+            rl.BeginShaderMode(shader.*);
+        }
+    }
+
+    fn popShaderStack() void {
+        if (shader_stack.size_pointer > 0)
+            _ = shader_stack.removeAt(shader_stack.size_pointer - 1);
+
+        if (shader_stack.size_pointer > 0) {
+            const binding_id = shader_stack.get(shader_stack.size_pointer - 1);
+            if (shaders.get(binding_id)) |shader| {
+                shader_stack.add(binding_id);
                 rl.BeginShaderMode(shader.*);
             } else {
                 rl.EndShaderMode();
@@ -380,6 +403,11 @@ const RaylibRenderAPI = struct {
         } else {
             rl.EndShaderMode();
         }
+    }
+
+    fn clearShaderStack() void {
+        shader_stack.clear();
+        rl.EndShaderMode();
     }
 
     fn startRendering(binding_id: ?BindingId, projection: *Projection) void {

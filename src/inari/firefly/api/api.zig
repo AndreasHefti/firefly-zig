@@ -820,9 +820,14 @@ pub fn IRenderAPI() type {
         /// Dispose the shader with the given binding identifier (shaderId) from GPU
         /// @param shaderId identifier of the shader to dispose.
         disposeShader: *const fn (BindingId) void = undefined,
-        /// Set the active sprite rendering shader. Note that the shader program must have been created before with createShader.
+        /// Put the specified shader as active shader to the active shader stack
         /// @param shaderId The instance identifier of the shader.
-        setActiveShader: *const fn (?BindingId) void = undefined,
+        putShaderStack: *const fn (BindingId) void = undefined,
+        /// Pops the current active shader from the active shader stack and makes new last shader from the stack the new
+        /// active shader or, if the stack is empty, set the default shader
+        popShaderStack: *const fn () void = undefined,
+        /// Clears the shader stack and resets the default shader as active shader
+        clearShaderStack: *const fn () void = undefined,
 
         bindTexture: *const fn (String, BindingId) void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given

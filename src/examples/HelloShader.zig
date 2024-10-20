@@ -43,7 +43,7 @@ fn example() void {
             .height = 80,
             .zoom = 1,
         },
-        .shader_binding = graphics.Shader.Component.byId(shader_id)._binding.?.id,
+        .view_render_shader = graphics.Shader.Component.byId(shader_id)._binding.?.id,
     });
 
     const view_id_2 = graphics.View.Component.newActive(.{

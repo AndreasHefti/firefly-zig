@@ -166,10 +166,10 @@ pub const View = struct {
     pub const Subscription = api.Component.SubscriptionMixin(View);
     pub const Control = api.Component.ControlMixin(View);
 
-    // struct fields
+    /// View Component identifier
     id: Index = UNDEF_INDEX,
+    /// View Component name
     name: ?String = null,
-    //order: u8 = undefined,
 
     position: PosF,
     pivot: ?PosF = .{ 0, 0 },
@@ -179,13 +179,21 @@ pub const View = struct {
     blend_mode: ?BlendMode = BlendMode.ALPHA,
     projection: api.Projection = .{},
 
+    /// If not null, this view is a texture to render on and will later be draw to screen or another texture
     render_texture_binding: ?api.RenderTextureBinding = null,
-    shader_binding: ?BindingId = null,
-    ordered_active_layer: ?utils.DynArray(Index) = null,
+    /// Shader binding of shader that will be applied for rendering to the view
+    view_render_shader: ?BindingId = null,
+    /// Shader binding of the shader that will be applied when the view gets drawn to screen or to another texture
+    texture_render_shader: ?BindingId = null,
     /// If not null, this view is rendered to another view instead of the screen
     target_view_id: ?Index = null,
 
+    /// Sorted list of active layer ids of this View. This is maintained by the system, do not change.
+    ordered_active_layer: ?utils.DynArray(Index) = null,
+
+    // Overall screen projection used when rendering to screen
     pub var screen_projection: api.Projection = .{};
+    // Overall screen shader used when rendering to screen and no other shader has been defined
     pub var screen_shader_binding: ?BindingId = null;
 
     var active_views_to_fbo: utils.DynIndexArray = undefined;
@@ -567,7 +575,7 @@ pub const Scene = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// ViewRenderer api.System
+//// ViewRenderer System
 //////////////////////////////////////////////////////////////
 
 pub const ViewRenderer = struct {
@@ -578,22 +586,24 @@ pub const ViewRenderer = struct {
         if (event.type != firefly.api.RenderEventType.RENDER)
             return;
 
-        if (View.active_views_to_screen.items.len == 0) {
-            // in this case we have only the screen, no FBO
-            if (View.screen_shader_binding) |sb|
-                firefly.api.rendering.setActiveShader(sb);
+        if (View.screen_shader_binding) |sb|
+            firefly.api.rendering.putShaderStack(sb);
 
+        if (View.active_views_to_screen.items.len == 0) {
+
+            // In this case we have only the screen, no FBO. Start render to screen
             firefly.api.rendering.startRendering(null, &View.screen_projection);
+
+            // Assemble view render event and notify all renderer to render to the screen
             VIEW_RENDER_EVENT.view_id = null;
             VIEW_RENDER_EVENT.layer_id = null;
             VIEW_RENDER_EVENT.projection = &View.screen_projection;
             firefly.api.renderView(VIEW_RENDER_EVENT);
 
-            if (View.screen_shader_binding != null)
-                firefly.api.rendering.setActiveShader(null);
-
             firefly.api.rendering.endRendering();
         } else {
+
+            // In this case we have a render pipeline where we first render all to FBOs and that all FBOs to screen.
             // 1. render objects to all FBOs
             var next = View.Activation.nextId(0);
             while (next) |id| {
@@ -601,13 +611,20 @@ pub const ViewRenderer = struct {
                 next = View.Activation.nextId(id + 1);
             }
 
-            // 2. render all FBO that has not screen as target but other FBO
+            // 2. render all FBO that has not screen as target but another FBO
             for (0..View.active_views_to_fbo.size_pointer) |id| {
                 const source_view: *View = View.Component.byId(id);
                 if (source_view.target_view_id) |tid| {
                     const target_view: *View = View.Component.byId(tid);
                     if (target_view.render_texture_binding) |b| {
+
+                        // start render to target view
                         firefly.api.rendering.startRendering(b.id, &target_view.projection);
+
+                        // set shader of source View for view texture rendering
+                        if (source_view.texture_render_shader) |sb|
+                            firefly.api.rendering.putShaderStack(sb);
+
                         firefly.api.rendering.renderTexture(
                             source_view.render_texture_binding.?.id,
                             source_view.position,
@@ -617,21 +634,28 @@ pub const ViewRenderer = struct {
                             source_view.tint_color,
                             source_view.blend_mode,
                         );
+
+                        //rest shader if needed
+                        if (source_view.texture_render_shader != null)
+                            firefly.api.rendering.popShaderStack();
+
                         firefly.api.rendering.endRendering();
                     }
                 }
             }
 
             // 3. render all FBO to screen that has screen as target
-            // set shader if needed
-            if (View.screen_shader_binding) |sb|
-                firefly.api.rendering.setActiveShader(sb);
             // activate render to screen
             firefly.api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
             for (0..View.active_views_to_screen.size_pointer) |id| {
                 const view: *View = View.Component.byId(id);
                 if (view.render_texture_binding) |b| {
+
+                    // set shader for view texture rendering
+                    if (view.texture_render_shader) |sb|
+                        firefly.api.rendering.putShaderStack(sb);
+
                     firefly.api.rendering.renderTexture(
                         b.id,
                         view.position,
@@ -641,47 +665,65 @@ pub const ViewRenderer = struct {
                         view.tint_color,
                         view.blend_mode,
                     );
+
+                    //rest shader if needed
+                    if (view.texture_render_shader != null)
+                        firefly.api.rendering.popShaderStack();
                 }
             }
+
             // reset shader
             if (View.screen_shader_binding != null)
-                firefly.api.rendering.setActiveShader(null);
+                firefly.api.rendering.popShaderStack();
+
             // end rendering to screen
             firefly.api.rendering.endRendering();
         }
+
+        if (View.screen_shader_binding != null)
+            firefly.api.rendering.popShaderStack();
     }
 
     fn renderToFBO(view: *View) void {
+        // Given View represents an FBO to render to
         if (view.render_texture_binding) |b| {
-            // start rendering to view (FBO)
-            // set shader...
-            if (view.shader_binding) |sb|
-                firefly.api.rendering.setActiveShader(sb);
-            // activate FBO
+
+            // start rendering to View (FBO)
+            // set default shader for render to this FBO if available
+            if (view.view_render_shader) |sb|
+                firefly.api.rendering.putShaderStack(sb);
+
+            // Activate rendering to this FBO
             firefly.api.rendering.startRendering(b.id, &view.projection);
-            // emit render events for all layers of the view in order to render to FBO
+
+            // Emit render events for all layers of the view in order to render to FBO
             if (view.ordered_active_layer != null) {
                 var it = view.ordered_active_layer.?.slots.nextSetBit(0);
                 while (it) |layer_id| {
+                    it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
                     const layer: *const Layer = Layer.Component.byId(layer_id);
-                    // apply layer shader to render engine if set
+
+                    // Apply layer shader to render engine if set
                     if (layer.shader_binding) |sb|
-                        firefly.api.rendering.setActiveShader(sb);
-                    // add layer offset to render engine
+                        firefly.api.rendering.putShaderStack(sb);
+
+                    // Add layer offset to render engine
                     if (layer.offset) |o|
                         firefly.api.rendering.addOffset(o);
-                    // send layer render event
+
+                    // Assemble and send layer render event
                     VIEW_RENDER_EVENT.view_id = view.id;
                     VIEW_RENDER_EVENT.layer_id = layer_id;
                     VIEW_RENDER_EVENT.projection = &view.projection;
                     firefly.api.renderView(VIEW_RENDER_EVENT);
+
                     // remove layer offset form render engine
                     if (layer.offset) |o|
                         firefly.api.rendering.addOffset(o * @as(Vector2f, @splat(-1)));
-                    it = view.ordered_active_layer.?.slots.nextSetBit(layer_id + 1);
+
                     // remove layer shader to render engine if set
                     if (layer.shader_binding != null)
-                        firefly.api.rendering.setActiveShader(null);
+                        firefly.api.rendering.popShaderStack();
                 }
             } else {
                 // we have no layer so only one render call for this view
@@ -691,8 +733,8 @@ pub const ViewRenderer = struct {
                 firefly.api.renderView(VIEW_RENDER_EVENT);
             }
             // reset shader
-            if (view.shader_binding != null)
-                firefly.api.rendering.setActiveShader(null);
+            if (view.view_render_shader != null)
+                firefly.api.rendering.popShaderStack();
             // end rendering to FBO
             firefly.api.rendering.endRendering();
         }
