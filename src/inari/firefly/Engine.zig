@@ -111,6 +111,7 @@ pub fn startWindow(
     if (init_callback) |ic|
         ic();
 
+    Timer.reset();
     running = true;
     while (!firefly.api.window.hasWindowClosed() and running)
         tick();

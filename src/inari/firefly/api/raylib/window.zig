@@ -43,6 +43,7 @@ const RaylibWindowAPI = struct {
         interface.isWindowState = isWindowState;
 
         interface.showFPS = showFPS;
+        interface.getFPS = getFPS;
         interface.toggleFullscreen = toggleFullscreen;
         interface.toggleBorderlessWindowed = toggleBorderlessWindowed;
         interface.setWindowFlags = setWindowFlags;
@@ -129,6 +130,10 @@ const RaylibWindowAPI = struct {
 
     fn showFPS(x: CInt, y: CInt) void {
         rl.DrawFPS(x, y);
+    }
+
+    fn getFPS() Float {
+        return @floatFromInt(rl.GetFPS());
     }
 
     fn toggleFullscreen() void {

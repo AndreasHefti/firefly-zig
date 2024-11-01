@@ -970,6 +970,7 @@ pub fn IWindowAPI() type {
         isWindowState: *const fn (CUInt) bool = undefined,
 
         showFPS: *const fn (CInt, CInt) void = undefined,
+        getFPS: *const fn () Float = undefined,
         toggleFullscreen: *const fn () void = undefined,
         toggleBorderlessWindowed: *const fn () void = undefined,
         setWindowFlags: *const fn ([]WindowFlag) void = undefined,

@@ -10,7 +10,7 @@ const Float = firefly.utils.Float;
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const Gravity: Float = 9.8;
+pub const EARTH_GRAVITY: Float = 9.8;
 
 pub const Animation = animation.Animation;
 pub const EAnimation = animation.EAnimation;
@@ -35,6 +35,7 @@ pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: 
 pub const MovementSystem = movement.MovementSystem;
 
 pub const SimpleStepIntegrator = movement.SimpleStepIntegrator;
+pub const FPSStepIntegrator = movement.FPSStepIntegrator;
 pub const VerletIntegrator = movement.VerletIntegrator;
 pub const EulerIntegrator = movement.EulerIntegrator;
 

@@ -72,7 +72,7 @@ fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
         .withComponent(ESprite{ .template_id = sprite_id })
         .withComponent(EMovement{
         .velocity = .{ vx, vy },
-        .mass = 0,
+        .mass = 1,
         .adjust_max = false,
         .adjust_ground = false,
     })

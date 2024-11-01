@@ -88,7 +88,7 @@ pub const MovFlags = struct {
     pub var BLOCK_SOUTH: physics.MovementAspect = undefined;
 };
 
-pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: Float) bool;
+pub const MoveIntegrator = *const fn (mov: *EMovement, delta_time_seconds: Float) bool;
 
 //////////////////////////////////////////////////////////////
 //// EMovement Entity Component
@@ -100,15 +100,21 @@ pub const EMovement = struct {
     id: Index = UNDEF_INDEX,
     kind: physics.MovementKind = undefined,
     integrator: MoveIntegrator = SimpleStepIntegrator,
-    update_scheduler: ?api.UpdateScheduler = null,
+    update_scheduler: ?*api.UpdateScheduler = null,
 
     active: bool = true,
-    mass: Float = 0,
-    mass_factor: Float = 1,
+
+    /// the gravity vector for this object. Default is earth gravity
+    gravity_vector: Vector2f = Vector2f{ 0, firefly.physics.EARTH_GRAVITY },
+    /// mass factor vector
+    mass: Float = 50,
+    /// additional external force
     force: Vector2f = Vector2f{ 0, 0 },
+    /// acceleration is been calculated for integration data: (force + gravity) * mass_factor
     acceleration: Vector2f = Vector2f{ 0, 0 },
     velocity: Vector2f = Vector2f{ 0, 0 },
-    gravity: Vector2f = Vector2f{ 0, firefly.physics.Gravity },
+    old_position: Vector2f = Vector2f{ 0, 0 },
+    _mass_vec: Vector2f = undefined,
 
     on_ground: bool = false,
 
@@ -124,6 +130,8 @@ pub const EMovement = struct {
 
     pub fn activation(self: *EMovement, active: bool) void {
         self.active = active;
+        self._mass_vec = @splat(self.mass);
+        self.old_position = graphics.ETransform.Component.byId(self.id).position;
     }
 
     pub fn destruct(self: *EMovement) void {
@@ -132,12 +140,13 @@ pub const EMovement = struct {
         self.integrator = SimpleStepIntegrator;
 
         self.active = true;
-        self.mass = 0;
-        self.mass_factor = 1;
+        self.mass = 50;
+        self._mass_vec = undefined;
         self.force = Vector2f{ 0, 0 };
         self.acceleration = Vector2f{ 0, 0 };
         self.velocity = Vector2f{ 0, 0 };
-        self.gravity = Vector2f{ 0, firefly.physics.Gravity };
+        self.old_position = Vector2f{ 0, 0 };
+        self.gravity_vector = Vector2f{ 0, firefly.physics.EARTH_GRAVITY };
 
         self.on_ground = false;
 
@@ -149,6 +158,20 @@ pub const EMovement = struct {
         self.adjust_max = true;
         self.adjust_ground = true;
         self.adjust_block = false;
+    }
+
+    pub fn integrate(self: *EMovement, delta_time_seconds: Float) bool {
+        // calc acceleration: (force + gravity) * mass
+        self.acceleration = (self.force + self.gravity_vector) * self._mass_vec;
+
+        if (self.update_scheduler) |scheduler| {
+            return if (scheduler.needs_update)
+                self.integrator(self, delta_time_seconds * (60 / @min(60, scheduler.resolution)))
+            else
+                false;
+        } else {
+            return self.integrator(self, delta_time_seconds);
+        }
     }
 
     pub fn flagAll(self: *EMovement, aspects: anytype, _flag: bool) void {
@@ -165,58 +188,66 @@ pub const EMovement = struct {
 //// Move Integrations
 //////////////////////////////////////////////////////////////
 
-pub fn SimpleStepIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
-    const accMass: Float = 1 / movement.mass * movement.mass_factor;
+const step_vec_60FPS: Vector2f = @splat(1.0 / 60.0);
+var step_vec_fps: Vector2f = @splat(1.0 / 60.0);
 
-    movement.velocity[0] += delta_time_seconds * movement.gravity[0] / accMass;
-    movement.velocity[1] += delta_time_seconds * movement.gravity[1] / accMass;
-    adjustVelocity(movement);
+/// Frame delta time independent moving point integration
+pub fn SimpleStepIntegrator(mov: *EMovement, _: Float) bool {
+    mov.velocity += mov.acceleration * step_vec_60FPS;
+    adjustVelocity(mov);
 
-    if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        graphics.ETransform.Component.byId(movement.id).move(
-            movement.velocity[0] * delta_time_seconds,
-            movement.velocity[1] * delta_time_seconds,
-        );
-
+    if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
+        var trans = graphics.ETransform.Component.byId(mov.id);
+        mov.old_position = trans.position;
+        trans.position += mov.velocity * step_vec_60FPS;
         return true;
     }
     return false;
 }
 
-pub fn VerletIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
-    const accMass: Float = 1 / movement.mass * movement.mass_factor;
+pub fn FPSStepIntegrator(mov: *EMovement, _: Float) bool {
+    mov.velocity += mov.acceleration * step_vec_fps;
+    adjustVelocity(mov);
 
-    movement.velocity[0] += delta_time_seconds * (movement.acceleration[0] + ((movement.gravity[0] + movement.force[0]) / accMass)) / 2;
-    movement.velocity[1] += delta_time_seconds * (movement.acceleration[1] + ((movement.gravity[1] + movement.force[1]) / accMass)) / 2;
-    adjustVelocity(movement);
-
-    if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        if (graphics.ETransform.byId(movement.id)) |transform| {
-            transform.move(
-                delta_time_seconds * (movement.velocity[0] + delta_time_seconds * movement.acceleration[0] / 2),
-                delta_time_seconds * (movement.velocity[1] + delta_time_seconds * movement.acceleration[1] / 2),
-            );
-        }
+    if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
+        var trans = graphics.ETransform.Component.byId(mov.id);
+        mov.old_position = trans.position;
+        trans.position += mov.velocity * step_vec_fps;
         return true;
     }
     return false;
 }
 
-pub fn EulerIntegrator(movement: *EMovement, delta_time_seconds: Float) bool {
-    const accMass: Float = 1 / movement.mass * movement.mass_factor;
+/// Frame delta time dependent moving point integration based on Euler's equation of motion
+pub fn EulerIntegrator(mov: *EMovement, delta_time_seconds: Float) bool {
+    const dtv: Vector2f = @splat(delta_time_seconds);
+    mov.velocity += mov.acceleration * dtv;
+    adjustVelocity(mov);
 
-    movement.acceleration[0] = (movement.gravity[0] + movement.force[0]) / accMass;
-    movement.acceleration[1] = (movement.gravity[1] + movement.force[1]) / accMass;
-    movement.velocity[0] += delta_time_seconds * movement.acceleration[0];
-    movement.velocity[1] += delta_time_seconds * movement.acceleration[1];
-    adjustVelocity(movement);
+    if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
+        var trans = graphics.ETransform.Component.byId(mov.id);
+        mov.old_position = trans.position;
+        trans.position += mov.velocity * dtv;
+        return true;
+    }
+    return false;
+}
 
-    if (movement.velocity[0] != 0 or movement.velocity[1] != 0) {
-        graphics.ETransform.Component.byId(movement.id).move(
-            movement.velocity[0] * delta_time_seconds,
-            movement.velocity[1] * delta_time_seconds,
-        );
+/// Frame delta time dependent moving point integration based on Verlet's integration method
+const vec2: Vector2f = @splat(2);
+pub fn VerletIntegrator(mov: *EMovement, delta_time_seconds: Float) bool {
+    if (delta_time_seconds > 0.1)
+        return false;
 
+    const dtv: Vector2f = @splat(@min(delta_time_seconds, 1));
+    mov.velocity += mov.acceleration * dtv;
+    adjustVelocity(mov);
+
+    if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
+        var trans = graphics.ETransform.Component.byId(mov.id);
+        const old_pos = trans.position;
+        trans.position = (vec2 * trans.position - mov.old_position) + mov.acceleration * dtv * dtv;
+        mov.old_position = old_pos;
         return true;
     }
     return false;
@@ -293,23 +324,20 @@ pub const MovementSystem = struct {
     }
 
     pub fn updateEntities(components: *utils.BitSet) void {
+        // update fps related vector for integration needs
+        const fps = api.window.getFPS();
+        if (fps > 0 and fps < 100)
+            step_vec_fps = @splat(1.0 / fps);
+
+        // update all EMovement components
         const dt: Float = @min(@as(Float, @floatFromInt(api.Timer.d_time)) / 1000, 0.5);
         moved.clear();
         var next = components.nextSetBit(0);
         while (next) |i| {
-            const m = EMovement.Component.byId(i);
-            if (m.active) {
-                if (m.update_scheduler) |scheduler| {
-                    if (scheduler.needs_update) {
-                        if (m.integrator(m, dt * (60 / @min(60, scheduler.resolution))))
-                            moved.set(i);
-                    }
-                } else {
-                    if (m.integrator(m, dt))
-                        moved.set(i);
-                }
-            }
             next = components.nextSetBit(i + 1);
+            const m = EMovement.Component.byId(i);
+            if (m.active)
+                moved.setValue(i, m.integrate(dt));
         }
         if (moved.count() > 0)
             event_dispatch.notify(event);

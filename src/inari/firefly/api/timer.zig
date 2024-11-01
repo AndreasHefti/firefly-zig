@@ -18,8 +18,11 @@ pub const UpdateScheduler = struct {
 };
 
 var initialized = false;
-var last_update_time: usize = undefined;
 var scheduler: std.ArrayList(UpdateScheduler) = undefined;
+
+var last_update_time: usize = undefined;
+pub var time: usize = 0;
+pub var d_time: usize = 0;
 
 pub fn init() void {
     defer initialized = true;
@@ -27,7 +30,6 @@ pub fn init() void {
         return;
 
     scheduler = std.ArrayList(UpdateScheduler).init(firefly.api.ALLOC);
-    last_update_time = firefly.utils.i64_usize(std.time.milliTimestamp());
 }
 
 pub fn deinit() void {
@@ -38,8 +40,11 @@ pub fn deinit() void {
     scheduler.deinit();
 }
 
-pub var time: usize = 0;
-pub var d_time: usize = 0;
+pub fn reset() void {
+    time = 0;
+    d_time = 0;
+    last_update_time = firefly.utils.i64_usize(std.time.milliTimestamp());
+}
 
 pub fn tick() void {
     const current_time: usize = firefly.utils.i64_usize(std.time.milliTimestamp());
