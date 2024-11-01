@@ -88,7 +88,20 @@ pub const MovFlags = struct {
     pub var BLOCK_SOUTH: physics.MovementAspect = undefined;
 };
 
-pub const MoveIntegrator = *const fn (mov: *EMovement, delta_time_seconds: Float) bool;
+pub const IntegrationType = enum {
+    SimpleStep,
+    FPSStep,
+    Euler,
+    Verlet,
+};
+
+pub const VelocityConstraint = *const fn (data: anytype) void;
+pub const MoveIntegrator = *const fn (
+    data: anytype,
+    constraint: ?VelocityConstraint,
+    delta_time_seconds: Float,
+) bool;
+pub const MoveConstraint = *const fn (data: anytype) void;
 
 //////////////////////////////////////////////////////////////
 //// EMovement Entity Component
@@ -99,7 +112,8 @@ pub const EMovement = struct {
 
     id: Index = UNDEF_INDEX,
     kind: physics.MovementKind = undefined,
-    integrator: MoveIntegrator = SimpleStepIntegrator,
+    integrator: IntegrationType = IntegrationType.SimpleStep,
+    //constraint: ?*const fn (data: *EMovement) void = null,
     update_scheduler: ?*api.UpdateScheduler = null,
 
     active: bool = true,
@@ -137,7 +151,8 @@ pub const EMovement = struct {
     pub fn destruct(self: *EMovement) void {
         self.id = UNDEF_INDEX;
         self.kind = undefined;
-        self.integrator = SimpleStepIntegrator;
+        self.integrator = IntegrationType.SimpleStep;
+        //       self.constraint = null;
 
         self.active = true;
         self.mass = 50;
@@ -163,23 +178,20 @@ pub const EMovement = struct {
     pub fn integrate(self: *EMovement, delta_time_seconds: Float) bool {
         // calc acceleration: (force + gravity) * mass
         self.acceleration = (self.force + self.gravity_vector) * self._mass_vec;
+        const dt = if (self.update_scheduler != null)
+            delta_time_seconds * (60 / @min(60, self.update_scheduler.?.resolution))
+        else
+            delta_time_seconds;
 
-        if (self.update_scheduler) |scheduler| {
-            return if (scheduler.needs_update)
-                self.integrator(self, delta_time_seconds * (60 / @min(60, scheduler.resolution)))
-            else
-                false;
-        } else {
-            return self.integrator(self, delta_time_seconds);
-        }
+        return switch (self.integrator) {
+            IntegrationType.SimpleStep => SimpleStepIntegrator(self, adjustVelocity, dt),
+            IntegrationType.FPSStep => FPSStepIntegrator(self, adjustVelocity, dt),
+            IntegrationType.Euler => EulerIntegrator(self, adjustVelocity, dt),
+            IntegrationType.Verlet => VerletIntegrator(self, adjustVelocity, dt),
+        };
     }
 
-    pub fn flagAll(self: *EMovement, aspects: anytype, _flag: bool) void {
-        inline for (aspects) |a|
-            flag(self, a, _flag);
-    }
-
-    pub fn flag(self: *EMovement, aspect: physics.MovementAspect, _flag: bool) void {
+    pub inline fn flag(self: *EMovement, aspect: physics.MovementAspect, _flag: bool) void {
         self.kind.activateAspect(aspect, _flag);
     }
 };
@@ -192,9 +204,10 @@ const step_vec_60FPS: Vector2f = @splat(1.0 / 60.0);
 var step_vec_fps: Vector2f = @splat(1.0 / 60.0);
 
 /// Frame delta time independent moving point integration
-pub fn SimpleStepIntegrator(mov: *EMovement, _: Float) bool {
+pub fn SimpleStepIntegrator(mov: anytype, constraint: ?VelocityConstraint, _: Float) bool {
     mov.velocity += mov.acceleration * step_vec_60FPS;
-    adjustVelocity(mov);
+    if (constraint) |c|
+        c(mov);
 
     if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
         var trans = graphics.ETransform.Component.byId(mov.id);
@@ -205,9 +218,10 @@ pub fn SimpleStepIntegrator(mov: *EMovement, _: Float) bool {
     return false;
 }
 
-pub fn FPSStepIntegrator(mov: *EMovement, _: Float) bool {
+pub fn FPSStepIntegrator(mov: anytype, constraint: ?VelocityConstraint, _: Float) bool {
     mov.velocity += mov.acceleration * step_vec_fps;
-    adjustVelocity(mov);
+    if (constraint) |c|
+        c(mov);
 
     if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
         var trans = graphics.ETransform.Component.byId(mov.id);
@@ -219,10 +233,11 @@ pub fn FPSStepIntegrator(mov: *EMovement, _: Float) bool {
 }
 
 /// Frame delta time dependent moving point integration based on Euler's equation of motion
-pub fn EulerIntegrator(mov: *EMovement, delta_time_seconds: Float) bool {
+pub fn EulerIntegrator(mov: anytype, constraint: ?VelocityConstraint, delta_time_seconds: Float) bool {
     const dtv: Vector2f = @splat(delta_time_seconds);
     mov.velocity += mov.acceleration * dtv;
-    adjustVelocity(mov);
+    if (constraint) |c|
+        c(mov);
 
     if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
         var trans = graphics.ETransform.Component.byId(mov.id);
@@ -235,13 +250,14 @@ pub fn EulerIntegrator(mov: *EMovement, delta_time_seconds: Float) bool {
 
 /// Frame delta time dependent moving point integration based on Verlet's integration method
 const vec2: Vector2f = @splat(2);
-pub fn VerletIntegrator(mov: *EMovement, delta_time_seconds: Float) bool {
+pub fn VerletIntegrator(mov: anytype, constraint: ?VelocityConstraint, delta_time_seconds: Float) bool {
     if (delta_time_seconds > 0.1)
         return false;
 
     const dtv: Vector2f = @splat(@min(delta_time_seconds, 1));
     mov.velocity += mov.acceleration * dtv;
-    adjustVelocity(mov);
+    if (constraint) |c|
+        c(mov);
 
     if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
         var trans = graphics.ETransform.Component.byId(mov.id);
@@ -253,7 +269,7 @@ pub fn VerletIntegrator(mov: *EMovement, delta_time_seconds: Float) bool {
     return false;
 }
 
-pub fn adjustVelocity(movement: *EMovement) void {
+pub fn adjustVelocity(movement: anytype) void {
     if (movement.adjust_block) {
         if (movement.kind.hasAspect(MovFlags.BLOCK_NORTH) and movement.velocity[1] < 0)
             movement.velocity[1] = 0;
@@ -263,21 +279,6 @@ pub fn adjustVelocity(movement: *EMovement) void {
             movement.velocity[1] = 0;
         if (movement.kind.hasAspect(MovFlags.BLOCK_WEST) and movement.velocity[0] < 0)
             movement.velocity[0] = 0;
-    }
-
-    if (movement.clear_per_frame_flags) {
-        movement.flagAll(.{
-            MovFlags.SLIP_LEFT,
-            MovFlags.SLIP_RIGHT,
-            MovFlags.BLOCK_EAST,
-            MovFlags.BLOCK_WEST,
-            MovFlags.BLOCK_NORTH,
-            MovFlags.BLOCK_SOUTH,
-            MovFlags.ON_SLOPE_UP,
-            MovFlags.ON_SLOPE_DOWN,
-            MovFlags.GROUND_TOUCHED,
-            MovFlags.LOST_GROUND,
-        }, false);
     }
 
     if (movement.adjust_ground and movement.on_ground)
@@ -298,7 +299,6 @@ pub fn adjustVelocity(movement: *EMovement) void {
 //////////////////////////////////////////////////////////////
 //// Movement System
 //////////////////////////////////////////////////////////////
-
 pub const MovementSystem = struct {
     pub const System = api.SystemMixin(MovementSystem);
     pub const EntityUpdate = api.EntityUpdateSystemMixin(MovementSystem);
@@ -308,11 +308,24 @@ pub const MovementSystem = struct {
     var moved: utils.BitSet = undefined;
     var event_dispatch: utils.EventDispatch(MovementEvent) = undefined;
     var event: MovementEvent = MovementEvent{};
+    var clear_kind: physics.MovementKind = undefined;
 
     pub fn systemInit() void {
         moved = utils.BitSet.new(firefly.api.COMPONENT_ALLOC);
         event.moved = &moved;
         event_dispatch = utils.EventDispatch(MovementEvent).new(firefly.api.COMPONENT_ALLOC);
+        clear_kind = physics.MovementKind.of(.{
+            MovFlags.SLIP_LEFT,
+            MovFlags.SLIP_RIGHT,
+            MovFlags.BLOCK_EAST,
+            MovFlags.BLOCK_WEST,
+            MovFlags.BLOCK_NORTH,
+            MovFlags.BLOCK_SOUTH,
+            MovFlags.ON_SLOPE_UP,
+            MovFlags.ON_SLOPE_DOWN,
+            MovFlags.GROUND_TOUCHED,
+            MovFlags.LOST_GROUND,
+        });
     }
 
     pub fn systemDeinit() void {
@@ -336,8 +349,12 @@ pub const MovementSystem = struct {
         while (next) |i| {
             next = components.nextSetBit(i + 1);
             const m = EMovement.Component.byId(i);
-            if (m.active)
+            if (m.active) {
+                if (m.clear_per_frame_flags)
+                    m.kind.removeAspects(clear_kind);
+
                 moved.setValue(i, m.integrate(dt));
+            }
         }
         if (moved.count() > 0)
             event_dispatch.notify(event);

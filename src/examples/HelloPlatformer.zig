@@ -120,7 +120,7 @@ fn playerLoadTask(_: *api.CallContext) void {
         .withComponent(graphics.ETransform{ .position = .{ 32, 32 }, .pivot = .{ 0, 0 } })
         .withComponent(graphics.EView{ .view_id = graphics.View.Naming.getId(view_name), .layer_id = graphics.Layer.Naming.getId(layer2) })
         .withComponent(graphics.ESprite{ .template_id = sprite_id })
-        .withComponent(physics.EMovement{ .mass = 50, .max_velocity_south = 180, .max_velocity_east = 50, .max_velocity_west = 50, .integrator = physics.EulerIntegrator })
+        .withComponent(physics.EMovement{ .mass = 50, .max_velocity_south = 180, .max_velocity_east = 50, .max_velocity_west = 50, .integrator = physics.IntegrationType.Euler })
         .withComponent(physics.EContactScan{ .collision_resolver = game.PlatformerCollisionResolver.new(.{ .contact_bounds = .{ 4, 1, 8, 14 }, .view_id = graphics.View.Naming.getId(view_name), .layer_id = graphics.Layer.Naming.getId(layer2) }) })
         .addToComponent(physics.EContactScan, physics.ContactConstraint{ .name = "Room_Transition", .layer_id = graphics.Layer.Naming.getId(layer2), .bounds = .{ .rect = .{ 6, 6, 4, 4 } }, .type_filter = physics.ContactTypeKind.of(.{game.ContactTypes.ROOM_TRANSITION}), .full_scan = true, .callback = game.TransitionContactCallback })
         .withControlOf(game.SimplePlatformerHorizontalMoveControl{ .button_left = api.InputButtonType.LEFT, .button_right = api.InputButtonType.RIGHT }, true)

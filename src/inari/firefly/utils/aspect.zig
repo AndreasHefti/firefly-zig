@@ -216,6 +216,10 @@ pub fn AspectGroup(comptime group_name: String) type {
                 self.without(aspect.id);
             }
 
+            pub fn removeAspects(self: *Kind, to_remove: Kind) void {
+                self._mask &= ~to_remove._mask;
+            }
+
             pub fn addAspect(self: *Kind, aspect: Aspect) void {
                 self.with(aspect.id);
             }

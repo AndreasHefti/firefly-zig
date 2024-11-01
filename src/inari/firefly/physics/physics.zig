@@ -34,6 +34,7 @@ pub const unsubscribeMovement = movement.unsubscribe;
 pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: Float) bool;
 pub const MovementSystem = movement.MovementSystem;
 
+pub const IntegrationType = movement.IntegrationType;
 pub const SimpleStepIntegrator = movement.SimpleStepIntegrator;
 pub const FPSStepIntegrator = movement.FPSStepIntegrator;
 pub const VerletIntegrator = movement.VerletIntegrator;
