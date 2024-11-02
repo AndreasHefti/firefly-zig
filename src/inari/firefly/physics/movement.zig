@@ -88,32 +88,30 @@ pub const MovFlags = struct {
     pub var BLOCK_SOUTH: physics.MovementAspect = undefined;
 };
 
-pub const IntegrationType = enum {
-    SimpleStep,
-    FPSStep,
-    Euler,
-    Verlet,
+pub const MovePoint = struct {
+    v: *Vector2f,
+    a: *Vector2f,
+    p: *Vector2f,
+    p_old: *Vector2f,
 };
 
-pub const VelocityConstraint = *const fn (data: anytype) void;
-pub const MoveIntegrator = *const fn (
-    data: anytype,
-    constraint: ?VelocityConstraint,
-    delta_time_seconds: Float,
-) bool;
-pub const MoveConstraint = *const fn (data: anytype) void;
+pub const MoveIntegrator = struct {
+    velocity_integration: *const fn (p: MovePoint, delta_time_seconds: Float) void,
+    position_integration: *const fn (p: MovePoint, delta_time_seconds: Float) void,
+};
 
 //////////////////////////////////////////////////////////////
 //// EMovement Entity Component
 //////////////////////////////////////////////////////////////
 
+pub const EMovementConstraint = *const fn (id: Index) void;
 pub const EMovement = struct {
     pub const Component = api.EntityComponentMixin(EMovement);
 
     id: Index = UNDEF_INDEX,
     kind: physics.MovementKind = undefined,
-    integrator: IntegrationType = IntegrationType.SimpleStep,
-    //constraint: ?*const fn (data: *EMovement) void = null,
+    integrator: MoveIntegrator = SimpleStepIntegrator,
+    constraint: ?EMovementConstraint = DefaultVelocityConstraint,
     update_scheduler: ?*api.UpdateScheduler = null,
 
     active: bool = true,
@@ -128,7 +126,6 @@ pub const EMovement = struct {
     acceleration: Vector2f = Vector2f{ 0, 0 },
     velocity: Vector2f = Vector2f{ 0, 0 },
     old_position: Vector2f = Vector2f{ 0, 0 },
-    _mass_vec: Vector2f = undefined,
 
     on_ground: bool = false,
 
@@ -142,17 +139,30 @@ pub const EMovement = struct {
     adjust_block: bool = false,
     clear_per_frame_flags: bool = true,
 
+    _mass_vec: Vector2f = undefined,
+    _m_point: MovePoint = undefined,
+
     pub fn activation(self: *EMovement, active: bool) void {
         self.active = active;
-        self._mass_vec = @splat(self.mass);
-        self.old_position = graphics.ETransform.Component.byId(self.id).position;
+        if (active) {
+            self._mass_vec = @splat(self.mass);
+            const p_ref = &graphics.ETransform.Component.byId(self.id).position;
+            //std.debug.print("trans pos: {d}\n", .{p_ref});
+            self._m_point = MovePoint{
+                .a = &self.acceleration,
+                .v = &self.velocity,
+                .p = p_ref,
+                .p_old = &self.old_position,
+            };
+
+            self.old_position = p_ref.*;
+        }
     }
 
     pub fn destruct(self: *EMovement) void {
         self.id = UNDEF_INDEX;
         self.kind = undefined;
-        self.integrator = IntegrationType.SimpleStep;
-        //       self.constraint = null;
+        self.integrator = SimpleStepIntegrator;
 
         self.active = true;
         self.mass = 50;
@@ -175,22 +185,6 @@ pub const EMovement = struct {
         self.adjust_block = false;
     }
 
-    pub fn integrate(self: *EMovement, delta_time_seconds: Float) bool {
-        // calc acceleration: (force + gravity) * mass
-        self.acceleration = (self.force + self.gravity_vector) * self._mass_vec;
-        const dt = if (self.update_scheduler != null)
-            delta_time_seconds * (60 / @min(60, self.update_scheduler.?.resolution))
-        else
-            delta_time_seconds;
-
-        return switch (self.integrator) {
-            IntegrationType.SimpleStep => SimpleStepIntegrator(self, adjustVelocity, dt),
-            IntegrationType.FPSStep => FPSStepIntegrator(self, adjustVelocity, dt),
-            IntegrationType.Euler => EulerIntegrator(self, adjustVelocity, dt),
-            IntegrationType.Verlet => VerletIntegrator(self, adjustVelocity, dt),
-        };
-    }
-
     pub inline fn flag(self: *EMovement, aspect: physics.MovementAspect, _flag: bool) void {
         self.kind.activateAspect(aspect, _flag);
     }
@@ -200,76 +194,71 @@ pub const EMovement = struct {
 //// Move Integrations
 //////////////////////////////////////////////////////////////
 
-const step_vec_60FPS: Vector2f = @splat(1.0 / 60.0);
-var step_vec_fps: Vector2f = @splat(1.0 / 60.0);
-
 /// Frame delta time independent moving point integration
-pub fn SimpleStepIntegrator(mov: anytype, constraint: ?VelocityConstraint, _: Float) bool {
-    mov.velocity += mov.acceleration * step_vec_60FPS;
-    if (constraint) |c|
-        c(mov);
+pub const SimpleStepIntegrator: MoveIntegrator = .{
+    .velocity_integration = ss_v_int,
+    .position_integration = ss_p_int,
+};
 
-    if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
-        var trans = graphics.ETransform.Component.byId(mov.id);
-        mov.old_position = trans.position;
-        trans.position += mov.velocity * step_vec_60FPS;
-        return true;
-    }
-    return false;
+pub const step_vec: Vector2f = @splat(1.0 / 60.0);
+fn ss_v_int(p: MovePoint, _: Float) void {
+    p.v.* += p.a.* * step_vec;
+}
+fn ss_p_int(p: MovePoint, _: Float) void {
+    p.p_old.* = p.p.*;
+    p.p.* += p.v.* * step_vec;
 }
 
-pub fn FPSStepIntegrator(mov: anytype, constraint: ?VelocityConstraint, _: Float) bool {
-    mov.velocity += mov.acceleration * step_vec_fps;
-    if (constraint) |c|
-        c(mov);
+/// Frame delta time independent moving point integration
+pub const FPSStepIntegrator: MoveIntegrator = .{
+    .velocity_integration = fps_v_int,
+    .position_integration = fps_p_int,
+};
 
-    if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
-        var trans = graphics.ETransform.Component.byId(mov.id);
-        mov.old_position = trans.position;
-        trans.position += mov.velocity * step_vec_fps;
-        return true;
-    }
-    return false;
+var step_vec_fps: Vector2f = @splat(1.0 / 60.0);
+fn fps_v_int(p: MovePoint, _: Float) void {
+    p.v.* += p.a.* * step_vec_fps;
+}
+fn fps_p_int(p: MovePoint, _: Float) void {
+    p.p_old.* = p.p.*;
+    p.p.* += p.v.* * step_vec_fps;
 }
 
 /// Frame delta time dependent moving point integration based on Euler's equation of motion
-pub fn EulerIntegrator(mov: anytype, constraint: ?VelocityConstraint, delta_time_seconds: Float) bool {
-    const dtv: Vector2f = @splat(delta_time_seconds);
-    mov.velocity += mov.acceleration * dtv;
-    if (constraint) |c|
-        c(mov);
+pub const EulerIntegrator: MoveIntegrator = .{
+    .velocity_integration = euler_v_int,
+    .position_integration = euler_p_int,
+};
 
-    if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
-        var trans = graphics.ETransform.Component.byId(mov.id);
-        mov.old_position = trans.position;
-        trans.position += mov.velocity * dtv;
-        return true;
-    }
-    return false;
+fn euler_v_int(p: MovePoint, delta_time_seconds: Float) void {
+    p.v.* += p.a.* * @as(Vector2f, @splat(delta_time_seconds));
+}
+
+fn euler_p_int(p: MovePoint, delta_time_seconds: Float) void {
+    p.p_old.* = p.p.*;
+    p.p.* += p.v.* * @as(Vector2f, @splat(delta_time_seconds));
 }
 
 /// Frame delta time dependent moving point integration based on Verlet's integration method
 const vec2: Vector2f = @splat(2);
-pub fn VerletIntegrator(mov: anytype, constraint: ?VelocityConstraint, delta_time_seconds: Float) bool {
-    if (delta_time_seconds > 0.1)
-        return false;
+pub const VerletIntegrator: MoveIntegrator = .{
+    .velocity_integration = euler_v_int,
+    .position_integration = verlet_p_int,
+};
 
-    const dtv: Vector2f = @splat(@min(delta_time_seconds, 1));
-    mov.velocity += mov.acceleration * dtv;
-    if (constraint) |c|
-        c(mov);
-
-    if (mov.velocity[0] != 0 or mov.velocity[1] != 0) {
-        var trans = graphics.ETransform.Component.byId(mov.id);
-        const old_pos = trans.position;
-        trans.position = (vec2 * trans.position - mov.old_position) + mov.acceleration * dtv * dtv;
-        mov.old_position = old_pos;
-        return true;
-    }
-    return false;
+fn verlet_p_int(p: MovePoint, delta_time_seconds: Float) void {
+    const old = p.p.*;
+    p.p.* = (vec2 * p.p.* - p.p_old.*) + p.a.* * @as(Vector2f, @splat(delta_time_seconds * delta_time_seconds));
+    p.p_old.* = old;
 }
 
-pub fn adjustVelocity(movement: anytype) void {
+//////////////////////////////////////////////////////////////
+//// Default Move Velocity Constraint
+//////////////////////////////////////////////////////////////
+
+pub fn DefaultVelocityConstraint(entity_id: Index) void {
+    var movement = EMovement.Component.byId(entity_id);
+
     if (movement.adjust_block) {
         if (movement.kind.hasAspect(MovFlags.BLOCK_NORTH) and movement.velocity[1] < 0)
             movement.velocity[1] = 0;
@@ -343,17 +332,38 @@ pub const MovementSystem = struct {
             step_vec_fps = @splat(1.0 / fps);
 
         // update all EMovement components
-        const dt: Float = @min(@as(Float, @floatFromInt(api.Timer.d_time)) / 1000, 0.5);
+        const delta_time_seconds: Float = @min(@as(Float, @floatFromInt(api.Timer.d_time)) / 1000, 0.5);
         moved.clear();
         var next = components.nextSetBit(0);
         while (next) |i| {
             next = components.nextSetBit(i + 1);
             const m = EMovement.Component.byId(i);
             if (m.active) {
+
+                // clear move flags per frame if requested
                 if (m.clear_per_frame_flags)
                     m.kind.removeAspects(clear_kind);
 
-                moved.setValue(i, m.integrate(dt));
+                // calc acceleration: (force + gravity) * mass
+                m.acceleration = (m.force + m.gravity_vector) * m._mass_vec;
+
+                // delta time
+                const dt = if (m.update_scheduler != null)
+                    delta_time_seconds * (60 / @min(60, m.update_scheduler.?.resolution))
+                else
+                    delta_time_seconds;
+
+                // do velocity integration
+                m.integrator.velocity_integration(m._m_point, dt);
+
+                // apply velocity constraint if available
+                if (m.constraint) |c|
+                    //@call(std.builtin.CallModifier.always_inline, c, .{i});
+                    c(i);
+
+                // integrate position
+                m.integrator.position_integration(m._m_point, dt);
+                moved.setValue(i, m.velocity[0] != 0 or m.velocity[1] != 0);
             }
         }
         if (moved.count() > 0)

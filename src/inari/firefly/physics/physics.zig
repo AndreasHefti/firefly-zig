@@ -34,11 +34,12 @@ pub const unsubscribeMovement = movement.unsubscribe;
 pub const MoveIntegrator = *const fn (movement: *EMovement, delta_time_seconds: Float) bool;
 pub const MovementSystem = movement.MovementSystem;
 
-pub const IntegrationType = movement.IntegrationType;
+pub const EMovementConstraint = movement.EMovementConstraint;
 pub const SimpleStepIntegrator = movement.SimpleStepIntegrator;
 pub const FPSStepIntegrator = movement.FPSStepIntegrator;
 pub const VerletIntegrator = movement.VerletIntegrator;
 pub const EulerIntegrator = movement.EulerIntegrator;
+pub const DefaultVelocityConstraint: EMovementConstraint = movement.DefaultVelocityConstraint;
 
 pub const AudioPlayer = audio.AudioPlayer;
 pub const Sound = audio.Sound;

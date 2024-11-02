@@ -75,6 +75,8 @@ fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
         .mass = 1,
         .adjust_max = false,
         .adjust_ground = false,
+        .integrator = firefly.physics.SimpleStepIntegrator,
+        .constraint = null,
     })
         .withComponent(EState{ .state_engine_ref = state_engine.id })
         .activateGetId();
