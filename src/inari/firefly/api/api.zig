@@ -73,7 +73,6 @@ pub const VoidControl = control.VoidControl;
 pub const Composite = composite.Composite;
 pub const CompositeLifeCycle = composite.CompositeLifeCycle;
 pub const CompositeMixin = composite.CompositeMixin;
-pub const CompositeBuilder = composite.CompositeBuilder;
 pub const State = control.State;
 pub const StateEngine = control.StateEngine;
 pub const EntityStateEngine = control.EntityStateEngine;
@@ -100,7 +99,7 @@ pub const EComponentAspect = EComponentAspectGroup.Aspect;
 pub const ActionResult = enum {
     Running,
     Success,
-    Failed,
+    Failure,
 };
 
 pub const CRef = struct {
@@ -239,6 +238,12 @@ pub const NamePool = struct {
             return @ptrCast(_n);
         }
         return null;
+    }
+
+    pub fn _getCName(name: String) CString {
+        const _n = firefly.api.ALLOC.dupeZ(u8, name) catch unreachable;
+        c_names.append(_n) catch unreachable;
+        return @ptrCast(_n);
     }
 
     pub fn freeCNames() void {
@@ -875,7 +880,7 @@ pub fn IRenderAPI() type {
 
         renderText: *const fn (
             font_id: ?BindingId,
-            text: CString,
+            text: String,
             position: PosF,
             pivot: ?PosF,
             rotation: ?Float,

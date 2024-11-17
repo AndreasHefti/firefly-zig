@@ -282,6 +282,13 @@ pub const View = struct {
         }
     }
 
+    pub fn transform_world_position(self: *View, window_position: Vector2f, apply_zoom: bool) Vector2f {
+        return if (apply_zoom)
+            (window_position - self.position) / @as(Vector2f, @splat(self.projection.zoom))
+        else
+            (window_position - self.position);
+    }
+
     pub fn onLayerAction(event: api.ComponentEvent) void {
         switch (event.event_type) {
             .ACTIVATED => addLayerMapping(Layer.Component.byId(event.c_id.?)),

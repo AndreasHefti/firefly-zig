@@ -47,8 +47,8 @@ pub const Font = struct {
     name: ?String = null,
     resource: String,
     size: ?CInt = null,
-    char_num: ?CInt,
-    code_points: ?CInt,
+    char_num: ?CInt = null,
+    code_points: ?CInt = null,
 
     _binding: ?BindingId = null,
 
@@ -81,7 +81,7 @@ pub const EText = struct {
 
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
-    text: CString,
+    text: String,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
     size: ?Float = null,
@@ -111,7 +111,7 @@ pub const DefaultTextRenderer = struct {
     pub fn renderEntities(entities: *firefly.utils.BitSet, _: graphics.ViewRenderEvent) void {
         var i = entities.nextSetBit(0);
         while (i) |id| {
-            // render the sprite
+            // render the text
             if (EText.Component.byIdOptional(id)) |text| {
                 const trans = graphics.ETransform.Component.byId(id);
                 firefly.api.rendering.renderText(

@@ -5,6 +5,7 @@ const api = firefly.api;
 const graphics = firefly.graphics;
 const physics = firefly.physics;
 
+const behavior = @import("behavior.zig");
 const tile = @import("tile.zig");
 const json = @import("json.zig");
 const world = @import("world.zig");
@@ -30,6 +31,7 @@ pub fn init() !void {
 
     Groups.PAUSEABLE = api.GroupAspectGroup.getAspect("PAUSEABLE");
     // init sub packages
+    behavior.init();
     tile.init();
     world.init();
     json.init();
@@ -65,12 +67,43 @@ pub fn deinit() void {
     json.deinit();
     world.deinit();
     tile.deinit();
-    //   GlobalStack.deinit();
+    behavior.deinit();
 }
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
 //////////////////////////////////////////////////////////////
+
+pub const TileDimensionType = tile.TileDimensionType;
+pub const TileAnimationFrame = tile.TileAnimationFrame;
+pub const TileSet = tile.TileSet;
+pub const SpriteData = tile.SpriteData;
+pub const TileTemplate = tile.TileTemplate;
+pub const TileMapping = tile.TileMapping;
+pub const TileSetMapping = tile.TileSetMapping;
+pub const TileLayerData = tile.TileLayerData;
+
+pub const JSONTile = json.JSONTile;
+pub const JSONTileSet = json.JSONTileSet;
+
+pub const Player = world.Player;
+pub const Room = world.Room;
+pub const RoomState = world.RoomState;
+pub const World = world.World;
+pub const TransitionContactCallback = world.TransitionContactCallback;
+
+pub const PlatformerCollisionResolver = platformer.PlatformerCollisionResolver;
+pub const SimplePlatformerHorizontalMoveControl = platformer.SimplePlatformerHorizontalMoveControl;
+pub const SimplePlatformerJumpControl = platformer.SimplePlatformerJumpControl;
+
+pub const BehaviorFunction = behavior.BehaviorFunction;
+pub const BehaviorNode = behavior.BehaviorNode;
+pub const BehaviorTreeBuilder = behavior.BehaviorTreeBuilder;
+pub const EBehavior = behavior.EBehavior;
+pub const BehaviorSystem = behavior.BehaviorSystem;
+pub const SequenceFunction = behavior.sequence;
+pub const FallbackFunction = behavior.fallback;
+pub const ParallelFunction = behavior.parallel;
 
 pub const Groups = struct {
     pub var PAUSEABLE: api.GroupAspect = undefined;
@@ -179,28 +212,6 @@ fn pause(p: bool) void {
         }
     }
 }
-
-pub const TileDimensionType = tile.TileDimensionType;
-pub const TileAnimationFrame = tile.TileAnimationFrame;
-pub const TileSet = tile.TileSet;
-pub const SpriteData = tile.SpriteData;
-pub const TileTemplate = tile.TileTemplate;
-pub const TileMapping = tile.TileMapping;
-pub const TileSetMapping = tile.TileSetMapping;
-pub const TileLayerData = tile.TileLayerData;
-
-pub const JSONTile = json.JSONTile;
-pub const JSONTileSet = json.JSONTileSet;
-
-pub const Player = world.Player;
-pub const Room = world.Room;
-pub const RoomState = world.RoomState;
-pub const World = world.World;
-pub const TransitionContactCallback = world.TransitionContactCallback;
-
-pub const PlatformerCollisionResolver = platformer.PlatformerCollisionResolver;
-pub const SimplePlatformerHorizontalMoveControl = platformer.SimplePlatformerHorizontalMoveControl;
-pub const SimplePlatformerJumpControl = platformer.SimplePlatformerJumpControl;
 
 //////////////////////////////////////////////////////////////
 //// Simple pivot camera

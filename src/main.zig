@@ -15,6 +15,8 @@ pub fn main() !void {
     try @import("examples/HelloFirefly.zig").run(init_context);
     try @import("examples/HelloIntro.zig").run(init_context);
     try @import("examples/HelloSprite.zig").run(init_context);
+    try @import("examples/HelloMultiViewport.zig").run(init_context);
+    try @import("examples/HelloBehavior.zig").run(init_context);
     try @import("examples/HelloShader.zig").run(init_context);
     try @import("examples/HelloSpriteAnimation.zig").run(init_context);
     try @import("examples/SpriteMultiply.zig").run(init_context);

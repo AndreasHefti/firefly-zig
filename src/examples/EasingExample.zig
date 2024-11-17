@@ -66,7 +66,7 @@ fn init() void {
 fn create(name: String, easing: Easing) void {
     Entity.build(.{})
         .withComponent(ETransform{ .position = .{ 10, ypos } })
-        .withComponent(EText{ .text = @ptrCast(name), .size = 20, .char_spacing = 2 })
+        .withComponent(EText{ .text = name, .size = 20, .char_spacing = 2 })
         .activate();
 
     Entity.build(.{})

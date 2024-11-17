@@ -76,6 +76,13 @@ pub inline fn f32_cint(v: f32) c_int {
     return @as(c_int, @intCast(f32_usize(v)));
 }
 
+pub inline fn digit(num: usize, position: u8) u8 {
+    return std.fmt.digitToChar(
+        @as(u8, @intCast(@mod(num / std.math.pow(usize, 10, position), 10))),
+        std.fmt.Case.lower,
+    );
+}
+
 pub inline fn parseBoolean(value: ?String) bool {
     if (value) |v| {
         if (v.len == 0)

@@ -631,6 +631,21 @@ pub const ContactSystem = struct {
     var simple_mapping: utils.BitSet = undefined;
     var contact_map: ?IContactMap = null;
 
+    pub fn getPotentialContactIds(
+        world_contact_bounds: utils.RectF,
+        view_id: ?Index,
+        layer_id: ?Index,
+    ) utils.BitSet {
+        return if (contact_map != null)
+            contact_map.?.getPotentialContactIds(
+                world_contact_bounds,
+                view_id,
+                layer_id,
+            ) orelse simple_mapping
+        else
+            simple_mapping;
+    }
+
     pub fn systemInit() void {
         simple_mapping = utils.BitSet.new(api.ALLOC);
         entity_condition = api.EntityTypeCondition{
@@ -740,14 +755,7 @@ pub const ContactSystem = struct {
         layer_id: ?Index,
     ) bool {
         var has_any_contact = false;
-        const entities = if (contact_map != null)
-            contact_map.?.getPotentialContactIds(
-                world_contact_bounds,
-                view_id,
-                layer_id,
-            ) orelse simple_mapping
-        else
-            simple_mapping;
+        const entities = getPotentialContactIds(world_contact_bounds, view_id, layer_id);
 
         var next = entities.nextSetBit(0);
         while (next) |i| {

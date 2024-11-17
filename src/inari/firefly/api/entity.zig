@@ -238,6 +238,7 @@ pub fn EntityComponentMixin(comptime T: type) type {
     const has_construct: bool = @hasDecl(T, "construct");
     const has_destruct: bool = @hasDecl(T, "destruct");
     const has_activation: bool = @hasDecl(T, "activation");
+    const has_call_context: bool = @hasDecl(T, "CallContext");
 
     comptime {
         if (@typeInfo(T) != .Struct)
@@ -330,6 +331,9 @@ pub fn EntityComponentMixin(comptime T: type) type {
             if (has_construct)
                 comp.construct();
 
+            if (has_call_context)
+                api.Component.CallContextMixin(T).construct(comp);
+
             return comp;
         }
 
@@ -351,11 +355,14 @@ pub fn EntityComponentMixin(comptime T: type) type {
             if (!pool.slots.isSet(id))
                 return;
 
-            if (has_destruct) {
-                if (pool.get(id)) |item| {
+            if (has_destruct)
+                if (pool.get(id)) |item|
                     item.destruct();
-                }
-            }
+
+            if (has_call_context)
+                if (pool.get(id)) |item|
+                    api.Component.CallContextMixin(T).destruct(item);
+
             pool.delete(id);
         }
 

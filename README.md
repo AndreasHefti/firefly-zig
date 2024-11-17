@@ -39,7 +39,7 @@ Features:
     - [ ] physics - Ray-Cast
     - [x] physics - Audio
     
-    - [ ] game - Behavior 
+    - [x] game - Behavior 
     - [x] game - TileSet (created in code or loaded from JSON file)
     - [x] game - TileMap (created in code or loaded from JSON file)
     - [x] game - Camera (simple pivot camera)

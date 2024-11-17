@@ -575,7 +575,7 @@ pub fn CallContextMixin(comptime T: type) type {
     return struct {
         pub const Attributes = AttributeMixin(T);
 
-        fn construct(self: *T) void {
+        pub fn construct(self: *T) void {
             self.call_context = .{
                 .caller_id = self.id,
             };
@@ -585,7 +585,7 @@ pub fn CallContextMixin(comptime T: type) type {
             Attributes.construct(self);
         }
 
-        fn destruct(self: *T) void {
+        pub fn destruct(self: *T) void {
             Attributes.destruct(self);
         }
     };
@@ -594,6 +594,7 @@ pub fn CallContextMixin(comptime T: type) type {
 pub fn AttributeMixin(comptime T: type) type {
     const has_attributes_id: bool = @hasField(T, "attributes_id");
     const has_call_context: bool = @hasField(T, "call_context");
+    const has_init_attributes: bool = @hasDecl(T, "init_attributes");
 
     if (!has_attributes_id and !has_call_context)
         @panic("Expecting type has one of the following fields: attributes_id: ?Index, call_context: CallContext");
@@ -602,7 +603,7 @@ pub fn AttributeMixin(comptime T: type) type {
 
     return struct {
         fn construct(self: *T) void {
-            if (@hasDecl(T, "init_attributes")) {
+            if (has_init_attributes) {
                 const name = getAttributesName(self);
                 if (T.init_attributes) {
                     if (has_call_context) {
@@ -623,16 +624,14 @@ pub fn AttributeMixin(comptime T: type) type {
         }
 
         fn destruct(self: *T) void {
-            if (T.init_attributes) {
-                if (has_call_context) {
-                    if (self.call_context.attributes_id) |aid|
-                        api.Attributes.Component.dispose(aid);
-                    self.call_context.attributes_id = null;
-                } else if (has_attributes_id) {
-                    if (self.attributes_id) |aid|
-                        api.Attributes.Component.dispose(aid);
-                    self.attributes_id = null;
-                }
+            if (has_call_context) {
+                if (self.call_context.attributes_id) |aid|
+                    api.Attributes.Component.dispose(aid);
+                self.call_context.attributes_id = null;
+            } else if (has_attributes_id) {
+                if (self.attributes_id) |aid|
+                    api.Attributes.Component.dispose(aid);
+                self.attributes_id = null;
             }
         }
 

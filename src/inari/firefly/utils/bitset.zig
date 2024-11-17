@@ -10,10 +10,10 @@ pub const BitSet = struct {
     const Self = @This();
 
     /// The integer type used to represent a mask in this bit set
-    pub const MaskInt = usize;
+    pub const MaskInt = DynamicBitSetUnmanaged.MaskInt;
 
     /// The integer type used to shift a mask in this bit set
-    pub const ShiftInt = std.math.Log2Int(MaskInt);
+    pub const ShiftInt = DynamicBitSetUnmanaged.ShiftInt;
 
     /// The allocator used by this bit set
     allocator: Allocator,

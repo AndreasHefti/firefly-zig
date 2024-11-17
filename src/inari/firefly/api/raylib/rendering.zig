@@ -206,8 +206,7 @@ const RaylibRenderAPI = struct {
         filter: TextureFilter,
         wrap: TextureWrap,
     ) TextureBinding {
-        const res = NamePool.getCName(resource) orelse
-            @panic("null not expected here");
+        const res = NamePool._getCName(resource);
         var tex = rl.LoadTexture(res);
         defer NamePool.freeCNames();
         if (is_mipmap) {
@@ -277,7 +276,7 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadImageFromFile(resource: String) ImageBinding {
-        const img: Image = rl.LoadImage(NamePool.getCName(resource).?);
+        const img: Image = rl.LoadImage(NamePool._getCName(resource));
         defer NamePool.freeCNames();
         const img_id = images.add(img);
         return ImageBinding{
@@ -313,12 +312,17 @@ const RaylibRenderAPI = struct {
 
     fn loadFont(resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) BindingId {
         defer NamePool.freeCNames();
-        return fonts.add(rl.LoadFontEx(
-            NamePool.getCName(resource).?,
-            size orelse default_font_size,
-            code_points orelse 0,
-            char_num orelse default_char_num,
-        ));
+
+        const font = if (size == null and char_num == null and code_points == null)
+            rl.LoadFont(NamePool._getCName(resource))
+        else
+            rl.LoadFontEx(
+                NamePool._getCName(resource),
+                size orelse default_font_size,
+                code_points orelse 0,
+                char_num orelse default_char_num,
+            );
+        return fonts.add(font);
     }
 
     fn disposeFont(binding: BindingId) void {
@@ -350,15 +354,14 @@ const RaylibRenderAPI = struct {
         defer NamePool.freeCNames();
         var shader: Shader = undefined;
         if (file) {
-            std.debug.print("********* shader: {?s}\n", .{vertex_shader});
             shader = rl.LoadShader(
-                NamePool.getCName(vertex_shader orelse EMPTY_STRING).?,
-                NamePool.getCName(fragment_shade orelse EMPTY_STRING).?,
+                NamePool._getCName(vertex_shader orelse EMPTY_STRING),
+                NamePool._getCName(fragment_shade orelse EMPTY_STRING),
             );
         } else {
             shader = rl.LoadShaderFromMemory(
-                NamePool.getCName(vertex_shader orelse EMPTY_STRING).?,
-                NamePool.getCName(fragment_shade orelse EMPTY_STRING).?,
+                NamePool._getCName(vertex_shader orelse EMPTY_STRING),
+                NamePool._getCName(fragment_shade orelse EMPTY_STRING),
             );
         }
 
@@ -614,7 +617,7 @@ const RaylibRenderAPI = struct {
 
     fn renderText(
         font_id: ?BindingId,
-        text: CString,
+        text: String,
         position: PosF,
         pivot: ?PosF,
         rotation: ?Float,
@@ -626,7 +629,8 @@ const RaylibRenderAPI = struct {
     ) void {
         var font = rl.GetFontDefault();
         if (font_id) |fid| {
-            if (fonts.get(fid)) |f| font = f.*;
+            if (fonts.get(fid)) |f|
+                font = f.*;
         }
 
         if (blend_mode) |bm| {
@@ -639,7 +643,7 @@ const RaylibRenderAPI = struct {
 
         rl.DrawTextPro(
             font,
-            text,
+            @ptrCast(text),
             rl.Vector2{ .x = position[0], .y = position[1] },
             @bitCast(pivot orelse default_pivot),
             rotation orelse 0,
