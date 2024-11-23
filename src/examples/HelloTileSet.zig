@@ -23,7 +23,6 @@ const Index = firefly.utils.Index;
 const EShape = firefly.graphics.EShape;
 const TileAnimationFrame = firefly.game.TileAnimationFrame;
 const IndexFrameList = firefly.physics.IndexFrameList;
-const EAnimation = firefly.physics.EAnimation;
 const IndexFrameIntegrator = firefly.physics.IndexFrameIntegrator;
 
 const JSON_TILE_SET: String =
@@ -97,7 +96,11 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn init() void {
-    const viewId = View.Component.new(.{
+
+    // we need to initialize the JSON integration tasks fist
+    firefly.game.initJSONIntegration();
+
+    const viewId = View.Component.newActive(.{
         .name = "TestView",
         .position = .{ 0, 0 },
         .projection = .{
@@ -105,8 +108,6 @@ fn init() void {
             .height = 400,
         },
     });
-
-    View.Activation.activate(viewId);
 
     firefly.api.Task.runTaskByNameWith(
         firefly.game.Tasks.JSON_LOAD_TILE_SET,
@@ -190,7 +191,7 @@ fn createTile(
             next = frames.slots.nextSetBit(i + 1);
         }
 
-        EAnimation.add(
+        firefly.physics.EAnimations.add(
             eid,
             .{ .duration = list._duration, .looping = true, .active_on_init = true },
             IndexFrameIntegrator{

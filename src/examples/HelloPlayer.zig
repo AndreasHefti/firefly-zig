@@ -43,6 +43,8 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 
 fn init() void {
     firefly.physics.ContactSystem.System.activate();
+    // we need to initialize the JSON integration tasks fist
+    firefly.game.initJSONIntegration();
 
     // view with two layer
     const view_id = graphics.View.Component.new(.{

@@ -41,7 +41,8 @@ const speed = 1;
 var pivot: utils.PosF = .{ 0, 0 };
 
 fn init() void {
-
+    // we need to initialize the JSON integration tasks fist
+    firefly.game.initJSONIntegration();
     // view component
     // two layers get automatically applied when loading the room tile maps
     // see JSON file: resources/example_tilemap1.json

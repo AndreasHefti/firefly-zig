@@ -137,6 +137,21 @@ pub const VoidControl = struct {
     update: api.CallFunction,
 };
 
+pub const EControl = struct {
+    name: ?String = null,
+    update: api.CallFunction,
+    active: bool = true,
+
+    pub fn create(entity_id: Index, template: EControl) void {
+        api.Entity.Control.add(
+            entity_id,
+            template.update,
+            template.name,
+            template.active,
+        );
+    }
+};
+
 //////////////////////////////////////////////////////////////////////////
 ////Task and Trigger
 //////////////////////////////////////////////////////////////////////////

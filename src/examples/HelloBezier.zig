@@ -8,7 +8,6 @@ const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const Animation = firefly.physics.Animation;
-const EAnimation = firefly.physics.EAnimation;
 const BezierSplineIntegrator = firefly.physics.BezierSplineIntegrator;
 const EasedValueIntegrator = firefly.physics.EasedValueIntegrator;
 const AnimationSystem = firefly.physics.AnimationSystem;
@@ -67,19 +66,20 @@ fn init() void {
         },
     });
 
-    const entity_id = Entity.build(.{ .name = "TestEntity2" })
-        .withComponent(ETransform{
-        .position = .{ 0, 0 },
-        .pivot = .{ 8, 8 },
-        .scale = .{ 2, 2 },
-    })
-        .withComponent(ESprite{
-        .template_id = sprite_id,
-    })
-        .withComponent(EAnimation{})
-        .getId();
+    const entity_id = Entity.new(
+        .{ .name = "TestEntity2" },
+        .{
+            ETransform{
+                .position = .{ 0, 0 },
+                .pivot = .{ 8, 8 },
+                .scale = .{ 2, 2 },
+            },
+            ESprite{ .template_id = sprite_id },
+            firefly.physics.EAnimations{},
+        },
+    );
 
-    if (EAnimation.Component.byIdOptional(entity_id)) |e_anim|
+    if (firefly.physics.EAnimations.Component.byIdOptional(entity_id)) |e_anim|
         e_anim.animations.set(anim_id);
 
     Entity.Activation.activate(entity_id);

@@ -40,9 +40,9 @@ fn init() void {
         pos[i][1] = rx.float(Float) * 400;
     }
 
-    Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .position = .{ 0, 0 } })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .withComponent(EMultiplier{ .positions = pos })
-        .activate();
+    _ = Entity.newActive(.{ .name = "TestEntity" }, .{
+        ETransform{ .position = .{ 0, 0 } },
+        ESprite{ .template_id = sprite_id },
+        EMultiplier{ .positions = pos },
+    });
 }

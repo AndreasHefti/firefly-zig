@@ -13,7 +13,6 @@ const Float = firefly.utils.Float;
 pub const EARTH_GRAVITY: Float = 9.8;
 
 pub const Animation = animation.Animation;
-pub const EAnimation = animation.EAnimation;
 pub const AnimationSystem = animation.AnimationSystem;
 pub const IndexFrame = animation.IndexFrame;
 pub const IndexFrameList = animation.IndexFrameList;
@@ -21,6 +20,10 @@ pub const EasedValueIntegrator = animation.EasedValueIntegrator;
 pub const EasedColorIntegrator = animation.EasedColorIntegrator;
 pub const IndexFrameIntegrator = animation.IndexFrameIntegrator;
 pub const BezierSplineIntegrator = animation.BezierSplineIntegrator;
+pub const EAnimations = animation.EAnimations;
+pub const EEasingAnimation = animation.EEasingAnimation;
+pub const EEasedColorAnimation = animation.EEasedColorAnimation;
+pub const EIndexFrameAnimation = animation.EIndexFrameAnimation;
 
 pub const MovFlags = movement.MovFlags;
 pub const EMovement = movement.EMovement;

@@ -14,15 +14,43 @@ const Color = firefly.utils.Color;
 const BlendMode = firefly.api.BlendMode;
 
 //////////////////////////////////////////////////////////////
-//// game json binding
+//// game json init
 //////////////////////////////////////////////////////////////
 
 var initialized = false;
+var dispose_json_tasks = false;
+var dispose_tiled_tasks = false;
 pub fn init() void {
     defer initialized = true;
     if (initialized)
         return;
+}
 
+pub fn deinit() void {
+    defer initialized = false;
+    if (!initialized)
+        return;
+
+    // dispose tasks
+    if (dispose_json_tasks) {
+        api.Task.Naming.dispose(game.Tasks.JSON_LOAD_ROOM);
+        api.Task.Naming.dispose(game.Tasks.JSON_LOAD_TILE_MAPPING);
+        api.Task.Naming.dispose(game.Tasks.JSON_LOAD_TILE_SET);
+        api.Task.Naming.dispose(game.Tasks.JSON_LOAD_WORLD);
+        dispose_json_tasks = false;
+    }
+
+    if (dispose_tiled_tasks) {
+        api.Task.Naming.dispose(game.Tasks.JSON_LOAD_TILED_TILE_SET);
+        dispose_tiled_tasks = false;
+    }
+}
+
+//////////////////////////////////////////////////////////////
+//// Firefly JSON API
+//////////////////////////////////////////////////////////////
+
+pub fn initJSONTasks() void {
     _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_TILE_SET,
         .function = loadTileSetFromJSON,
@@ -42,22 +70,9 @@ pub fn init() void {
         .name = game.Tasks.JSON_LOAD_WORLD,
         .function = loadWorldFromJSON,
     });
+
+    dispose_json_tasks = true;
 }
-
-pub fn deinit() void {
-    defer initialized = false;
-    if (!initialized)
-        return;
-
-    // dispose tasks
-    api.Task.Naming.dispose(game.Tasks.JSON_LOAD_ROOM);
-    api.Task.Naming.dispose(game.Tasks.JSON_LOAD_TILE_MAPPING);
-    api.Task.Naming.dispose(game.Tasks.JSON_LOAD_TILE_SET);
-}
-
-//////////////////////////////////////////////////////////////
-//// API
-//////////////////////////////////////////////////////////////
 
 pub const JSONFileTypes = struct {
     const WORLD = "World";
@@ -145,8 +160,8 @@ pub const Resource = struct {
 
 pub const JSONTile = struct {
     name: String,
-    props: String, // "pos_x,pos_y|flip_x?|flip_y?|?contact_material_type|contact_mask?|?groups[g1,g3,...]"
-    animation: ?String = null, // "duration,pos_x,pos_y,flip_x?,flip_y?|duration,pos_x,pos_y,flip_x?,flip_y?|..."
+    props: String, // "pos_x,pos_y|?flip_x|?flip_y|?contact_material_type|?contact_mask|?groups[g1,g3,...]"
+    animation: ?String = null, // "duration,pos_x,pos_y,flip_x,flip_y|duration,pos_x,pos_y,flip_x,flip_y|..."
 };
 
 pub const JSONTileSet = struct {
@@ -810,5 +825,88 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
                 },
             ).id,
         );
+    }
+}
+
+//////////////////////////////////////////////////////////////
+//// Tiled JSON API
+//////////////////////////////////////////////////////////////
+
+pub fn initTiledTasks() void {
+    _ = api.Task.Component.new(.{
+        .name = game.Tasks.JSON_LOAD_TILED_TILE_SET,
+        .function = loadTiledTileSet,
+    });
+    dispose_tiled_tasks = true;
+}
+
+// Tiled Tile Set JSON mapping
+
+pub const TiledTileSetProps = struct {
+    texture: Resource,
+};
+
+pub const TiledTileProps = struct {
+    tile: TiledTile,
+};
+
+pub const TiledTile = struct {
+    name: String,
+    props: String,
+    animation: ?String = null,
+};
+
+pub const TiledTileSet = struct {
+    name: String,
+    image: String,
+    columns: usize,
+    properties: TiledTileSetProps,
+    tilecount: usize,
+    tileheight: Float,
+    tilewidth: Float,
+    tileproperties: std.json.ArrayHashMap(TiledTileProps),
+};
+
+fn loadTiledTileSet(ctx: *api.CallContext) void {
+    var json_res_handle = JSONResourceHandle.new(ctx.attributes_id.?);
+    defer json_res_handle.deinit();
+
+    if (json_res_handle.json_resource) |json| {
+        const parsed = std.json.parseFromSlice(
+            TiledTileSet,
+            firefly.api.ALLOC,
+            json,
+            .{ .ignore_unknown_fields = true },
+        ) catch unreachable;
+        defer parsed.deinit();
+
+        const tiledTileSet: TiledTileSet = parsed.value;
+        const tiles: []JSONTile = api.ALLOC.alloc(JSONTile, tiledTileSet.tileproperties.map.count()) catch undefined;
+        defer api.ALLOC.free(tiles);
+
+        var i: usize = 0;
+        for (tiledTileSet.tileproperties.map.values()) |v| {
+            tiles[i] = JSONTile{
+                .name = v.tile.name,
+                .props = v.tile.props,
+                .animation = v.tile.animation,
+            };
+            i += 1;
+        }
+
+        const jsonTileSet = JSONTileSet{
+            .file_type = JSONFileTypes.TILE_SET,
+            .name = tiledTileSet.image,
+            .texture = tiledTileSet.properties.texture,
+            .tile_width = tiledTileSet.tilewidth,
+            .tile_height = tiledTileSet.tileheight,
+            .tiles = tiles,
+        };
+
+        // checkFileType(jsonTileSet, JSONFileTypes.TILE_SET);
+        const tile_set_id = loadTileSet(jsonTileSet);
+
+        if (ctx.c_ref_callback) |callback|
+            callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
     }
 }

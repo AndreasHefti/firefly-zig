@@ -6,7 +6,6 @@ const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
-const EAnimation = firefly.physics.EAnimation;
 const EasedValueIntegrator = firefly.physics.EasedValueIntegrator;
 const Allocator = std.mem.Allocator;
 const Easing = utils.Easing;
@@ -64,16 +63,25 @@ fn init() void {
 }
 
 fn create(name: String, easing: Easing) void {
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 10, ypos } })
-        .withComponent(EText{ .text = name, .size = 20, .char_spacing = 2 })
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 10, ypos } },
+        EText{ .text = name, .size = 20, .char_spacing = 2 },
+    });
 
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 200, ypos } })
-        .withComponent(ESprite{ .template_id = SpriteTemplate.Naming.byName("Sprite").?.id })
-        .addFromBuilder(EAnimation.build(.{}).addAnimation(.{ .duration = 5000, .looping = true, .inverse_on_loop = true, .active_on_init = true }, EasedValueIntegrator{ .start_value = 200, .end_value = 500, .easing = easing, .property_ref = ETransform.Property.XPos }))
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 200, ypos } },
+        ESprite{ .template_id = SpriteTemplate.Naming.byName("Sprite").?.id },
+        firefly.physics.EEasingAnimation{
+            .duration = 5000,
+            .looping = true,
+            .inverse_on_loop = true,
+            .active_on_init = true,
+            .start_value = 200,
+            .end_value = 500,
+            .easing = easing,
+            .property_ref = ETransform.Property.XPos,
+        },
+    });
 
     ypos += 35;
 }

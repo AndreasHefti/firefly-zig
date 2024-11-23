@@ -6,7 +6,6 @@ const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
-const EAnimation = firefly.physics.EAnimation;
 const AnimationSystem = firefly.physics.AnimationSystem;
 const Allocator = std.mem.Allocator;
 const IndexFrameList = firefly.physics.IndexFrameList;
@@ -51,19 +50,20 @@ fn init() void {
     _ = animation.withFrame(sid3, 1000);
     _ = animation.withFrame(sid4, 1000);
 
-    Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .position = .{ 100, 100 }, .scale = .{ 2, 2 } })
-        .withComponent(ESprite{ .template_id = sid1 })
-        .addFromBuilder(EAnimation.build(.{})
-        .addAnimation(.{
-        .duration = animation._duration,
-        .looping = true,
-        .active_on_init = true,
-    }, IndexFrameIntegrator{
-        .timeline = animation,
-        .property_ref = ESprite.Property.FrameId,
-    }))
-        .activate();
+    _ = Entity.newActive(
+        .{},
+        .{
+            ETransform{ .position = .{ 100, 100 }, .scale = .{ 2, 2 } },
+            ESprite{ .template_id = sid1 },
+            firefly.physics.EIndexFrameAnimation{
+                .duration = animation._duration,
+                .looping = true,
+                .active_on_init = true,
+                .timeline = animation,
+                .property_ref = ESprite.Property.FrameId,
+            },
+        },
+    );
 
     Entity.build(.{ .name = "TestEntity1" })
         .withComponent(ETransform{

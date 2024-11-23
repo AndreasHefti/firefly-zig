@@ -6,7 +6,8 @@ const SpriteTemplate = firefly.graphics.SpriteTemplate;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
-const EAnimation = firefly.physics.EAnimation;
+const EEasingAnimation = firefly.physics.EEasingAnimation;
+//const EAnimations = firefly.physics.EAnimations;
 const AnimationSystem = firefly.physics.AnimationSystem;
 const EasedValueIntegrator = firefly.physics.EasedValueIntegrator;
 const Allocator = std.mem.Allocator;
@@ -34,41 +35,36 @@ fn _Example_One_Entity_No_Views() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{
-        .position = .{ 64, 164 },
-        .scale = .{ 4, 4 },
-        .pivot = .{ 16, 16 },
-        .rotation = 180,
-    })
-        .withComponent(ESprite{
-        .template_id = sprite_id,
-    })
-        .addFromBuilder(EAnimation.build(.{})
-        .addAnimation(.{
-        .duration = 1000,
-        .looping = true,
-        .inverse_on_loop = true,
-        .active_on_init = true,
-        .loop_callback = loopCallback1,
-    }, EasedValueIntegrator{
-        .start_value = 164.0,
-        .end_value = 264.0,
-        .easing = Easing.Linear,
-        .property_ref = ETransform.Property.XPos,
-    })
-        .addAnimation(.{
-        .duration = 2000,
-        .looping = true,
-        .inverse_on_loop = true,
-        .active_on_init = true,
-    }, EasedValueIntegrator{
-        .start_value = 0.0,
-        .end_value = 180.0,
-        .easing = Easing.Linear,
-        .property_ref = ETransform.Property.Rotation,
-    }))
-        .activate();
+    _ = Entity.newActive(.{ .name = "TestEntity" }, .{
+        ETransform{
+            .position = .{ 64, 164 },
+            .scale = .{ 4, 4 },
+            .pivot = .{ 16, 16 },
+            .rotation = 180,
+        },
+        ESprite{ .template_id = sprite_id },
+        EEasingAnimation{
+            .duration = 1000,
+            .looping = true,
+            .inverse_on_loop = true,
+            .active_on_init = true,
+            .loop_callback = loopCallback1,
+            .start_value = 164.0,
+            .end_value = 264.0,
+            .easing = Easing.Linear,
+            .property_ref = ETransform.Property.XPos,
+        },
+        EEasingAnimation{
+            .duration = 2000,
+            .looping = true,
+            .inverse_on_loop = true,
+            .active_on_init = true,
+            .start_value = 0.0,
+            .end_value = 180.0,
+            .easing = Easing.Linear,
+            .property_ref = ETransform.Property.Rotation,
+        },
+    });
 }
 
 fn loopCallback1(count: usize) void {

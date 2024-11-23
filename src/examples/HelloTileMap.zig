@@ -22,16 +22,12 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
-    firefly.Engine.start(
-        room_pixel_width,
-        room_pixel_height,
-        60,
-        "Hello Tile Map",
-        init,
-    );
+    firefly.Engine.start(room_pixel_width, room_pixel_height, 60, "Hello Tile Map", init);
 }
 
 fn init() void {
+    firefly.game.initJSONIntegration();
+
     // view, layer are auto-created by tile mapping if not present
     _ = graphics.View.Component.new(.{
         .name = view_name,

@@ -64,6 +64,29 @@ pub const Entity = struct {
         EntityComponentMixin(T).init(name);
     }
 
+    pub fn newActive(entity: Entity, components: anytype) Index {
+        const id = new(entity, components);
+        Entity.Activation.activate(id);
+        return id;
+    }
+
+    pub fn new(template: Entity, components: anytype) Index {
+        const entity_id = Component.new(template);
+
+        inline for (components) |c| {
+            const T = @TypeOf(c);
+            if (@hasDecl(T, "Component")) {
+                EntityComponentMixin(T).new(entity_id, c);
+            } else if (@hasDecl(T, "create")) {
+                T.create(entity_id, c);
+            } else {
+                @panic("unknown type");
+            }
+        }
+        return entity_id;
+    }
+
+    // TODO remove
     pub fn build(template: Entity) EntityBuilder {
         return EntityBuilder{ .entity_id = Component.new(template) };
     }
@@ -94,6 +117,7 @@ pub const Entity = struct {
     }
 };
 
+// TODO remove
 pub const EntityBuilder = struct {
     entity_id: Index,
 
@@ -321,6 +345,9 @@ pub fn EntityComponentMixin(comptime T: type) type {
 
             if (component.id != UNDEF_INDEX)
                 @panic("Entity Component id mismatch");
+
+            if (pool.exists(entity_id))
+                utils.panic(api.ALLOC, "Entity {d} has already component of type {any}\n", .{ entity_id, T });
 
             var comp = pool.set(component, entity_id);
             comp.id = entity_id;

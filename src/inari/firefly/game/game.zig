@@ -57,6 +57,15 @@ pub fn init() !void {
     _ = api.Condition.Component.new(.{ .name = Conditions.GOES_SOUTH, .check = goesSouth });
 }
 
+pub fn initJSONIntegration() void {
+    json.initJSONTasks();
+}
+
+pub fn initTiledIntegration() void {
+    initJSONIntegration();
+    json.initTiledTasks();
+}
+
 pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
@@ -129,11 +138,6 @@ pub const TaskAttributes = struct {
 
     // The room name within the context
     pub const ROOM_NAME = "room";
-    // pub const ROOM_TRANSITION_CONDITION = "ROOM_TRANSITION_CONDITION";
-    // pub const ROOM_TRANSITION_BOUNDS = "ROOM_TRANSITION_BOUNDS";
-    // pub const ROOM_TRANSITION_ORIENTATION = "ROOM_TRANSITION_ORIENTATION";
-    // pub const ROOM_TRANSITION_TARGET_ROOM = "ROOM_TRANSITION_TARGET_ROOM";
-    // pub const ROOM_TRANSITION_TARGET_TRANSITION = "ROOM_TRANSITION_TARGET_TRANSITION";
 };
 
 pub const Tasks = struct {
@@ -141,6 +145,10 @@ pub const Tasks = struct {
     pub const JSON_LOAD_TILE_MAPPING = "load_tile_mapping_json_default";
     pub const JSON_LOAD_ROOM = "load_room_json_default";
     pub const JSON_LOAD_WORLD = "load_world_json_default";
+
+    pub const JSON_LOAD_TILED_TILE_SET = "load_tiled_tile_set_json_default";
+    pub const JSON_LOAD_TILED_TILE_MAPPING = "load_tiled_tile_mapping_json_default";
+    pub const JSON_LOAD_TILED_ROOM = "load_tiled_room_json_default";
 
     pub const SIMPLE_ROOM_TRANSITION_SCENE_BUILDER = "simpleRoomTransitionBuilder";
     pub const ROOM_TRANSITION_BUILDER = "room_transition_builder";

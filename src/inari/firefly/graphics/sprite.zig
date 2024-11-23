@@ -154,10 +154,6 @@ pub const ESprite = struct {
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
 
-    pub fn add(entity_id: Index, c: ESprite) void {
-        Component.new(entity_id, c);
-    }
-
     pub fn destruct(self: *ESprite) void {
         self.template_id = utils.UNDEF_INDEX;
         self.tint_color = null;

@@ -49,6 +49,8 @@ fn init() void {
     firefly.physics.ContactSystem.System.activate();
     firefly.physics.ContactGizmosRenderer.System.activate();
     firefly.physics.ContactScanGizmosRenderer.System.activate();
+    // we need to initialize the JSON integration tasks fist
+    firefly.game.initJSONIntegration();
 
     // create view with two layer
     _ = graphics.View.Component.new(.{

@@ -27,7 +27,7 @@ pub fn init() void {
     api.Component.Subtype.register(Animation, EasedColorIntegrator, "EasedColorIntegrator");
     api.Component.Subtype.register(Animation, IndexFrameIntegrator, "IndexFrameIntegrator");
     api.Component.Subtype.register(Animation, BezierSplineIntegrator, "BezierSplineIntegrator");
-    api.Entity.registerComponent(EAnimation, "EAnimation");
+    api.Entity.registerComponent(EAnimations, "EAnimations");
     api.System.register(AnimationSystem);
 }
 
@@ -163,18 +163,14 @@ pub const AnimationSystem = struct {
 //// EAnimation Entity Component
 //////////////////////////////////////////////////////////////
 
-pub const EAnimation = struct {
-    pub const Component = api.EntityComponentMixin(EAnimation);
+pub const EAnimations = struct {
+    pub const Component = api.EntityComponentMixin(EAnimations);
 
     id: Index = UNDEF_INDEX,
     animations: utils.BitSet = undefined,
 
-    pub fn construct(self: *EAnimation) void {
+    pub fn construct(self: *EAnimations) void {
         self.animations = utils.BitSet.new(firefly.api.ENTITY_ALLOC);
-    }
-
-    pub fn build(a: EAnimation) EAnimationBuilder {
-        return EAnimationBuilder.new(a);
     }
 
     pub fn add(entity_id: Index, animation: Animation, integrator: anytype) void {
@@ -187,7 +183,7 @@ pub const EAnimation = struct {
         }
     }
 
-    pub fn activation(self: *EAnimation, active: bool) void {
+    pub fn activation(self: *EAnimations, active: bool) void {
         if (!initialized) return;
 
         var next = self.animations.nextSetBit(0);
@@ -202,7 +198,7 @@ pub const EAnimation = struct {
         }
     }
 
-    pub fn destruct(self: *EAnimation) void {
+    pub fn destruct(self: *EAnimations) void {
         if (initialized) {
             var next = self.animations.nextSetBit(0);
             while (next) |i| {
@@ -216,46 +212,49 @@ pub const EAnimation = struct {
     }
 };
 
-pub const EAnimationBuilder = struct {
-    component: EAnimation,
-    animations: utils.BitSet,
-
-    pub fn new(component: EAnimation) EAnimationBuilder {
-        return .{
-            .component = component,
-            .animations = utils.BitSet.new(api.ALLOC),
-        };
-    }
-
-    pub fn addAnimation(
-        self: EAnimationBuilder,
-        animation: Animation,
-        integrator: anytype,
-    ) EAnimationBuilder {
-        var builder = self;
-        const i_type = @TypeOf(integrator);
-
-        const a_id = i_type.Component.createSubtype(animation, integrator).id;
-        builder.animations.set(a_id);
-        return builder;
-    }
-
-    pub fn buildForEntity(self: EAnimationBuilder, entity_id: Index) void {
-        var builder = self;
-        EAnimation.Component.new(entity_id, self.component);
-
-        var next = builder.animations.nextSetBit(0);
-        while (next) |i| {
-            next = builder.animations.nextSetBit(i + 1);
-            Animation.Component.byId(i).initForComponent(entity_id);
-        }
-        builder.animations.deinit();
-    }
-};
-
 //////////////////////////////////////////////////////////////
 //// Eased Value Animation Integrator
 //////////////////////////////////////////////////////////////
+
+pub const EEasingAnimation = struct {
+    name: ?String = null,
+    duration: usize = 0,
+    looping: bool = false,
+    inverse_on_loop: bool = false,
+    reset_on_finish: bool = true,
+    active_on_init: bool = true,
+    loop_callback: ?*const fn (usize) void = null,
+    finish_callback: ?*const fn () void = null,
+    start_value: Float = 0.0,
+    end_value: Float = 0.0,
+    easing: Easing = Easing.Linear,
+    property_ref: ?*const fn (Index) *Float = null,
+
+    pub fn create(entity_id: Index, template: EEasingAnimation) void {
+        _ = EAnimations.Component.byIdOptional(entity_id) orelse
+            EAnimations.Component.new(entity_id, .{});
+
+        EAnimations.add(
+            entity_id,
+            Animation{
+                .name = template.name,
+                .duration = template.duration,
+                .looping = template.looping,
+                .inverse_on_loop = template.inverse_on_loop,
+                .reset_on_finish = template.reset_on_finish,
+                .active_on_init = template.active_on_init,
+                .loop_callback = template.loop_callback,
+                .finish_callback = template.finish_callback,
+            },
+            EasedValueIntegrator{
+                .start_value = template.start_value,
+                .end_value = template.end_value,
+                .easing = template.easing,
+                .property_ref = template.property_ref,
+            },
+        );
+    }
+};
 
 pub const EasedValueIntegrator = struct {
     pub const Component = api.Component.SubTypeMixin(Animation, EasedValueIntegrator);
@@ -300,6 +299,46 @@ pub const EasedValueIntegrator = struct {
 //////////////////////////////////////////////////////////////
 //// Color Value Animation
 //////////////////////////////////////////////////////////////
+
+pub const EEasedColorAnimation = struct {
+    name: ?String = null,
+    duration: usize = 0,
+    looping: bool = false,
+    inverse_on_loop: bool = false,
+    reset_on_finish: bool = true,
+    active_on_init: bool = true,
+    loop_callback: ?*const fn (usize) void = null,
+    finish_callback: ?*const fn () void = null,
+    start_value: utils.Color = .{ 0, 0, 0, 255 },
+    end_value: utils.Color = .{ 0, 0, 0, 255 },
+    easing: Easing = Easing.Linear,
+    property_ref: ?*const fn (Index) *utils.Color = null,
+
+    pub fn create(entity_id: Index, template: EEasedColorAnimation) void {
+        _ = EAnimations.Component.byIdOptional(entity_id) orelse
+            EAnimations.Component.new(entity_id, .{});
+
+        EAnimations.add(
+            entity_id,
+            Animation{
+                .name = template.name,
+                .duration = template.duration,
+                .looping = template.looping,
+                .inverse_on_loop = template.inverse_on_loop,
+                .reset_on_finish = template.reset_on_finish,
+                .active_on_init = template.active_on_init,
+                .loop_callback = template.loop_callback,
+                .finish_callback = template.finish_callback,
+            },
+            EasedColorIntegrator{
+                .start_value = template.start_value,
+                .end_value = template.end_value,
+                .easing = template.easing,
+                .property_ref = template.property_ref,
+            },
+        );
+    }
+};
 
 pub const EasedColorIntegrator = struct {
     pub const Component = api.Component.SubTypeMixin(Animation, EasedColorIntegrator);
@@ -363,6 +402,42 @@ pub const EasedColorIntegrator = struct {
 //////////////////////////////////////////////////////////////
 //// Index Frame Animation Integrator
 //////////////////////////////////////////////////////////////
+
+pub const EIndexFrameAnimation = struct {
+    name: ?String = null,
+    duration: usize = 0,
+    looping: bool = false,
+    inverse_on_loop: bool = false,
+    reset_on_finish: bool = true,
+    active_on_init: bool = true,
+    loop_callback: ?*const fn (usize) void = null,
+    finish_callback: ?*const fn () void = null,
+    timeline: IndexFrameList,
+    property_ref: ?*const fn (Index) *Index,
+
+    pub fn create(entity_id: Index, template: EIndexFrameAnimation) void {
+        _ = EAnimations.Component.byIdOptional(entity_id) orelse
+            EAnimations.Component.new(entity_id, .{});
+
+        EAnimations.add(
+            entity_id,
+            Animation{
+                .name = template.name,
+                .duration = template.duration,
+                .looping = template.looping,
+                .inverse_on_loop = template.inverse_on_loop,
+                .reset_on_finish = template.reset_on_finish,
+                .active_on_init = template.active_on_init,
+                .loop_callback = template.loop_callback,
+                .finish_callback = template.finish_callback,
+            },
+            IndexFrameIntegrator{
+                .timeline = template.timeline,
+                .property_ref = template.property_ref,
+            },
+        );
+    }
+};
 
 pub const IndexFrame = struct {
     sprite_id: Index = UNDEF_INDEX,

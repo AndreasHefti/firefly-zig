@@ -49,11 +49,11 @@ fn sceneInit(_: *api.CallContext) void {
         .pivot = .{ 0, 0 },
         .rotation = 0,
     });
-    graphics.ESprite.add(eid, .{
+    graphics.ESprite.Component.new(eid, .{
         .template_id = sprite_id,
         .tint_color = .{ 255, 255, 255, 0 },
     });
-    physics.EAnimation.add(eid, .{
+    physics.EAnimations.add(eid, .{
         .duration = 3000,
         .active_on_init = true,
     }, physics.EasedColorIntegrator{

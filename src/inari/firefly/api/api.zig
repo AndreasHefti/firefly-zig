@@ -69,6 +69,7 @@ pub const EMultiplier = entity.EMultiplier;
 pub const Task = control.Task;
 pub const Trigger = control.Trigger;
 pub const Control = control.Control;
+pub const EControl = control.EControl;
 pub const VoidControl = control.VoidControl;
 pub const Composite = composite.Composite;
 pub const CompositeLifeCycle = composite.CompositeLifeCycle;

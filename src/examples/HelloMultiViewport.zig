@@ -77,71 +77,41 @@ fn loadWithView() void {
         .resource = "resources/mini_font.png",
     });
 
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 5, 20 } })
-        .withComponent(EView{ .view_id = viewId1 })
-        .withComponent(EText{
-        .font_id = font_id,
-        .text = &buffers[0][0],
-        .size = 10,
-        .char_spacing = 0,
-    })
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 5, 20 } },
+        EView{ .view_id = viewId1 },
+        EText{ .font_id = font_id, .text = &buffers[0][0], .size = 10, .char_spacing = 0 },
+    });
 
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 5, 35 } })
-        .withComponent(EView{ .view_id = viewId1 })
-        .withComponent(EText{
-        .font_id = font_id,
-        .text = &buffers[0][1],
-        .size = 10,
-        .char_spacing = 0,
-    })
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 5, 35 } },
+        EView{ .view_id = viewId1 },
+        EText{ .font_id = font_id, .text = &buffers[0][1], .size = 10, .char_spacing = 0 },
+    });
 
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 10, 10 } })
-        .withComponent(EView{ .view_id = viewId2 })
-        .withComponent(EText{
-        .font_id = font_id,
-        .text = &buffers[1][0],
-        .size = 10,
-        .char_spacing = 0,
-    })
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 10, 10 } },
+        EView{ .view_id = viewId2 },
+        EText{ .font_id = font_id, .text = &buffers[1][0], .size = 10, .char_spacing = 0 },
+    });
 
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 10, 25 } })
-        .withComponent(EView{ .view_id = viewId2 })
-        .withComponent(EText{
-        .font_id = font_id,
-        .text = &buffers[1][1],
-        .size = 10,
-        .char_spacing = 0,
-    })
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 10, 25 } },
+        EView{ .view_id = viewId2 },
+        EText{ .font_id = font_id, .text = &buffers[1][1], .size = 10, .char_spacing = 0 },
+    });
 
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 10, 10 } })
-        .withComponent(EView{ .view_id = viewId3 })
-        .withComponent(EText{
-        .font_id = font_id,
-        .text = &buffers[2][0],
-        .size = 10,
-        .char_spacing = 0,
-    })
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 10, 10 } },
+        EView{ .view_id = viewId3 },
+        EText{ .font_id = font_id, .text = &buffers[2][0], .size = 10, .char_spacing = 0 },
+    });
 
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 10, 30 } })
-        .withComponent(EView{ .view_id = viewId3 })
-        .withComponent(EText{
-        .font_id = font_id,
-        .text = &buffers[2][1],
-        .size = 10,
-        .char_spacing = 0,
-    })
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 10, 30 } },
+        EView{ .view_id = viewId3 },
+        EText{ .font_id = font_id, .text = &buffers[2][1], .size = 10, .char_spacing = 0 },
+    });
 }
 
 fn update(ctx: *firefly.api.CallContext) void {
