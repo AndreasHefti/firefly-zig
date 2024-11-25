@@ -230,7 +230,7 @@ pub const EEasingAnimation = struct {
     easing: Easing = Easing.Linear,
     property_ref: ?*const fn (Index) *Float = null,
 
-    pub fn create(entity_id: Index, template: EEasingAnimation) void {
+    pub fn createEComponent(entity_id: Index, template: EEasingAnimation) void {
         _ = EAnimations.Component.byIdOptional(entity_id) orelse
             EAnimations.Component.new(entity_id, .{});
 
@@ -314,7 +314,7 @@ pub const EEasedColorAnimation = struct {
     easing: Easing = Easing.Linear,
     property_ref: ?*const fn (Index) *utils.Color = null,
 
-    pub fn create(entity_id: Index, template: EEasedColorAnimation) void {
+    pub fn createEComponent(entity_id: Index, template: EEasedColorAnimation) void {
         _ = EAnimations.Component.byIdOptional(entity_id) orelse
             EAnimations.Component.new(entity_id, .{});
 
@@ -415,7 +415,7 @@ pub const EIndexFrameAnimation = struct {
     timeline: IndexFrameList,
     property_ref: ?*const fn (Index) *Index,
 
-    pub fn create(entity_id: Index, template: EIndexFrameAnimation) void {
+    pub fn createEComponent(entity_id: Index, template: EIndexFrameAnimation) void {
         _ = EAnimations.Component.byIdOptional(entity_id) orelse
             EAnimations.Component.new(entity_id, .{});
 

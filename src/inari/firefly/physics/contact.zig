@@ -241,6 +241,13 @@ pub const ContactConstraint = struct {
     /// The concrete contact scan result that will be updated on every loop cycle related to this constraint
     scan: ContactScan = undefined,
 
+    pub fn createEComponent(entity_id: Index, template: ContactConstraint) void {
+        var scan = EContactScan.Component.byIdOptional(entity_id) orelse
+            EContactScan.Component.newAndGet(entity_id, .{});
+
+        scan.constraints.set(ContactConstraint.Component.new(template));
+    }
+
     pub fn format(
         self: ContactConstraint,
         comptime _: []const u8,
@@ -559,8 +566,10 @@ pub const EContactScan = struct {
         }
     }
 
-    pub fn addToComponent(c_id: Index, constraint: ContactConstraint) void {
-        Component.byId(c_id).constraints.set(ContactConstraint.Component.new(constraint));
+    // TODO remove
+    pub fn addToComponent(_: Index, _: ContactConstraint) void {
+        @panic("Use create");
+        //Component.byId(c_id).constraints.set(ContactConstraint.Component.new(constraint));
     }
 
     pub fn withConstraint(self: *EContactScan, constraint: ContactConstraint) *EContactScan {

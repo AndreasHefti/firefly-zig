@@ -403,25 +403,26 @@ pub const TileMapping = struct {
                                 if (tile_set.tile_templates.get(ti)) |tile_template| {
 
                                     // create entity from TileTemplate for specific view and layer and add code mapping
-                                    const entity = api.Entity.build(.{
+                                    const entity_id = api.Entity.new(.{
                                         .name = api.NamePool.format("{s}_{s}", .{ tile_template.name.?, layer_mapping.layer }),
                                         .groups = api.GroupKind.fromStringList(tile_template.groups),
-                                    })
-                                        .withComponent(graphics.ETransform{})
-                                        .withComponent(graphics.EView{ .view_id = self.view_id, .layer_id = layer.id })
-                                        .withComponent(graphics.ETile{
-                                        .sprite_template_id = tile_template._sprite_template_id.?,
-                                        .tint_color = layer_mapping.tint,
-                                        .blend_mode = layer_mapping.blend,
-                                    }).get();
+                                    }, .{
+                                        graphics.ETransform{},
+                                        graphics.EView{ .view_id = self.view_id, .layer_id = layer.id },
+                                        graphics.ETile{
+                                            .sprite_template_id = tile_template._sprite_template_id.?,
+                                            .tint_color = layer_mapping.tint,
+                                            .blend_mode = layer_mapping.blend,
+                                        },
+                                    });
 
                                     // add contact if needed
-                                    addContactData(entity, tile_set, tile_template);
+                                    addContactData(entity_id, tile_set, tile_template);
                                     // add animation if needed
-                                    addAnimationData(entity, tile_template);
+                                    addAnimationData(entity_id, tile_template);
                                     // set code -> entity id mapping for layer
-                                    entity_mapping.set(code, entity.id);
-                                    api.Entity.Activation.activate(entity.id);
+                                    entity_mapping.set(code, entity_id);
+                                    api.Entity.Activation.activate(entity_id);
                                 }
                                 next_ti = tile_set.tile_templates.slots.nextSetBit(ti + 1);
                                 code += 1;
@@ -468,16 +469,16 @@ pub const TileMapping = struct {
         }
     }
 
-    fn addContactData(entity: *api.Entity, tile_set: *TileSet, tile_template: *TileTemplate) void {
+    fn addContactData(entity_id: Index, tile_set: *TileSet, tile_template: *TileTemplate) void {
         const material_type = tile_template.contact_material_type orelse return;
-        physics.EContact.Component.new(entity.id, .{
+        physics.EContact.Component.new(entity_id, .{
             .bounds = .{ .rect = .{ 0, 0, tile_set.tile_width, tile_set.tile_height } },
             .material = material_type,
             .mask = tile_set.createContactMaskFromImage(tile_template),
         });
     }
 
-    fn addAnimationData(entity: *api.Entity, tile_template: *TileTemplate) void {
+    fn addAnimationData(entity_id: Index, tile_template: *TileTemplate) void {
         if (tile_template.animation) |*frames| {
             var list = physics.IndexFrameList.new();
             var next = frames.slots.nextSetBit(0);
@@ -493,7 +494,7 @@ pub const TileMapping = struct {
                     .timeline = list,
                     .property_ref = graphics.ETile.Property.FrameId,
                 },
-                entity.id,
+                entity_id,
             );
         }
     }

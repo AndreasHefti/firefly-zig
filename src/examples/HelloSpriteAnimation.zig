@@ -65,32 +65,23 @@ fn init() void {
         },
     );
 
-    Entity.build(.{ .name = "TestEntity1" })
-        .withComponent(ETransform{
-        .position = .{ 100, 200 },
-        .scale = .{ 2, 2 },
-    })
-        .withComponent(ESprite{ .template_id = sid1 })
-        .activate();
-    Entity.build(.{ .name = "TestEntity2" })
-        .withComponent(ETransform{
-        .position = .{ 150, 200 },
-        .scale = .{ 2, 2 },
-    })
-        .withComponent(ESprite{ .template_id = sid2 })
-        .activate();
-    Entity.build(.{ .name = "TestEntity3" })
-        .withComponent(ETransform{
-        .position = .{ 200, 200 },
-        .scale = .{ 2, 2 },
-    })
-        .withComponent(ESprite{ .template_id = sid3 })
-        .activate();
-    Entity.build(.{ .name = "TestEntity4" })
-        .withComponent(ETransform{
-        .position = .{ 250, 200 },
-        .scale = .{ 2, 2 },
-    })
-        .withComponent(ESprite{ .template_id = sid4 })
-        .activate();
+    _ = Entity.newActive(.{ .name = "TestEntity1" }, .{
+        ETransform{ .position = .{ 100, 200 }, .scale = .{ 2, 2 } },
+        ESprite{ .template_id = sid1 },
+    });
+
+    _ = Entity.newActive(.{ .name = "TestEntity2" }, .{
+        ETransform{ .position = .{ 150, 200 }, .scale = .{ 2, 2 } },
+        ESprite{ .template_id = sid2 },
+    });
+
+    _ = Entity.newActive(.{ .name = "TestEntity3" }, .{
+        ETransform{ .position = .{ 200, 200 }, .scale = .{ 2, 2 } },
+        ESprite{ .template_id = sid3 },
+    });
+
+    _ = Entity.newActive(.{ .name = "TestEntity4" }, .{
+        ETransform{ .position = .{ 250, 200 }, .scale = .{ 2, 2 } },
+        ESprite{ .template_id = sid4 },
+    });
 }

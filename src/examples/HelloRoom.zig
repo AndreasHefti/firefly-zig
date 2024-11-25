@@ -130,21 +130,21 @@ var color: *utils.Color = undefined;
 fn startSceneAction(ctx: *api.CallContext) void {
     if (!start_scene_init) {
         // create overlay entity
-        const entity_id = api.Entity.build(.{ .name = "StartSceneEntity" })
-            .withComponent(graphics.ETransform{
-            .scale = .{ screen_width, screen_height },
-        })
-            .withComponent(graphics.EView{
-            .view_id = graphics.View.Naming.getId(view_name),
-            .layer_id = graphics.Layer.Naming.getId(layer2),
-        })
-            .withComponent(graphics.EShape{
-            .blend_mode = api.BlendMode.ALPHA,
-            .color = .{ 0, 0, 0, 255 },
-            .shape_type = api.ShapeType.RECTANGLE,
-            .fill = true,
-            .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
-        }).activateGetId();
+        const entity_id = api.Entity.newActive(.{ .name = "StartSceneEntity" }, .{
+            graphics.ETransform{ .scale = .{ screen_width, screen_height } },
+            graphics.EView{
+                .view_id = graphics.View.Naming.getId(view_name),
+                .layer_id = graphics.Layer.Naming.getId(layer2),
+            },
+            graphics.EShape{
+                .blend_mode = api.BlendMode.ALPHA,
+                .color = .{ 0, 0, 0, 255 },
+                .shape_type = api.ShapeType.RECTANGLE,
+                .fill = true,
+                .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
+            },
+        });
+
         color = &graphics.EShape.Component.byId(entity_id).color;
         start_scene_init = true;
     }

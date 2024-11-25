@@ -66,33 +66,29 @@ fn init() void {
         },
     });
 
-    const entity_id = Entity.new(
-        .{ .name = "TestEntity2" },
-        .{
-            ETransform{
-                .position = .{ 0, 0 },
-                .pivot = .{ 8, 8 },
-                .scale = .{ 2, 2 },
-            },
-            ESprite{ .template_id = sprite_id },
-            firefly.physics.EAnimations{},
+    const entity_id = Entity.new(.{ .name = "TestEntity2" }, .{
+        ETransform{
+            .position = .{ 0, 0 },
+            .pivot = .{ 8, 8 },
+            .scale = .{ 2, 2 },
         },
-    );
+        ESprite{ .template_id = sprite_id },
+        firefly.physics.EAnimations{},
+    });
 
     if (firefly.physics.EAnimations.Component.byIdOptional(entity_id)) |e_anim|
         e_anim.animations.set(anim_id);
 
     Entity.Activation.activate(entity_id);
 
-    Entity.build(.{ .name = "TestEntity5" })
-        .withComponent(ETransform{
-        .position = .{ 0, 0 },
-    })
-        .withComponent(EShape{
-        .shape_type = firefly.api.ShapeType.CIRCLE,
-        .vertices = firefly.api.allocFloatArray([_]utils.Float{ 50, 200, 1, 50, 50, 1, 200, 50, 1, 200, 200, 1, 200, 500, 1, 500, 500, 1, 500, 200, 1 }),
-        .color = .{ 150, 150, 150, 100 },
-        .fill = true,
-        .thickness = 10,
-    }).activate();
+    _ = Entity.newActive(.{ .name = "TestEntity5" }, .{
+        ETransform{ .position = .{ 0, 0 } },
+        EShape{
+            .shape_type = firefly.api.ShapeType.CIRCLE,
+            .vertices = firefly.api.allocFloatArray([_]utils.Float{ 50, 200, 1, 50, 50, 1, 200, 50, 1, 200, 200, 1, 200, 500, 1, 500, 500, 1, 500, 200, 1 }),
+            .color = .{ 150, 150, 150, 100 },
+            .fill = true,
+            .thickness = 10,
+        },
+    });
 }

@@ -29,14 +29,14 @@ fn init() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .position = .{ 100, 100 }, .scale = .{ 1.2, 1.2 }, .pivot = .{ 16, 16 }, .rotation = 45 })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .withComponent(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
-        .{ 50, 50 },
-        .{ 200, 50 },
-        .{ 50, 150 },
-        .{ 200, 150 },
-    }) })
-        .activate();
+    _ = Entity.newActive(.{ .name = "TestEntity" }, .{
+        ETransform{ .position = .{ 100, 100 }, .scale = .{ 1.2, 1.2 }, .pivot = .{ 16, 16 }, .rotation = 45 },
+        ESprite{ .template_id = sprite_id },
+        EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
+            .{ 50, 50 },
+            .{ 200, 50 },
+            .{ 50, 150 },
+            .{ 200, 150 },
+        }) },
+    });
 }

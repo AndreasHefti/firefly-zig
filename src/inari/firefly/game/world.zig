@@ -371,20 +371,20 @@ fn createRoomTransition(ctx: *api.CallContext) void {
         else => "NONE",
     };
 
-    const trans_entity_id = api.Entity.build(.{ .name = name })
-        .withComponent(graphics.ETransform{ .position = .{ bounds[0], bounds[1] } })
-        .withComponent(graphics.EView{ .view_id = view_id, .layer_id = layer_id })
-        .withComponent(physics.EContact{
-        .bounds = .{ .rect = .{ 0, 0, bounds[2], bounds[3] } },
-        .type = game.ContactTypes.ROOM_TRANSITION,
-    })
-        .withComponent(ERoomTransition{
-        .condition = api.Condition.functionByName(condition_name),
-        .target_room = target_room_name,
-        .target_transition = target_transition_name,
-        .orientation = orientation,
-    })
-        .activateGetId();
+    const trans_entity_id = api.Entity.newActive(.{ .name = name }, .{
+        graphics.ETransform{ .position = .{ bounds[0], bounds[1] } },
+        graphics.EView{ .view_id = view_id, .layer_id = layer_id },
+        physics.EContact{
+            .bounds = .{ .rect = .{ 0, 0, bounds[2], bounds[3] } },
+            .type = game.ContactTypes.ROOM_TRANSITION,
+        },
+        ERoomTransition{
+            .condition = api.Condition.functionByName(condition_name),
+            .target_room = target_room_name,
+            .target_transition = target_transition_name,
+            .orientation = orientation,
+        },
+    });
 
     // add transition entity as owned reference if requested
     if (ctx.c_ref_callback) |callback|
@@ -499,21 +499,22 @@ pub const SimpleRoomTransitionScene = struct {
         const entry = !ctx.boolean("exit");
 
         if (graphics.View.Naming.byName(view_name)) |view| {
-            ctx.id_1 = api.Entity.build(.{ .name = name })
-                .withComponent(graphics.ETransform{
-                .scale = .{ view.projection.width, view.projection.height },
-            })
-                .withComponent(graphics.EView{
-                .view_id = graphics.View.Naming.getId(view_name),
-                .layer_id = graphics.Layer.Naming.getId(layer_name),
-            })
-                .withComponent(graphics.EShape{
-                .blend_mode = api.BlendMode.ALPHA,
-                .color = .{ 0, 0, 0, if (entry) 255 else 0 },
-                .shape_type = api.ShapeType.RECTANGLE,
-                .fill = true,
-                .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
-            }).activateGetId();
+            ctx.id_1 = api.Entity.newActive(.{ .name = name }, .{
+                graphics.ETransform{
+                    .scale = .{ view.projection.width, view.projection.height },
+                },
+                graphics.EView{
+                    .view_id = graphics.View.Naming.getId(view_name),
+                    .layer_id = graphics.Layer.Naming.getId(layer_name),
+                },
+                graphics.EShape{
+                    .blend_mode = api.BlendMode.ALPHA,
+                    .color = .{ 0, 0, 0, if (entry) 255 else 0 },
+                    .shape_type = api.ShapeType.RECTANGLE,
+                    .fill = true,
+                    .vertices = api.allocFloatArray([_]utils.Float{ 0, 0, 1, 1 }),
+                },
+            });
         }
     }
 

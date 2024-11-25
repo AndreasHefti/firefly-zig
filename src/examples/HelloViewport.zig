@@ -63,11 +63,11 @@ fn loadWithView() void {
         .is_mipmap = false,
     });
 
-    Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{})
-        .withComponent(EView{ .view_id = viewId })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .activate();
+    _ = Entity.newActive(.{ .name = "TestEntity" }, .{
+        ETransform{},
+        EView{ .view_id = viewId },
+        ESprite{ .template_id = sprite_id },
+    });
 }
 
 fn view_control(ctx: *firefly.api.CallContext) void {

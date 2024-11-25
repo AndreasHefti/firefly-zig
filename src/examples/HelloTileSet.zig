@@ -150,11 +150,11 @@ fn createTile(
     y: Float,
     view_id: Index,
 ) void {
-    const eid = Entity.build(.{ .name = tile_template.name })
-        .withComponent(ETransform{ .position = .{ x, y } })
-        .withComponent(EView{ .view_id = view_id })
-        .withComponent(ESprite{ .template_id = tile_template._sprite_template_id.? })
-        .getId();
+    const eid = Entity.new(.{ .name = tile_template.name }, .{
+        ETransform{ .position = .{ x, y } },
+        EView{ .view_id = view_id },
+        ESprite{ .template_id = tile_template._sprite_template_id.? },
+    });
 
     if (tile_set.createContactMaskFromImage(tile_template)) |mask| {
         var vert: std.ArrayList(Float) = std.ArrayList(Float).init(firefly.api.ALLOC);

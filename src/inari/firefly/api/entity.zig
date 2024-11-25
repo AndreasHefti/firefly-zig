@@ -75,20 +75,15 @@ pub const Entity = struct {
 
         inline for (components) |c| {
             const T = @TypeOf(c);
-            if (@hasDecl(T, "Component")) {
+            if (@hasDecl(T, "createEComponent")) {
+                T.createEComponent(entity_id, c);
+            } else if (@hasDecl(T, "Component")) {
                 EntityComponentMixin(T).new(entity_id, c);
-            } else if (@hasDecl(T, "create")) {
-                T.create(entity_id, c);
             } else {
                 @panic("unknown type");
             }
         }
         return entity_id;
-    }
-
-    // TODO remove
-    pub fn build(template: Entity) EntityBuilder {
-        return EntityBuilder{ .entity_id = Component.new(template) };
     }
 
     pub fn hasEntityComponent(entity_id: Index, ect: api.EComponentAspect) bool {
@@ -114,64 +109,6 @@ pub const Entity = struct {
                 try writer.print(" {s} ", .{api.EComponentAspectGroup.getAspectById(i).name});
             }
         }
-    }
-};
-
-// TODO remove
-pub const EntityBuilder = struct {
-    entity_id: Index,
-
-    pub fn addToGroup(self: EntityBuilder, aspect: api.GroupAspect) EntityBuilder {
-        Entity.Grouping.add(self.entity_id, aspect);
-        return self;
-    }
-
-    pub fn withComponent(self: EntityBuilder, component: anytype) EntityBuilder {
-        const T = @TypeOf(component);
-        EntityComponentMixin(T).new(self.entity_id, component);
-        return self;
-    }
-
-    pub fn withControl(self: EntityBuilder, update: api.CallFunction, name: ?String, active: bool) EntityBuilder {
-        Entity.Control.add(self.entity_id, update, name, active);
-        return self;
-    }
-
-    pub fn withControlOf(self: EntityBuilder, control: anytype, active: bool) EntityBuilder {
-        Entity.Control.addOf(self.entity_id, control, active);
-        return self;
-    }
-
-    pub fn addFromBuilder(self: EntityBuilder, builder: anytype) EntityBuilder {
-        builder.buildForEntity(self.entity_id);
-        return self;
-    }
-
-    pub fn addToComponent(self: EntityBuilder, c_type: type, c: anytype) EntityBuilder {
-        c_type.addToComponent(self.entity_id, c);
-        return self;
-    }
-
-    pub fn activate(self: EntityBuilder) void {
-        Entity.Activation.activate(self.entity_id);
-    }
-
-    pub fn activateGet(self: EntityBuilder) *Entity {
-        Entity.Activation.activate(self.entity_id);
-        return Entity.Component.byId(self.entity_id);
-    }
-
-    pub fn activateGetId(self: EntityBuilder) Index {
-        Entity.Activation.activate(self.entity_id);
-        return self.entity_id;
-    }
-
-    pub fn getId(self: EntityBuilder) Index {
-        return self.entity_id;
-    }
-
-    pub fn get(self: EntityBuilder) *Entity {
-        return Entity.Component.byId(self.entity_id);
     }
 };
 

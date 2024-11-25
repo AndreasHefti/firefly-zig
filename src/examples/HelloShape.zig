@@ -36,87 +36,93 @@ fn example() void {
         Engine.CoreSystems.SPRITE_RENDERER,
     });
 
-    Entity.build(.{ .name = "TestEntity4" })
-        .withComponent(ETransform{ .position = .{ 100, 100 } })
-        .withComponent(EShape{
-        .shape_type = ShapeType.CIRCLE,
-        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 50 }),
-        .color = .{ 150, 150, 150, 100 },
-    }).activate();
+    _ = Entity.newActive(.{ .name = "TestEntity4" }, .{
+        ETransform{ .position = .{ 100, 100 } },
+        EShape{
+            .shape_type = ShapeType.CIRCLE,
+            .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 50 }),
+            .color = .{ 150, 150, 150, 100 },
+        },
+    });
 
-    Entity.build(.{ .name = "TestEntity1" })
-        .withComponent(ETransform{
-        .position = .{ 0, 0 },
-        .pivot = .{ 100, 100 },
-        .scale = .{ 0.5, 0.5 },
-        .rotation = 45,
-    })
-        .withComponent(EShape{
-        .shape_type = ShapeType.RECTANGLE,
-        .fill = false,
-        .thickness = 5,
-        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
-        .color = .{ 255, 0, 0, 255 },
-    }).activate();
+    _ = Entity.newActive(.{ .name = "TestEntity1" }, .{
+        ETransform{
+            .position = .{ 0, 0 },
+            .pivot = .{ 100, 100 },
+            .scale = .{ 0.5, 0.5 },
+            .rotation = 45,
+        },
+        EShape{
+            .shape_type = ShapeType.RECTANGLE,
+            .fill = false,
+            .thickness = 5,
+            .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
+            .color = .{ 255, 0, 0, 255 },
+        },
+    });
 
-    Entity.build(.{ .name = "TestEntity2" })
-        .withComponent(ETransform{
-        .position = .{ 0, 0 },
-        .pivot = .{ 100, 100 },
-        .scale = .{ 0.25, 0.25 },
-        .rotation = 45,
-    })
-        .withComponent(EShape{
-        .shape_type = ShapeType.RECTANGLE,
-        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
-        .color = .{ 255, 0, 0, 100 },
-    }).activate();
+    _ = Entity.newActive(.{ .name = "TestEntity2" }, .{
+        ETransform{
+            .position = .{ 0, 0 },
+            .pivot = .{ 100, 100 },
+            .scale = .{ 0.25, 0.25 },
+            .rotation = 45,
+        },
+        EShape{
+            .shape_type = ShapeType.RECTANGLE,
+            .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
+            .color = .{ 255, 0, 0, 100 },
+        },
+    });
 
-    Entity.build(.{ .name = "TestEntity3" })
-        .withComponent(ETransform{
-        .position = .{ 0, 0 },
-        .pivot = .{ 100, 100 },
-        .scale = .{ 0.1, 0.1 },
-        .rotation = 45,
-    })
-        .withComponent(EShape{
-        .shape_type = ShapeType.RECTANGLE,
-        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
-        .color = .{ 255, 0, 0, 255 },
-        .color1 = .{ 0, 255, 0, 255 },
-        .color2 = .{ 0, 0, 255, 255 },
-        .color3 = .{ 255, 255, 255, 0 },
-    }).activate();
+    _ = Entity.newActive(.{ .name = "TestEntity3" }, .{
+        ETransform{
+            .position = .{ 0, 0 },
+            .pivot = .{ 100, 100 },
+            .scale = .{ 0.1, 0.1 },
+            .rotation = 45,
+        },
+        EShape{
+            .shape_type = ShapeType.RECTANGLE,
+            .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 200, 200 }),
+            .color = .{ 255, 0, 0, 255 },
+            .color1 = .{ 0, 255, 0, 255 },
+            .color2 = .{ 0, 0, 255, 255 },
+            .color3 = .{ 255, 255, 255, 0 },
+        },
+    });
 
-    Entity.build(.{ .name = "TestEntity5" })
-        .withComponent(ETransform{ .position = .{ 0, 0 } })
-        .withComponent(EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
-        .{ 400, 310 },
-        .{ 410, 310 },
-        .{ 420, 310 },
-        .{ 430, 315 },
-        .{ 400, 315 },
-        .{ 415, 310 },
-    }) })
-        .withComponent(EShape{
-        .shape_type = ShapeType.CIRCLE,
-        .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 10 }),
-        .color = .{ 150, 150, 150, 100 },
-    }).activate();
+    _ = Entity.newActive(.{ .name = "TestEntity5" }, .{
+        ETransform{ .position = .{ 0, 0 } },
+        EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
+            .{ 400, 310 },
+            .{ 410, 310 },
+            .{ 420, 310 },
+            .{ 430, 315 },
+            .{ 400, 315 },
+            .{ 415, 310 },
+        }) },
+        EShape{
+            .shape_type = ShapeType.CIRCLE,
+            .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 10 }),
+            .color = .{ 150, 150, 150, 100 },
+        },
+    });
 
-    Entity.build(.{ .name = "Triangle" })
-        .withComponent(ETransform{
-        .position = .{ 300, 0 },
-        .pivot = .{ 60, 60 },
-        .scale = .{ 0.5, 0.5 },
-        .rotation = 45,
-    })
-        .withComponent(EShape{
-        .shape_type = ShapeType.TRIANGLE,
-        .fill = true,
-        .vertices = firefly.api.allocFloatArray([_]Float{ 60, 10, 10, 110, 110, 110 }),
-        .color = .{ 255, 255, 255, 255 },
-    }).activate();
+    _ = Entity.newActive(.{ .name = "Triangle" }, .{
+        ETransform{
+            .position = .{ 300, 0 },
+            .pivot = .{ 60, 60 },
+            .scale = .{ 0.5, 0.5 },
+            .rotation = 45,
+        },
+        EShape{
+            .shape_type = ShapeType.TRIANGLE,
+            .fill = true,
+            .vertices = firefly.api.allocFloatArray([_]Float{ 60, 10, 10, 110, 110, 110 }),
+            .color = .{ 255, 255, 255, 255 },
+        },
+    });
 
     _ = Texture.Component.newActive(.{
         .name = "TestTexture",
@@ -129,13 +135,13 @@ fn example() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    Entity.build(.{ .name = "TestEntitySprite" })
-        .withComponent(ETransform{
-        .position = .{ 64, 164 },
-        .scale = .{ 4, 4 },
-        .pivot = .{ 16, 16 },
-        .rotation = 180,
-    })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .activate();
+    _ = Entity.newActive(.{ .name = "TestEntitySprite" }, .{
+        ETransform{
+            .position = .{ 64, 164 },
+            .scale = .{ 4, 4 },
+            .pivot = .{ 16, 16 },
+            .rotation = 180,
+        },
+        ESprite{ .template_id = sprite_id },
+    });
 }

@@ -121,41 +121,33 @@ fn create_player(_: *api.CallContext) void {
     });
 
     // create player entity
-    _ = api.Entity.build(.{ .name = "Player" })
-        .withComponent(graphics.ETransform{
-        .position = .{ 32, 32 },
-        .pivot = .{ 0, 0 },
-    })
-        .withComponent(graphics.EView{
-        .view_id = graphics.View.Naming.getId(view_name),
-        .layer_id = graphics.Layer.Naming.getId(layer2),
-    })
-        .withComponent(graphics.ESprite{ .template_id = sprite_id })
-        .withComponent(physics.EMovement{
-        .max_velocity_south = 80,
-        .max_velocity_east = 50,
-        .max_velocity_west = 50,
-        .integrator = physics.EulerIntegrator,
-    })
-        .withComponent(physics.EContactScan{
-        .collision_resolver = game.PlatformerCollisionResolver.new(.{
-            .contact_bounds = .{ 4, 1, 8, 14 },
-            .view_id = graphics.View.Naming.getId(view_name),
-            .layer_id = graphics.Layer.Naming.getId(layer2),
-        }),
-    })
-        .withControlOf(
+    _ = api.Entity.newActive(.{ .name = "Player" }, .{
+        graphics.ETransform{ .position = .{ 32, 32 }, .pivot = .{ 0, 0 } },
+        graphics.EView{ .view_id = graphics.View.Naming.getId(view_name), .layer_id = graphics.Layer.Naming.getId(layer2) },
+        graphics.ESprite{ .template_id = sprite_id },
+        physics.EMovement{
+            .max_velocity_south = 80,
+            .max_velocity_east = 50,
+            .max_velocity_west = 50,
+            .integrator = physics.EulerIntegrator,
+        },
+        physics.EContactScan{
+            .collision_resolver = game.PlatformerCollisionResolver.new(.{
+                .contact_bounds = .{ 4, 1, 8, 14 },
+                .view_id = graphics.View.Naming.getId(view_name),
+                .layer_id = graphics.Layer.Naming.getId(layer2),
+            }),
+        },
         game.SimplePlatformerHorizontalMoveControl{
             .button_left = api.InputButtonType.LEFT,
             .button_right = api.InputButtonType.RIGHT,
         },
-        true,
-    )
-        .withControlOf(game.SimplePlatformerJumpControl{
-        .jump_button = api.InputButtonType.FIRE_1,
-        .jump_impulse = 100,
-        .double_jump = true,
-    }, true).activate();
+        game.SimplePlatformerJumpControl{
+            .jump_button = api.InputButtonType.FIRE_1,
+            .jump_impulse = 100,
+            .double_jump = true,
+        },
+    });
 
     // apply player position as pivot for camera
     var cam = game.SimplePivotCamera.Component.byName(cam_name).?;

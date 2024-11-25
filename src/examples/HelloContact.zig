@@ -51,10 +51,8 @@ fn init() void {
 
     var x: Float = 10;
 
-    const eid = Entity.newActive(.{}, .{
-        firefly.api.EControl{ .update = control },
-        ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+    _ = Entity.newActive(.{}, .{
+        firefly.api.EControl{ .update = control },                    ETransform{ .position = .{ x, 0 } }, ESprite{ .template_id = sprite_id },
         EMovement{
             .gravity_vector = .{ 2, firefly.physics.EARTH_GRAVITY },
             .mass = 1,
@@ -67,37 +65,28 @@ fn init() void {
             .color = .{ 0, 0, 255, 255 },
         },
         EContactScan{ .collision_resolver = DebugCollisionResolver },
+        ContactConstraint{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true },
     });
     // TODO move this to Entity creation
-    EContactScan.addToComponent(eid, .{
-        .bounds = .{ .rect = .{ 0, 0, 32, 32 } },
-        .full_scan = true,
-    });
-
-    // Entity.build(.{})
-    //     .withControl(control, null, true)
-    //     .withComponent(ETransform{ .position = .{ x, 0 } })
-    //     .withComponent(ESprite{ .template_id = sprite_id })
-    //     .withComponent(EMovement{ .gravity_vector = .{ 2, firefly.physics.EARTH_GRAVITY }, .mass = 1, .integrator = firefly.physics.EulerIntegrator })
-    //     .withComponent(EContactScan{ .collision_resolver = DebugCollisionResolver })
-    //     .addToComponent(EContactScan, .{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true })
-    //     .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .fill = false, .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }), .color = .{ 0, 0, 255, 255 } })
-    //     .activate();
+    // EContactScan.addToComponent(eid, .{
+    //     .bounds = .{ .rect = .{ 0, 0, 32, 32 } },
+    //     .full_scan = true,
+    // });
 
     x += 50;
 
-    Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ x, 200 } })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
-        .activate();
+    _ = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ x, 200 } },
+        ESprite{ .template_id = sprite_id },
+        EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } },
+    });
 
     // tile grid
-    const tile = Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{})
-        .withComponent(ETile{ .sprite_template_id = sprite_id })
-        .withComponent(EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } })
-        .activateGet();
+    const tile_id = Entity.newActive(.{ .name = "TestEntity" }, .{
+        ETransform{},
+        ETile{ .sprite_template_id = sprite_id },
+        EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } },
+    });
 
     var tile_grid = TileGrid.Component.newAndGet(.{
         .name = "TileGrid1",
@@ -108,7 +97,7 @@ fn init() void {
 
     for (0..3) |y| {
         for (0..10) |_x|
-            tile_grid._grid[y][_x] = tile.id;
+            tile_grid._grid[y][_x] = tile_id;
     }
 }
 

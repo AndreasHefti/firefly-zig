@@ -142,7 +142,7 @@ pub const EControl = struct {
     update: api.CallFunction,
     active: bool = true,
 
-    pub fn create(entity_id: Index, template: EControl) void {
+    pub fn createEComponent(entity_id: Index, template: EControl) void {
         api.Entity.Control.add(
             entity_id,
             template.update,

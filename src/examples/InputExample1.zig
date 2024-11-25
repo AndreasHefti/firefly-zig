@@ -35,10 +35,10 @@ fn init() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{ .position = .{ 100, 100 } })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .activate();
+    _ = Entity.newActive(.{ .name = "TestEntity" }, .{
+        ETransform{ .position = .{ 100, 100 } },
+        ESprite{ .template_id = sprite_id },
+    });
 
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_UP, InputButtonType.UP);
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_DOWN, InputButtonType.DOWN);

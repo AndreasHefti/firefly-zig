@@ -68,27 +68,23 @@ fn example() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    _ = firefly.api.Entity.build(.{ .name = "Player1" })
-        .withComponent(graphics.ETransform{
-        .position = .{ 0, 0 },
-        .pivot = .{ 0, 0 },
-        .scale = .{ 2, 2 },
-    })
-        .withComponent(graphics.EView{
-        .view_id = view_id_1,
-    })
-        .withComponent(graphics.ESprite{ .template_id = sprite_id })
-        .activate();
+    _ = firefly.api.Entity.newActive(.{ .name = "Player1" }, .{
+        graphics.ETransform{
+            .position = .{ 0, 0 },
+            .pivot = .{ 0, 0 },
+            .scale = .{ 2, 2 },
+        },
+        graphics.EView{ .view_id = view_id_1 },
+        graphics.ESprite{ .template_id = sprite_id },
+    });
 
-    _ = firefly.api.Entity.build(.{ .name = "Player2" })
-        .withComponent(graphics.ETransform{
-        .position = .{ 0, 0 },
-        .pivot = .{ 0, 0 },
-        .scale = .{ 2, 2 },
-    })
-        .withComponent(graphics.EView{
-        .view_id = view_id_2,
-    })
-        .withComponent(graphics.ESprite{ .template_id = sprite_id })
-        .activate();
+    _ = firefly.api.Entity.newActive(.{ .name = "Player2" }, .{
+        graphics.ETransform{
+            .position = .{ 0, 0 },
+            .pivot = .{ 0, 0 },
+            .scale = .{ 2, 2 },
+        },
+        graphics.EView{ .view_id = view_id_2 },
+        graphics.ESprite{ .template_id = sprite_id },
+    });
 }

@@ -44,11 +44,11 @@ pub fn init() void {
         .addAction(go_up, "go up")
         .build();
 
-    const entity_id = Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 0, 0 } })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .withComponent(game.EBehavior{ .root_node_id = behavior_id })
-        .activateGet().id;
+    const entity_id = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 0, 0 } },
+        ESprite{ .template_id = sprite_id },
+        game.EBehavior{ .root_node_id = behavior_id },
+    });
 
     var behavior = game.EBehavior.Component.byId(entity_id);
     behavior.call_context.id_1 = 0;

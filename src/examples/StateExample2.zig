@@ -67,19 +67,19 @@ fn init() void {
 fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
     const vx = random.float(Float) * 200 + 1;
     const vy = random.float(Float) * 200 + 1;
-    const entity_id = Entity.build(.{})
-        .withComponent(ETransform{ .position = .{ 0, 0 } })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .withComponent(EMovement{
-        .velocity = .{ vx, vy },
-        .mass = 1,
-        .adjust_max = false,
-        .adjust_ground = false,
-        .integrator = firefly.physics.SimpleStepIntegrator,
-        .constraint = null,
-    })
-        .withComponent(EState{ .state_engine_ref = state_engine.id })
-        .activateGetId();
+    const entity_id = Entity.newActive(.{}, .{
+        ETransform{ .position = .{ 0, 0 } },
+        ESprite{ .template_id = sprite_id },
+        EMovement{
+            .velocity = .{ vx, vy },
+            .mass = 1,
+            .adjust_max = false,
+            .adjust_ground = false,
+            .integrator = firefly.physics.SimpleStepIntegrator,
+            .constraint = null,
+        },
+        EState{ .state_engine_ref = state_engine.id },
+    });
 
     // just the initial state
     EState.Component.byId(entity_id).current_state =

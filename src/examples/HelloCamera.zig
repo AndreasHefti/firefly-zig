@@ -11,6 +11,7 @@ const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const EShape = firefly.graphics.EShape;
 const EMultiplier = firefly.api.EMultiplier;
+const EControl = firefly.api.EControl;
 const ShapeType = firefly.api.ShapeType;
 const InputButtonType = firefly.api.InputButtonType;
 const InputActionType = firefly.api.InputActionType;
@@ -65,12 +66,12 @@ fn init() void {
         },
     });
 
-    const entity = Entity.build(.{ .name = "TestEntity" })
-        .withControl(entity_control, "PlayerControl", true)
-        .withComponent(EView{ .view_id = view.id })
-        .withComponent(ETransform{ .position = .{ 100, 100 } })
-        .withComponent(ESprite{ .template_id = sprite_id })
-        .activateGet();
+    const entity_id = Entity.newActive(.{ .name = "TestEntity" }, .{
+        EControl{ .name = "PlayerControl", .update = entity_control },
+        EView{ .view_id = view.id },
+        ETransform{ .position = .{ 100, 100 } },
+        ESprite{ .template_id = sprite_id },
+    });
 
     View.Control.addActiveOf(
         view.id,
@@ -78,7 +79,7 @@ fn init() void {
             .name = "Camera1",
             .pixel_perfect = false,
             .snap_to_bounds = .{ -100, -100, 800, 800 },
-            .pivot = &ETransform.Component.byId(entity.id).position,
+            .pivot = &ETransform.Component.byId(entity_id).position,
             .offset = .{ 16, 16 },
             .velocity_relative_to_pivot = .{ 0.1, 0.1 },
         },
@@ -97,11 +98,11 @@ fn init() void {
     EMultiplier.Component.new(eid, .{ .positions = firefly.api.allocVec2FArray([_]Vector2f{ .{ 50, 50 }, .{ 200, 50 }, .{ 50, 150 }, .{ 200, 150 }, .{ 300, 250 }, .{ 400, 350 }, .{ 500, 450 }, .{ 200, 450 }, .{ 300, 350 }, .{ 400, 250 }, .{ 500, 150 } }) });
     Entity.Activation.activate(eid);
 
-    Entity.build(.{ .name = "Border" })
-        .withComponent(EView{ .view_id = view.id })
-        .withComponent(ETransform{ .position = .{ 0, 0 } })
-        .withComponent(EShape{ .shape_type = ShapeType.RECTANGLE, .vertices = firefly.api.allocFloatArray([_]Float{ -100, -100, 800, 800 }), .fill = false, .thickness = 2, .color = .{ 150, 0, 0, 255 } })
-        .activate();
+    _ = Entity.newActive(.{ .name = "Border" }, .{
+        EView{ .view_id = view.id },
+        ETransform{ .position = .{ 0, 0 } },
+        EShape{ .shape_type = ShapeType.RECTANGLE, .vertices = firefly.api.allocFloatArray([_]Float{ -100, -100, 800, 800 }), .fill = false, .thickness = 2, .color = .{ 150, 0, 0, 255 } },
+    });
 }
 
 const speed = 2;

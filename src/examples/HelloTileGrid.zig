@@ -34,10 +34,10 @@ fn loadWithView() void {
         .is_mipmap = false,
     });
 
-    const tile = Entity.build(.{ .name = "TestEntity" })
-        .withComponent(ETransform{})
-        .withComponent(ETile{ .sprite_template_id = sprite_id })
-        .activateGet();
+    const tile_id = Entity.newActive(.{ .name = "TestEntity" }, .{
+        ETransform{},
+        ETile{ .sprite_template_id = sprite_id },
+    });
 
     var tile_grid = TileGrid.Component.newAndGet(.{
         .name = "TileGrid1",
@@ -48,7 +48,7 @@ fn loadWithView() void {
 
     for (0..10) |y| {
         for (0..10) |x|
-            tile_grid._grid[y][x] = tile.id;
+            tile_grid._grid[y][x] = tile_id;
     }
 
     firefly.api.subscribeUpdate(update);

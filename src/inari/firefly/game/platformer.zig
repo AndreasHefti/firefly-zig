@@ -372,6 +372,10 @@ pub const SimplePlatformerHorizontalMoveControl = struct {
     button_left: api.InputButtonType = api.InputButtonType.LEFT,
     button_right: api.InputButtonType = api.InputButtonType.RIGHT,
 
+    pub fn createEComponent(entity_id: Index, template: SimplePlatformerHorizontalMoveControl) void {
+        api.Entity.Control.addActiveOf(entity_id, template);
+    }
+
     pub fn controlledComponentType() api.ComponentAspect {
         return api.Entity.Component.aspect;
     }
@@ -425,6 +429,10 @@ pub const SimplePlatformerJumpControl = struct {
     double_jump_tolerance: u8 = 100,
 
     _off_ground: u8 = 0,
+
+    pub fn createEComponent(entity_id: Index, template: SimplePlatformerJumpControl) void {
+        api.Entity.Control.addActiveOf(entity_id, template);
+    }
 
     pub fn controlledComponentType() api.ComponentAspect {
         return api.Entity.Component.aspect;
