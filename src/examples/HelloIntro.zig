@@ -56,6 +56,7 @@ fn sceneInit(_: *api.CallContext) void {
     physics.EAnimations.add(eid, .{
         .duration = 3000,
         .active_on_init = true,
+        .reset_on_finish = false,
     }, physics.EasedColorIntegrator{
         .start_value = .{ 255, 255, 255, 0 },
         .end_value = .{ 255, 255, 255, 255 },
@@ -67,6 +68,7 @@ fn sceneInit(_: *api.CallContext) void {
 
 fn sceneRun(ctx: *api.CallContext) void {
     if (graphics.ESprite.Component.byName("IntroSprite")) |sprite| {
+        //std.debug.print("**** alpha: {d}\n", .{sprite.tint_color.?[3]});
         if (sprite.tint_color.?[3] >= 254)
             ctx.result = api.ActionResult.Success
         else

@@ -404,7 +404,7 @@ pub const TileMapping = struct {
 
                                     // create entity from TileTemplate for specific view and layer and add code mapping
                                     const entity_id = api.Entity.new(.{
-                                        .name = api.NamePool.format("{s}_{s}", .{ tile_template.name.?, layer_mapping.layer }),
+                                        .name = utils.NamePool.format("{s}_{s}", .{ tile_template.name.?, layer_mapping.layer }),
                                         .groups = api.GroupKind.fromStringList(tile_template.groups),
                                     }, .{
                                         graphics.ETransform{},

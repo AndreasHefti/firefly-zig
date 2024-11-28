@@ -143,7 +143,7 @@ fn init() void {
     }
 }
 
-fn createTile(
+pub fn createTile(
     tile_set: *TileSet,
     tile_template: *TileTemplate,
     x: Float,

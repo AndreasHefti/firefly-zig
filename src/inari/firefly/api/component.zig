@@ -616,7 +616,7 @@ pub fn AttributeMixin(comptime T: type) type {
         }
 
         fn getAttributesName(self: *T) ?String {
-            return api.NamePool.format("{s}_{d}_{?s}", .{
+            return utils.NamePool.format("{s}_{d}_{?s}", .{
                 if (@hasDecl(T, "aspect")) T.aspect.name else @typeName(T),
                 self.id,
                 self.name,

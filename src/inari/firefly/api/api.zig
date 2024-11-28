@@ -147,7 +147,7 @@ pub fn init(context: InitContext) !void {
         audio = IAudioAPI().initDummy();
     }
 
-    NamePool.init();
+    utils.NamePool.init(ALLOC);
     Component.init();
     Timer.init();
     system.init();
@@ -184,7 +184,7 @@ pub fn deinit() void {
     audio.deinit();
     audio = undefined;
     Timer.deinit();
-    NamePool.deinit();
+    utils.NamePool.deinit();
 
     UPDATE_EVENT_DISPATCHER.deinit();
     RENDER_EVENT_DISPATCHER.deinit();
@@ -251,137 +251,6 @@ pub const FUNCTION_NAMES = struct {
     pub const SYSTEM_RENDER_FUNCTION: String = "render";
     pub const SYSTEM_RENDER_VIEW_FUNCTION: String = "renderView";
     pub const SYSTEM_RENDER_COMPONENT_FUNCTION: String = "renderComponents";
-};
-
-//////////////////////////////////////////////////////////////
-//// Name Pool used for none constant Strings not living
-//// in zigs data mem. These can be de-allocated by call
-//// or will be freed all on package deinit
-//////////////////////////////////////////////////////////////
-
-pub const NamePool = struct {
-    var names: std.BufSet = undefined;
-    var c_names: std.ArrayList([:0]const u8) = undefined;
-
-    fn init() void {
-        names = std.BufSet.init(ALLOC);
-        c_names = std.ArrayList([:0]const u8).init(ALLOC);
-    }
-
-    fn deinit() void {
-        names.deinit();
-
-        freeCNames();
-        c_names.deinit();
-    }
-
-    pub fn alloc(name: ?String) ?String {
-        if (name) |n| {
-            if (names.contains(n))
-                return names.hash_map.getKey(n);
-
-            names.insert(n) catch unreachable;
-            //std.debug.print("************ NamePool names add: {s}\n", .{n});
-            return names.hash_map.getKey(n);
-        }
-        return null;
-    }
-
-    pub fn format(comptime fmt: String, args: anytype) String {
-        const formatted = std.fmt.allocPrint(ALLOC, fmt, args) catch unreachable;
-        defer ALLOC.free(formatted);
-        return alloc(formatted).?;
-    }
-
-    pub fn getCName(name: ?String) ?CString {
-        if (name) |n| {
-            const _n = firefly.api.ALLOC.dupeZ(u8, n) catch unreachable;
-            c_names.append(_n) catch unreachable;
-            //std.debug.print("************ NamePool c_names add: {s}\n", .{_n});
-            return @ptrCast(_n);
-        }
-        return null;
-    }
-
-    pub fn _getCName(name: String) CString {
-        const _n = firefly.api.ALLOC.dupeZ(u8, name) catch unreachable;
-        c_names.append(_n) catch unreachable;
-        return @ptrCast(_n);
-    }
-
-    pub fn freeCNames() void {
-        for (c_names.items) |item|
-            firefly.api.ALLOC.free(item);
-        c_names.clearRetainingCapacity();
-    }
-
-    pub fn indexToString(index: ?Index) ?String {
-        if (index) |i| {
-            const str = std.fmt.allocPrint(ALLOC, "{d}", i) catch return null;
-            defer ALLOC.free(str);
-            names.insert(str) catch unreachable;
-            return names.hash_dict.getKey(str);
-        }
-        return null;
-    }
-
-    pub fn free(name: String) void {
-        names.remove(name);
-    }
-};
-
-pub const PropertyIterator = struct {
-    delegate: std.mem.SplitIterator(u8, std.mem.DelimiterType.scalar),
-
-    pub fn new(s: String) PropertyIterator {
-        return PropertyIterator{ .delegate = std.mem.splitScalar(u8, s, '|') };
-    }
-
-    pub inline fn next(self: *PropertyIterator) ?String {
-        return self.delegate.next();
-    }
-
-    pub inline fn nextAspect(self: *PropertyIterator, comptime aspect_group: anytype) ?aspect_group.Aspect {
-        if (self.delegate.next()) |s|
-            return aspect_group.getAspectIfExists(s);
-        return null;
-    }
-
-    pub inline fn nextName(self: *PropertyIterator) ?String {
-        if (self.delegate.next()) |s|
-            return NamePool.alloc(utils.parseName(s));
-        return null;
-    }
-
-    pub inline fn nextBoolean(self: *PropertyIterator) bool {
-        return utils.parseBoolean(self.delegate.next());
-    }
-
-    pub inline fn nextFloat(self: *PropertyIterator) ?Float {
-        return utils.parseFloat(self.delegate.next());
-    }
-
-    pub inline fn nextIndex(self: *PropertyIterator) ?Index {
-        return utils.parseUsize(self.delegate.next());
-    }
-
-    pub inline fn nextPosF(self: *PropertyIterator) ?utils.PosF {
-        return utils.parsePosF(self.delegate.next());
-    }
-
-    pub inline fn nextRectF(self: *PropertyIterator) ?utils.RectF {
-        return utils.parseRectF(self.delegate.next());
-    }
-
-    pub inline fn nextColor(self: *PropertyIterator) ?utils.Color {
-        return utils.parseColor(self.delegate.next());
-    }
-
-    pub inline fn nextOrientation(self: *PropertyIterator) ?utils.Orientation {
-        if (next(self)) |n|
-            return utils.Orientation.byName(n);
-        return null;
-    }
 };
 
 //////////////////////////////////////////////////////////////
@@ -511,7 +380,7 @@ pub const CallContext = struct {
     }
 
     pub fn optionalAttribute(self: *CallContext, name: String) ?String {
-        return NamePool.alloc(self.getAttrs().get(name));
+        return utils.NamePool.alloc(self.getAttrs().get(name));
     }
 
     pub fn attribute(self: *CallContext, name: String) String {
@@ -519,7 +388,7 @@ pub const CallContext = struct {
     }
 
     pub fn optionalString(self: *CallContext, name: String) ?String {
-        return NamePool.alloc(utils.parseName(self.getAttrs().get(name)));
+        return utils.NamePool.alloc(utils.parseName(self.getAttrs().get(name)));
     }
 
     pub fn string(self: *CallContext, name: String) String {
@@ -538,8 +407,8 @@ pub const CallContext = struct {
         return optionalRectF(self, name) orelse miss(name);
     }
 
-    pub fn properties(self: *CallContext, name: String) PropertyIterator {
-        return PropertyIterator.new(attribute(self, name));
+    pub fn properties(self: *CallContext, name: String) utils.PropertyIterator {
+        return utils.PropertyIterator.new(attribute(self, name));
     }
 
     inline fn miss(name: String) void {

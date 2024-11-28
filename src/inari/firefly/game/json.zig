@@ -207,8 +207,8 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
             api.Task.runTaskByName(lt);
         } else {
             _ = graphics.Texture.Component.newActive(.{
-                .name = api.NamePool.alloc(jsonTileSet.texture.name).?,
-                .resource = api.NamePool.alloc(jsonTileSet.texture.file).?,
+                .name = utils.NamePool.alloc(jsonTileSet.texture.name).?,
+                .resource = utils.NamePool.alloc(jsonTileSet.texture.file).?,
                 .is_mipmap = false,
             });
         }
@@ -219,19 +219,19 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
 
     // create TileSet from jsonTileSet
     var tile_set = game.TileSet.Component.newAndGet(.{
-        .name = api.NamePool.alloc(jsonTileSet.name),
-        .texture_name = api.NamePool.alloc(jsonTileSet.texture.name).?,
+        .name = utils.NamePool.alloc(jsonTileSet.name),
+        .texture_name = utils.NamePool.alloc(jsonTileSet.texture.name).?,
         .tile_width = jsonTileSet.tile_width,
         .tile_height = jsonTileSet.tile_height,
     });
 
     // create all tile templates for tile set
     for (0..jsonTileSet.tiles.len) |i| {
-        var it = api.PropertyIterator.new(jsonTileSet.tiles[i].props);
+        var it = utils.PropertyIterator.new(jsonTileSet.tiles[i].props);
 
         if (it.nextPosF()) |tex_pos| {
             var tile_template: game.TileTemplate = .{
-                .name = api.NamePool.alloc(jsonTileSet.tiles[i].name),
+                .name = utils.NamePool.alloc(jsonTileSet.tiles[i].name),
                 .sprite_data = .{
                     .texture_pos = .{
                         tex_pos[0] * tile_set.tile_width,
@@ -241,13 +241,16 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
                     .flip_y = it.nextBoolean(),
                 },
                 .contact_material_type = it.nextAspect(physics.ContactMaterialAspectGroup),
-                .contact_mask_name = api.NamePool.alloc(if (it.nextBoolean()) jsonTileSet.tiles[i].name else null),
+                .contact_mask_name = utils.NamePool.alloc(if (it.nextBoolean()) jsonTileSet.tiles[i].name else null),
                 .groups = it.nextName(),
             };
 
             if (jsonTileSet.tiles[i].animation) |a| {
                 var it_a1 = std.mem.split(u8, a, "|");
                 while (it_a1.next()) |frame| {
+                    if (frame.len == 0)
+                        continue;
+
                     var it_a2 = std.mem.split(u8, frame, ",");
                     tile_template = tile_template.withAnimationFrame(.{
                         .duration = utils.parseUsize(it_a2.next().?),
@@ -392,7 +395,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
     // prepare view
     const view_id = graphics.View.Naming.getId(view_name);
     var tile_mapping = game.TileMapping.Component.newAndGet(.{
-        .name = api.NamePool.alloc(jsonTileMapping.name),
+        .name = utils.NamePool.alloc(jsonTileMapping.name),
         .view_id = view_id,
     });
 
@@ -442,7 +445,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
             layer_id = graphics.Layer.Naming.getId(layer_mapping.layer_name);
         } else {
             layer_id = graphics.Layer.Component.new(.{
-                .name = api.NamePool.alloc(layer_mapping.layer_name),
+                .name = utils.NamePool.alloc(layer_mapping.layer_name),
                 .view_id = view_id,
                 .order = i,
             });
@@ -450,7 +453,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 
         // create tile layer data
         var tile_layer_data = tile_mapping.withTileLayerData(.{
-            .layer = api.NamePool.alloc(layer_mapping.layer_name).?,
+            .layer = utils.NamePool.alloc(layer_mapping.layer_name).?,
             .tint = utils.parseColor(layer_mapping.tint_color).?,
             .blend = BlendMode.byName(layer_mapping.blend_mode),
             .parallax = utils.parsePosF(layer_mapping.parallax_factor),
@@ -464,7 +467,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
                 const tile_set_ref = jsonTileMapping.tile_sets[ii];
                 if (utils.stringEquals(tile_set_ref.resource.name, tile_set_name)) {
                     _ = tile_layer_data.withTileSetMapping(.{
-                        .tile_set_name = api.NamePool.alloc(tile_set_ref.resource.name).?,
+                        .tile_set_name = utils.NamePool.alloc(tile_set_ref.resource.name).?,
                         .code_offset = tile_set_ref.code_offset.?,
                     });
                     break;
@@ -477,8 +480,8 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
     for (0..jsonTileMapping.tile_grids.len) |i| {
         const json_grid = jsonTileMapping.tile_grids[i];
         tile_mapping.addTileGridData(.{
-            .name = api.NamePool.alloc(json_grid.name).?,
-            .layer = api.NamePool.alloc(json_grid.layer).?,
+            .name = utils.NamePool.alloc(json_grid.name).?,
+            .layer = utils.NamePool.alloc(json_grid.layer).?,
             .world_position = utils.parsePosF(json_grid.position) orelse .{ 0, 0 },
             .spherical = json_grid.spherical,
             .dimensions = .{
@@ -487,7 +490,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
                 json_grid.tile_width,
                 json_grid.tile_height,
             },
-            .codes = api.NamePool.alloc(json_grid.codes).?,
+            .codes = utils.NamePool.alloc(json_grid.codes).?,
         });
     }
 
@@ -502,6 +505,8 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 ///     "name": "Room1",
 ///     "start_scene": "scene1",
 ///     "end_scene": "scene2",
+///     "load_tasks": "task1|task2|task3",
+///     "activation_tasks": "task1|task2|task3",
 ///     "attributes": [
 ///         { "name": "test_attribute1", "value": "attr_value1"}
 ///     ]
@@ -556,6 +561,8 @@ pub const JSONRoom = struct {
     bounds: String,
     start_scene: ?String = null,
     end_scene: ?String = null,
+    load_tasks: ?String = null,
+    activation_tasks: ?String = null,
     attributes: ?[]const JSONAttribute = null,
     tile_sets: []const Resource,
     tile_mapping_file: ?Resource = null,
@@ -598,11 +605,15 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
         return;
 
     const room_id = game.Room.Component.new(.{
-        .name = api.NamePool.alloc(jsonRoom.name).?,
+        .name = utils.NamePool.alloc(jsonRoom.name).?,
         .bounds = utils.parseRectF(jsonRoom.bounds).?,
-        .start_scene_ref = api.NamePool.alloc(jsonRoom.start_scene),
-        .end_scene_ref = api.NamePool.alloc(jsonRoom.end_scene),
+        .start_scene_ref = utils.NamePool.alloc(jsonRoom.start_scene),
+        .end_scene_ref = utils.NamePool.alloc(jsonRoom.end_scene),
     });
+
+    // if (jsonRoom.load_tasks) |load_tasks| {
+    //     utils.
+    // }
 
     if (jsonRoom.attributes) |a| {
         for (0..a.len) |i|
@@ -660,7 +671,7 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
     if (jsonRoom.objects) |objects| {
         for (0..objects.len) |i| {
             var attributes = api.Attributes.newWith(
-                api.NamePool.format("room_object_{s}_{s}", .{ jsonRoom.name, objects[i].name }),
+                utils.NamePool.format("room_object_{s}_{s}", .{ jsonRoom.name, objects[i].name }),
                 .{
                     .{ game.TaskAttributes.NAME, objects[i].name },
                     .{ game.TaskAttributes.VIEW_NAME, view_name },
@@ -674,7 +685,7 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
 
             game.Room.Composite.addTaskByName(
                 room_id,
-                api.NamePool.alloc(objects[i].build_task).?,
+                utils.NamePool.alloc(objects[i].build_task).?,
                 api.CompositeLifeCycle.ACTIVATE,
                 attributes.id,
             );
@@ -780,13 +791,13 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
 
     const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
     const world_id = game.World.Component.new(.{
-        .name = api.NamePool.alloc(jsonWorld.name).?,
+        .name = utils.NamePool.alloc(jsonWorld.name).?,
     });
 
     if (jsonWorld.room_transitions) |room_transitions| {
         for (0..room_transitions.len) |i| {
             var attributes: *api.Attributes = api.Attributes.newWith(
-                api.NamePool.alloc(room_transitions[i].name),
+                utils.NamePool.alloc(room_transitions[i].name),
                 .{
                     .{ game.TaskAttributes.NAME, room_transitions[i].name },
                     .{ game.TaskAttributes.VIEW_NAME, view_name },
@@ -820,7 +831,7 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
             api.Attributes.newWith(
                 null,
                 .{
-                    .{ game.TaskAttributes.FILE_RESOURCE, api.NamePool.alloc(jsonWorld.rooms[i].file.file).? },
+                    .{ game.TaskAttributes.FILE_RESOURCE, utils.NamePool.alloc(jsonWorld.rooms[i].file.file).? },
                     .{ game.TaskAttributes.VIEW_NAME, view_name },
                 },
             ).id,
@@ -881,6 +892,8 @@ fn loadTiledTileSet(ctx: *api.CallContext) void {
         defer parsed.deinit();
 
         const tiledTileSet: TiledTileSet = parsed.value;
+
+        // convert tiled JSON to self JSON
         const tiles: []JSONTile = api.ALLOC.alloc(JSONTile, tiledTileSet.tileproperties.map.count()) catch undefined;
         defer api.ALLOC.free(tiles);
 
@@ -896,7 +909,7 @@ fn loadTiledTileSet(ctx: *api.CallContext) void {
 
         const jsonTileSet = JSONTileSet{
             .file_type = JSONFileTypes.TILE_SET,
-            .name = tiledTileSet.image,
+            .name = tiledTileSet.name,
             .texture = tiledTileSet.properties.texture,
             .tile_width = tiledTileSet.tilewidth,
             .tile_height = tiledTileSet.tileheight,

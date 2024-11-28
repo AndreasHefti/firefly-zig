@@ -3,7 +3,7 @@ const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
 const rlgl = @cImport(@cInclude("rlgl.h"));
 
-const NamePool = firefly.api.NamePool;
+const NamePool = firefly.utils.NamePool;
 const Texture2D = rl.Texture2D;
 const Font = rl.Font;
 const RenderTexture2D = rl.RenderTexture2D;

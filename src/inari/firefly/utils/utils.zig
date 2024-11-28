@@ -1,29 +1,41 @@
 const std = @import("std");
+const aspect = @import("aspect.zig");
+const string = @import("string.zig");
+const dynarray = @import("dynarray.zig");
 const Allocator = std.mem.Allocator;
 const Writer = std.io.Writer;
 const ArrayList = std.ArrayList;
-const aspect = @import("aspect.zig");
+
 const StringHashMap = std.StringHashMap;
 
 //////////////////////////////////////////////////////////////
 //// inari utils public API
 //////////////////////////////////////////////////////////////
 
-pub usingnamespace @import("geom.zig");
-pub usingnamespace @import("event.zig");
-pub usingnamespace @import("dynarray.zig");
-pub usingnamespace @import("bitset.zig");
-
-pub const String = []const u8;
-pub const CString = [*c]const u8;
 pub const Index = usize;
 pub const CInt = c_int;
 pub const CUInt = c_uint;
 pub const Float = f32;
 pub const Byte = u8;
 
+pub const String = string.String;
+pub const CString = string.CString;
+pub const NamePool = string.NamePool;
+pub const StringBuffer = string.StringBuffer;
+pub const PropertyIterator = string.PropertyIterator;
+
+pub const AspectGroup = aspect.AspectGroup;
+
+pub const DynArrayError = dynarray.DynArrayError;
+pub const DynArray = dynarray.DynArray;
+pub const DynIndexArray = dynarray.DynIndexArray;
+pub const DynIndexMap = dynarray.DynIndexMap;
+
+pub usingnamespace @import("geom.zig");
+pub usingnamespace @import("event.zig");
+pub usingnamespace @import("bitset.zig");
+
 pub const EMPTY_STRING: String = "";
-//pub const NO_NAME: String = EMPTY_STRING;
 pub const UNDEF_INDEX = std.math.maxInt(Index);
 
 pub const Test = struct { array: []Index = &[_]Index{ 1, 2, 3 } };
@@ -108,43 +120,6 @@ pub inline fn parseName(value: ?String) ?String {
     }
     return null;
 }
-
-pub const AspectGroup = aspect.AspectGroup;
-
-pub const StringBuffer = struct {
-    buffer: std.ArrayList(u8),
-
-    pub fn init(allocator: Allocator) StringBuffer {
-        return StringBuffer{
-            .buffer = ArrayList(u8).init(allocator),
-        };
-    }
-
-    pub fn deinit(self: *StringBuffer) void {
-        clear(self);
-        self.buffer.deinit();
-    }
-
-    pub fn clear(self: *StringBuffer) void {
-        self.buffer.clearAndFree();
-    }
-
-    pub fn append(self: *StringBuffer, s: String) void {
-        self.buffer.writer().writeAll(s) catch |e| {
-            std.log.err("Failed to write to string buffer .{any}", .{e});
-        };
-    }
-
-    pub fn print(self: *StringBuffer, comptime s: String, args: anytype) void {
-        self.buffer.writer().print(s, args) catch |e| {
-            std.log.err("Failed to write to string buffer .{any}", .{e});
-        };
-    }
-
-    pub fn toString(self: StringBuffer) String {
-        return self.buffer.items[0..];
-    }
-};
 
 pub fn getNullPointer(comptime T: type) *const ?T {
     const t: ?T = null;
