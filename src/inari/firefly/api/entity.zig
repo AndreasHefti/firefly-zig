@@ -75,9 +75,9 @@ pub const Entity = struct {
 
         inline for (components) |c| {
             const T = @TypeOf(c);
-            if (@hasDecl(T, "createEComponent")) {
+            if (@hasDecl(T, api.FUNCTION_NAMES.ENTITY_CREATE_COMPONENT_FUNCTION)) {
                 T.createEComponent(entity_id, c);
-            } else if (@hasDecl(T, "Component")) {
+            } else if (@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN)) {
                 EntityComponentMixin(T).new(entity_id, c);
             } else {
                 @panic("unknown type");
@@ -193,18 +193,18 @@ fn isValid(any_component: anytype) bool {
 
 pub fn EntityComponentMixin(comptime T: type) type {
     // component function interceptors
-    const has_init: bool = @hasDecl(T, "typeInit");
-    const has_deinit: bool = @hasDecl(T, "typeDeinit");
+    const has_init: bool = @hasDecl(T, api.FUNCTION_NAMES.ENTITY_COMPONENT_TYPE_INIT_FUNCTION);
+    const has_deinit: bool = @hasDecl(T, api.FUNCTION_NAMES.ENTITY_COMPONENT_TYPE_DEINIT_FUNCTION);
     // component struct based interceptors / methods
-    const has_construct: bool = @hasDecl(T, "construct");
-    const has_destruct: bool = @hasDecl(T, "destruct");
-    const has_activation: bool = @hasDecl(T, "activation");
-    const has_call_context: bool = @hasDecl(T, "CallContext");
+    const has_construct: bool = @hasDecl(T, api.FUNCTION_NAMES.COMPONENT_CONSTRUCTOR_FUNCTION);
+    const has_destruct: bool = @hasDecl(T, api.FUNCTION_NAMES.COMPONENT_DESTRUCTOR_FUNCTION);
+    const has_activation: bool = @hasDecl(T, api.FUNCTION_NAMES.COMPONENT_ACTIVATION_FUNCTION);
+    const has_call_context: bool = @hasDecl(T, api.DECLARATION_NAMES.CALL_CONTEXT_MIXIN);
 
     comptime {
         if (@typeInfo(T) != .Struct)
             @compileError("Expects component type is a struct.");
-        if (!@hasField(T, "id"))
+        if (!@hasField(T, api.FIELD_NAMES.COMPONENT_ID_FIELD))
             @compileError("Expects component type to have field named id");
     }
 
@@ -229,8 +229,9 @@ pub fn EntityComponentMixin(comptime T: type) type {
                 .deinit = @This().deinit,
                 .to_string = toString,
             });
+
             if (has_init)
-                T.typeInit();
+                T.entityComponentTypeInit();
         }
 
         pub fn deinit() void {
@@ -247,7 +248,7 @@ pub fn EntityComponentMixin(comptime T: type) type {
             }
 
             if (has_deinit)
-                T.typeDeinit();
+                T.entityComponentTypeDeinit();
 
             pool.clear();
             pool.deinit();
@@ -362,7 +363,7 @@ pub fn EntityUpdateSystemMixin(comptime T: type) type {
         comptime {
             if (@typeInfo(T) != .Struct)
                 @compileError("Expects component type is a struct.");
-            if (!@hasDecl(T, "updateEntities"))
+            if (!@hasDecl(T, api.FUNCTION_NAMES.ENTITY_COMPONENT_UPDATE_FUNCTION))
                 @compileError("Expects type has fn: updateEntities(*utils.BitSet)");
         }
 
@@ -371,11 +372,11 @@ pub fn EntityUpdateSystemMixin(comptime T: type) type {
 
         pub fn init() void {
             entities = firefly.utils.BitSet.new(api.ALLOC);
-            if (@hasDecl(T, "accept") or @hasDecl(T, "dismiss")) {
+            if (@hasDecl(T, api.DECLARATION_NAMES.ENTITY_KIND_ACCEPT) or @hasDecl(T, api.DECLARATION_NAMES.ENTITY_KIND_DISMISS)) {
                 entity_condition = api.EntityTypeCondition{
-                    .accept_kind = if (@hasDecl(T, "accept")) api.EComponentAspectGroup.newKindOf(T.accept) else null,
-                    .accept_full_only = if (@hasDecl(T, "accept_full_only")) T.accept_full_only else true,
-                    .dismiss_kind = if (@hasDecl(T, "dismiss")) api.EComponentAspectGroup.newKindOf(T.dismiss) else null,
+                    .accept_kind = if (@hasDecl(T, api.DECLARATION_NAMES.ENTITY_KIND_ACCEPT)) api.EComponentAspectGroup.newKindOf(T.accept) else null,
+                    .accept_full_only = if (@hasDecl(T, api.DECLARATION_NAMES.ENTITY_KIND_ACCEPT_FULL_ONLY)) T.accept_full_only else true,
+                    .dismiss_kind = if (@hasDecl(T, api.DECLARATION_NAMES.ENTITY_KIND_DISMISS)) api.EComponentAspectGroup.newKindOf(T.dismiss) else null,
                 };
             }
         }

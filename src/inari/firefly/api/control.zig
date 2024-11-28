@@ -104,12 +104,12 @@ pub const Control = struct {
 
     pub fn createForSubType(subtype: anytype) *Control {
         const c_subtype_type = @TypeOf(subtype);
-        const update = if (@hasDecl(c_subtype_type, "update")) c_subtype_type.update else subtype.update;
-        const name = if (@hasField(c_subtype_type, "name")) subtype.name else @typeName(c_subtype_type);
+        const update = if (@hasDecl(c_subtype_type, api.FUNCTION_NAMES.COMPONENT_UPDATE_FUNCTION)) c_subtype_type.update else subtype.update;
+        const name = if (@hasField(c_subtype_type, api.FIELD_NAMES.COMPONENT_NAME_FIELD)) subtype.name else @typeName(c_subtype_type);
         return Component.newForSubType(.{
             .name = name,
             .update = update,
-            .controlled_component_type = if (@hasDecl(c_subtype_type, "controlledComponentType"))
+            .controlled_component_type = if (@hasDecl(c_subtype_type, api.FUNCTION_NAMES.COMPONENT_CONTROLLED_TYPE_FUNCTION))
                 c_subtype_type.controlledComponentType()
             else
                 api.ComponentAspectGroup.getAspect("VoidControl"),

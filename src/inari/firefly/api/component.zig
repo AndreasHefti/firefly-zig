@@ -111,22 +111,22 @@ pub fn print(string_buffer: *utils.StringBuffer) void {
 pub fn Mixin(comptime T: type) type {
     if (@typeInfo(T) != .Struct)
         @compileError("Expects component type is a struct.");
-    if (!@hasField(T, "id"))
+    if (!@hasField(T, api.FIELD_NAMES.COMPONENT_ID_FIELD))
         @compileError("Expects component type to have field: id: Index, that holds the index-id of the component instance");
 
-    const has_activation: bool = @hasDecl(T, "Activation");
-    const has_naming: bool = @hasDecl(T, "Naming");
-    const has_subscription: bool = @hasDecl(T, "Subscription");
-    const has_call_context: bool = @hasDecl(T, "CallContext");
-    const has_attributes: bool = @hasDecl(T, "Attributes");
-    const has_grouping: bool = @hasDecl(T, "Grouping");
-    const has_control: bool = @hasDecl(T, "Control");
-    const has_subtypes: bool = @hasDecl(T, "Subtypes");
+    const has_activation: bool = @hasDecl(T, api.DECLARATION_NAMES.ACTIVATION_MIXIN);
+    const has_naming: bool = @hasDecl(T, api.DECLARATION_NAMES.NAMING_MIXIN);
+    const has_subscription: bool = @hasDecl(T, api.DECLARATION_NAMES.SUBSCRIPTION_MIXIN);
+    const has_call_context: bool = @hasDecl(T, api.DECLARATION_NAMES.CALL_CONTEXT_MIXIN);
+    const has_attributes: bool = @hasDecl(T, api.DECLARATION_NAMES.ATTRIBUTE_MIXIN);
+    const has_grouping: bool = @hasDecl(T, api.DECLARATION_NAMES.GROUPING_MIXIN);
+    const has_control: bool = @hasDecl(T, api.DECLARATION_NAMES.CONTROL_MIXIN);
+    const has_subtypes: bool = @hasDecl(T, api.DECLARATION_NAMES.SUBTYPE_MIXIN);
 
-    const has_component_type_init: bool = @hasDecl(T, "componentTypeInit");
-    const has_component_type_deinit: bool = @hasDecl(T, "componentTypeDeinit");
-    const has_construct: bool = @hasDecl(T, "construct");
-    const has_destruct = @hasDecl(T, "destruct");
+    const has_component_type_init: bool = @hasDecl(T, api.FUNCTION_NAMES.COMPONENT_TYPE_INIT_FUNCTION);
+    const has_component_type_deinit: bool = @hasDecl(T, api.FUNCTION_NAMES.COMPONENT_TYPE_DEINIT_FUNCTION);
+    const has_construct: bool = @hasDecl(T, api.FUNCTION_NAMES.COMPONENT_CONSTRUCTOR_FUNCTION);
+    const has_destruct = @hasDecl(T, api.FUNCTION_NAMES.COMPONENT_DESTRUCTOR_FUNCTION);
 
     return struct {
         const Self = @This();
@@ -356,12 +356,12 @@ pub fn Mixin(comptime T: type) type {
 pub fn ActivationMixin(comptime T: type) type {
     if (@typeInfo(T) != .Struct)
         @compileError("Expects component type is a struct.");
-    if (!@hasDecl(T, "Component"))
+    if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
 
-    const has_activation_function: bool = @hasDecl(T, "activation");
-    const has_subscription: bool = @hasDecl(T, "Subscription");
-    const has_naming: bool = @hasDecl(T, "Naming");
+    const has_activation_function: bool = @hasDecl(T, api.FUNCTION_NAMES.COMPONENT_ACTIVATION_FUNCTION);
+    const has_subscription: bool = @hasDecl(T, api.DECLARATION_NAMES.SUBSCRIPTION_MIXIN);
+    const has_naming: bool = @hasDecl(T, api.DECLARATION_NAMES.NAMING_MIXIN);
     const mixin = Mixin(T);
 
     return struct {
@@ -456,9 +456,9 @@ pub fn ActivationMixin(comptime T: type) type {
 pub fn NameMappingMixin(comptime T: type) type {
     if (@typeInfo(T) != .Struct)
         @compileError("Expects component type is a struct.");
-    if (!@hasDecl(T, "Component"))
+    if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
-    if (!@hasField(T, "name"))
+    if (!@hasField(T, api.FIELD_NAMES.COMPONENT_NAME_FIELD))
         @compileError("Expects component type to have optional field: name: ?String, that holds name of the component instance");
 
     const mixin = Mixin(T);
@@ -521,7 +521,7 @@ pub fn NameMappingMixin(comptime T: type) type {
 pub fn SubscriptionMixin(comptime T: type) type {
     if (@typeInfo(T) != .Struct)
         @panic("Expects component type is a struct.");
-    if (!@hasDecl(T, "Component"))
+    if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @panic("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
 
     return struct {
@@ -569,7 +569,7 @@ pub fn SubscriptionMixin(comptime T: type) type {
 pub fn CallContextMixin(comptime T: type) type {
     if (@typeInfo(T) != .Struct)
         @compileError("Expects component type is a struct.");
-    if (!@hasField(T, "call_context"))
+    if (!@hasField(T, api.FIELD_NAMES.CALL_CONTEXT_FIELD))
         @compileError("Expects component type to have field: call_context: api.CallContext, that holds the call context for a component");
 
     return struct {
@@ -592,13 +592,13 @@ pub fn CallContextMixin(comptime T: type) type {
 }
 
 pub fn AttributeMixin(comptime T: type) type {
-    const has_attributes_id: bool = @hasField(T, "attributes_id");
-    const has_call_context: bool = @hasField(T, "call_context");
-    const has_init_attributes: bool = @hasDecl(T, "init_attributes");
+    const has_attributes_id: bool = @hasField(T, api.FIELD_NAMES.ATTRIBUTE_ID_FIELD);
+    const has_init_attributes: bool = @hasDecl(T, api.FIELD_NAMES.ATTRIBUTE_INIT_FLAG_FIELD);
+    const has_call_context: bool = @hasField(T, api.FIELD_NAMES.CALL_CONTEXT_FIELD);
 
     if (!has_attributes_id and !has_call_context)
         @panic("Expecting type has one of the following fields: attributes_id: ?Index, call_context: CallContext");
-    if (!@hasField(T, "id"))
+    if (!@hasField(T, api.FIELD_NAMES.COMPONENT_ID_FIELD))
         @panic("Expecting type has fields: id: Index");
 
     return struct {
@@ -676,11 +676,11 @@ pub fn AttributeMixin(comptime T: type) type {
 pub fn GroupingMixin(comptime T: type) type {
     if (@typeInfo(T) != .Struct)
         @compileError("Expects component type is a struct.");
-    if (!@hasDecl(T, "Component"))
+    if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
-    if (!@hasDecl(T, "Grouping"))
+    if (!@hasDecl(T, api.DECLARATION_NAMES.GROUPING_MIXIN))
         @compileError("Expects component type to have declaration: const Grouping = GroupingMixin(T).");
-    if (!@hasField(T, "groups"))
+    if (!@hasField(T, api.FIELD_NAMES.COMPONENT_GROUPS_FIELD))
         @compileError("Expects component type to have optional field: groups: ?api.GroupKind, that holds the group aspects of component instance");
 
     const mixin = Mixin(T);
@@ -742,12 +742,12 @@ pub fn GroupingMixin(comptime T: type) type {
 pub fn ControlMixin(comptime T: type) type {
     if (@typeInfo(T) != .Struct)
         @compileError("Expects component type is a struct.");
-    if (!@hasDecl(T, "Component"))
+    if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
-    if (!@hasDecl(T, "Control"))
+    if (!@hasDecl(T, api.DECLARATION_NAMES.CONTROL_MIXIN))
         @compileError("Expects component type to have declaration: const Control = ControlMixin(T).");
 
-    const has_activation: bool = @hasDecl(T, "Activation");
+    const has_activation: bool = @hasDecl(T, api.DECLARATION_NAMES.ACTIVATION_MIXIN);
     const mixin = Mixin(T);
     const activation_mixin = ActivationMixin(T);
     const control_mixin = Mixin(api.Control);
@@ -795,8 +795,8 @@ pub fn ControlMixin(comptime T: type) type {
             const c_sub_id = c_subtype_type.Component.new(subtype);
             indexes.map(id, c_sub_id);
 
-            if (@hasDecl(c_subtype_type, "initForComponent"))
-                c_subtype_type.initForComponent(id);
+            // if (@hasDecl(c_subtype_type, "initForComponent"))
+            //     c_subtype_type.initForComponent(id);
 
             ActivationMixin(api.Control).set(c_sub_id, active);
         }

@@ -80,9 +80,9 @@ pub const System = struct {
 };
 
 pub fn SystemMixin(comptime T: type) type {
-    const has_entity_update: bool = @hasDecl(T, "EntityUpdate");
-    const is_entity_renderer: bool = @hasDecl(T, "EntityRenderer");
-    const is_component_renderer: bool = @hasDecl(T, "ComponentRenderer");
+    const has_entity_update: bool = @hasDecl(T, api.DECLARATION_NAMES.SYSTEM_ENTITY_UPDATE_MIXIN);
+    const is_entity_renderer: bool = @hasDecl(T, api.DECLARATION_NAMES.SYSTEM_ENTITY_RENDERER_MIXIN);
+    const is_component_renderer: bool = @hasDecl(T, api.DECLARATION_NAMES.SYSTEM_COMPONENT_RENDERER_MIXIN);
 
     if (@typeInfo(T) != .Struct)
         @compileError("Expects component type is a struct.");
@@ -109,56 +109,56 @@ pub fn SystemMixin(comptime T: type) type {
                 .to_string = @This().print,
             });
 
-            if (@hasDecl(T, "systemInit"))
+            if (@hasDecl(T, api.FUNCTION_NAMES.SYSTEM_INIT_FUNCTION))
                 T.systemInit();
 
             if (has_entity_update) {
                 T.EntityUpdate.init();
-                if (@hasDecl(T.EntityUpdate, "entityRegistration"))
+                if (@hasDecl(T.EntityUpdate, api.FUNCTION_NAMES.SYSTEM_ENTITY_REGISTRATION_FUNCTION))
                     entity_registration = T.EntityUpdate.entityRegistration;
-                if (@hasDecl(T.EntityUpdate, "entity_condition"))
+                if (@hasDecl(T.EntityUpdate, api.DECLARATION_NAMES.SYSTEM_ENTITY_CONDITION))
                     entity_condition = T.EntityUpdate.entity_condition;
-                if (@hasDecl(T.EntityUpdate, "update"))
+                if (@hasDecl(T.EntityUpdate, api.FUNCTION_NAMES.COMPONENT_UPDATE_FUNCTION))
                     update_listener = T.EntityUpdate.update;
             }
 
             if (is_entity_renderer) {
                 T.EntityRenderer.init();
-                if (@hasDecl(T.EntityRenderer, "entityRegistration"))
+                if (@hasDecl(T.EntityRenderer, api.FUNCTION_NAMES.SYSTEM_ENTITY_REGISTRATION_FUNCTION))
                     entity_registration = T.EntityRenderer.entityRegistration;
-                if (@hasDecl(T.EntityRenderer, "entity_condition"))
+                if (@hasDecl(T.EntityRenderer, api.DECLARATION_NAMES.SYSTEM_ENTITY_CONDITION))
                     entity_condition = T.EntityRenderer.entity_condition;
-                if (@hasDecl(T.EntityRenderer, "render"))
+                if (@hasDecl(T.EntityRenderer, api.FUNCTION_NAMES.SYSTEM_RENDER_FUNCTION))
                     render_listener = T.EntityRenderer.render;
-                if (@hasDecl(T.EntityRenderer, "renderView"))
+                if (@hasDecl(T.EntityRenderer, api.FUNCTION_NAMES.SYSTEM_RENDER_VIEW_FUNCTION))
                     view_render_listener = T.EntityRenderer.renderView;
             }
 
             if (is_component_renderer) {
                 T.ComponentRenderer.init();
-                if (@hasDecl(T.ComponentRenderer, "componentRegistration"))
+                if (@hasDecl(T.ComponentRenderer, api.FUNCTION_NAMES.SYSTEM_COMPONENT_REGISTRATION))
                     component_registration = T.ComponentRenderer.componentRegistration;
-                if (@hasDecl(T.ComponentRenderer, "componentCondition"))
+                if (@hasDecl(T.ComponentRenderer, api.DECLARATION_NAMES.SYSTEM_COMPONENT_CONDITION))
                     component_condition = T.ComponentRenderer.componentCondition;
-                if (@hasDecl(T.ComponentRenderer, "render"))
+                if (@hasDecl(T.ComponentRenderer, api.FUNCTION_NAMES.SYSTEM_RENDER_FUNCTION))
                     render_listener = T.ComponentRenderer.render;
-                if (@hasDecl(T.ComponentRenderer, "renderView"))
+                if (@hasDecl(T.ComponentRenderer, api.FUNCTION_NAMES.SYSTEM_RENDER_VIEW_FUNCTION))
                     view_render_listener = T.ComponentRenderer.renderView;
             }
 
-            if (@hasDecl(T, "update"))
+            if (@hasDecl(T, api.FUNCTION_NAMES.COMPONENT_UPDATE_FUNCTION))
                 update_listener = T.update;
-            if (@hasDecl(T, "render"))
+            if (@hasDecl(T, api.FUNCTION_NAMES.SYSTEM_RENDER_FUNCTION))
                 render_listener = T.render;
-            if (@hasDecl(T, "renderView"))
+            if (@hasDecl(T, api.FUNCTION_NAMES.SYSTEM_RENDER_VIEW_FUNCTION))
                 view_render_listener = T.renderView;
-            if (@hasDecl(T, "entityRegistration"))
+            if (@hasDecl(T, api.FUNCTION_NAMES.SYSTEM_ENTITY_REGISTRATION_FUNCTION))
                 entity_registration = T.entityRegistration;
-            if (@hasDecl(T, "entity_condition"))
+            if (@hasDecl(T, api.DECLARATION_NAMES.SYSTEM_ENTITY_CONDITION))
                 entity_condition = T.entity_condition;
-            if (@hasDecl(T, "componentRegistration"))
+            if (@hasDecl(T, api.FUNCTION_NAMES.SYSTEM_COMPONENT_REGISTRATION))
                 component_registration = T.componentRegistration;
-            if (@hasDecl(T, "componentCondition"))
+            if (@hasDecl(T, api.DECLARATION_NAMES.SYSTEM_COMPONENT_CONDITION))
                 component_condition = T.componentCondition;
         }
 
@@ -166,7 +166,7 @@ pub fn SystemMixin(comptime T: type) type {
             if (system_active)
                 deactivate();
 
-            if (@hasDecl(T, "systemDeinit"))
+            if (@hasDecl(T, api.FUNCTION_NAMES.SYSTEM_DEINIT_FUNCTION))
                 T.systemDeinit();
             if (has_entity_update)
                 T.EntityUpdate.deinit();
@@ -232,19 +232,19 @@ pub fn SystemMixin(comptime T: type) type {
 
                 system_active = false;
             }
-            if (@hasDecl(T, "activation"))
+            if (@hasDecl(T, api.FUNCTION_NAMES.COMPONENT_ACTIVATION_FUNCTION))
                 T.activation(active);
         }
 
         fn getComponentRegType() ?type {
             if (has_entity_update)
-                if (@hasDecl(T.EntityUpdate, "component_register_type"))
+                if (@hasDecl(T.EntityUpdate, api.DECLARATION_NAMES.SYSTEM_COMPONENT_REGISTER_TYPE))
                     return T.EntityUpdate.component_register_type;
             if (is_component_renderer)
-                if (@hasDecl(T.ComponentRenderer, "component_register_type"))
+                if (@hasDecl(T.ComponentRenderer, api.DECLARATION_NAMES.SYSTEM_COMPONENT_REGISTER_TYPE))
                     return T.ComponentRenderer.component_register_type;
 
-            if (@hasDecl(T, "component_register_type"))
+            if (@hasDecl(T, api.DECLARATION_NAMES.SYSTEM_COMPONENT_REGISTER_TYPE))
                 return T.component_register_type;
 
             return null;

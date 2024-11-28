@@ -152,7 +152,7 @@ pub fn ComponentRendererMixin(comptime T: type, comptime CType: type) type {
         comptime {
             if (@typeInfo(T) != .Struct)
                 @compileError("Expects component type is a struct.");
-            if (!@hasDecl(T, "renderComponents"))
+            if (!@hasDecl(T, api.FUNCTION_NAMES.SYSTEM_RENDER_COMPONENT_FUNCTION))
                 @compileError("Expects type has fn: renderComponents(*utils.BitSet)");
         }
 

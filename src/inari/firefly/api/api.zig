@@ -192,6 +192,68 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////
+//// Generic API declaration and field names
+//////////////////////////////////////////////////////////////
+
+pub const FIELD_NAMES = struct {
+    pub const COMPONENT_ID_FIELD: String = "id";
+    pub const COMPONENT_NAME_FIELD: String = "name";
+
+    pub const COMPONENT_GROUPS_FIELD: String = "groups";
+
+    pub const CALL_CONTEXT_FIELD: String = "call_context";
+    pub const ATTRIBUTE_ID_FIELD: String = "attributes_id";
+    pub const ATTRIBUTE_INIT_FLAG_FIELD: String = "init_attributes";
+};
+
+pub const DECLARATION_NAMES = struct {
+    pub const COMPONENT_MIXIN: String = "Component";
+    pub const ACTIVATION_MIXIN: String = "Activation";
+    pub const NAMING_MIXIN: String = "Naming";
+    pub const SUBSCRIPTION_MIXIN: String = "Subscription";
+    pub const CALL_CONTEXT_MIXIN: String = "CallContext";
+    pub const ATTRIBUTE_MIXIN: String = "Attributes";
+    pub const GROUPING_MIXIN: String = "Grouping";
+    pub const CONTROL_MIXIN: String = "Control";
+    pub const SUBTYPE_MIXIN: String = "Subtypes";
+
+    pub const ENTITY_KIND_ACCEPT: String = "accept";
+    pub const ENTITY_KIND_ACCEPT_FULL_ONLY: String = "accept_full_only";
+    pub const ENTITY_KIND_DISMISS: String = "dismiss";
+
+    pub const SYSTEM_ENTITY_UPDATE_MIXIN: String = "EntityUpdate";
+    pub const SYSTEM_ENTITY_RENDERER_MIXIN: String = "EntityRenderer";
+    pub const SYSTEM_COMPONENT_RENDERER_MIXIN: String = "ComponentRenderer";
+
+    pub const SYSTEM_ENTITY_CONDITION: String = "entity_condition";
+    pub const SYSTEM_COMPONENT_CONDITION: String = "componentCondition";
+    pub const SYSTEM_COMPONENT_REGISTER_TYPE: String = "component_register_type";
+};
+
+pub const FUNCTION_NAMES = struct {
+    pub const COMPONENT_TYPE_INIT_FUNCTION: String = "componentTypeInit";
+    pub const COMPONENT_TYPE_DEINIT_FUNCTION: String = "componentTypeDeinit";
+    pub const COMPONENT_CONSTRUCTOR_FUNCTION: String = "construct";
+    pub const COMPONENT_DESTRUCTOR_FUNCTION: String = "destruct";
+    pub const COMPONENT_ACTIVATION_FUNCTION: String = "activation";
+    pub const COMPONENT_UPDATE_FUNCTION: String = "update";
+    pub const COMPONENT_CONTROLLED_TYPE_FUNCTION: String = "controlledComponentType";
+
+    pub const ENTITY_CREATE_COMPONENT_FUNCTION: String = "createEComponent";
+    pub const ENTITY_COMPONENT_TYPE_INIT_FUNCTION: String = "entityComponentTypeInit";
+    pub const ENTITY_COMPONENT_TYPE_DEINIT_FUNCTION: String = "entityComponentTypeDeinit";
+    pub const ENTITY_COMPONENT_UPDATE_FUNCTION: String = "updateEntities";
+
+    pub const SYSTEM_INIT_FUNCTION: String = "systemInit";
+    pub const SYSTEM_DEINIT_FUNCTION: String = "systemDeinit";
+    pub const SYSTEM_ENTITY_REGISTRATION_FUNCTION: String = "entityRegistration";
+    pub const SYSTEM_COMPONENT_REGISTRATION: String = "componentRegistration";
+    pub const SYSTEM_RENDER_FUNCTION: String = "render";
+    pub const SYSTEM_RENDER_VIEW_FUNCTION: String = "renderView";
+    pub const SYSTEM_RENDER_COMPONENT_FUNCTION: String = "renderComponents";
+};
+
+//////////////////////////////////////////////////////////////
 //// Name Pool used for none constant Strings not living
 //// in zigs data mem. These can be de-allocated by call
 //// or will be freed all on package deinit
