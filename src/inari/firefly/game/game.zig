@@ -119,39 +119,45 @@ pub const Groups = struct {
 };
 
 pub const TaskAttributes = struct {
-    pub const NAME = "name";
+    pub const NAME: String = "name";
     /// Name of the involved View
-    pub const VIEW_NAME = "view";
+    pub const VIEW_NAME: String = "view";
     /// Name of involved Layer
-    pub const LAYER_NAME = "layer";
+    pub const LAYER_NAME: String = "layer";
     /// Position, Format: "x,y"
-    pub const POSITION = "position";
+    pub const POSITION: String = "position";
     /// Bounds, Format: "x,y,width,height"
-    pub const BOUNDS = "bounds";
+    pub const BOUNDS: String = "bounds";
     /// Arbitrary properties, Format: "prop1|prop2|prop3|..."
-    pub const PROPERTIES = "props";
+    pub const PROPERTIES: String = "props";
+
     /// File resource name. If this is set, a task shall try to load the data from referenced file
-    pub const FILE_RESOURCE = "FILE_RESOURCE";
+    //pub const FILE_RESOURCE = "FILE_RESOURCE";
     /// JSON String resource reference. If this is set, a task shall interpret this as JSON Sting
     /// and try to load defined components from JSON
     pub const JSON_RESOURCE = "JSON_RESOURCE";
 
+    pub const JSON_RESOURCE_TILE_SET_FILE: String = "JSON_RESOURCE_TILE_SET_FILE";
+    pub const JSON_RESOURCE_TILE_MAP_FILE: String = "JSON_RESOURCE_TILE_MAP_FILE";
+    pub const JSON_RESOURCE_ROOM_FILE: String = "JSON_RESOURCE_ROOM_FILE";
+    pub const JSON_RESOURCE_WORLD_FILE: String = "JSON_RESOURCE_WORLD_FILE";
+
     // The room name within the context
-    pub const ROOM_NAME = "room";
+    pub const ROOM_NAME: String = "room";
 };
 
 pub const Tasks = struct {
-    pub const JSON_LOAD_TILE_SET = "load_tile_set_json_default";
-    pub const JSON_LOAD_TILE_MAPPING = "load_tile_mapping_json_default";
-    pub const JSON_LOAD_ROOM = "load_room_json_default";
-    pub const JSON_LOAD_WORLD = "load_world_json_default";
+    pub const JSON_LOAD_TILE_SET: String = "load_tile_set_json_default";
+    pub const JSON_LOAD_TILE_MAPPING: String = "load_tile_mapping_json_default";
+    pub const JSON_LOAD_ROOM: String = "load_room_json_default";
+    pub const JSON_LOAD_WORLD: String = "load_world_json_default";
 
-    pub const JSON_LOAD_TILED_TILE_SET = "load_tiled_tile_set_json_default";
-    pub const JSON_LOAD_TILED_TILE_MAPPING = "load_tiled_tile_mapping_json_default";
-    pub const JSON_LOAD_TILED_ROOM = "load_tiled_room_json_default";
+    pub const JSON_LOAD_TILED_TILE_SET: String = "load_tiled_tile_set_json_default";
+    pub const JSON_LOAD_TILED_TILE_MAPPING: String = "load_tiled_tile_mapping_json_default";
+    pub const JSON_LOAD_TILED_ROOM: String = "load_tiled_room_json_default";
 
-    pub const SIMPLE_ROOM_TRANSITION_SCENE_BUILDER = "simpleRoomTransitionBuilder";
-    pub const ROOM_TRANSITION_BUILDER = "room_transition_builder";
+    pub const SIMPLE_ROOM_TRANSITION_SCENE_BUILDER: String = "simpleRoomTransitionBuilder";
+    pub const ROOM_TRANSITION_BUILDER: String = "room_transition_builder";
 };
 
 pub const MaterialTypes = struct {
@@ -171,10 +177,10 @@ pub const ContactTypes = struct {
 };
 
 pub const Conditions = struct {
-    pub const GOES_EAST = "GOES_EAST";
-    pub const GOES_WEST = "GOES_WEST";
-    pub const GOES_NORTH = "GOES_NORTH";
-    pub const GOES_SOUTH = "GOES_SOUTH";
+    pub const GOES_EAST: String = "GOES_EAST";
+    pub const GOES_WEST: String = "GOES_WEST";
+    pub const GOES_NORTH: String = "GOES_NORTH";
+    pub const GOES_SOUTH: String = "GOES_SOUTH";
 };
 
 fn goesEast(ctx: *api.CallContext) bool {

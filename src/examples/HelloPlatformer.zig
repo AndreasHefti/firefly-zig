@@ -71,7 +71,7 @@ fn init() void {
             .attributes_id = api.Attributes.newWith(
                 null,
                 .{
-                    .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_world.json" },
+                    .{ game.TaskAttributes.JSON_RESOURCE_WORLD_FILE, "resources/example_world.json" },
                     .{ game.TaskAttributes.VIEW_NAME, view_name },
                 },
             ).id,
@@ -82,9 +82,9 @@ fn init() void {
     game.World.loadByName("World1");
 
     //create player with load task (active room will load and activate the player when started)
-    _ = game.Player.Composite
-        .build(.{ .name = player_name })
-        .withTask(
+    const player_id = game.Player.Component.new(.{ .name = player_name });
+    game.Player.Composite.addTask(
+        player_id,
         api.Task{
             .run_once = true,
             .function = playerLoadTask,
@@ -92,12 +92,16 @@ fn init() void {
         api.CompositeLifeCycle.LOAD,
         null,
     );
+
     // and just start the Room with the player
     game.Room.startRoom(room1_name, player_name, roomLoaded);
 }
 
 fn roomLoaded(room_id: Index) void {
-    std.debug.print("Room running!!! test_attribute1={?s} \n", .{game.Room.Composite.getAttribute(room_id, "test_attribute1")});
+    std.debug.print(
+        "Room running!!! test_attribute1={?s} \n",
+        .{game.Room.Composite.Attributes.getAttribute(room_id, "test_attribute1")},
+    );
 }
 
 fn playerLoadTask(_: *api.CallContext) void {
@@ -145,16 +149,6 @@ fn playerLoadTask(_: *api.CallContext) void {
         game.SimplePlatformerHorizontalMoveControl{ .button_left = api.InputButtonType.LEFT, .button_right = api.InputButtonType.RIGHT },
         game.SimplePlatformerJumpControl{ .jump_button = api.InputButtonType.FIRE_1, .jump_impulse = 140, .double_jump = true },
     });
-    // .addToGroup(game.Groups.PAUSEABLE)
-    //     .withComponent(graphics.ETransform{ .position = .{ 32, 32 }, .pivot = .{ 0, 0 } })
-    //     .withComponent(graphics.EView{ .view_id = graphics.View.Naming.getId(view_name), .layer_id = graphics.Layer.Naming.getId(layer2) })
-    //     .withComponent(graphics.ESprite{ .template_id = sprite_id })
-    //     .withComponent(physics.EMovement{ .mass = 50, .max_velocity_south = 180, .max_velocity_east = 50, .max_velocity_west = 50, .integrator = physics.EulerIntegrator })
-    //     .withComponent(physics.EContactScan{ .collision_resolver = game.PlatformerCollisionResolver.new(.{ .contact_bounds = .{ 4, 1, 8, 14 }, .view_id = graphics.View.Naming.getId(view_name), .layer_id = graphics.Layer.Naming.getId(layer2) }) })
-    //     .addToComponent(physics.EContactScan, physics.ContactConstraint{ .name = "Room_Transition", .layer_id = graphics.Layer.Naming.getId(layer2), .bounds = .{ .rect = .{ 6, 6, 4, 4 } }, .type_filter = physics.ContactTypeKind.of(.{game.ContactTypes.ROOM_TRANSITION}), .full_scan = true, .callback = game.TransitionContactCallback })
-    //     .withControlOf(game.SimplePlatformerHorizontalMoveControl{ .button_left = api.InputButtonType.LEFT, .button_right = api.InputButtonType.RIGHT }, true)
-    //     .withControlOf(game.SimplePlatformerJumpControl{ .jump_button = api.InputButtonType.FIRE_1, .jump_impulse = 140, .double_jump = true }, true)
-    //     .getId();
 
     player._move = physics.EMovement.Component.byId(player._entity_id);
     player._transform = graphics.ETransform.Component.byId(player._entity_id);

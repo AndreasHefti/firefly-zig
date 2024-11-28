@@ -58,7 +58,7 @@ pub fn deinit() void {
 
 pub const Player = struct {
     pub const Component = api.Component.SubTypeMixin(api.Composite, Player);
-    pub const Composite = api.CompositeMixin(Player);
+    pub const Composite = api.CompositeMixin();
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -89,7 +89,7 @@ pub const Player = struct {
 
 pub const World = struct {
     pub const Component = api.Component.SubTypeMixin(api.Composite, World);
-    pub const Composite = api.CompositeMixin(World);
+    pub const Composite = api.CompositeMixin();
 
     id: Index = UNDEF_INDEX,
     name: String,
@@ -131,7 +131,7 @@ pub const RoomCallback = *const fn (room_id: Index) void;
 
 pub const Room = struct {
     pub const Component = api.Component.SubTypeMixin(api.Composite, Room);
-    pub const Composite = api.CompositeMixin(Room);
+    pub const Composite = api.CompositeMixin();
 
     id: Index = UNDEF_INDEX,
     name: String,

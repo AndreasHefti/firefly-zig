@@ -40,7 +40,7 @@ fn init() void {
         firefly.api.CallContext.new(
             null,
             .{
-                .{ firefly.game.TaskAttributes.FILE_RESOURCE, "resources/tiled/tileset1616.json" },
+                .{ firefly.game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE, "resources/tiled/tileset1616.json" },
             },
         ),
     );

@@ -94,7 +94,7 @@ fn init() void {
         firefly.api.CallContext.new(
             null,
             .{
-                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_room1.json" },
+                .{ game.TaskAttributes.JSON_RESOURCE_ROOM_FILE, "resources/example_room1.json" },
                 .{ game.TaskAttributes.VIEW_NAME, view_name },
             },
         ),

@@ -97,20 +97,22 @@ pub const Composite = struct {
         return Component.newForSubType(.{ .name = SubType.name });
     }
 
-    pub fn withTask(
-        self: *Composite,
-        task: api.Task,
-        life_cycle: CompositeLifeCycle,
-        attributes_id: ?Index,
-    ) *Composite {
+    pub fn addTask(composite_id: Index, task: api.Task, life_cycle: CompositeLifeCycle) void {
+        _ = Component.byId(composite_id).withTask(task, life_cycle);
+    }
+
+    pub fn withTask(self: *Composite, task: api.Task, life_cycle: CompositeLifeCycle) *Composite {
         const _task = api.Task.new(task);
         _ = self.task_refs.add(CompositeTaskRef{
             .task_ref = _task.id,
             .task_name = _task.name,
             .life_cycle = life_cycle,
-            .attributes_id = attributes_id,
         });
         return self;
+    }
+
+    pub fn addTaskRef(composite_id: Index, task_ref: CompositeTaskRef) void {
+        _ = Component.byId(composite_id).withTaskRef(task_ref);
     }
 
     pub fn withTaskRef(self: *Composite, task_ref: CompositeTaskRef) *Composite {
@@ -184,7 +186,7 @@ pub const Composite = struct {
                 var ctx: api.CallContext = .{
                     .caller_id = self.id,
                     .caller_name = self.name,
-                    .attributes_id = tr.attributes_id,
+                    .attributes_id = tr.attributes_id orelse self.attributes_id,
                     .c_ref_callback = callRefCallback,
                 };
 
@@ -205,18 +207,12 @@ pub const Composite = struct {
     }
 };
 
-pub fn CompositeMixin(comptime T: type) type {
+pub fn CompositeMixin() type {
     return struct {
-        pub fn build(subtype: anytype) CompositeBuilder {
-            return CompositeBuilder{ .id = T.Component.new(subtype) };
-        }
+        pub const Attributes = Composite.Attributes;
 
-        pub fn getAttribute(c_id: Index, name: String) ?String {
-            return api.Composite.Attributes.getAttribute(c_id, name);
-        }
-
-        pub fn setAttribute(c_id: Index, name: String, value: String) void {
-            api.Composite.Attributes.setAttribute(c_id, name, value);
+        pub fn addTask(c_id: Index, task: api.Task, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
+            addTaskById(c_id, api.Task.Component.new(task), life_cycle, attributes_id);
         }
 
         pub fn addTaskById(c_id: Index, task_id: Index, life_cycle: api.CompositeLifeCycle, attributes_id: ?Index) void {
@@ -243,34 +239,5 @@ pub fn CompositeMixin(comptime T: type) type {
             if (composite.loaded)
                 utils.panic(api.ALLOC, "Composite is already loaded: {?s}", .{composite.name});
         }
-
-        pub const CompositeBuilder = struct {
-            id: Index = UNDEF_INDEX,
-
-            pub fn setAttribute(self: CompositeBuilder, name: String, value: String) CompositeBuilder {
-                CompositeMixin(T).setAttribute(self.id, name, value);
-                return self;
-            }
-
-            pub fn withTask(self: CompositeBuilder, task: api.Task, life_cycle: CompositeLifeCycle, attributes_id: ?Index) CompositeBuilder {
-                CompositeMixin(T).addTaskById(self.id, api.Task.Component.new(task), life_cycle, attributes_id);
-                return self;
-            }
-
-            pub fn withTaskByName(self: CompositeBuilder, task_name: String, life_cycle: CompositeLifeCycle, attributes_id: ?Index) CompositeBuilder {
-                CompositeMixin(T).addTaskByName(self.id, task_name, life_cycle, attributes_id);
-                return self;
-            }
-
-            pub fn build() void {}
-
-            pub fn buildGetId(self: CompositeBuilder) Index {
-                return self.id;
-            }
-
-            pub fn buildGet(self: CompositeBuilder) *T {
-                return T.Component.byId(self.id);
-            }
-        };
     };
 }

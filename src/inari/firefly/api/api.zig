@@ -72,6 +72,7 @@ pub const Control = control.Control;
 pub const EControl = control.EControl;
 pub const VoidControl = control.VoidControl;
 pub const Composite = composite.Composite;
+pub const CompositeTaskRef = composite.CompositeTaskRef;
 pub const CompositeLifeCycle = composite.CompositeLifeCycle;
 pub const CompositeMixin = composite.CompositeMixin;
 pub const State = control.State;
@@ -280,25 +281,8 @@ pub const Attributes = struct {
 
     pub fn newWith(name: ?String, attributes: anytype) *Attributes {
         var result = Attributes.Component.newAndGet(.{ .name = name });
-
-        inline for (attributes) |v| {
-            const t = @typeInfo(@TypeOf(v[1]));
-            if (t == .Int) {
-                if (utils.stringEquals(v[0], "id_1")) {
-                    result.id_1 = v[1];
-                } else if (utils.stringEquals(v[0], "id_2")) {
-                    result.id_2 = v[1];
-                } else if (utils.stringEquals(v[0], "id_3")) {
-                    result.id_3 = v[1];
-                } else if (utils.stringEquals(v[0], "id_4")) {
-                    result.id_4 = v[1];
-                } else if (utils.stringEquals(v[0], "id_5")) {
-                    result.id_5 = v[1];
-                }
-            } else {
-                result.set(v[0], v[1]);
-            }
-        }
+        inline for (attributes) |v|
+            result.set(v[0], v[1]);
 
         return result;
     }

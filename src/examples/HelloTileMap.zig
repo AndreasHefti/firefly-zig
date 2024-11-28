@@ -45,7 +45,7 @@ fn init() void {
         firefly.api.CallContext.new(
             null,
             .{
-                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
+                .{ game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE, "resources/example_tileset.json" },
             },
         ),
     );
@@ -56,7 +56,7 @@ fn init() void {
         firefly.api.CallContext.new(
             null,
             .{
-                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
+                .{ game.TaskAttributes.JSON_RESOURCE_TILE_MAP_FILE, "resources/example_tilemap1.json" },
                 .{ game.TaskAttributes.VIEW_NAME, view_name },
             },
         ),

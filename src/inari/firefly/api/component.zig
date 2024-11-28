@@ -652,6 +652,14 @@ pub fn AttributeMixin(comptime T: type) type {
                 api.Attributes.Component.byId(id).set(name, value);
         }
 
+        pub fn setAttributes(component_id: Index, attributes: anytype) void {
+            if (getAttributesId(component_id)) |id| {
+                var attrs = api.Attributes.Component.byId(id);
+                inline for (attributes) |v|
+                    attrs.set(v[0], v[1]);
+            }
+        }
+
         pub fn setAllAttributes(component_id: Index, attributes: *api.Attributes) void {
             if (getAttributesId(component_id)) |id|
                 api.Attributes.Component.byId(id).setAll(attributes);

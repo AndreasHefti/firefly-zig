@@ -75,42 +75,40 @@ fn init() void {
     firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
 
     // create new Room
-    var room = game.Room.Composite.build(.{
+    const room_id = game.Room.Component.new(.{
         .name = "Test Room1",
         .bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
-    })
-        .withTaskByName(
+    });
+    game.Room.Composite.Attributes.setAttributes(room_id, .{
+        .{ game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE, "resources/example_tileset.json" },
+        .{ game.TaskAttributes.JSON_RESOURCE_TILE_MAP_FILE, "resources/example_tilemap1.json" },
+        .{ game.TaskAttributes.VIEW_NAME, view_name },
+    });
+
+    game.Room.Composite.addTaskByName(
+        room_id,
         game.Tasks.JSON_LOAD_TILE_SET,
         api.CompositeLifeCycle.LOAD,
-        api.Attributes.newWith(
-            null,
-            .{
-                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tileset.json" },
-            },
-        ).id,
-    )
-        .withTaskByName(
+        null,
+    );
+    game.Room.Composite.addTaskByName(
+        room_id,
         game.Tasks.JSON_LOAD_TILE_MAPPING,
         api.CompositeLifeCycle.LOAD,
-        api.Attributes.newWith(
-            null,
-            .{
-                .{ game.TaskAttributes.FILE_RESOURCE, "resources/example_tilemap1.json" },
-                .{ game.TaskAttributes.VIEW_NAME, view_name },
-            },
-        ).id,
-    )
-        .withTask(
-        api.Task{
+        null,
+    );
+    game.Room.Composite.addTask(
+        room_id,
+        .{
             .name = "CreatePlayer",
             .run_once = true,
             .function = create_player,
         },
         api.CompositeLifeCycle.ACTIVATE,
         null,
-    ).buildGet();
+    );
 
-    room.start("Player", null);
+    game.Room.startRoom("Test Room1", "Player", null);
 }
 
 var player_pos_ptr: *utils.PosF = undefined;
