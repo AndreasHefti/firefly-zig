@@ -279,7 +279,7 @@ pub const Attributes = struct {
         self._dict = undefined;
     }
 
-    pub fn newWith(name: ?String, attributes: anytype) *Attributes {
+    pub fn newGet(name: ?String, attributes: anytype) *Attributes {
         var result = Attributes.Component.newAndGet(.{ .name = name });
         inline for (attributes) |v|
             result.set(v[0], v[1]);
@@ -359,7 +359,7 @@ pub const CallContext = struct {
     pub fn new(caller_id: ?Index, attributes: anytype) CallContext {
         return CallContext{
             .caller_id = caller_id orelse UNDEF_INDEX,
-            .attributes_id = Attributes.newWith(null, attributes).id,
+            .attributes_id = Attributes.newGet(null, attributes).id,
         };
     }
 
@@ -554,27 +554,6 @@ pub const BlendMode = enum(CInt) {
     CUSTOM = 6,
     /// Blend textures using custom rgb/alpha separate src/dst factors (use rlSetBlendFactorsSeparate())
     CUSTOM_SEPARATE = 7,
-
-    const BlendModeNameTable = [@typeInfo(BlendMode).Enum.fields.len][:0]const u8{
-        "ALPHA",
-        "ADDITIVE",
-        "MULTIPLIED",
-        "ADD_COLORS",
-        "SUBTRACT_COLORS",
-        "ALPHA_PREMULTIPLY",
-        "CUSTOM",
-        "CUSTOM_SEPARATE",
-    };
-
-    pub fn byName(name: ?String) ?BlendMode {
-        if (name) |n| {
-            for (0..BlendModeNameTable.len) |i| {
-                if (firefly.utils.stringEquals(BlendModeNameTable[i], n))
-                    return @enumFromInt(i);
-            }
-        }
-        return null;
-    }
 
     pub fn format(
         self: BlendMode,

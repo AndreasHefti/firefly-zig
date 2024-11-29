@@ -131,3 +131,14 @@ pub inline fn panic(allocator: Allocator, comptime template: String, args: anyty
     defer allocator.free(msg);
     @panic(msg);
 }
+
+pub fn enumByName(comptime E: type, name: ?String) ?E {
+    if (name) |n| {
+        const e = std.enums.values(E);
+        for (0..e.len) |i| {
+            if (stringEquals(@tagName(e[i]), n))
+                return @enumFromInt(i);
+        }
+    }
+    return null;
+}

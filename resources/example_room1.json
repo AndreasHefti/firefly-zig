@@ -7,6 +7,9 @@
     "attributes": [
         { "name": "test_attribute1", "value": "attr_value1"}
     ],
+    "tasks": [
+        { "name": "create_player", "life_cycle": "LOAD"}
+    ],
     "tile_sets": [
         { "name": "TestTileSet", "file": "resources/example_tileset.json" }
     ],

@@ -68,7 +68,7 @@ fn init() void {
     api.Task.runTaskByNameWith(
         game.Tasks.JSON_LOAD_WORLD,
         .{
-            .attributes_id = api.Attributes.newWith(
+            .attributes_id = api.Attributes.newGet(
                 null,
                 .{
                     .{ game.TaskAttributes.JSON_RESOURCE_WORLD_FILE, "resources/example_world.json" },
@@ -78,21 +78,15 @@ fn init() void {
         },
     );
 
+    //create player with load task (active room will load and activate the player when started)
+    _ = api.Task.Component.new(.{
+        .name = "create_player",
+        .run_once = true,
+        .function = createPlayerTask,
+    });
+
     // load the created world (will create all thr rooms of the world from json files)
     game.World.loadByName("World1");
-
-    //create player with load task (active room will load and activate the player when started)
-    const player_id = game.Player.Component.new(.{ .name = player_name });
-    game.Player.Composite.addTask(
-        player_id,
-        api.Task{
-            .run_once = true,
-            .function = playerLoadTask,
-        },
-        api.CompositeLifeCycle.LOAD,
-        null,
-    );
-
     // and just start the Room with the player
     game.Room.startRoom(room1_name, player_name, roomLoaded);
 }
@@ -101,6 +95,19 @@ fn roomLoaded(room_id: Index) void {
     std.debug.print(
         "Room running!!! test_attribute1={?s} \n",
         .{game.Room.Composite.Attributes.getAttribute(room_id, "test_attribute1")},
+    );
+}
+
+fn createPlayerTask(_: *api.CallContext) void {
+    //create player with load task (active room will load and activate the player when started)
+    game.Player.Composite.addTask(
+        game.Player.Component.new(.{ .name = player_name }),
+        api.Task{
+            .run_once = true,
+            .function = playerLoadTask,
+        },
+        api.CompositeLifeCycle.LOAD,
+        null,
     );
 }
 

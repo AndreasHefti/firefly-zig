@@ -464,7 +464,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
         var tile_layer_data = tile_mapping.withTileLayerData(.{
             .layer = utils.NamePool.alloc(layer_mapping.layer_name).?,
             .tint = utils.parseColor(layer_mapping.tint_color).?,
-            .blend = BlendMode.byName(layer_mapping.blend_mode),
+            .blend = utils.enumByName(BlendMode, layer_mapping.blend_mode),
             .parallax = utils.parsePosF(layer_mapping.parallax_factor),
             .offset = utils.parsePosF(layer_mapping.offset),
         });
@@ -514,13 +514,21 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 ///     "name": "Room1",
 ///     "start_scene": "scene1",
 ///     "end_scene": "scene2",
-///     "load_tasks": "task1|task2|task3",
-///     "activation_tasks": "task1|task2|task3",
+///
 ///     "attributes": [
 ///         { "name": "test_attribute1", "value": "attr_value1"}
 ///     ]
 ///     "tile_sets": [
 ///         { "name": "TestTileSet", "file": "resources/example_tileset.json" }
+///     ],
+///     "tasks": [
+///          {
+///               "name": "task1",
+///               "life_cycle": "LOAD or ACTIVATION or DEACTIVATION or DISPOSE",
+///               "attributes": [
+///                    { "name": "task_attribute1", "value": "attr_value1"}
+///              ]
+///          }
 ///     ],
 ///
 /// NOTE: either of
@@ -570,13 +578,18 @@ pub const JSONRoom = struct {
     bounds: String,
     start_scene: ?String = null,
     end_scene: ?String = null,
-    load_tasks: ?String = null,
-    activation_tasks: ?String = null,
+    tasks: ?[]const JSONTask = null,
     attributes: ?[]const JSONAttribute = null,
     tile_sets: []const Resource,
     tile_mapping_file: ?Resource = null,
     tile_mapping: ?JSONTileMapping = null,
     objects: ?[]const JSONRoomObject = null,
+};
+
+pub const JSONTask = struct {
+    name: String,
+    life_cycle: String,
+    attributes: ?[]const JSONAttribute = null,
 };
 
 pub const JSONRoomObject = struct {
@@ -636,24 +649,15 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
             );
     }
 
-    if (jsonRoom.load_tasks) |load_tasks| {
-        var it = utils.PropertyIterator.new(load_tasks);
-        while (it.next()) |task_name| {
-            game.Room.Composite.addTaskByName(
-                room_id,
-                task_name,
-                api.CompositeLifeCycle.LOAD,
-                null,
-            );
-        }
-    }
+    addAttributes(room_id, jsonRoom.attributes);
+    addTasks(room_id, jsonRoom.tasks);
 
     for (0..jsonRoom.tile_sets.len) |i| {
         game.Room.Composite.addTaskByName(
             room_id,
             jsonRoom.tile_sets[i].load_task orelse game.Tasks.JSON_LOAD_TILE_SET,
             api.CompositeLifeCycle.LOAD,
-            api.Attributes.newWith(
+            api.Attributes.newGet(
                 null,
                 .{
                     .{ game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE, jsonRoom.tile_sets[i].file },
@@ -667,7 +671,7 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
             room_id,
             tile_mapping_file.load_task orelse game.Tasks.JSON_LOAD_TILE_MAPPING,
             api.CompositeLifeCycle.LOAD,
-            api.Attributes.newWith(
+            api.Attributes.newGet(
                 null,
                 .{
                     .{ game.TaskAttributes.JSON_RESOURCE_TILE_MAP_FILE, tile_mapping_file.file },
@@ -683,7 +687,7 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
             room_id,
             game.Tasks.JSON_LOAD_TILE_MAPPING,
             api.CompositeLifeCycle.LOAD,
-            api.Attributes.newWith(
+            api.Attributes.newGet(
                 null,
                 .{
                     .{ game.TaskAttributes.JSON_RESOURCE, tileMappingJSON },
@@ -698,7 +702,7 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
     // add objects as activation tasks
     if (jsonRoom.objects) |objects| {
         for (0..objects.len) |i| {
-            var attributes = api.Attributes.newWith(
+            var attributes = api.Attributes.newGet(
                 utils.NamePool.format("room_object_{s}_{s}", .{ jsonRoom.name, objects[i].name }),
                 .{
                     .{ game.TaskAttributes.NAME, objects[i].name },
@@ -754,6 +758,15 @@ fn loadRoomFromJSON(ctx: *api.CallContext) void {
 ////            ]
 ////        }
 ////    ],
+///     "tasks": [
+///          {
+///               "name": "task1",
+///               "life_cycle": "LOAD or ACTIVATION or DEACTIVATION or DISPOSE",
+///               "attributes": [
+///                    { "name": "task_attribute1", "value": "attr_value1"}
+///              ]
+///          }
+///     ],
 ////    "attributes": [
 ////        { "name": "description", "value": "This is a test world with three rooms."}
 ////    ],
@@ -781,6 +794,7 @@ pub const JSONWorld = struct {
     file_type: ?String = null,
     name: String,
     room_transitions: ?[]const JSONRoomTransition = null,
+    tasks: ?[]const JSONTask = null,
     attributes: ?[]const JSONAttribute = null,
     rooms: []JSONRoomRef,
 };
@@ -827,7 +841,7 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
 
     if (jsonWorld.room_transitions) |room_transitions| {
         for (0..room_transitions.len) |i| {
-            var attributes: *api.Attributes = api.Attributes.newWith(
+            var attributes: *api.Attributes = api.Attributes.newGet(
                 utils.NamePool.alloc(room_transitions[i].name),
                 .{
                     .{ game.TaskAttributes.NAME, room_transitions[i].name },
@@ -849,21 +863,15 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
         }
     }
 
-    if (jsonWorld.attributes) |a| {
-        for (0..a.len) |i|
-            game.World.Composite.Attributes.setAttribute(
-                world_id,
-                a[i].name,
-                a[i].value,
-            );
-    }
+    addAttributes(world_id, jsonWorld.attributes);
+    addTasks(world_id, jsonWorld.tasks);
 
     for (0..jsonWorld.rooms.len) |i| {
         game.World.Composite.addTaskByName(
             world_id,
             game.Tasks.JSON_LOAD_ROOM,
             api.CompositeLifeCycle.LOAD,
-            api.Attributes.newWith(
+            api.Attributes.newGet(
                 null,
                 .{
                     .{ game.TaskAttributes.JSON_RESOURCE_ROOM_FILE, utils.NamePool.alloc(jsonWorld.rooms[i].file.file).? },
@@ -871,6 +879,46 @@ fn loadWorldFromJSON(ctx: *api.CallContext) void {
                 },
             ).id,
         );
+    }
+}
+
+fn addAttributes(c_id: Index, attributes: ?[]const JSONAttribute) void {
+    if (attributes) |a| {
+        for (0..a.len) |i|
+            game.World.Composite.Attributes.setAttribute(
+                c_id,
+                a[i].name,
+                a[i].value,
+            );
+    }
+}
+
+fn addTasks(c_id: Index, tasks: ?[]const JSONTask) void {
+    if (tasks) |tsk| {
+        for (0..tsk.len) |i| {
+            if (!api.Task.Naming.exists(tsk[i].name)) {
+                std.log.warn("Task with name: {s} does not exist!\n", .{tsk[i].name});
+                continue;
+            }
+
+            var attr_id: ?Index = null;
+            if (tsk[i].attributes) |a| {
+                attr_id = api.Attributes.Component.new(.{});
+                for (0..a.len) |a_id|
+                    game.Room.Composite.Attributes.setAttribute(
+                        c_id,
+                        a[a_id].name,
+                        a[a_id].value,
+                    );
+            }
+
+            game.Room.Composite.addTaskByName(
+                c_id,
+                utils.NamePool.alloc(tsk[i].name).?,
+                utils.enumByName(api.CompositeLifeCycle, tsk[i].life_cycle).?,
+                attr_id,
+            );
+        }
     }
 }
 
