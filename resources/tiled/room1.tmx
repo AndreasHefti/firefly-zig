@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.11" tiledversion="1.11.0" class="Room1" orientation="orthogonal" renderorder="right-down" width="20" height="10" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="7">
+ <editorsettings>
+  <export target="room1.json" format="json1"/>
+ </editorsettings>
+ <properties>
+  <property name="attributes" value="attr1=val1|attr2=val2"/>
+  <property name="end_scene" value="scene2"/>
+  <property name="name" value="Room1"/>
+  <property name="start_scene" value="scene1"/>
+  <property name="task_create_player" value="life_cycle=LOAD|attr1=val1|attr2=val2"/>
+  <property name="tile_set_TestTileSet" value="offset=1|file=resources/example_tileset.json"/>
+ </properties>
+ <tileset firstgid="1" source="../../../../../IdeaProjects/flyko-lib/src/jvmTest/resources/tiled_tileset_example/tiled_tileset.json"/>
+ <layer id="2" name="Background" class="firefly_maplayer" width="20" height="10" opacity="0.5" offsetx="-15" offsety="-10" parallaxx="0.9" parallaxy="0.9">
+  <properties>
+   <property name="blend_mode" value="ALPHA"/>
+   <property name="tilesets" value="TestTileSet"/>
+   <property name="tint_color" value="255,255,255,100"/>
+  </properties>
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,2,32,22,12,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,0,0,0,0,0,
+0,0,0,0,0,0,0,2,32,39,0,0,29,22,12,0,0,0,0,0,
+0,0,0,0,0,0,2,32,0,0,19,19,0,0,22,12,0,0,0,0,
+0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,22,12,0,0,0,
+0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,22,12,0,0,
+0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,
+0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,12,
+0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="1" name="Foreground" class="firefly_maplayer" width="20" height="10">
+  <properties>
+   <property name="blend_mode" value="ALPHA"/>
+   <property name="tile_sets" value="TestTileSet"/>
+   <property name="tint_color" value="255,255,255,255"/>
+  </properties>
+  <data encoding="csv">
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+1,0,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,
+1,0,0,0,13,0,0,0,40,0,0,0,0,0,3,1,1,1,1,1,
+1,5,0,0,1,14,13,0,1,0,0,0,0,0,0,0,0,0,0,1,
+1,6,0,0,1,1,1,0,22,1,1,21,21,11,11,0,2,1,1,1,
+1,1,5,0,0,0,0,0,0,0,0,0,0,0,0,0,23,33,0,1,
+1,1,6,0,0,3,7,13,0,3,4,14,13,3,13,0,0,0,0,1,
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1
+</data>
+ </layer>
+ <objectgroup id="4" name="objects">
+  <object id="1" name="t1" type="room_transition" x="318" y="16" width="4" height="16">
+   <properties>
+    <property name="build_task" value="room_transition_builder"/>
+    <property name="layer" value="Foreground"/>
+    <property name="props" value="Room2|t1|EAST"/>
+   </properties>
+  </object>
+  <object id="6" name="t2" type="room_transition" x="256" y="157" width="48" height="11.625">
+   <properties>
+    <property name="build_task" value="room_transition_builder"/>
+    <property name="layer" value="Foreground"/>
+    <property name="props" value="Room3|t1|SOUTH"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>

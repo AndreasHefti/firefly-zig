@@ -153,7 +153,6 @@ pub const Tasks = struct {
     pub const JSON_LOAD_WORLD: String = "load_world_json_default";
 
     pub const JSON_LOAD_TILED_TILE_SET: String = "load_tiled_tile_set_json_default";
-    pub const JSON_LOAD_TILED_TILE_MAPPING: String = "load_tiled_tile_mapping_json_default";
     pub const JSON_LOAD_TILED_ROOM: String = "load_tiled_room_json_default";
 
     pub const SIMPLE_ROOM_TRANSITION_SCENE_BUILDER: String = "simpleRoomTransitionBuilder";

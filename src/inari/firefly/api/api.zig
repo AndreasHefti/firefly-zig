@@ -43,9 +43,28 @@ pub const InitContext = struct {
 
 pub const BindingId = usize;
 
+/// Allocation
 pub var COMPONENT_ALLOC: Allocator = undefined;
 pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
+pub const ArenaAlloc = struct {
+    arena: std.heap.ArenaAllocator,
+    allocator: Allocator,
+
+    pub fn new() ArenaAlloc {
+        var aa = std.heap.ArenaAllocator.init(ALLOC);
+        return ArenaAlloc{
+            .arena = aa,
+            .allocator = aa.allocator(),
+        };
+    }
+
+    pub fn deinit(self: *ArenaAlloc) void {
+        self.arena.deinit();
+        self.arena = undefined;
+        self.allocator = undefined;
+    }
+};
 
 pub var rendering: IRenderAPI() = undefined;
 pub var window: IWindowAPI() = undefined;
@@ -252,6 +271,29 @@ pub const FUNCTION_NAMES = struct {
     pub const SYSTEM_RENDER_FUNCTION: String = "render";
     pub const SYSTEM_RENDER_VIEW_FUNCTION: String = "renderView";
     pub const SYSTEM_RENDER_COMPONENT_FUNCTION: String = "renderComponents";
+};
+
+//////////////////////////////////////////////////////////////
+//// Global Logger
+//////////////////////////////////////////////////////////////
+
+pub const Logger = struct {
+    pub const API_TAG = "[Firefly]";
+
+    pub fn info(comptime msg: String, args: anytype) void {
+        const parsed_msg = std.fmt.allocPrint(ALLOC, msg, args) catch msg;
+        std.log.info("{s} {s}{s}", .{ API_TAG, parsed_msg, "\n" });
+    }
+
+    pub fn warn(comptime msg: String, args: anytype) void {
+        const parsed_msg = std.fmt.allocPrint(ALLOC, msg, args) catch msg;
+        std.log.warn("{s} {s}{s}", .{ API_TAG, parsed_msg, "\n" });
+    }
+
+    pub fn err(comptime msg: String, args: anytype) void {
+        const parsed_msg = std.fmt.allocPrint(ALLOC, msg, args) catch msg;
+        std.log.err("{s}{s} {s}", .{ API_TAG, parsed_msg, "\n" });
+    }
 };
 
 //////////////////////////////////////////////////////////////

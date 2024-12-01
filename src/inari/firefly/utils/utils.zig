@@ -23,6 +23,9 @@ pub const CString = string.CString;
 pub const NamePool = string.NamePool;
 pub const StringBuffer = string.StringBuffer;
 pub const PropertyIterator = string.PropertyIterator;
+pub const AttributeIterator = string.AttributeIterator;
+pub const stringEquals = string.stringEquals;
+pub const stringStartsWith = string.stringStartsWith;
 
 pub const AspectGroup = aspect.AspectGroup;
 
@@ -38,11 +41,7 @@ pub usingnamespace @import("bitset.zig");
 pub const EMPTY_STRING: String = "";
 pub const UNDEF_INDEX = std.math.maxInt(Index);
 
-pub const Test = struct { array: []Index = &[_]Index{ 1, 2, 3 } };
-
-pub fn stringEquals(s1: String, s2: String) bool {
-    return std.mem.eql(u8, s1, s2);
-}
+//pub const Test = struct { array: []Index = &[_]Index{ 1, 2, 3 } };
 
 pub inline fn usize_i32(v: usize) i32 {
     return @as(i32, @intCast(v));

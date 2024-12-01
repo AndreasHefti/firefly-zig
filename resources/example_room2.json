@@ -4,9 +4,6 @@
     "bounds": "0,0,320,320",
     "start_scene": "enterRoom",
     "end_scene": "exitRoom",
-    "tile_sets": [
-        { "name": "TestTileSet", "file": "resources/example_tileset.json" }
-    ],
     "tile_mapping": {
         "name": "TileMapRoom2",
         "tile_sets": [

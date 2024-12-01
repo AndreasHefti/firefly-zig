@@ -1,0 +1,168 @@
+{ "class":"Room1",
+ "compressionlevel":-1,
+ "height":10,
+ "infinite":false,
+ "layers":[
+        {
+         "class":"firefly_maplayer",
+         "data":[0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 32, 22, 12, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 2, 32, 9, 9, 22, 12, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 2, 32, 39, 0, 0, 29, 22, 12, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 32, 0, 0, 19, 19, 0, 0, 22, 12, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 22, 12, 0, 0, 0,
+            0, 0, 0, 0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 12, 0, 0,
+            0, 0, 0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 12, 0,
+            0, 0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 12,
+            0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         "height":10,
+         "id":2,
+         "name":"Background",
+         "offsetx":-15,
+         "offsety":-10,
+         "opacity":0.5,
+         "parallaxx":0.9,
+         "parallaxy":0.9,
+         "properties":
+            {
+             "blend_mode":"ALPHA",
+             "tile_sets":"TestTileSet",
+             "tint_color":"255,255,255,100"
+            },
+         "propertytypes":
+            {
+             "blend_mode":"string",
+             "tile_sets":"string",
+             "tint_color":"string"
+            },
+         "type":"tilelayer",
+         "visible":true,
+         "width":20,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "class":"firefly_maplayer",
+         "data":[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 0, 0, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1,
+            1, 0, 0, 0, 13, 0, 0, 0, 40, 0, 0, 0, 0, 0, 3, 1, 1, 1, 1, 1,
+            1, 5, 0, 0, 1, 14, 13, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            1, 6, 0, 0, 1, 1, 1, 0, 22, 1, 1, 21, 21, 11, 11, 0, 2, 1, 1, 1,
+            1, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 33, 0, 1,
+            1, 1, 6, 0, 0, 3, 7, 13, 0, 3, 4, 14, 13, 3, 13, 0, 0, 0, 0, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1],
+         "height":10,
+         "id":1,
+         "name":"Foreground",
+         "opacity":1,
+         "properties":
+            {
+             "blend_mode":"ALPHA",
+             "tile_sets":"TestTileSet",
+             "tint_color":"255,255,255,255"
+            },
+         "propertytypes":
+            {
+             "blend_mode":"string",
+             "tile_sets":"string",
+             "tint_color":"string"
+            },
+         "type":"tilelayer",
+         "visible":true,
+         "width":20,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":4,
+         "name":"objects",
+         "objects":[
+                {
+                 "height":16,
+                 "id":1,
+                 "name":"t1",
+                 "properties":
+                    {
+                     "build_task":"room_transition_builder",
+                     "layer":"Foreground",
+                     "props":"Room2|t1|EAST"
+                    },
+                 "propertytypes":
+                    {
+                     "build_task":"string",
+                     "layer":"string",
+                     "props":"string"
+                    },
+                 "rotation":0,
+                 "type":"room_transition",
+                 "visible":true,
+                 "width":4,
+                 "x":318,
+                 "y":16
+                }, 
+                {
+                 "height":11.625,
+                 "id":6,
+                 "name":"t2",
+                 "properties":
+                    {
+                     "build_task":"room_transition_builder",
+                     "layer":"Foreground",
+                     "props":"Room3|t1|SOUTH"
+                    },
+                 "propertytypes":
+                    {
+                     "build_task":"string",
+                     "layer":"string",
+                     "props":"string"
+                    },
+                 "rotation":0,
+                 "type":"room_transition",
+                 "visible":true,
+                 "width":48,
+                 "x":256,
+                 "y":157
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }],
+ "nextlayerid":5,
+ "nextobjectid":7,
+ "orientation":"orthogonal",
+ "properties":
+    {
+     "attributes":"attr1=val1|attr2=val2",
+     "end_scene":"scene2",
+     "name":"Room1",
+     "start_scene":"scene1",
+     "task_create_player":"life_cycle=LOAD|attr1=val1|attr2=val2",
+     "tile_set_TestTileSet":"offset=1|file=resources\/example_tileset.json"
+    },
+ "propertytypes":
+    {
+     "attributes":"string",
+     "end_scene":"string",
+     "name":"string",
+     "start_scene":"string",
+     "task_create_player":"string",
+     "tile_set_TestTileSet":"string"
+    },
+ "renderorder":"right-down",
+ "tiledversion":"1.11.0",
+ "tileheight":16,
+ "tilesets":[
+        {
+         "firstgid":1,
+         "source":"..\/..\/..\/..\/..\/IdeaProjects\/flyko-lib\/src\/jvmTest\/resources\/tiled_tileset_example\/tiled_tileset.json"
+        }],
+ "tilewidth":16,
+ "type":"map",
+ "version":1.1,
+ "width":20
+}

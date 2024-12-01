@@ -6,6 +6,17 @@ const Writer = std.io.Writer;
 pub const String = []const u8;
 pub const CString = [*c]const u8;
 
+pub fn stringEquals(s1: String, s2: String) bool {
+    return std.mem.eql(u8, s1, s2);
+}
+
+pub fn stringStartsWith(str: ?String, prefix: String) bool {
+    if (str) |s|
+        return std.mem.eql(u8, prefix, s[0..prefix.len]);
+
+    return false;
+}
+
 //////////////////////////////////////////////////////////////
 //// Name Pool used for none constant Strings not living
 //// in zigs data mem. These can be de-allocated by call
@@ -171,6 +182,30 @@ pub const PropertyIterator = struct {
     pub inline fn nextOrientation(self: *PropertyIterator) ?utils.Orientation {
         if (next(self)) |n|
             return utils.Orientation.byName(n);
+        return null;
+    }
+};
+
+pub const AttributeIterator = struct {
+    delegate: std.mem.SplitIterator(u8, std.mem.DelimiterType.scalar),
+
+    pub const Result = struct {
+        name: String,
+        value: String,
+    };
+
+    pub fn new(s: String) AttributeIterator {
+        return .{ .delegate = std.mem.splitScalar(u8, s, '|') };
+    }
+
+    pub inline fn next(self: *AttributeIterator) ?Result {
+        if (self.delegate.next()) |attr_str| {
+            var it = std.mem.splitScalar(u8, attr_str, '=');
+            return .{
+                .name = NamePool.alloc(it.next()).?,
+                .value = NamePool.alloc(it.next()).?,
+            };
+        }
         return null;
     }
 };

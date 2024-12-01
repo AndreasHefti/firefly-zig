@@ -10,9 +10,6 @@
     "tasks": [
         { "name": "create_player", "life_cycle": "LOAD"}
     ],
-    "tile_sets": [
-        { "name": "TestTileSet", "file": "resources/example_tileset.json" }
-    ],
     "tile_mapping": {
         "name": "TileMapRoom1",
         "tile_sets": [
