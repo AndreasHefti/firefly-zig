@@ -184,7 +184,6 @@ pub const BehaviorTreeBuilder = struct {
         if (p.children == null)
             p.children = utils.DynIndexArray.new(api.COMPONENT_ALLOC, 3);
 
-        std.debug.print("add child: {d} to parent: {d}\n", .{ child, parent });
         p.children.?.add(child);
     }
 

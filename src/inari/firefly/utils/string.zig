@@ -55,7 +55,6 @@ pub const NamePool = struct {
     }
 
     pub fn format(comptime fmt: String, args: anytype) String {
-        // TODO use bufPrint
         const formatted = std.fmt.allocPrint(_ally, fmt, args) catch unreachable;
         defer _ally.free(formatted);
         return alloc(formatted).?;

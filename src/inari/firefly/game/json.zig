@@ -105,7 +105,10 @@ pub fn JSONResource(T: type) type {
                     .free_json_resource = true,
                 };
             } else {
-                api.Logger.info("No context attribute for file resource found for: {s}. Fallback to 'JSON_RESOURCE' attribute", .{file_attribute_name});
+                api.Logger.info(
+                    "No context attribute for file resource found for: {s}. Fallback to 'JSON_RESOURCE' attribute",
+                    .{file_attribute_name},
+                );
                 return .{
                     .attribute_name = game.TaskAttributes.JSON_RESOURCE,
                     .json_resource = attrs.get(game.TaskAttributes.JSON_RESOURCE),

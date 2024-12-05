@@ -148,12 +148,12 @@ pub const Room = struct {
     _unload_callback: ?RoomCallback = undefined,
 
     pub fn construct(self: *Room) void {
-        std.debug.print("FIREFLY : INFO: Room {s} created\n", .{self.name});
+        api.Logger.info("Room {s} created", .{self.name});
         self.state = .CREATED;
     }
 
     pub fn destruct(self: *Room) void {
-        std.debug.print("FIREFLY : INFO: Room {s} destructed\n", .{self.name});
+        api.Logger.info("INFO: Room {s} destructed", .{self.name});
         self.state = .NONE;
     }
 
@@ -170,7 +170,7 @@ pub const Room = struct {
         if (self.state != .LOADED) self.load();
         // ignore when room is in unexpected state
         if (self.state != .LOADED) {
-            std.debug.print("FIREFLY : ERROR: Room is in unexpected state to run: {any} still active!", .{self});
+            api.Logger.err("Room is in unexpected state to run: {any} still active!", .{self});
             return;
         }
 
@@ -196,7 +196,7 @@ pub const Room = struct {
     ) void {
         // if this room is already starting, ignore call
         if (self.state == .STARTING or self.state == .RUNNING) {
-            std.debug.print("FIREFLY : ERROR: Another Room is already starting cannot start: {any}", .{self});
+            api.Logger.err("Another Room is already starting cannot start: {any}", .{self});
             return;
         }
 
@@ -206,7 +206,7 @@ pub const Room = struct {
 
         // ignore when room is in unexpected state
         if (self.state != .ACTIVATED) {
-            std.debug.print("FIREFLY : ERROR: Room is in unexpected state to run: {any} still active!", .{self});
+            api.Logger.err("Room is in unexpected state to run: {any} still active!", .{self});
             return;
         }
 

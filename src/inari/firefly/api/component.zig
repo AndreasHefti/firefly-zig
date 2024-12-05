@@ -142,7 +142,7 @@ pub fn Mixin(comptime T: type) type {
             if (_type_init)
                 return;
 
-            std.debug.print("FIREFLY : INFO: initialize component: {s}\n", .{name});
+            api.Logger.info("Initialize component: {s}", .{name});
 
             defer {
                 _ = TYPE_REFERENCES.add(TypeReference{
@@ -181,7 +181,7 @@ pub fn Mixin(comptime T: type) type {
             if (!_type_init)
                 return;
 
-            std.debug.print("FIREFLY : INFO: deinitialize component: {s}\n", .{component_name});
+            api.Logger.info("Deinitialize component: {s}", .{component_name});
 
             clearAll();
 

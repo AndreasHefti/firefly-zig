@@ -227,7 +227,7 @@ pub const View = struct {
         firefly.api.window.toggleFullscreen();
         // adapt view to full screen
         //const window = firefly.api.window.getWindowData();
-        std.debug.print("FIREFLY : INFO: Set fullscreen, screen: {d} {d} \n", .{
+        api.Logger.info("Set fullscreen, screen: {d} {d}", .{
             firefly.api.window.getMonitorWidth(1),
             firefly.api.window.getMonitorHeight(1),
         });

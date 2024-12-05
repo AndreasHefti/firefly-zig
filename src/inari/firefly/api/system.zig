@@ -191,7 +191,8 @@ pub fn SystemMixin(comptime T: type) type {
                 if (system_active)
                     return;
 
-                std.debug.print("FIREFLY : INFO: Activate System: {?s}\n", .{system_name});
+                api.Logger.info("Activate System: {?s}", .{system_name});
+
                 if (entity_registration) |_| {
                     api.Entity.Subscription.subscribe(notifyEntityChange);
                 }
@@ -213,7 +214,8 @@ pub fn SystemMixin(comptime T: type) type {
                 if (!system_active)
                     return;
 
-                std.debug.print("FIREFLY : INFO: Deactivate System: {?s}\n", .{system_name});
+                api.Logger.info("Deactivate System: {?s}", .{system_name});
+
                 if (entity_registration) |_| {
                     api.Entity.Subscription.unsubscribe(notifyEntityChange);
                 }

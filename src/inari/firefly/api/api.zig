@@ -153,6 +153,8 @@ pub fn init(context: InitContext) !void {
     if (initialized)
         return;
 
+    Logger.info("*** Starting Firefly Engine *** \n", .{});
+
     COMPONENT_ALLOC = context.component_allocator;
     ENTITY_ALLOC = context.entity_allocator;
     ALLOC = context.allocator;
@@ -215,6 +217,8 @@ pub fn deinit() void {
     UPDATE_EVENT_DISPATCHER.deinit();
     RENDER_EVENT_DISPATCHER.deinit();
     VIEW_RENDER_EVENT_DISPATCHER.deinit();
+
+    Logger.info("*** Firefly Engine stopped *** \n", .{});
 }
 
 //////////////////////////////////////////////////////////////
@@ -283,22 +287,31 @@ pub const FUNCTION_NAMES = struct {
 //// Global Logger
 //////////////////////////////////////////////////////////////
 
+var log_buffer = [_]u8{0} ** 512;
 pub const Logger = struct {
     pub const API_TAG = "[Firefly]";
 
+    const INFO_LOG_ON = false;
+    const WARN_LOG_ON = true;
+    const ERROR_LOG_ON = true;
+
     pub fn info(comptime msg: String, args: anytype) void {
-        const parsed_msg = utils.NamePool.format(msg, args);
-        std.log.info("{s} {s}", .{ API_TAG, parsed_msg });
+        if (INFO_LOG_ON)
+            std.log.info("{s} {s}", .{ API_TAG, format(msg, args) });
     }
 
     pub fn warn(comptime msg: String, args: anytype) void {
-        const parsed_msg = utils.NamePool.format(msg, args);
-        std.log.warn("{s} {s}", .{ API_TAG, parsed_msg });
+        if (WARN_LOG_ON)
+            std.log.warn("{s} {s}", .{ API_TAG, format(msg, args) });
     }
 
     pub fn err(comptime msg: String, args: anytype) void {
-        const parsed_msg = utils.NamePool.format(msg, args);
-        std.log.err("{s} {s}", .{ API_TAG, parsed_msg });
+        if (ERROR_LOG_ON)
+            std.log.err("{s} {s}", .{ API_TAG, format(msg, args) });
+    }
+
+    fn format(comptime msg: String, args: anytype) String {
+        return std.fmt.bufPrint(&log_buffer, msg, args) catch msg;
     }
 };
 
