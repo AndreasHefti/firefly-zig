@@ -291,7 +291,7 @@ var log_buffer = [_]u8{0} ** 512;
 pub const Logger = struct {
     pub const API_TAG = "[Firefly]";
 
-    const INFO_LOG_ON = false;
+    const INFO_LOG_ON = true;
     const WARN_LOG_ON = true;
     const ERROR_LOG_ON = true;
 
