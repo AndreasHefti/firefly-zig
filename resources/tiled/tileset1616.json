@@ -3,7 +3,7 @@
  "imageheight":64,
  "imagewidth":160,
  "margin":0,
- "name":"tileset1616",
+ "name":"TestTileSet",
  "properties":
     {
      "texture":
@@ -227,6 +227,7 @@
         {
          "tile":
             {
+             "animation":"",
              "name":"slope_1_4",
              "props":"1,0|1|1|TERRAIN|1|-"
             }

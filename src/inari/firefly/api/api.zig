@@ -49,20 +49,26 @@ pub var ENTITY_ALLOC: Allocator = undefined;
 pub var ALLOC: Allocator = undefined;
 pub const ArenaAlloc = struct {
     arena: std.heap.ArenaAllocator,
-    allocator: Allocator,
+    _allocator: ?Allocator = null,
 
     pub fn new() ArenaAlloc {
-        var aa = std.heap.ArenaAllocator.init(ALLOC);
         return ArenaAlloc{
-            .arena = aa,
-            .allocator = aa.allocator(),
+            .arena = std.heap.ArenaAllocator.init(ALLOC),
         };
+    }
+
+    pub fn allocator(self: *ArenaAlloc) Allocator {
+        if (self._allocator == null) {
+            self._allocator = self.arena.allocator();
+        }
+
+        return self._allocator.?;
     }
 
     pub fn deinit(self: *ArenaAlloc) void {
         self.arena.deinit();
         self.arena = undefined;
-        self.allocator = undefined;
+        self._allocator = null;
     }
 };
 
@@ -281,18 +287,18 @@ pub const Logger = struct {
     pub const API_TAG = "[Firefly]";
 
     pub fn info(comptime msg: String, args: anytype) void {
-        const parsed_msg = std.fmt.allocPrint(ALLOC, msg, args) catch msg;
-        std.log.info("{s} {s}{s}", .{ API_TAG, parsed_msg, "\n" });
+        const parsed_msg = utils.NamePool.format(msg, args);
+        std.log.info("{s} {s}", .{ API_TAG, parsed_msg });
     }
 
     pub fn warn(comptime msg: String, args: anytype) void {
-        const parsed_msg = std.fmt.allocPrint(ALLOC, msg, args) catch msg;
-        std.log.warn("{s} {s}{s}", .{ API_TAG, parsed_msg, "\n" });
+        const parsed_msg = utils.NamePool.format(msg, args);
+        std.log.warn("{s} {s}", .{ API_TAG, parsed_msg });
     }
 
     pub fn err(comptime msg: String, args: anytype) void {
-        const parsed_msg = std.fmt.allocPrint(ALLOC, msg, args) catch msg;
-        std.log.err("{s}{s} {s}", .{ API_TAG, parsed_msg, "\n" });
+        const parsed_msg = utils.NamePool.format(msg, args);
+        std.log.err("{s} {s}", .{ API_TAG, parsed_msg });
     }
 };
 

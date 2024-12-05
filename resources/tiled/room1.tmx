@@ -8,25 +8,25 @@
   <property name="end_scene" value="scene2"/>
   <property name="name" value="Room1"/>
   <property name="start_scene" value="scene1"/>
-  <property name="task_create_player" value="life_cycle=LOAD|attr1=val1|attr2=val2"/>
-  <property name="tile_set_TestTileSet" value="offset=1|file=resources/example_tileset.json"/>
+  <property name="tile_set_TestTileSet" value="offset=1|file=resources/tiled/tileset1616.json"/>
  </properties>
  <tileset firstgid="1" source="../../../../../IdeaProjects/flyko-lib/src/jvmTest/resources/tiled_tileset_example/tiled_tileset.json"/>
- <layer id="2" name="Background" class="firefly_maplayer" width="20" height="10" opacity="0.5" offsetx="-15" offsety="-10" parallaxx="0.9" parallaxy="0.9">
+ <tileset firstgid="41" source="tileset1616.tsx"/>
+ <layer id="2" name="Background" class="firefly_maplayer" width="20" height="10" opacity="0.5" parallaxx="-0.2" parallaxy="0.9">
   <properties>
    <property name="blend_mode" value="ALPHA"/>
-   <property name="tilesets" value="TestTileSet"/>
+   <property name="tile_sets" value="TestTileSet"/>
    <property name="tint_color" value="255,255,255,100"/>
   </properties>
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,2,32,22,12,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,0,0,0,0,0,
-0,0,0,0,0,0,0,2,32,39,0,0,29,22,12,0,0,0,0,0,
+0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,11,0,0,0,0,
+0,0,11,0,0,0,0,2,32,39,11,11,29,22,12,0,0,0,0,0,
 0,0,0,0,0,0,2,32,0,0,19,19,0,0,22,12,0,0,0,0,
 0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,22,12,0,0,0,
 0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,22,12,0,0,
 0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,
-0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,12,
+0,0,2,32,0,0,0,0,0,0,0,11,0,0,0,0,0,0,22,12,
 0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>

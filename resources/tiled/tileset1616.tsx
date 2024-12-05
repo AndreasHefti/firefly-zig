@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.11.0" name="tileset1616" tilewidth="16" tileheight="16" tilecount="40" columns="10">
+<tileset version="1.11" tiledversion="1.11.0" name="TestTileSet" tilewidth="16" tileheight="16" tilecount="40" columns="10">
  <editorsettings>
   <export target="tileset1616.json" format="json1"/>
  </editorsettings>

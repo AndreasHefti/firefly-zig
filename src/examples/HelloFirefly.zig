@@ -11,11 +11,12 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     firefly.Engine.reorderSystems(&firefly.Engine.CoreSystems.DEFAULT_SYSTEM_ORDER);
     firefly.Engine.printState();
 
-    var arena_allocator = std.heap.ArenaAllocator.init(firefly.api.ALLOC);
+    var arena_allocator = firefly.api.ArenaAlloc.new();
     defer arena_allocator.deinit();
-    const arena = arena_allocator.allocator();
 
-    const tuples = testArrayListAlloc(arena);
+    const alloc = arena_allocator.allocator();
+
+    const tuples = testArrayListAlloc(alloc);
     for (0..tuples.len) |i| {
         std.debug.print("*********** tuple: {s} {s}\n", .{ tuples[i].name, tuples[i].value });
     }

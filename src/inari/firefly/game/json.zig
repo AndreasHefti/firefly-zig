@@ -105,6 +105,7 @@ pub fn JSONResource(T: type) type {
                     .free_json_resource = true,
                 };
             } else {
+                api.Logger.info("No context attribute for file resource found for: {s}. Fallback to 'JSON_RESOURCE' attribute", .{file_attribute_name});
                 return .{
                     .attribute_name = game.TaskAttributes.JSON_RESOURCE,
                     .json_resource = attrs.get(game.TaskAttributes.JSON_RESOURCE),
@@ -120,12 +121,15 @@ pub fn JSONResource(T: type) type {
                     firefly.api.ALLOC,
                     json,
                     .{ .ignore_unknown_fields = true },
-                ) catch |err| switch (err) {
-                    else => {
-                        api.Logger.err("Failed to parse JSON resource: {any}", .{self.attribute_name});
-                        return null;
-                    },
-                };
+                ) catch unreachable;
+                // |err| switch (err) {
+                //     else => {
+                //         api.Logger.err("Failed to parse JSON resource: {s}", .{self.attribute_name});
+                //         return null;
+                //     },
+                // };
+            } else {
+                api.Logger.err("No JSON resource available for context attribute: {s}", .{self.attribute_name});
             }
 
             if (self.parsed) |p|
@@ -947,14 +951,14 @@ fn loadTiledTileSet(ctx: *api.CallContext) void {
         const tiles: []JSONTile = api.ALLOC.alloc(JSONTile, tiledTileSet.tileproperties.map.count()) catch undefined;
         defer api.ALLOC.free(tiles);
 
-        var i: usize = 0;
-        for (tiledTileSet.tileproperties.map.values()) |v| {
-            tiles[i] = JSONTile{
+        for (tiledTileSet.tileproperties.map.keys()) |key| {
+            const v = tiledTileSet.tileproperties.map.getPtr(key).?;
+            const index = utils.parseUsize(key);
+            tiles[index] = JSONTile{
                 .name = v.tile.name,
                 .props = v.tile.props,
                 .animation = v.tile.animation,
             };
-            i += 1;
         }
 
         const jsonTileSet = JSONTileSet{
@@ -998,10 +1002,10 @@ pub const TiledTileMap = struct {
 pub const TiledMapLayer = struct {
     type: String,
     name: String,
-    x: usize,
-    y: usize,
-    offsetx: ?usize = null,
-    offsety: ?usize = null,
+    x: Float,
+    y: Float,
+    offsetx: ?Float = null,
+    offsety: ?Float = null,
     width: ?usize = null,
     height: ?usize = null,
     visible: bool,
@@ -1017,11 +1021,11 @@ pub const TiledObject = struct {
     type: String,
     name: String,
     visible: bool,
-    x: usize,
-    y: usize,
-    width: usize,
-    height: usize,
-    rotation: usize,
+    x: Float,
+    y: Float,
+    width: Float,
+    height: Float,
+    rotation: Float,
     properties: ?std.json.ArrayHashMap(String) = null,
 };
 
@@ -1037,7 +1041,7 @@ const TiledRoomPropertyMap = struct {
 fn loadTiledTileMap(ctx: *api.CallContext) void {
     var jsonResource = JSONResource(TiledTileMap).new(
         ctx.attributes_id,
-        game.TaskAttributes.JSON_RESOURCE_TILE_MAP_FILE,
+        game.TaskAttributes.JSON_RESOURCE_ROOM_FILE,
     );
     defer jsonResource.deinit();
     const _json = jsonResource.parse();
@@ -1045,8 +1049,9 @@ fn loadTiledTileMap(ctx: *api.CallContext) void {
     if (_json) |tiledTileMap| {
         var arena = api.ArenaAlloc.new();
         defer arena.deinit();
+        const ally = arena.allocator();
 
-        if (parseTiledMapProperties(tiledTileMap.properties, arena.allocator)) |p_map| {
+        if (parseTiledMapProperties(tiledTileMap.properties, ally)) |p_map| {
 
             // // convert TiledTileMap to JSONRoom
             const jsonRoom = JSONRoom{
@@ -1060,17 +1065,31 @@ fn loadTiledTileMap(ctx: *api.CallContext) void {
                 .end_scene = p_map.end_scene,
                 .tasks = p_map.tasks,
                 .attributes = p_map.attributes,
-                .tile_mapping_file = null,
                 .tile_mapping = convertTiledTileMap(
                     tiledTileMap,
                     p_map,
-                    arena.allocator,
+                    ally,
                 ),
                 .objects = convertTiledObjects(
                     tiledTileMap.layers,
-                    arena.allocator,
+                    ally,
                 ),
             };
+
+            // load tile-sets from Tiled files so they are not tried to be loaded from regular JSON files later on
+            if (jsonRoom.tile_mapping) |tile_mapping| {
+                for (0..tile_mapping.tile_sets.len) |i| {
+                    api.Task.runTaskByNameWith(
+                        game.Tasks.JSON_LOAD_TILED_TILE_SET,
+                        .{ .attributes_id = api.Attributes.newGet(null, .{
+                            .{
+                                game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
+                                tile_mapping.tile_sets[i].resource.file,
+                            },
+                        }).id },
+                    );
+                }
+            }
 
             const room_id = loadRoom(jsonRoom, ctx);
             if (ctx.c_ref_callback) |callback|
@@ -1113,6 +1132,7 @@ fn parseTiledMapProperties(props: ?std.json.ArrayHashMap(String), allocator: std
             } else if (utils.stringStartsWith(name, TILE_SET_ATTR_PREFIX)) {
                 var new = tile_set_list.addOne() catch unreachable;
                 new.resource.name = utils.NamePool.alloc(name[TILE_SET_ATTR_PREFIX.len..]).?;
+                new.resource.load_task = null;
                 var a_it = utils.AttributeIterator.new(entry.value_ptr.*);
                 while (a_it.next()) |r| {
                     if (utils.stringEquals(OFFSET_ATTR, r.name)) {
@@ -1123,7 +1143,6 @@ fn parseTiledMapProperties(props: ?std.json.ArrayHashMap(String), allocator: std
                         api.Logger.warn("Unknown tile set attribute: {s} {s}", .{ r.name, r.value });
                     }
                 }
-                // TODO
             } else if (utils.stringStartsWith(name, ATTRIBUTES_ATTR)) {
                 var new = attr_list.addOne() catch unreachable;
                 new.name = utils.NamePool.alloc(name).?;
@@ -1157,7 +1176,6 @@ fn convertTiledTileMap(
     for (0..layers.len) |i| {
         if (utils.stringEquals(layers[i].type, "tilelayer")) {
             var new_layer = layer_list.addOne() catch unreachable;
-            //new_layer.blend_mode = layers[i].
             new_layer.layer_name = utils.NamePool.alloc(layers[i].name).?;
             new_layer.offset = utils.NamePool.format("{d},{d}", .{ layers[i].offsetx orelse 0, layers[i].offsety orelse 0 });
             new_layer.parallax_factor = utils.NamePool.format("{d},{d}", .{ layers[i].parallaxx orelse 0, layers[i].parallaxy orelse 0 });
@@ -1179,7 +1197,7 @@ fn convertTiledTileMap(
     }
 
     return JSONTileMapping{
-        .name = utils.NamePool.alloc(getAttributeValue(tiled_room_props.attributes, "name")).?,
+        .name = tiled_room_props.name,
         .tile_sets = tiled_room_props.tile_sets.?,
         .tile_grids = grid_list.toOwnedSlice() catch unreachable,
         .layer_mapping = layer_list.toOwnedSlice() catch unreachable,
@@ -1208,7 +1226,7 @@ fn convertTiledObjects(layers: []const TiledMapLayer, arena: std.mem.Allocator) 
                     var new = list.addOne() catch unreachable;
                     new.name = utils.NamePool.alloc(object[j].name).?;
                     new.object_type = utils.NamePool.alloc(object[j].type).?;
-                    new.attributes = convertObjectAttributes(object[j].properties, arena);
+                    new.attributes = convertObjectAttributes(object[j], arena);
                     new.build_task = getAttributeValue(new.attributes, "build_task").?;
                     new.layer = getAttributeValue(new.attributes, "layer");
                 }
@@ -1228,9 +1246,18 @@ fn getAttributeValue(attrs: ?[]const JSONAttribute, name: String) ?String {
     return null;
 }
 
-fn convertObjectAttributes(props: ?std.json.ArrayHashMap(String), arena: std.mem.Allocator) ?[]const JSONAttribute {
-    if (props) |p| {
-        var list = std.ArrayList(JSONAttribute).init(arena);
+fn convertObjectAttributes(object: TiledObject, arena: std.mem.Allocator) ?[]const JSONAttribute {
+    var list = std.ArrayList(JSONAttribute).init(arena);
+    var bounds = list.addOne() catch unreachable;
+    bounds.name = "bounds";
+    bounds.value = utils.NamePool.format("{d},{d},{d},{d}", .{
+        object.x,
+        object.y,
+        object.width,
+        object.height,
+    });
+
+    if (object.properties) |p| {
         var it = p.map.iterator();
         while (it.next()) |entry| {
             const name = entry.key_ptr.*;
@@ -1238,7 +1265,6 @@ fn convertObjectAttributes(props: ?std.json.ArrayHashMap(String), arena: std.mem
             new.name = utils.NamePool.alloc(name).?;
             new.value = utils.NamePool.alloc(entry.value_ptr.*).?;
         }
-        return list.toOwnedSlice() catch unreachable;
     }
-    return null;
+    return list.toOwnedSlice() catch unreachable;
 }
