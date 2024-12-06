@@ -294,6 +294,7 @@ pub const TileGridData = struct {
     world_position: PosF,
     spherical: bool = false,
     dimensions: @Vector(4, usize),
+    // TODO make this slice of Index!?
     codes: String,
 };
 

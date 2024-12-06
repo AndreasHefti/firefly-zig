@@ -114,6 +114,9 @@ pub const Animation = struct {
     fn update(self: *Animation) void {
         self._t_normalized += 1.0 * firefly.utils.usize_f32(api.Timer.d_time) / firefly.utils.usize_f32(self.duration);
         if (self._t_normalized >= 1.0) {
+            // set to end value
+            self._t_normalized = 1.0;
+            self._integrator_ref.integrate(self);
             self._t_normalized = 0.0;
             if (self._suspending or !self.looping) {
                 finish(self);

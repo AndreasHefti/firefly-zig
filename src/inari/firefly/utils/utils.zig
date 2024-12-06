@@ -22,8 +22,10 @@ pub const String = string.String;
 pub const CString = string.CString;
 pub const NamePool = string.NamePool;
 pub const StringBuffer = string.StringBuffer;
-pub const PropertyIterator = string.PropertyIterator;
-pub const AttributeIterator = string.AttributeIterator;
+pub const StringPropertyIterator = string.StringPropertyIterator;
+pub const StringAttributeIterator = string.StringAttributeIterator;
+pub const StringAttributeMap = string.StringAttributeMap;
+pub const StringListIterator = string.StringListIterator;
 pub const stringEquals = string.stringEquals;
 pub const stringStartsWith = string.stringStartsWith;
 

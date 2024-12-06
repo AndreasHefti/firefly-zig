@@ -132,61 +132,61 @@ pub const StringBuffer = struct {
     }
 };
 
-pub const PropertyIterator = struct {
+pub const StringPropertyIterator = struct {
     delegate: std.mem.SplitIterator(u8, std.mem.DelimiterType.scalar),
 
-    pub fn new(s: String) PropertyIterator {
-        return PropertyIterator{ .delegate = std.mem.splitScalar(u8, s, '|') };
+    pub fn new(s: String) StringPropertyIterator {
+        return StringPropertyIterator{ .delegate = std.mem.splitScalar(u8, s, '|') };
     }
 
-    pub inline fn next(self: *PropertyIterator) ?String {
+    pub inline fn next(self: *StringPropertyIterator) ?String {
         return self.delegate.next();
     }
 
-    pub inline fn nextAspect(self: *PropertyIterator, comptime aspect_group: anytype) ?aspect_group.Aspect {
+    pub inline fn nextAspect(self: *StringPropertyIterator, comptime aspect_group: anytype) ?aspect_group.Aspect {
         if (self.delegate.next()) |s|
             return aspect_group.getAspectIfExists(s);
         return null;
     }
 
-    pub inline fn nextName(self: *PropertyIterator) ?String {
+    pub inline fn nextName(self: *StringPropertyIterator) ?String {
         if (self.delegate.next()) |s|
             return NamePool.alloc(utils.parseName(s));
         return null;
     }
 
-    pub inline fn nextBoolean(self: *PropertyIterator) bool {
+    pub inline fn nextBoolean(self: *StringPropertyIterator) bool {
         return utils.parseBoolean(self.delegate.next());
     }
 
-    pub inline fn nextFloat(self: *PropertyIterator) ?utils.Float {
+    pub inline fn nextFloat(self: *StringPropertyIterator) ?utils.Float {
         return utils.parseFloat(self.delegate.next());
     }
 
-    pub inline fn nextIndex(self: *PropertyIterator) ?utils.Index {
+    pub inline fn nextIndex(self: *StringPropertyIterator) ?utils.Index {
         return utils.parseUsize(self.delegate.next());
     }
 
-    pub inline fn nextPosF(self: *PropertyIterator) ?utils.PosF {
+    pub inline fn nextPosF(self: *StringPropertyIterator) ?utils.PosF {
         return utils.parsePosF(self.delegate.next());
     }
 
-    pub inline fn nextRectF(self: *PropertyIterator) ?utils.RectF {
+    pub inline fn nextRectF(self: *StringPropertyIterator) ?utils.RectF {
         return utils.parseRectF(self.delegate.next());
     }
 
-    pub inline fn nextColor(self: *PropertyIterator) ?utils.Color {
+    pub inline fn nextColor(self: *StringPropertyIterator) ?utils.Color {
         return utils.parseColor(self.delegate.next());
     }
 
-    pub inline fn nextOrientation(self: *PropertyIterator) ?utils.Orientation {
+    pub inline fn nextOrientation(self: *StringPropertyIterator) ?utils.Orientation {
         if (next(self)) |n|
             return utils.Orientation.byName(n);
         return null;
     }
 };
 
-pub const AttributeIterator = struct {
+pub const StringAttributeIterator = struct {
     delegate: std.mem.SplitIterator(u8, std.mem.DelimiterType.scalar),
 
     pub const Result = struct {
@@ -194,18 +194,54 @@ pub const AttributeIterator = struct {
         value: String,
     };
 
-    pub fn new(s: String) AttributeIterator {
+    pub fn new(s: String) StringAttributeIterator {
         return .{ .delegate = std.mem.splitScalar(u8, s, '|') };
     }
 
-    pub inline fn next(self: *AttributeIterator) ?Result {
+    pub inline fn next(self: *StringAttributeIterator) ?Result {
         if (self.delegate.next()) |attr_str| {
             var it = std.mem.splitScalar(u8, attr_str, '=');
             return .{
-                .name = NamePool.alloc(it.next()).?,
-                .value = NamePool.alloc(it.next()).?,
+                .name = it.next().?,
+                .value = it.next().?,
             };
         }
         return null;
+    }
+};
+
+pub const StringAttributeMap = struct {
+    map: std.StringArrayHashMap(String) = undefined,
+
+    pub fn new(s: String, allocator: std.mem.Allocator) StringAttributeMap {
+        var result = StringAttributeMap{ .map = std.StringArrayHashMap(String).init(allocator) };
+        var it = StringAttributeIterator.new(s);
+        while (it.next()) |r|
+            result.map.put(r.name, r.value) catch unreachable;
+        return result;
+    }
+
+    pub fn get(self: *StringAttributeMap, name: String) String {
+        return self.map.get(name).?;
+    }
+
+    pub fn getOptinal(self: *StringAttributeMap, name: String) ?String {
+        return self.map.get(name);
+    }
+
+    pub fn deinit(self: *StringAttributeMap) void {
+        self.map.deinit();
+    }
+};
+
+pub const StringListIterator = struct {
+    delegate: std.mem.SplitIterator(u8, std.mem.DelimiterType.scalar),
+
+    pub fn new(s: String) StringListIterator {
+        return .{ .delegate = std.mem.splitScalar(u8, s, '\n') };
+    }
+
+    pub inline fn next(self: *StringListIterator) ?String {
+        return self.delegate.next();
     }
 };

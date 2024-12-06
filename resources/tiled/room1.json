@@ -5,34 +5,38 @@
  "layers":[
         {
          "class":"firefly_maplayer",
-         "data":[0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 32, 22, 12, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 2, 32, 9, 9, 22, 12, 0, 11, 0, 0, 0, 0,
-            0, 0, 11, 0, 0, 0, 0, 2, 32, 39, 11, 11, 29, 22, 12, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 2, 32, 0, 0, 19, 19, 0, 0, 22, 12, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 22, 12, 0, 0, 0,
-            0, 0, 0, 0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 12, 0, 0,
-            0, 0, 0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 12, 0,
-            0, 0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 22, 12,
-            0, 2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            2, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         "data":[2, 32, 0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0,
+            32, 0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0,
+            0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 0,
+            0, 2, 32, 0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 0, 2,
+            2, 32, 0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 0, 2, 32,
+            32, 0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0,
+            0, 0, 2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0,
+            0, 2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 2,
+            2, 32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 2, 32,
+            32, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 0, 2, 32, 0, 0, 2, 32, 0],
          "height":10,
          "id":2,
          "name":"Background",
          "opacity":0.5,
          "parallaxx":-0.2,
          "parallaxy":-0.2,
-         "properties":
-            {
-             "blend_mode":"ALPHA",
-             "tile_sets":"TestTileSet",
-             "tint_color":"255,255,255,100"
-            },
-         "propertytypes":
-            {
-             "blend_mode":"string",
-             "tile_sets":"string",
-             "tint_color":"string"
-            },
+         "properties":[
+                {
+                 "name":"blend_mode",
+                 "type":"string",
+                 "value":"ALPHA"
+                }, 
+                {
+                 "name":"tile_sets",
+                 "type":"string",
+                 "value":"TestTileSet"
+                }, 
+                {
+                 "name":"tint_color",
+                 "type":"string",
+                 "value":"255,255,255,100"
+                }],
          "type":"tilelayer",
          "visible":true,
          "width":20,
@@ -43,30 +47,34 @@
          "class":"firefly_maplayer",
          "data":[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            1, 0, 0, 0, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1,
-            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1,
-            1, 0, 0, 0, 13, 0, 0, 0, 40, 0, 0, 0, 0, 0, 3, 1, 1, 1, 1, 1,
-            1, 5, 0, 0, 1, 14, 13, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-            1, 6, 0, 0, 1, 1, 1, 0, 22, 1, 1, 21, 21, 11, 11, 0, 2, 1, 1, 1,
-            1, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 33, 0, 1,
-            1, 1, 6, 0, 0, 3, 7, 13, 0, 3, 4, 14, 13, 3, 13, 0, 0, 0, 0, 1,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            1, 0, 0, 0, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 0, 0, 0, 0, 0, 1,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 0, 0, 1,
+            1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            1, 0, 0, 0, 0, 0, 0, 0, 15, 5, 0, 0, 0, 0, 0, 0, 0, 7, 7, 1,
+            1, 13, 0, 0, 0, 0, 0, 0, 16, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1],
          "height":10,
          "id":1,
          "name":"Foreground",
          "opacity":1,
-         "properties":
-            {
-             "blend_mode":"ALPHA",
-             "tile_sets":"TestTileSet",
-             "tint_color":"255,255,255,255"
-            },
-         "propertytypes":
-            {
-             "blend_mode":"string",
-             "tile_sets":"string",
-             "tint_color":"string"
-            },
+         "properties":[
+                {
+                 "name":"blend_mode",
+                 "type":"string",
+                 "value":"ALPHA"
+                }, 
+                {
+                 "name":"tile_sets",
+                 "type":"string",
+                 "value":"TestTileSet"
+                }, 
+                {
+                 "name":"tint_color",
+                 "type":"string",
+                 "value":"255,255,255,255"
+                }],
          "type":"tilelayer",
          "visible":true,
          "width":20,
@@ -82,18 +90,22 @@
                  "height":16,
                  "id":1,
                  "name":"t1",
-                 "properties":
-                    {
-                     "build_task":"room_transition_builder",
-                     "layer":"Foreground",
-                     "props":"Room2|t1|EAST"
-                    },
-                 "propertytypes":
-                    {
-                     "build_task":"string",
-                     "layer":"string",
-                     "props":"string"
-                    },
+                 "properties":[
+                        {
+                         "name":"build_task",
+                         "type":"string",
+                         "value":"room_transition_builder"
+                        }, 
+                        {
+                         "name":"layer",
+                         "type":"string",
+                         "value":"Foreground"
+                        }, 
+                        {
+                         "name":"props",
+                         "type":"string",
+                         "value":"Room2|t1|EAST"
+                        }],
                  "rotation":0,
                  "type":"room_transition",
                  "visible":true,
@@ -102,21 +114,25 @@
                  "y":16
                 }, 
                 {
-                 "height":11.625,
+                 "height":5.29167,
                  "id":6,
                  "name":"t2",
-                 "properties":
-                    {
-                     "build_task":"room_transition_builder",
-                     "layer":"Foreground",
-                     "props":"Room3|t1|SOUTH"
-                    },
-                 "propertytypes":
-                    {
-                     "build_task":"string",
-                     "layer":"string",
-                     "props":"string"
-                    },
+                 "properties":[
+                        {
+                         "name":"build_task",
+                         "type":"string",
+                         "value":"room_transition_builder"
+                        }, 
+                        {
+                         "name":"layer",
+                         "type":"string",
+                         "value":"Foreground"
+                        }, 
+                        {
+                         "name":"props",
+                         "type":"string",
+                         "value":"Room3|t1|SOUTH"
+                        }],
                  "rotation":0,
                  "type":"room_transition",
                  "visible":true,
@@ -133,36 +149,52 @@
  "nextlayerid":5,
  "nextobjectid":7,
  "orientation":"orthogonal",
- "properties":
-    {
-     "attributes":"attr1=val1|attr2=val2",
-     "end_scene":"scene2",
-     "name":"Room1",
-     "start_scene":"scene1",
-     "tile_set_TestTileSet":"offset=1|file=resources\/tiled\/tileset1616.json"
-    },
- "propertytypes":
-    {
-     "attributes":"string",
-     "end_scene":"string",
-     "name":"string",
-     "start_scene":"string",
-     "tile_set_TestTileSet":"string"
-    },
+ "properties":[
+        {
+         "name":"attributes",
+         "type":"string",
+         "value":"attr1=val1|attr2=val2"
+        }, 
+        {
+         "name":"end_scene",
+         "type":"string",
+         "value":"scene2"
+        }, 
+        {
+         "name":"name",
+         "type":"string",
+         "value":"Room1"
+        }, 
+        {
+         "name":"start_scene",
+         "type":"string",
+         "value":"scene1"
+        }, 
+        {
+         "name":"tasks",
+         "type":"string",
+         "value":"name=task1|life_cycle=LOAD|attr1=val1|attr2=val2\nname=task2|life_cycle=LOAD|attr1=val1|attr2=val2"
+        }, 
+        {
+         "name":"tile_set_TestTileSet",
+         "type":"string",
+         "value":"offset=1|file=resources\/tiled\/tileset1616.json"
+        }, 
+        {
+         "name":"tile_sets",
+         "type":"string",
+         "value":"name=TestTileSet|offset=1|file=resources\/tiled\/tileset1616.json\nname=TestTileSet|offset=1|file=resources\/tiled\/tileset1616.json"
+        }],
  "renderorder":"right-down",
  "tiledversion":"1.11.0",
  "tileheight":16,
  "tilesets":[
         {
          "firstgid":1,
-         "source":"..\/..\/..\/..\/..\/IdeaProjects\/flyko-lib\/src\/jvmTest\/resources\/tiled_tileset_example\/tiled_tileset.json"
-        }, 
-        {
-         "firstgid":41,
          "source":"tileset1616.tsx"
         }],
  "tilewidth":16,
  "type":"map",
- "version":1.1,
+ "version":"1.10",
  "width":20
 }

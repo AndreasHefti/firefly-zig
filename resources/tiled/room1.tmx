@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.11" tiledversion="1.11.0" class="Room1" orientation="orthogonal" renderorder="right-down" width="20" height="10" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="7">
+<map version="1.10" tiledversion="1.11.0" class="Room1" orientation="orthogonal" renderorder="right-down" width="20" height="10" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="7">
  <editorsettings>
-  <export target="room1.json" format="json1"/>
+  <export target="room1.json" format="json"/>
  </editorsettings>
  <properties>
   <property name="attributes" value="attr1=val1|attr2=val2"/>
   <property name="end_scene" value="scene2"/>
   <property name="name" value="Room1"/>
   <property name="start_scene" value="scene1"/>
+  <property name="tasks">name=task1|life_cycle=LOAD|attr1=val1|attr2=val2
+name=task2|life_cycle=LOAD|attr1=val1|attr2=val2</property>
   <property name="tile_set_TestTileSet" value="offset=1|file=resources/tiled/tileset1616.json"/>
+  <property name="tile_sets">name=TestTileSet|offset=1|file=resources/tiled/tileset1616.json
+name=TestTileSet|offset=1|file=resources/tiled/tileset1616.json</property>
  </properties>
- <tileset firstgid="1" source="../../../../../IdeaProjects/flyko-lib/src/jvmTest/resources/tiled_tileset_example/tiled_tileset.json"/>
- <tileset firstgid="41" source="tileset1616.tsx"/>
+ <tileset firstgid="1" source="tileset1616.tsx"/>
  <layer id="2" name="Background" class="firefly_maplayer" width="20" height="10" opacity="0.5" parallaxx="-0.2" parallaxy="-0.2">
   <properties>
    <property name="blend_mode" value="ALPHA"/>
@@ -19,16 +22,16 @@
    <property name="tint_color" value="255,255,255,100"/>
   </properties>
   <data encoding="csv">
-0,0,0,0,0,0,0,0,0,2,32,22,12,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,11,0,0,0,0,
-0,0,11,0,0,11,0,2,32,39,11,11,29,22,12,0,0,0,0,0,
-0,0,0,0,0,0,2,32,0,0,19,19,0,0,22,12,0,0,0,0,
-0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,22,12,0,0,0,
-0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,22,12,0,0,
-0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,22,12,0,
-0,0,2,32,0,0,0,0,0,0,0,11,0,0,0,0,0,0,22,12,
-0,2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-2,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+2,32,0,0,2,32,0,0,2,32,0,0,2,32,0,0,0,2,32,0,
+32,0,0,2,32,0,0,2,32,0,0,2,32,0,0,0,2,32,0,0,
+0,0,2,32,0,0,2,32,0,0,2,32,0,0,0,2,32,0,0,0,
+0,2,32,0,0,2,32,0,0,2,32,0,0,0,2,32,0,0,0,2,
+2,32,0,0,2,32,0,0,2,32,0,0,0,2,32,0,0,0,2,32,
+32,0,0,2,32,0,0,2,32,0,0,0,2,32,0,0,0,2,32,0,
+0,0,2,32,0,0,2,32,0,0,0,2,32,0,0,0,2,32,0,0,
+0,2,32,0,0,2,32,0,0,0,2,32,0,0,0,2,32,0,0,2,
+2,32,0,0,2,32,0,0,0,2,32,0,0,0,2,32,0,0,2,32,
+32,0,0,2,32,0,0,0,2,32,0,0,0,2,32,0,0,2,32,0
 </data>
  </layer>
  <layer id="1" name="Foreground" class="firefly_maplayer" width="20" height="10">
@@ -40,13 +43,13 @@
   <data encoding="csv">
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-1,0,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,
-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,
-1,0,0,0,13,0,0,0,40,0,0,0,0,0,3,1,1,1,1,1,
-1,5,0,0,1,14,13,0,1,0,0,0,0,0,0,0,0,0,0,1,
-1,6,0,0,1,1,1,0,22,1,1,21,21,11,11,0,2,1,1,1,
-1,1,5,0,0,0,0,0,0,0,0,0,0,0,0,0,23,33,0,1,
-1,1,6,0,0,3,7,13,0,3,4,14,13,3,13,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,11,11,11,11,11,11,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,1,
+1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,15,5,0,0,0,0,0,0,0,7,7,1,
+1,13,0,0,0,0,0,0,16,6,0,0,0,0,0,0,0,0,0,1,
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1
 </data>
  </layer>

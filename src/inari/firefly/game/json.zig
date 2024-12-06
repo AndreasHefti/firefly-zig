@@ -260,7 +260,7 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
 
     // create all tile templates for tile set
     for (0..jsonTileSet.tiles.len) |i| {
-        var it = utils.PropertyIterator.new(jsonTileSet.tiles[i].props);
+        var it = utils.StringPropertyIterator.new(jsonTileSet.tiles[i].props);
 
         if (it.nextPosF()) |tex_pos| {
             var tile_template: game.TileTemplate = .{
@@ -873,7 +873,7 @@ fn addTasks(c_id: Index, tasks: ?[]const JSONTask) void {
     if (tasks) |tsk| {
         for (0..tsk.len) |i| {
             if (!api.Task.Naming.exists(tsk[i].name)) {
-                std.log.warn("Task with name: {s} does not exist!\n", .{tsk[i].name});
+                std.log.warn("Task with name: {s} does not exist!", .{tsk[i].name});
                 continue;
             }
 
@@ -914,31 +914,77 @@ pub fn initTiledTasks() void {
     dispose_tiled_tasks = true;
 }
 
+const P_NAME_ATLAS_NAME: String = "atlas_name";
+const P_NAME_ATLAS_FILE: String = "atlas_file";
+const P_NAME_NAME: String = "name";
+const P_NAME_PROPS: String = "props";
+const P_NAME_ANIMATION: String = "animation";
+
+const P_NAME_TILE_SETS: String = "tile_sets";
+const P_NAME_TASKS: String = "tasks";
+const P_NAME_START_SCENE: String = "start_scene";
+const P_NAME_END_SCENE: String = "end_scene";
+const P_NAME_ATTRIBUTES: String = "attributes";
+const P_NAME_LIFE_CYCLE: String = "life_cycle";
+const P_NAME_OFFSET: String = "offset";
+const P_NAME_FILE: String = "file";
+const P_NAME_LOAD_TASK: String = "load_task";
+
+const P_NAME_TINT_COLOR: String = "tint_color";
+const P_NAME_BLEND_MODE: String = "blend_mode";
+const P_NAME_TILE_SET_REFS: String = "tile_sets";
+const P_NAME_BUILD_TASK: String = "build_task";
+const P_NAME_LAYER: String = "layer";
+const P_NAME_BOUNDS: String = "bounds";
+
+pub fn getPropertyValue(properties: []const TiledProperty, name: String) ?String {
+    for (0..properties.len) |i| {
+        if (utils.stringEquals(name, properties[i].name) and properties[i].value.len > 0)
+            return properties[i].value;
+    }
+    return null;
+}
+
+pub fn toJSONAttributes(attributes_str: String, allocator: std.mem.Allocator) []const JSONAttribute {
+    var a_it = utils.StringAttributeIterator.new(attributes_str);
+    var a_list = std.ArrayList(JSONAttribute).init(allocator);
+    while (a_it.next()) |r| {
+        var t_attr = a_list.addOne() catch unreachable;
+        t_attr.name = r.name;
+        t_attr.value = r.value;
+    }
+    return a_list.toOwnedSlice() catch unreachable;
+}
+
+pub fn getAttributeValue(attrs: []const JSONAttribute, name: String) ?String {
+    for (0..attrs.len) |i| {
+        if (utils.stringEquals(name, attrs[i].name) and attrs[i].value.len > 0)
+            return attrs[i].value;
+    }
+    return null;
+}
+
 // Tiled Tile Set JSON mapping
 
-pub const TiledTileSetProps = struct {
-    texture: Resource,
-};
-
-pub const TiledTileProps = struct {
-    tile: TiledTile,
+pub const TiledProperty = struct {
+    name: String,
+    value: String,
 };
 
 pub const TiledTile = struct {
-    name: String,
-    props: String,
-    animation: ?String = null,
+    id: Index,
+    properties: []const TiledProperty,
 };
 
 pub const TiledTileSet = struct {
     name: String,
     image: String,
     columns: usize,
-    properties: TiledTileSetProps,
+    properties: []const TiledProperty,
     tilecount: usize,
-    tileheight: Float,
-    tilewidth: Float,
-    tileproperties: std.json.ArrayHashMap(TiledTileProps),
+    tileheight: usize,
+    tilewidth: usize,
+    tiles: []const TiledTile,
 };
 
 fn loadTiledTileSet(ctx: *api.CallContext) void {
@@ -950,48 +996,45 @@ fn loadTiledTileSet(ctx: *api.CallContext) void {
     const _json = jsonResource.parse();
 
     if (_json) |tiledTileSet| {
-        const tile_set_id = loadTileSet(convertTiledTileSet(tiledTileSet));
+        var arena = api.ArenaAlloc.new();
+        defer arena.deinit();
+        const ally = arena.allocator();
+
+        const tile_set = convertTiledTileSet(tiledTileSet, ally);
+        const tile_set_id = loadTileSet(tile_set);
 
         if (ctx.c_ref_callback) |callback|
             callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
     }
 }
 
-fn convertTiledTileSet(tiled: TiledTileSet) JSONTileSet {
-    const tiles: []JSONTile = api.ALLOC.alloc(JSONTile, tiled.tileproperties.map.count()) catch undefined;
-    defer api.ALLOC.free(tiles);
+fn convertTiledTileSet(tiled: TiledTileSet, allocator: std.mem.Allocator) JSONTileSet {
+    const tiles: []JSONTile = allocator.alloc(JSONTile, tiled.tiles.len) catch undefined;
 
-    for (tiled.tileproperties.map.keys()) |key| {
-        const v = tiled.tileproperties.map.getPtr(key).?;
-        const index = utils.parseUsize(key);
+    for (0..tiled.tiles.len) |i| {
+        const tile = tiled.tiles[i];
+        const index = tile.id;
         tiles[index] = JSONTile{
-            .name = v.tile.name,
-            .props = v.tile.props,
-            .animation = v.tile.animation,
+            .name = getPropertyValue(tile.properties, P_NAME_NAME).?,
+            .props = getPropertyValue(tile.properties, P_NAME_PROPS).?,
+            .animation = getPropertyValue(tile.properties, P_NAME_ANIMATION),
         };
     }
 
     return JSONTileSet{
         .file_type = JSONFileTypes.TILE_SET,
         .name = tiled.name,
-        .texture = tiled.properties.texture,
-        .tile_width = tiled.tilewidth,
-        .tile_height = tiled.tileheight,
+        .texture = Resource{
+            .name = getPropertyValue(tiled.properties, P_NAME_ATLAS_NAME).?,
+            .file = getPropertyValue(tiled.properties, P_NAME_ATLAS_FILE).?,
+        },
+        .tile_width = utils.usize_f32(tiled.tilewidth),
+        .tile_height = utils.usize_f32(tiled.tileheight),
         .tiles = tiles,
     };
 }
 
 // // Tiled TileMap / Room JSON Mapping
-
-const TILE_SET_ATTR_PREFIX: String = "tile_set_";
-const TASK_ATTR_PREFIX = "task_";
-const NAME_ATTR = "name";
-const START_SCENE_ATTR = "start_scene";
-const END_SCENE_ATTR = "end_scene";
-const ATTRIBUTES_ATTR = "attributes";
-const LIFE_CYCLE_ATTR = "life_cycle";
-const OFFSET_ATTR = "offset";
-const FILE_ATTR = "file";
 
 pub const TiledTileMap = struct {
     width: usize,
@@ -999,7 +1042,7 @@ pub const TiledTileMap = struct {
     tilewidth: usize,
     tileheight: usize,
     infinite: bool,
-    properties: ?std.json.ArrayHashMap(String) = null,
+    properties: []const TiledProperty,
     layers: []const TiledMapLayer,
 };
 
@@ -1008,8 +1051,6 @@ pub const TiledMapLayer = struct {
     name: String,
     x: Float,
     y: Float,
-    offsetx: ?Float = null,
-    offsety: ?Float = null,
     width: ?usize = null,
     height: ?usize = null,
     visible: bool,
@@ -1018,7 +1059,7 @@ pub const TiledMapLayer = struct {
     parallaxy: ?Float = null,
     data: ?[]const Index = null,
     objects: ?[]const TiledObject = null,
-    properties: ?std.json.ArrayHashMap(String) = null,
+    properties: ?[]const TiledProperty = null,
 };
 
 pub const TiledObject = struct {
@@ -1030,16 +1071,7 @@ pub const TiledObject = struct {
     width: Float,
     height: Float,
     rotation: Float,
-    properties: ?std.json.ArrayHashMap(String) = null,
-};
-
-const TiledRoomPropertyMap = struct {
-    name: String,
-    start_scene: ?String = null,
-    end_scene: ?String = null,
-    attributes: ?[]const JSONAttribute = null,
-    tasks: ?[]const JSONTask = null,
-    tile_sets: ?[]const TileSetDef = null,
+    properties: []const TiledProperty,
 };
 
 fn loadTiledRoom(ctx: *api.CallContext) void {
@@ -1050,146 +1082,83 @@ fn loadTiledRoom(ctx: *api.CallContext) void {
     defer jsonResource.deinit();
     const _json = jsonResource.parse();
 
-    if (_json) |tiledTileMap| {
+    if (_json) |tiles_tile_map| {
         var arena = api.ArenaAlloc.new();
         defer arena.deinit();
         const ally = arena.allocator();
 
-        if (parseTiledMapProperties(tiledTileMap.properties, ally)) |p_map| {
+        // convert TiledTileMap to JSONRoom
+        // gloabal attributes
+        const attr_string = getPropertyValue(tiles_tile_map.properties, P_NAME_ATTRIBUTES).?;
+        const attrs = toJSONAttributes(attr_string, ally);
 
-            // // convert TiledTileMap to JSONRoom
-            const jsonRoom = JSONRoom{
-                .file_type = "Room",
-                .name = p_map.name,
-                .bounds = utils.NamePool.format("0,0,{d},{d}", .{
-                    tiledTileMap.width * tiledTileMap.tilewidth,
-                    tiledTileMap.height * tiledTileMap.tileheight,
-                }),
-                .start_scene = p_map.start_scene,
-                .end_scene = p_map.end_scene,
-                .tasks = p_map.tasks,
-                .attributes = p_map.attributes,
-                .tile_mapping = convertTiledTileMap(
-                    tiledTileMap,
-                    p_map,
-                    ally,
-                ),
-                .objects = convertTiledObjects(
-                    tiledTileMap.layers,
-                    ally,
-                ),
-            };
-
-            // load tile-sets from Tiled files so they are not tried to be loaded from regular JSON files later on
-            if (jsonRoom.tile_mapping) |tile_mapping| {
-                for (0..tile_mapping.tile_sets.len) |i| {
-                    api.Task.runTaskByNameWith(
-                        game.Tasks.JSON_LOAD_TILED_TILE_SET,
-                        .{ .attributes_id = api.Attributes.newGet(null, .{
-                            .{
-                                game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
-                                tile_mapping.tile_sets[i].resource.file,
-                            },
-                        }).id },
-                    );
-                }
-            }
-
-            const room_id = loadRoom(jsonRoom, ctx);
-            if (ctx.c_ref_callback) |callback|
-                callback(game.TileSet.Component.getReference(room_id, true).?, ctx);
-        }
-    }
-}
-
-fn parseTiledMapProperties(props: ?std.json.ArrayHashMap(String), allocator: std.mem.Allocator) ?TiledRoomPropertyMap {
-    if (props) |p| {
-        var tile_set_list = std.ArrayList(TileSetDef).init(allocator);
-        var task_list = std.ArrayList(JSONTask).init(allocator);
-        var attr_list = std.ArrayList(JSONAttribute).init(allocator);
-        var result = TiledRoomPropertyMap{ .name = "" };
-
-        var it = p.map.iterator();
-        while (it.next()) |entry| {
-            const name = entry.key_ptr.*;
-            if (utils.stringEquals(name, NAME_ATTR)) {
-                result.name = utils.NamePool.alloc(entry.value_ptr.*).?;
-            } else if (utils.stringEquals(name, START_SCENE_ATTR)) {
-                result.start_scene = utils.NamePool.alloc(entry.value_ptr.*);
-            } else if (utils.stringEquals(name, END_SCENE_ATTR)) {
-                result.end_scene = utils.NamePool.alloc(entry.value_ptr.*);
-            } else if (utils.stringStartsWith(name, TASK_ATTR_PREFIX)) {
+        // tasks...
+        var task_list = std.ArrayList(JSONTask).init(ally);
+        if (getPropertyValue(tiles_tile_map.properties, P_NAME_TASKS)) |taks_string| {
+            var task_it = utils.StringListIterator.new(taks_string);
+            while (task_it.next()) |task_attr_str| {
+                const task_attrs = toJSONAttributes(task_attr_str, ally);
                 var new = task_list.addOne() catch unreachable;
-                new.name = utils.NamePool.alloc(name[TASK_ATTR_PREFIX.len..]).?;
-                var a_it = utils.AttributeIterator.new(entry.value_ptr.*);
-                var a_list = std.ArrayList(JSONAttribute).init(allocator);
-                while (a_it.next()) |r| {
-                    if (utils.stringEquals(LIFE_CYCLE_ATTR, r.name)) {
-                        new.life_cycle = r.value;
-                    } else {
-                        var t_attr = a_list.addOne() catch unreachable;
-                        t_attr.name = r.name;
-                        t_attr.value = r.value;
-                    }
-                }
-                new.attributes = a_list.toOwnedSlice() catch unreachable;
-            } else if (utils.stringStartsWith(name, TILE_SET_ATTR_PREFIX)) {
-                var new = tile_set_list.addOne() catch unreachable;
-                new.resource.name = utils.NamePool.alloc(name[TILE_SET_ATTR_PREFIX.len..]).?;
-                new.resource.load_task = null;
-                var a_it = utils.AttributeIterator.new(entry.value_ptr.*);
-                while (a_it.next()) |r| {
-                    if (utils.stringEquals(OFFSET_ATTR, r.name)) {
-                        new.code_offset = utils.parseUsize(r.value);
-                    } else if (utils.stringEquals(FILE_ATTR, r.name)) {
-                        new.resource.file = utils.NamePool.alloc(r.value).?;
-                    } else {
-                        api.Logger.warn("Unknown tile set attribute: {s} {s}", .{ r.name, r.value });
-                    }
-                }
-            } else if (utils.stringStartsWith(name, ATTRIBUTES_ATTR)) {
-                var new = attr_list.addOne() catch unreachable;
-                new.name = utils.NamePool.alloc(name).?;
-                new.value = utils.NamePool.alloc(entry.value_ptr.*).?;
-            } else {
-                var a_it = utils.AttributeIterator.new(entry.value_ptr.*);
-                while (a_it.next()) |r| {
-                    var new = attr_list.addOne() catch unreachable;
-                    new.name = r.name;
-                    new.value = r.value;
-                }
+                new.name = getAttributeValue(task_attrs, P_NAME_NAME).?;
+                new.life_cycle = getAttributeValue(task_attrs, P_NAME_LIFE_CYCLE).?;
+                new.attributes = task_attrs;
             }
         }
 
-        result.attributes = attr_list.toOwnedSlice() catch unreachable;
-        result.tasks = task_list.toOwnedSlice() catch unreachable;
-        result.tile_sets = tile_set_list.toOwnedSlice() catch unreachable;
-        return result;
+        const jsonRoom = JSONRoom{
+            .file_type = "Room",
+            .name = getPropertyValue(tiles_tile_map.properties, P_NAME_NAME).?,
+            .bounds = utils.NamePool.format("0,0,{d},{d}", .{
+                tiles_tile_map.width * tiles_tile_map.tilewidth,
+                tiles_tile_map.height * tiles_tile_map.tileheight,
+            }),
+            .start_scene = getPropertyValue(tiles_tile_map.properties, P_NAME_START_SCENE),
+            .end_scene = getPropertyValue(tiles_tile_map.properties, P_NAME_END_SCENE),
+            .tasks = if (task_list.items.len > 0) task_list.toOwnedSlice() catch unreachable else null,
+            .attributes = attrs,
+            .tile_mapping = convertTiledTileMap(tiles_tile_map, ally),
+            .objects = convertTiledObjects(tiles_tile_map.layers, ally),
+        };
+
+        // load tile-sets from Tiled files so they are not tried to be loaded from regular JSON files later on
+        if (jsonRoom.tile_mapping) |tile_mapping| {
+            for (0..tile_mapping.tile_sets.len) |i| {
+                api.Task.runTaskByNameWith(
+                    game.Tasks.JSON_LOAD_TILED_TILE_SET,
+                    .{ .attributes_id = api.Attributes.newGet(null, .{
+                        .{
+                            game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
+                            tile_mapping.tile_sets[i].resource.file,
+                        },
+                    }).id },
+                );
+            }
+        }
+
+        const room_id = loadRoom(jsonRoom, ctx);
+        if (ctx.c_ref_callback) |callback|
+            callback(game.TileSet.Component.getReference(room_id, true).?, ctx);
     }
-    return null;
 }
 
-fn convertTiledTileMap(
-    tiled_tile_map: TiledTileMap,
-    tiled_room_props: TiledRoomPropertyMap,
-    arena: std.mem.Allocator,
-) JSONTileMapping {
+fn convertTiledTileMap(tiled_tile_map: TiledTileMap, arena: std.mem.Allocator) JSONTileMapping {
     var grid_list = std.ArrayList(JSONTileGrid).init(arena);
     var layer_list = std.ArrayList(TileLayerMapping).init(arena);
     const layers = tiled_tile_map.layers;
+
     for (0..layers.len) |i| {
         if (utils.stringEquals(layers[i].type, "tilelayer")) {
             var new_layer = layer_list.addOne() catch unreachable;
-            new_layer.layer_name = utils.NamePool.alloc(layers[i].name).?;
-            new_layer.offset = utils.NamePool.format("{d},{d}", .{ layers[i].offsetx orelse 0, layers[i].offsety orelse 0 });
+            new_layer.layer_name = layers[i].name;
+            new_layer.offset = utils.NamePool.format("{d},{d}", .{ layers[i].x, layers[i].y });
             new_layer.parallax_factor = utils.NamePool.format("{d},{d}", .{ layers[i].parallaxx orelse 0, layers[i].parallaxy orelse 0 });
-            new_layer.tint_color = utils.NamePool.alloc(layers[i].properties.?.map.get("tint_color"));
-            new_layer.blend_mode = utils.NamePool.alloc(layers[i].properties.?.map.get("blend_mode"));
-            new_layer.tile_sets_refs = utils.NamePool.alloc(layers[i].properties.?.map.get("tile_sets")).?;
+            new_layer.tint_color = getPropertyValue(layers[i].properties.?, P_NAME_TINT_COLOR);
+            new_layer.blend_mode = getPropertyValue(layers[i].properties.?, P_NAME_BLEND_MODE);
+            new_layer.tile_sets_refs = getPropertyValue(layers[i].properties.?, P_NAME_TILE_SET_REFS).?;
 
             var new_grid = grid_list.addOne() catch unreachable;
-            new_grid.name = utils.NamePool.alloc(layers[i].name).?; // TODO same as layer?
-            new_grid.layer = utils.NamePool.alloc(layers[i].name).?;
+            new_grid.name = layers[i].name; // TODO same as layer?
+            new_grid.layer = layers[i].name;
             new_grid.grid_tile_width = layers[i].width.?;
             new_grid.grid_tile_height = layers[i].height.?;
             new_grid.tile_width = tiled_tile_map.tilewidth;
@@ -1200,9 +1169,23 @@ fn convertTiledTileMap(
         }
     }
 
+    // tile sets...
+    var tile_set_list = std.ArrayList(TileSetDef).init(arena);
+    if (getPropertyValue(tiled_tile_map.properties, P_NAME_TILE_SETS)) |tile_sets_string| {
+        var tile_set_it = utils.StringListIterator.new(tile_sets_string);
+        while (tile_set_it.next()) |tile_set_attr_str| {
+            var tile_set_attrs = utils.StringAttributeMap.new(tile_set_attr_str, arena);
+            var new = tile_set_list.addOne() catch unreachable;
+            new.code_offset = utils.parseUsize(tile_set_attrs.get(P_NAME_OFFSET));
+            new.resource.name = tile_set_attrs.get(P_NAME_NAME);
+            new.resource.file = tile_set_attrs.get(P_NAME_FILE);
+            new.resource.load_task = tile_set_attrs.getOptinal(P_NAME_LOAD_TASK);
+        }
+    }
+
     return JSONTileMapping{
-        .name = tiled_room_props.name,
-        .tile_sets = tiled_room_props.tile_sets.?,
+        .name = getPropertyValue(tiled_tile_map.properties, P_NAME_NAME).?,
+        .tile_sets = tile_set_list.toOwnedSlice() catch unreachable,
         .tile_grids = grid_list.toOwnedSlice() catch unreachable,
         .layer_mapping = layer_list.toOwnedSlice() catch unreachable,
     };
@@ -1228,11 +1211,11 @@ fn convertTiledObjects(layers: []const TiledMapLayer, arena: std.mem.Allocator) 
             if (layers[i].objects) |object| {
                 for (0..object.len) |j| {
                     var new = list.addOne() catch unreachable;
-                    new.name = utils.NamePool.alloc(object[j].name).?;
-                    new.object_type = utils.NamePool.alloc(object[j].type).?;
+                    new.name = object[j].name;
+                    new.object_type = object[j].type;
                     new.attributes = convertObjectAttributes(object[j], arena);
-                    new.build_task = getAttributeValue(new.attributes, "build_task").?;
-                    new.layer = getAttributeValue(new.attributes, "layer");
+                    new.build_task = getAttributeValue(new.attributes.?, P_NAME_BUILD_TASK).?;
+                    new.layer = getAttributeValue(new.attributes.?, P_NAME_LAYER);
                 }
             }
         }
@@ -1240,20 +1223,10 @@ fn convertTiledObjects(layers: []const TiledMapLayer, arena: std.mem.Allocator) 
     return list.toOwnedSlice() catch unreachable;
 }
 
-fn getAttributeValue(attrs: ?[]const JSONAttribute, name: String) ?String {
-    if (attrs) |a| {
-        for (0..a.len) |i| {
-            if (utils.stringEquals(name, a[i].name))
-                return a[i].value;
-        }
-    }
-    return null;
-}
-
 fn convertObjectAttributes(object: TiledObject, arena: std.mem.Allocator) ?[]const JSONAttribute {
     var list = std.ArrayList(JSONAttribute).init(arena);
     var bounds = list.addOne() catch unreachable;
-    bounds.name = "bounds";
+    bounds.name = P_NAME_BOUNDS;
     bounds.value = utils.NamePool.format("{d},{d},{d},{d}", .{
         object.x,
         object.y,
@@ -1261,14 +1234,11 @@ fn convertObjectAttributes(object: TiledObject, arena: std.mem.Allocator) ?[]con
         object.height,
     });
 
-    if (object.properties) |p| {
-        var it = p.map.iterator();
-        while (it.next()) |entry| {
-            const name = entry.key_ptr.*;
-            var new = list.addOne() catch unreachable;
-            new.name = utils.NamePool.alloc(name).?;
-            new.value = utils.NamePool.alloc(entry.value_ptr.*).?;
-        }
+    for (0..object.properties.len) |i| {
+        var new = list.addOne() catch unreachable;
+        new.name = object.properties[i].name;
+        new.value = object.properties[i].value;
     }
+
     return list.toOwnedSlice() catch unreachable;
 }

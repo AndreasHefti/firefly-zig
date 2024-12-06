@@ -452,8 +452,8 @@ pub const CallContext = struct {
         return optionalRectF(self, name) orelse miss(name);
     }
 
-    pub fn properties(self: *CallContext, name: String) utils.PropertyIterator {
-        return utils.PropertyIterator.new(attribute(self, name));
+    pub fn properties(self: *CallContext, name: String) utils.StringPropertyIterator {
+        return utils.StringPropertyIterator.new(attribute(self, name));
     }
 
     inline fn miss(name: String) void {

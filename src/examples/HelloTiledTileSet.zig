@@ -45,7 +45,7 @@ fn init() void {
         ),
     );
 
-    var tile_set: *TileSet = TileSet.Naming.byName("tileset1616").?;
+    var tile_set: *TileSet = TileSet.Naming.byName("TestTileSet").?;
     TileSet.Activation.activate(tile_set.id);
 
     var next = tile_set.tile_templates.slots.nextSetBit(0);
