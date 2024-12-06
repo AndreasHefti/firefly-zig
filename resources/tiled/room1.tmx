@@ -12,7 +12,7 @@
  </properties>
  <tileset firstgid="1" source="../../../../../IdeaProjects/flyko-lib/src/jvmTest/resources/tiled_tileset_example/tiled_tileset.json"/>
  <tileset firstgid="41" source="tileset1616.tsx"/>
- <layer id="2" name="Background" class="firefly_maplayer" width="20" height="10" opacity="0.5" parallaxx="-0.2" parallaxy="0.9">
+ <layer id="2" name="Background" class="firefly_maplayer" width="20" height="10" opacity="0.5" parallaxx="-0.2" parallaxy="-0.2">
   <properties>
    <property name="blend_mode" value="ALPHA"/>
    <property name="tile_sets" value="TestTileSet"/>
@@ -21,7 +21,7 @@
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,2,32,22,12,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,2,32,9,9,22,12,0,11,0,0,0,0,
-0,0,11,0,0,0,0,2,32,39,11,11,29,22,12,0,0,0,0,0,
+0,0,11,0,0,11,0,2,32,39,11,11,29,22,12,0,0,0,0,0,
 0,0,0,0,0,0,2,32,0,0,19,19,0,0,22,12,0,0,0,0,
 0,0,0,0,0,2,32,0,0,0,0,0,0,0,0,22,12,0,0,0,
 0,0,0,0,2,32,0,0,0,0,0,0,0,0,0,0,22,12,0,0,
@@ -58,7 +58,7 @@
     <property name="props" value="Room2|t1|EAST"/>
    </properties>
   </object>
-  <object id="6" name="t2" type="room_transition" x="256" y="157" width="48" height="11.625">
+  <object id="6" name="t2" type="room_transition" x="256" y="157" width="48" height="5.29167">
    <properties>
     <property name="build_task" value="room_transition_builder"/>
     <property name="layer" value="Foreground"/>

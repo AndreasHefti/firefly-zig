@@ -909,7 +909,7 @@ pub fn initTiledTasks() void {
     });
     _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_TILED_ROOM,
-        .function = loadTiledTileMap,
+        .function = loadTiledRoom,
     });
     dispose_tiled_tasks = true;
 }
@@ -950,34 +950,35 @@ fn loadTiledTileSet(ctx: *api.CallContext) void {
     const _json = jsonResource.parse();
 
     if (_json) |tiledTileSet| {
-        // convert tiled TiledTileSet to JSONTileSet
-        const tiles: []JSONTile = api.ALLOC.alloc(JSONTile, tiledTileSet.tileproperties.map.count()) catch undefined;
-        defer api.ALLOC.free(tiles);
-
-        for (tiledTileSet.tileproperties.map.keys()) |key| {
-            const v = tiledTileSet.tileproperties.map.getPtr(key).?;
-            const index = utils.parseUsize(key);
-            tiles[index] = JSONTile{
-                .name = v.tile.name,
-                .props = v.tile.props,
-                .animation = v.tile.animation,
-            };
-        }
-
-        const jsonTileSet = JSONTileSet{
-            .file_type = JSONFileTypes.TILE_SET,
-            .name = tiledTileSet.name,
-            .texture = tiledTileSet.properties.texture,
-            .tile_width = tiledTileSet.tilewidth,
-            .tile_height = tiledTileSet.tileheight,
-            .tiles = tiles,
-        };
-
-        const tile_set_id = loadTileSet(jsonTileSet);
+        const tile_set_id = loadTileSet(convertTiledTileSet(tiledTileSet));
 
         if (ctx.c_ref_callback) |callback|
             callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
     }
+}
+
+fn convertTiledTileSet(tiled: TiledTileSet) JSONTileSet {
+    const tiles: []JSONTile = api.ALLOC.alloc(JSONTile, tiled.tileproperties.map.count()) catch undefined;
+    defer api.ALLOC.free(tiles);
+
+    for (tiled.tileproperties.map.keys()) |key| {
+        const v = tiled.tileproperties.map.getPtr(key).?;
+        const index = utils.parseUsize(key);
+        tiles[index] = JSONTile{
+            .name = v.tile.name,
+            .props = v.tile.props,
+            .animation = v.tile.animation,
+        };
+    }
+
+    return JSONTileSet{
+        .file_type = JSONFileTypes.TILE_SET,
+        .name = tiled.name,
+        .texture = tiled.properties.texture,
+        .tile_width = tiled.tilewidth,
+        .tile_height = tiled.tileheight,
+        .tiles = tiles,
+    };
 }
 
 // // Tiled TileMap / Room JSON Mapping
@@ -1041,7 +1042,7 @@ const TiledRoomPropertyMap = struct {
     tile_sets: ?[]const TileSetDef = null,
 };
 
-fn loadTiledTileMap(ctx: *api.CallContext) void {
+fn loadTiledRoom(ctx: *api.CallContext) void {
     var jsonResource = JSONResource(TiledTileMap).new(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_ROOM_FILE,
