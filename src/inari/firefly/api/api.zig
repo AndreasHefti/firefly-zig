@@ -26,6 +26,9 @@ const Vector3f = utils.Vector3f;
 const Vector4f = utils.Vector4f;
 const StringBuffer = utils.StringBuffer;
 
+const Aes256Gcm = std.crypto.aead.aes_gcm.Aes256Gcm;
+const nonce: [Aes256Gcm.nonce_length]u8 = [_]u8{0x42} ** Aes256Gcm.nonce_length;
+
 fn dummyDeinit() void {}
 
 //////////////////////////////////////////////////////////////
@@ -508,19 +511,34 @@ pub fn writeToJSONFile(file_name: String, value: anytype) void {
     writeToFile(file_name, json);
 }
 
-// pub fn encrypt(cipher: String, password: String) String {
-//     //TODO
-//     var ctx: std.crypto.core.aesAesEncryptCtx(std.crypto.core.aesAes256) = std.crypto.core.aes.Aes256.initEnc(password);
-//     ctx.encrypt(dst: *[16]u8, src: *const [16]u8)
-//     ctx.encryptWide(comptime count: usize, dst: *[16*count]u8, src: *const [16*count]u8)
-// }
-
 pub fn allocFloatArray(array: anytype) []Float {
     return firefly.api.ALLOC.dupe(Float, &array) catch unreachable;
 }
 
 pub fn allocVec2FArray(array: anytype) []const Vector2f {
     return firefly.api.ALLOC.dupe(Vector2f, &array) catch unreachable;
+}
+
+pub fn encrypt(text: String, password: [32]u8, allocator: Allocator) String {
+    const ad = "";
+    var tag: [Aes256Gcm.tag_length]u8 = undefined;
+    const cypher: []u8 = allocator.alloc(u8, text.len) catch unreachable;
+    defer allocator.free(cypher);
+
+    Aes256Gcm.encrypt(cypher, &tag, text, ad, nonce, password);
+
+    const s: []const []const u8 = &[_]String{ cypher, &tag };
+    return std.mem.concat(allocator, u8, s) catch unreachable;
+}
+
+pub fn decrypt(cypher: String, password: [32]u8, allocator: Allocator) String {
+    const ad = "";
+    var tag: [Aes256Gcm.tag_length]u8 = undefined;
+    const text: []u8 = allocator.alloc(u8, cypher.len - Aes256Gcm.tag_length) catch unreachable;
+    std.mem.copyForwards(u8, &tag, cypher[cypher.len - Aes256Gcm.tag_length ..]);
+
+    Aes256Gcm.decrypt(text, cypher[0 .. cypher.len - Aes256Gcm.tag_length], tag, ad, nonce, password) catch unreachable;
+    return text;
 }
 
 //////////////////////////////////////////////////////////////

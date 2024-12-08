@@ -15,7 +15,7 @@ name=task2|life_cycle=LOAD|attr1=val1|attr2=val2</property>
 name=TestTileSet|offset=1|file=resources/tiled/tileset1616.json</property>
  </properties>
  <tileset firstgid="1" source="tileset1616.tsx"/>
- <layer id="2" name="Background" class="firefly_maplayer" width="20" height="10" opacity="0.5" parallaxx="-0.2" parallaxy="-0.2">
+ <layer id="2" name="Background" class="firefly_maplayer" width="20" height="10" opacity="0.5" offsetx="-180.667" offsety="-98.3333" parallaxx="-0.2" parallaxy="-0.2">
   <properties>
    <property name="blend_mode" value="ALPHA"/>
    <property name="tile_sets" value="TestTileSet"/>
