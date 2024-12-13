@@ -46,34 +46,57 @@ pub const InitContext = struct {
 
 pub const BindingId = usize;
 
-/// Allocation
+/// COMPONENT_ALLOC is used for component allocation. A component of specified type uses a
+/// Register or Pool that grows as needed using this allocator. But never shrinks until the
+/// component type is been de-initialized. This is done when the whole system de-initializes
 pub var COMPONENT_ALLOC: Allocator = undefined;
+
+/// ENTITY_ALLOC works the same way as COMPONENT_ALLOC and is used allocation of entity components
 pub var ENTITY_ALLOC: Allocator = undefined;
+
+/// ALLOC is a general purpose allocate that needs to be managed by the user
 pub var ALLOC: Allocator = undefined;
-pub const ArenaAlloc = struct {
-    arena: std.heap.ArenaAllocator,
-    _allocator: ?Allocator = null,
 
-    pub fn new() ArenaAlloc {
-        return ArenaAlloc{
-            .arena = std.heap.ArenaAllocator.init(ALLOC),
-        };
+/// LOAD_ALLOC is an arena allocator that can be used for arbitrary load tasks. It uses ALLOC as child allocator.
+/// Practically one can reset it after a heavy load task has been done and memory is not used anymore.
+/// The system de-initialization will free all memory when happened
+pub var LOAD_ALLOC: Allocator = undefined;
+var load_alloc_arena: std.heap.ArenaAllocator = undefined;
+
+pub fn freeLoadAllocator() void {
+    if (initialized) {
+        load_alloc_arena.reset(.{.free_all});
     }
+}
+// pub const ArenaAlloc = struct {
+//     arena: std.heap.ArenaAllocator,
+//     //_allocator: ?Allocator = null,
 
-    pub fn allocator(self: *ArenaAlloc) Allocator {
-        if (self._allocator == null) {
-            self._allocator = self.arena.allocator();
-        }
+//     pub fn new() ArenaAlloc {
+//         return ArenaAlloc{
+//             .arena = std.heap.ArenaAllocator.init(ALLOC),
+//         };
+//         // result._allocator = result.arena.allocator();
+//         // return ArenaAlloc{
+//         //     .arena = std.heap.ArenaAllocator.init(ALLOC),
+//         // };
+//     }
 
-        return self._allocator.?;
-    }
+//     pub fn allocator(self: *ArenaAlloc) Allocator {
+//         return self.arena.allocator();
+//         // if (self._allocator == null) {
+//         //     self._allocator = self.arena.allocator();
+//         // }
 
-    pub fn deinit(self: *ArenaAlloc) void {
-        self.arena.deinit();
-        self.arena = undefined;
-        self._allocator = null;
-    }
-};
+//         // return self._allocator.?;
+//     }
+
+//     pub fn deinit(self: *ArenaAlloc) void {
+//         self.arena.deinit();
+//         self.arena = undefined;
+//         //self._allocator = null;
+//     }
+// };
 
 pub var rendering: IRenderAPI() = undefined;
 pub var window: IWindowAPI() = undefined;
@@ -161,6 +184,8 @@ pub fn init(context: InitContext) !void {
     COMPONENT_ALLOC = context.component_allocator;
     ENTITY_ALLOC = context.entity_allocator;
     ALLOC = context.allocator;
+    load_alloc_arena = std.heap.ArenaAllocator.init(ALLOC);
+    LOAD_ALLOC = load_alloc_arena.allocator();
 
     UPDATE_EVENT_DISPATCHER = utils.EventDispatch(UpdateEvent).new(ALLOC);
     RENDER_EVENT_DISPATCHER = utils.EventDispatch(RenderEvent).new(ALLOC);
@@ -220,6 +245,8 @@ pub fn deinit() void {
     UPDATE_EVENT_DISPATCHER.deinit();
     RENDER_EVENT_DISPATCHER.deinit();
     VIEW_RENDER_EVENT_DISPATCHER.deinit();
+
+    load_alloc_arena.deinit();
 
     Logger.info("*** Firefly Engine stopped *** \n", .{});
 }
@@ -287,10 +314,10 @@ pub const FUNCTION_NAMES = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Global Logger
+//// Global Logger and Error Handling
 //////////////////////////////////////////////////////////////
 
-var log_buffer = [_]u8{0} ** 512;
+var log_buffer = [_]u8{0} ** 10000;
 pub const Logger = struct {
     pub const API_TAG = "[Firefly]";
 
@@ -314,9 +341,17 @@ pub const Logger = struct {
     }
 
     fn format(comptime msg: String, args: anytype) String {
-        return std.fmt.bufPrint(&log_buffer, msg, args) catch msg;
+        return std.fmt.bufPrint(&log_buffer, msg, args) catch unreachable;
     }
 };
+
+// TODO better error handling?
+pub inline fn handleError(err: anyerror, comptime msg: ?String, args: anytype) void {
+    if (msg) |m|
+        Logger.err(m, args);
+
+    utils.panic(ALLOC, "Panic because of: {any}", .{@errorName(err)});
+}
 
 //////////////////////////////////////////////////////////////
 //// Attributes
@@ -480,41 +515,50 @@ pub const CallContext = struct {
 //// Convenient Functions
 //////////////////////////////////////////////////////////////
 
-pub fn loadFromFile(file_name: String) String {
-    return std.fs.cwd().readFileAlloc(ALLOC, file_name, 1000000) catch unreachable;
+pub fn loadFromFile(file_name: String, decryption_pwd: ?String) String {
+    const file_content = std.fs.cwd().readFileAlloc(
+        LOAD_ALLOC,
+        file_name,
+        1000000,
+    ) catch |err| handleError(err, "Failed to load from file: {s}", .{file_name});
+
+    if (decryption_pwd) |pwd| {
+        if (pwd.len != 32)
+            @panic("Decryption password length mismatch. Must be 32 Byte.");
+
+        return decrypt(file_content, pwd[0..32].*, LOAD_ALLOC);
+    }
+    return file_content;
 }
 
-pub fn writeToFile(file_name: String, text: String) void {
-    const file: std.fs.File = try std.fs.cwd().createFile(
+pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) void {
+    const file: std.fs.File = std.fs.cwd().createFile(
         file_name,
         .{ .read = true },
-    ) catch unreachable;
+    ) catch |err| handleError(err, "Failed to create file: {s}", .{file_name});
+
     defer file.close();
 
-    file.writeAll(text.*) catch unreachable;
+    var bytes: String = undefined;
+    if (encryption_pwd) |pwd| {
+        if (pwd.len != 32)
+            @panic("Encryption password length mismatch. Must be 32 Byte.");
+
+        bytes = encrypt(text, pwd[0..32].*, LOAD_ALLOC);
+    } else {
+        bytes = text;
+    }
+
+    file.writeAll(bytes) catch |err|
+        handleError(err, "Failed to write to file: {s}", .{file_name});
 }
 
-pub fn loadFromJSONFile(file_name: String, comptime T: type) std.json.Parsed(T) {
-    const json_text = loadFromFile(file_name);
-    const parsed = std.json.parseFromSlice(
-        T,
-        ALLOC,
-        json_text,
-        .{ .ignore_unknown_fields = true },
-    ) catch unreachable;
-    return parsed;
-}
-
-pub fn writeToJSONFile(file_name: String, value: anytype) void {
-    const json: String = std.json.stringifyAlloc(ALLOC, value, .{});
-    defer ALLOC.free(json);
-    writeToFile(file_name, json);
-}
-
+// TODO do with arena
 pub fn allocFloatArray(array: anytype) []Float {
     return firefly.api.ALLOC.dupe(Float, &array) catch unreachable;
 }
 
+// TODO do with arena
 pub fn allocVec2FArray(array: anytype) []const Vector2f {
     return firefly.api.ALLOC.dupe(Vector2f, &array) catch unreachable;
 }

@@ -4,14 +4,14 @@
     "room_transitions": [
         { 
             "name": "enterRoom", 
-            "builder": "simpleRoomTransitionBuilder",
+            "builder": "simple_room_transition_scene",
             "attributes": [
                 { "name": "layer", "value": "Foreground"}
             ]
         },
         { 
             "name": "exitRoom", 
-            "builder": "simpleRoomTransitionBuilder",
+            "builder": "simple_room_transition_scene",
             "attributes": [
                 { "name": "layer", "value": "Foreground"},
                 { "name": "exit", "value": "true"}

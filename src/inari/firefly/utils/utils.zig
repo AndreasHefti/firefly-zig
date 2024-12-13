@@ -129,7 +129,8 @@ pub fn getNullPointer(comptime T: type) *const ?T {
 
 pub inline fn panic(allocator: Allocator, comptime template: String, args: anytype) void {
     const msg = std.fmt.allocPrint(allocator, template, args) catch unreachable;
-    defer allocator.free(msg);
+    errdefer allocator.free(msg);
+
     @panic(msg);
 }
 

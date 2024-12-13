@@ -141,21 +141,26 @@ pub const TaskAttributes = struct {
     pub const JSON_RESOURCE_TILE_MAP_FILE: String = "JSON_RESOURCE_TILE_MAP_FILE";
     pub const JSON_RESOURCE_ROOM_FILE: String = "JSON_RESOURCE_ROOM_FILE";
     pub const JSON_RESOURCE_WORLD_FILE: String = "JSON_RESOURCE_WORLD_FILE";
+    pub const JSON_RESOURCE_DESTINATION_DIR: String = "JSON_RESOURCE_DESTINATION_DIR";
+    pub const JSON_RESOURCE_ENCRYPT_PWD: String = "JSON_RESOURCE_ENCRYPT_PWD";
+    pub const JSON_RESOURCE_DECRYPT_PWD: String = "JSON_RESOURCE_DECRYPT_PWD";
 
     // The room name within the context
     pub const ROOM_NAME: String = "room";
 };
 
 pub const Tasks = struct {
-    pub const JSON_LOAD_TILE_SET: String = "load_tile_set_json_default";
-    pub const JSON_LOAD_TILE_MAPPING: String = "load_tile_mapping_json_default";
-    pub const JSON_LOAD_ROOM: String = "load_room_json_default";
-    pub const JSON_LOAD_WORLD: String = "load_world_json_default";
+    pub const JSON_LOAD_TILE_SET: String = "JSON_LOAD_TILE_SET_TASK";
+    pub const JSON_LOAD_TILE_MAPPING: String = "JSON_LOAD_TILE_MAPPING_TASK";
+    pub const JSON_LOAD_ROOM: String = "JSON_LOAD_ROOM_TASK";
+    pub const JSON_LOAD_WORLD: String = "JSON_LOAD_WORLD_TASK";
 
-    pub const JSON_LOAD_TILED_TILE_SET: String = "load_tiled_tile_set_json_default";
-    pub const JSON_LOAD_TILED_ROOM: String = "load_tiled_room_json_default";
+    pub const JSON_LOAD_TILED_TILE_SET: String = "JSON_LOAD_TILED_TILE_SET_TASK";
+    pub const JSON_LOAD_TILED_ROOM: String = "JSON_LOAD_TILED_ROOM_TASK";
 
-    pub const SIMPLE_ROOM_TRANSITION_SCENE_BUILDER: String = "simpleRoomTransitionBuilder";
+    pub const JSON_CONVERT_TILED_TILE_SET: String = "JSON_CONVERT_TILED_TILE_SET_TASK";
+
+    pub const SIMPLE_ROOM_TRANSITION_SCENE_BUILDER: String = "simple_room_transition_scene";
     pub const ROOM_TRANSITION_BUILDER: String = "room_transition_builder";
 };
 

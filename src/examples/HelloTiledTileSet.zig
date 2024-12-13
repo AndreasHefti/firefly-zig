@@ -68,4 +68,17 @@ fn init() void {
         }
         next = tile_set.tile_templates.slots.nextSetBit(i + 1);
     }
+
+    // and convert the tiled tile set to an in-house JSON tile set
+    firefly.api.Task.runTaskByNameWith(
+        firefly.game.Tasks.JSON_CONVERT_TILED_TILE_SET,
+        firefly.api.CallContext.new(
+            null,
+            .{
+                .{ firefly.game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE, "resources/tiled/tileset1616.json" },
+                .{ firefly.game.TaskAttributes.JSON_RESOURCE_DESTINATION_DIR, "resources/tiled/conv/" },
+                //  .{ firefly.game.TaskAttributes.JSON_RESOURCE_ENCRYPT_PWD, "passwordpasswordpasswordpassword" },
+            },
+        ),
+    );
 }

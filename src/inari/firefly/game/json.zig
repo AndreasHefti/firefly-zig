@@ -86,69 +86,32 @@ pub const JSONAttribute = struct {
     value: String,
 };
 
-pub fn JSONResource(T: type) type {
-    return struct {
-        attribute_name: String,
-        json_resource: ?String,
-        free_json_resource: bool,
-        parsed: ?std.json.Parsed(T) = null,
+pub fn parseJSONFromAttributes(attributes_id: ?Index, file_attribute: ?String, comptime T: type) T {
+    if (attributes_id == null)
+        @panic("No attributes provided");
 
-        pub fn new(attributes_id: ?Index, file_attribute_name: String) JSONResource(T) {
-            if (attributes_id == null)
-                @panic("No attributes provided");
+    var attrs = api.Attributes.Component.byId(attributes_id.?);
+    var json: String = undefined;
 
-            var attrs = api.Attributes.Component.byId(attributes_id.?);
-            if (attrs.get(file_attribute_name)) |file| {
-                return .{
-                    .attribute_name = file,
-                    .json_resource = firefly.api.loadFromFile(file),
-                    .free_json_resource = true,
-                };
-            } else {
-                api.Logger.info(
-                    "No context attribute for file resource found for: {s}. Fallback to 'JSON_RESOURCE' attribute",
-                    .{file_attribute_name},
-                );
-                return .{
-                    .attribute_name = game.TaskAttributes.JSON_RESOURCE,
-                    .json_resource = attrs.get(game.TaskAttributes.JSON_RESOURCE),
-                    .free_json_resource = false,
-                };
-            }
+    if (file_attribute) |fa| {
+        if (attrs.get(fa)) |file| {
+            json = firefly.api.loadFromFile(file, attrs.get(game.TaskAttributes.JSON_RESOURCE_DECRYPT_PWD));
+        } else {
+            json = attrs.get(game.TaskAttributes.JSON_RESOURCE) orelse
+                @panic("No JSON_RESOURCE attribute found");
         }
+    } else {
+        json = attrs.get(game.TaskAttributes.JSON_RESOURCE) orelse
+            @panic("No JSON_RESOURCE attribute found");
+    }
 
-        pub fn parse(self: *JSONResource(T)) ?T {
-            if (self.json_resource) |json| {
-                self.parsed = std.json.parseFromSlice(
-                    T,
-                    firefly.api.ALLOC,
-                    json,
-                    .{ .ignore_unknown_fields = true },
-                ) catch unreachable;
-                // |err| switch (err) {
-                //     else => {
-                //         api.Logger.err("Failed to parse JSON resource: {s}", .{self.attribute_name});
-                //         return null;
-                //     },
-                // };
-            } else {
-                api.Logger.err("No JSON resource available for context attribute: {s}", .{self.attribute_name});
-            }
-
-            if (self.parsed) |p|
-                return p.value;
-
-            return null;
-        }
-
-        pub fn deinit(self: *JSONResource(T)) void {
-            if (self.free_json_resource) {
-                if (self.json_resource) |r| firefly.api.ALLOC.free(r);
-            }
-            if (self.parsed) |p|
-                p.deinit();
-        }
-    };
+    const parsed = std.json.parseFromSlice(
+        T,
+        firefly.api.LOAD_ALLOC,
+        json,
+        .{ .ignore_unknown_fields = true },
+    ) catch unreachable;
+    return parsed.value;
 }
 
 fn checkFileType(json: anytype, file_type: String) void {
@@ -207,25 +170,23 @@ pub const JSONTileSet = struct {
     file_type: ?String = null,
     name: String,
     texture: Resource,
-    tile_width: Float,
-    tile_height: Float,
+    tile_width: usize,
+    tile_height: usize,
     tiles: []const JSONTile,
 };
 
 fn loadTileSetFromJSON(ctx: *api.CallContext) void {
-    var jsonResource = JSONResource(JSONTileSet).new(
+    const jsonTileSet = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
+        JSONTileSet,
     );
-    defer jsonResource.deinit();
-    const jsonTileSet = jsonResource.parse();
-    if (jsonTileSet) |jts| {
-        checkFileType(jts, JSONFileTypes.TILE_SET);
-        const tile_set_id = loadTileSet(jts);
 
-        if (ctx.c_ref_callback) |callback|
-            callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
-    }
+    checkFileType(jsonTileSet, JSONFileTypes.TILE_SET);
+    const tile_set_id = loadTileSet(jsonTileSet);
+
+    if (ctx.c_ref_callback) |callback|
+        callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
 }
 
 fn loadTileSet(jsonTileSet: JSONTileSet) Index {
@@ -250,12 +211,15 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
     if (!graphics.Texture.Component.existsByName(jsonTileSet.texture.name))
         utils.panic(api.ALLOC, "Failed to find/load texture: {any}", .{jsonTileSet.texture});
 
+    const tile_width: Float = utils.usize_f32(jsonTileSet.tile_width);
+    const tile_height: Float = utils.usize_f32(jsonTileSet.tile_height);
+
     // create TileSet from jsonTileSet
     var tile_set = game.TileSet.Component.newAndGet(.{
         .name = utils.NamePool.alloc(jsonTileSet.name),
         .texture_name = utils.NamePool.alloc(jsonTileSet.texture.name).?,
-        .tile_width = jsonTileSet.tile_width,
-        .tile_height = jsonTileSet.tile_height,
+        .tile_width = tile_width,
+        .tile_height = tile_height,
     });
 
     // create all tile templates for tile set
@@ -267,8 +231,8 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
                 .name = utils.NamePool.alloc(jsonTileSet.tiles[i].name),
                 .sprite_data = .{
                     .texture_pos = .{
-                        tex_pos[0] * tile_set.tile_width,
-                        tex_pos[1] * tile_set.tile_height,
+                        tex_pos[0] * tile_width,
+                        tex_pos[1] * tile_height,
                     },
                     .flip_x = it.nextBoolean(),
                     .flip_y = it.nextBoolean(),
@@ -289,8 +253,8 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
                         .duration = utils.parseUsize(it_a2.next().?),
                         .sprite_data = .{
                             .texture_pos = .{
-                                utils.parseFloat(it_a2.next()) * tile_set.tile_width,
-                                utils.parseFloat(it_a2.next()) * tile_set.tile_height,
+                                utils.parseFloat(it_a2.next()) * tile_width,
+                                utils.parseFloat(it_a2.next()) * tile_height,
                             },
                             .flip_x = utils.parseBoolean(it_a2.next()),
                             .flip_y = utils.parseBoolean(it_a2.next()),
@@ -394,24 +358,21 @@ pub const JSONTileGrid = struct {
 };
 
 fn loadTileMappingFromJSON(ctx: *api.CallContext) void {
-    var jsonResource = JSONResource(JSONTileMapping).new(
+    const jsonTileMapping = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_TILE_MAP_FILE,
+        JSONTileMapping,
     );
-    defer jsonResource.deinit();
-    const jsonTileMapping = jsonResource.parse();
 
-    if (jsonTileMapping) |jtm| {
-        const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
-        checkFileType(jtm, JSONFileTypes.TILE_MAP);
-        const tile_mapping_id = loadTileMapping(
-            jtm,
-            view_name,
-        );
+    const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
+    checkFileType(jsonTileMapping, JSONFileTypes.TILE_MAP);
+    const tile_mapping_id = loadTileMapping(
+        jsonTileMapping,
+        view_name,
+    );
 
-        if (ctx.c_ref_callback) |callback|
-            callback(game.TileMapping.Component.getReference(tile_mapping_id, true).?, ctx);
-    }
+    if (ctx.c_ref_callback) |callback|
+        callback(game.TileMapping.Component.getReference(tile_mapping_id, true).?, ctx);
 }
 
 fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
@@ -613,22 +574,19 @@ pub const JSONRoomObject = struct {
 };
 
 fn loadRoomFromJSON(ctx: *api.CallContext) void {
-    var jsonResource = JSONResource(JSONRoom).new(
+    const jsonRoom = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_ROOM_FILE,
+        JSONRoom,
     );
-    defer jsonResource.deinit();
-    const _jsonRoom = jsonResource.parse();
 
-    if (_jsonRoom) |jsonRoom| {
-        const room_id = loadRoom(jsonRoom, ctx);
-        // add composite owned reference if requested
-        if (ctx.c_ref_callback) |callback| {
-            if (api.Composite.Component.getReference(room_id, true)) |ref| {
-                var r = ref;
-                r.activation = null;
-                callback(r, ctx);
-            }
+    const room_id = loadRoom(jsonRoom, ctx);
+    // add composite owned reference if requested
+    if (ctx.c_ref_callback) |callback| {
+        if (api.Composite.Component.getReference(room_id, true)) |ref| {
+            var r = ref;
+            r.activation = null;
+            callback(r, ctx);
         }
     }
 }
@@ -731,14 +689,14 @@ fn loadRoom(jsonRoom: JSONRoom, ctx: *api.CallContext) Index {
 ////    "room_transitions": [
 ////        {
 ////            "name": "enterRoom",
-////            "builder": "simpleRoomTransitionBuilder",
+////            "builder": "simple_room_transition_scene",
 ////            "attributes": [
 ////                { "name": "NAME", "value": "enterRoom"}
 ////            ]
 ////        },
 ////        {
 ////            "name": "exitRoom",
-////            "builder": "simpleRoomTransitionBuilder",
+////            "builder": "simple_room_transition_scene",
 ////            "attributes": [
 ////                { "name": "NAME", "value": "exitRoom"},
 ////                { "name": "exit", "value": "true"}
@@ -799,62 +757,59 @@ pub const JSONRoomTransition = struct {
 };
 
 fn loadWorldFromJSON(ctx: *api.CallContext) void {
-    var jsonResource = JSONResource(JSONWorld).new(
+    const jsonWorld = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_WORLD_FILE,
+        JSONWorld,
     );
-    defer jsonResource.deinit();
-    const _jsonWorld = jsonResource.parse();
 
-    if (_jsonWorld) |jsonWorld| {
-        checkFileType(jsonWorld, JSONFileTypes.WORLD);
+    checkFileType(jsonWorld, JSONFileTypes.WORLD);
 
-        const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
-        const world_id = game.World.Component.new(.{
-            .name = utils.NamePool.alloc(jsonWorld.name).?,
-        });
+    const view_name = ctx.attribute(game.TaskAttributes.VIEW_NAME);
+    const world_id = game.World.Component.new(.{
+        .name = utils.NamePool.alloc(jsonWorld.name).?,
+    });
 
-        if (jsonWorld.room_transitions) |room_transitions| {
-            for (0..room_transitions.len) |i| {
-                var attributes: *api.Attributes = api.Attributes.newGet(
-                    utils.NamePool.alloc(room_transitions[i].name),
-                    .{
-                        .{ game.TaskAttributes.NAME, room_transitions[i].name },
-                        .{ game.TaskAttributes.VIEW_NAME, view_name },
-                    },
-                );
+    if (jsonWorld.room_transitions) |room_transitions| {
+        for (0..room_transitions.len) |i| {
+            var attributes: *api.Attributes = api.Attributes.newGet(
+                utils.NamePool.alloc(room_transitions[i].name),
+                .{
+                    .{ game.TaskAttributes.NAME, room_transitions[i].name },
+                    .{ game.TaskAttributes.VIEW_NAME, view_name },
+                },
+            );
 
-                if (room_transitions[i].attributes) |a| {
-                    for (0..a.len) |ia|
-                        attributes.set(a[ia].name, a[ia].value);
-                }
-
-                game.World.Composite.addTaskByName(
-                    world_id,
-                    game.Tasks.SIMPLE_ROOM_TRANSITION_SCENE_BUILDER,
-                    api.CompositeLifeCycle.LOAD,
-                    attributes.id,
-                );
+            if (room_transitions[i].attributes) |a| {
+                for (0..a.len) |ia|
+                    attributes.set(a[ia].name, a[ia].value);
             }
-        }
 
-        addAttributes(world_id, jsonWorld.attributes);
-        addTasks(world_id, jsonWorld.tasks);
-
-        for (0..jsonWorld.rooms.len) |i| {
             game.World.Composite.addTaskByName(
                 world_id,
-                game.Tasks.JSON_LOAD_ROOM,
+                game.Tasks.SIMPLE_ROOM_TRANSITION_SCENE_BUILDER,
                 api.CompositeLifeCycle.LOAD,
-                api.Attributes.newGet(
-                    null,
-                    .{
-                        .{ game.TaskAttributes.JSON_RESOURCE_ROOM_FILE, utils.NamePool.alloc(jsonWorld.rooms[i].file.file).? },
-                        .{ game.TaskAttributes.VIEW_NAME, view_name },
-                    },
-                ).id,
+                attributes.id,
             );
         }
+    }
+
+    addAttributes(world_id, jsonWorld.attributes);
+    addTasks(world_id, jsonWorld.tasks);
+
+    for (0..jsonWorld.rooms.len) |i| {
+        game.World.Composite.addTaskByName(
+            world_id,
+            game.Tasks.JSON_LOAD_ROOM,
+            api.CompositeLifeCycle.LOAD,
+            api.Attributes.newGet(
+                null,
+                .{
+                    .{ game.TaskAttributes.JSON_RESOURCE_ROOM_FILE, utils.NamePool.alloc(jsonWorld.rooms[i].file.file).? },
+                    .{ game.TaskAttributes.VIEW_NAME, view_name },
+                },
+            ).id,
+        );
     }
 }
 
@@ -905,12 +860,18 @@ fn addTasks(c_id: Index, tasks: ?[]const JSONTask) void {
 pub fn initTiledTasks() void {
     _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_TILED_TILE_SET,
-        .function = loadTiledTileSet,
+        .function = loadTiledTileSetTask,
     });
     _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_TILED_ROOM,
-        .function = loadTiledRoom,
+        .function = loadTiledRoomTask,
     });
+
+    _ = api.Task.Component.new(.{
+        .name = game.Tasks.JSON_CONVERT_TILED_TILE_SET,
+        .function = convertAndSaveTiledTileSetTask,
+    });
+
     dispose_tiled_tasks = true;
 }
 
@@ -945,9 +906,9 @@ pub fn getPropertyValue(properties: []const TiledProperty, name: String) ?String
     return null;
 }
 
-pub fn toJSONAttributes(attributes_str: String, allocator: std.mem.Allocator) []const JSONAttribute {
+pub fn toJSONAttributes(attributes_str: String) []const JSONAttribute {
     var a_it = utils.StringAttributeIterator.new(attributes_str);
-    var a_list = std.ArrayList(JSONAttribute).init(allocator);
+    var a_list = std.ArrayList(JSONAttribute).init(api.LOAD_ALLOC);
     while (a_it.next()) |r| {
         var t_attr = a_list.addOne() catch unreachable;
         t_attr.name = r.name;
@@ -987,29 +948,48 @@ pub const TiledTileSet = struct {
     tiles: []const TiledTile,
 };
 
-fn loadTiledTileSet(ctx: *api.CallContext) void {
-    var jsonResource = JSONResource(TiledTileSet).new(
+fn loadTiledTileSetTask(ctx: *api.CallContext) void {
+    const tiled_tile_set = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
+        TiledTileSet,
     );
-    defer jsonResource.deinit();
-    const _json = jsonResource.parse();
+    const tile_set = convertTiledTileSet(tiled_tile_set);
+    const tile_set_id = loadTileSet(tile_set);
 
-    if (_json) |tiledTileSet| {
-        var arena = api.ArenaAlloc.new();
-        defer arena.deinit();
-        const ally = arena.allocator();
-
-        const tile_set = convertTiledTileSet(tiledTileSet, ally);
-        const tile_set_id = loadTileSet(tile_set);
-
-        if (ctx.c_ref_callback) |callback|
-            callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
-    }
+    if (ctx.c_ref_callback) |callback|
+        callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
 }
 
-fn convertTiledTileSet(tiled: TiledTileSet, allocator: std.mem.Allocator) JSONTileSet {
-    const tiles: []JSONTile = allocator.alloc(JSONTile, tiled.tiles.len) catch undefined;
+fn convertAndSaveTiledTileSetTask(ctx: *api.CallContext) void {
+    var attrs = api.Attributes.Component.byId(ctx.attributes_id.?);
+
+    const source = attrs.get(game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE).?;
+    const file_name = source[std.mem.lastIndexOf(u8, source, "/").?..];
+    const dest_path = attrs.get(game.TaskAttributes.JSON_RESOURCE_DESTINATION_DIR).?;
+    const dest_file = utils.NamePool.format("{s}{s}", .{ dest_path, file_name });
+    const encryption_pwd = attrs.get(game.TaskAttributes.JSON_RESOURCE_ENCRYPT_PWD);
+    const tiled_tile_set = parseJSONFromAttributes(
+        ctx.attributes_id,
+        game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
+        TiledTileSet,
+    );
+
+    api.Logger.info("tile set JSON file name: {s}", .{file_name});
+    api.Logger.info("tile set JSON file path: {s}", .{dest_file});
+
+    const tile_set = convertTiledTileSet(tiled_tile_set);
+    const json = std.json.stringifyAlloc(
+        api.LOAD_ALLOC,
+        tile_set,
+        .{ .emit_null_optional_fields = false, .whitespace = .minified },
+    ) catch |err| api.handleError(err, "Failed to stringify json for tiled tile set", .{});
+
+    api.writeToFile(dest_file, json, encryption_pwd);
+}
+
+fn convertTiledTileSet(tiled: TiledTileSet) JSONTileSet {
+    const tiles: []JSONTile = api.LOAD_ALLOC.alloc(JSONTile, tiled.tiles.len) catch undefined;
 
     for (0..tiled.tiles.len) |i| {
         const tile = tiled.tiles[i];
@@ -1028,8 +1008,8 @@ fn convertTiledTileSet(tiled: TiledTileSet, allocator: std.mem.Allocator) JSONTi
             .name = getPropertyValue(tiled.properties, P_NAME_ATLAS_NAME).?,
             .file = getPropertyValue(tiled.properties, P_NAME_ATLAS_FILE).?,
         },
-        .tile_width = utils.usize_f32(tiled.tilewidth),
-        .tile_height = utils.usize_f32(tiled.tileheight),
+        .tile_width = tiled.tilewidth,
+        .tile_height = tiled.tileheight,
         .tiles = tiles,
     };
 }
@@ -1074,76 +1054,69 @@ pub const TiledObject = struct {
     properties: []const TiledProperty,
 };
 
-fn loadTiledRoom(ctx: *api.CallContext) void {
-    var jsonResource = JSONResource(TiledTileMap).new(
+fn loadTiledRoomTask(ctx: *api.CallContext) void {
+    const tiles_tile_map = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_ROOM_FILE,
+        TiledTileMap,
     );
-    defer jsonResource.deinit();
-    const _json = jsonResource.parse();
 
-    if (_json) |tiles_tile_map| {
-        var arena = api.ArenaAlloc.new();
-        defer arena.deinit();
-        const ally = arena.allocator();
+    // convert TiledTileMap to JSONRoom
+    // global attributes
+    const attr_string = getPropertyValue(tiles_tile_map.properties, P_NAME_ATTRIBUTES).?;
+    const attrs = toJSONAttributes(attr_string);
 
-        // convert TiledTileMap to JSONRoom
-        // gloabal attributes
-        const attr_string = getPropertyValue(tiles_tile_map.properties, P_NAME_ATTRIBUTES).?;
-        const attrs = toJSONAttributes(attr_string, ally);
-
-        // tasks...
-        var task_list = std.ArrayList(JSONTask).init(ally);
-        if (getPropertyValue(tiles_tile_map.properties, P_NAME_TASKS)) |taks_string| {
-            var task_it = utils.StringListIterator.new(taks_string);
-            while (task_it.next()) |task_attr_str| {
-                const task_attrs = toJSONAttributes(task_attr_str, ally);
-                var new = task_list.addOne() catch unreachable;
-                new.name = getAttributeValue(task_attrs, P_NAME_NAME).?;
-                new.life_cycle = getAttributeValue(task_attrs, P_NAME_LIFE_CYCLE).?;
-                new.attributes = task_attrs;
-            }
+    // tasks...
+    var task_list = std.ArrayList(JSONTask).init(api.LOAD_ALLOC);
+    if (getPropertyValue(tiles_tile_map.properties, P_NAME_TASKS)) |taks_string| {
+        var task_it = utils.StringListIterator.new(taks_string);
+        while (task_it.next()) |task_attr_str| {
+            const task_attrs = toJSONAttributes(task_attr_str);
+            var new = task_list.addOne() catch unreachable;
+            new.name = getAttributeValue(task_attrs, P_NAME_NAME).?;
+            new.life_cycle = getAttributeValue(task_attrs, P_NAME_LIFE_CYCLE).?;
+            new.attributes = task_attrs;
         }
-
-        const jsonRoom = JSONRoom{
-            .file_type = "Room",
-            .name = getPropertyValue(tiles_tile_map.properties, P_NAME_NAME).?,
-            .bounds = utils.NamePool.format("0,0,{d},{d}", .{
-                tiles_tile_map.width * tiles_tile_map.tilewidth,
-                tiles_tile_map.height * tiles_tile_map.tileheight,
-            }),
-            .start_scene = getPropertyValue(tiles_tile_map.properties, P_NAME_START_SCENE),
-            .end_scene = getPropertyValue(tiles_tile_map.properties, P_NAME_END_SCENE),
-            .tasks = if (task_list.items.len > 0) task_list.toOwnedSlice() catch unreachable else null,
-            .attributes = attrs,
-            .tile_mapping = convertTiledTileMap(tiles_tile_map, ally),
-            .objects = convertTiledObjects(tiles_tile_map.layers, ally),
-        };
-
-        // load tile-sets from Tiled files so they are not tried to be loaded from regular JSON files later on
-        if (jsonRoom.tile_mapping) |tile_mapping| {
-            for (0..tile_mapping.tile_sets.len) |i| {
-                api.Task.runTaskByNameWith(
-                    game.Tasks.JSON_LOAD_TILED_TILE_SET,
-                    .{ .attributes_id = api.Attributes.newGet(null, .{
-                        .{
-                            game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
-                            tile_mapping.tile_sets[i].resource.file,
-                        },
-                    }).id },
-                );
-            }
-        }
-
-        const room_id = loadRoom(jsonRoom, ctx);
-        if (ctx.c_ref_callback) |callback|
-            callback(game.TileSet.Component.getReference(room_id, true).?, ctx);
     }
+
+    const jsonRoom = JSONRoom{
+        .file_type = "Room",
+        .name = getPropertyValue(tiles_tile_map.properties, P_NAME_NAME).?,
+        .bounds = utils.NamePool.format("0,0,{d},{d}", .{
+            tiles_tile_map.width * tiles_tile_map.tilewidth,
+            tiles_tile_map.height * tiles_tile_map.tileheight,
+        }),
+        .start_scene = getPropertyValue(tiles_tile_map.properties, P_NAME_START_SCENE),
+        .end_scene = getPropertyValue(tiles_tile_map.properties, P_NAME_END_SCENE),
+        .tasks = if (task_list.items.len > 0) task_list.toOwnedSlice() catch unreachable else null,
+        .attributes = attrs,
+        .tile_mapping = convertTiledTileMap(tiles_tile_map),
+        .objects = convertTiledObjects(tiles_tile_map.layers),
+    };
+
+    // load tile-sets from Tiled files so they are not tried to be loaded from regular JSON files later on
+    if (jsonRoom.tile_mapping) |tile_mapping| {
+        for (0..tile_mapping.tile_sets.len) |i| {
+            api.Task.runTaskByNameWith(
+                game.Tasks.JSON_LOAD_TILED_TILE_SET,
+                .{ .attributes_id = api.Attributes.newGet(null, .{
+                    .{
+                        game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
+                        tile_mapping.tile_sets[i].resource.file,
+                    },
+                }).id },
+            );
+        }
+    }
+
+    const room_id = loadRoom(jsonRoom, ctx);
+    if (ctx.c_ref_callback) |callback|
+        callback(game.TileSet.Component.getReference(room_id, true).?, ctx);
 }
 
-fn convertTiledTileMap(tiled_tile_map: TiledTileMap, arena: std.mem.Allocator) JSONTileMapping {
-    var grid_list = std.ArrayList(JSONTileGrid).init(arena);
-    var layer_list = std.ArrayList(TileLayerMapping).init(arena);
+fn convertTiledTileMap(tiled_tile_map: TiledTileMap) JSONTileMapping {
+    var grid_list = std.ArrayList(JSONTileGrid).init(api.LOAD_ALLOC);
+    var layer_list = std.ArrayList(TileLayerMapping).init(api.LOAD_ALLOC);
     const layers = tiled_tile_map.layers;
 
     for (0..layers.len) |i| {
@@ -1165,16 +1138,16 @@ fn convertTiledTileMap(tiled_tile_map: TiledTileMap, arena: std.mem.Allocator) J
             new_grid.tile_height = tiled_tile_map.tileheight;
             new_grid.position = new_layer.offset orelse "0,0";
             new_grid.spherical = false; // TODO
-            new_grid.codes = toCodes(layers[i].data, arena);
+            new_grid.codes = toCodes(layers[i].data);
         }
     }
 
     // tile sets...
-    var tile_set_list = std.ArrayList(TileSetDef).init(arena);
+    var tile_set_list = std.ArrayList(TileSetDef).init(api.LOAD_ALLOC);
     if (getPropertyValue(tiled_tile_map.properties, P_NAME_TILE_SETS)) |tile_sets_string| {
         var tile_set_it = utils.StringListIterator.new(tile_sets_string);
         while (tile_set_it.next()) |tile_set_attr_str| {
-            var tile_set_attrs = utils.StringAttributeMap.new(tile_set_attr_str, arena);
+            var tile_set_attrs = utils.StringAttributeMap.new(tile_set_attr_str, api.LOAD_ALLOC);
             var new = tile_set_list.addOne() catch unreachable;
             new.code_offset = utils.parseUsize(tile_set_attrs.get(P_NAME_OFFSET));
             new.resource.name = tile_set_attrs.get(P_NAME_NAME);
@@ -1191,9 +1164,9 @@ fn convertTiledTileMap(tiled_tile_map: TiledTileMap, arena: std.mem.Allocator) J
     };
 }
 
-fn toCodes(data: ?[]const Index, arena: std.mem.Allocator) String {
+fn toCodes(data: ?[]const Index) String {
     if (data) |d| {
-        var buffer = utils.StringBuffer.init(arena);
+        var buffer = utils.StringBuffer.init(api.LOAD_ALLOC);
         for (0..d.len) |i| {
             if (i > 0)
                 buffer.append(",");
@@ -1204,8 +1177,8 @@ fn toCodes(data: ?[]const Index, arena: std.mem.Allocator) String {
     @panic("No code data found");
 }
 
-fn convertTiledObjects(layers: []const TiledMapLayer, arena: std.mem.Allocator) ?[]const JSONRoomObject {
-    var list = std.ArrayList(JSONRoomObject).init(arena);
+fn convertTiledObjects(layers: []const TiledMapLayer) ?[]const JSONRoomObject {
+    var list = std.ArrayList(JSONRoomObject).init(api.LOAD_ALLOC);
     for (0..layers.len) |i| {
         if (utils.stringEquals(layers[i].type, "objectgroup")) {
             if (layers[i].objects) |object| {
@@ -1213,7 +1186,7 @@ fn convertTiledObjects(layers: []const TiledMapLayer, arena: std.mem.Allocator) 
                     var new = list.addOne() catch unreachable;
                     new.name = object[j].name;
                     new.object_type = object[j].type;
-                    new.attributes = convertObjectAttributes(object[j], arena);
+                    new.attributes = convertObjectAttributes(object[j]);
                     new.build_task = getAttributeValue(new.attributes.?, P_NAME_BUILD_TASK).?;
                     new.layer = getAttributeValue(new.attributes.?, P_NAME_LAYER);
                 }
@@ -1223,8 +1196,8 @@ fn convertTiledObjects(layers: []const TiledMapLayer, arena: std.mem.Allocator) 
     return list.toOwnedSlice() catch unreachable;
 }
 
-fn convertObjectAttributes(object: TiledObject, arena: std.mem.Allocator) ?[]const JSONAttribute {
-    var list = std.ArrayList(JSONAttribute).init(arena);
+fn convertObjectAttributes(object: TiledObject) ?[]const JSONAttribute {
+    var list = std.ArrayList(JSONAttribute).init(api.LOAD_ALLOC);
     var bounds = list.addOne() catch unreachable;
     bounds.name = P_NAME_BOUNDS;
     bounds.value = utils.NamePool.format("{d},{d},{d},{d}", .{
