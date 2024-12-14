@@ -157,8 +157,7 @@ pub fn createTile(
     });
 
     if (tile_set.createContactMaskFromImage(tile_template)) |mask| {
-        var vert: std.ArrayList(Float) = std.ArrayList(Float).init(firefly.api.ALLOC);
-        defer vert.deinit();
+        var vert: std.ArrayList(Float) = std.ArrayList(Float).init(firefly.api.POOL_ALLOC);
 
         for (0..mask.height) |_y| {
             for (0..mask.width) |_x| {
@@ -171,7 +170,7 @@ pub fn createTile(
 
         EShape.Component.new(eid, .{
             .shape_type = firefly.api.ShapeType.POINT,
-            .vertices = firefly.api.ALLOC.dupe(Float, vert.items) catch unreachable,
+            .vertices = vert.items,
             .color = .{ 255, 0, 0, 255 },
         });
     } else if (tile_template.contact_material_type) |_| {

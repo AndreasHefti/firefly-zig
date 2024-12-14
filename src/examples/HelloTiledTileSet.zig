@@ -70,15 +70,24 @@ fn init() void {
     }
 
     // and convert the tiled tile set to an in-house JSON tile set
-    firefly.api.Task.runTaskByNameWith(
-        firefly.game.Tasks.JSON_CONVERT_TILED_TILE_SET,
-        firefly.api.CallContext.new(
-            null,
-            .{
-                .{ firefly.game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE, "resources/tiled/tileset1616.json" },
-                .{ firefly.game.TaskAttributes.JSON_RESOURCE_DESTINATION_DIR, "resources/tiled/conv/" },
-                //  .{ firefly.game.TaskAttributes.JSON_RESOURCE_ENCRYPT_PWD, "passwordpasswordpasswordpassword" },
-            },
-        ),
+    convertAndSaveTiledTileSet();
+}
+
+fn convertAndSaveTiledTileSet() void {
+    const dest_file = "zig-out/tileset1616";
+    const encryption_pwd = "passwordpasswordpasswordpassword";
+    const tiled_tile_set = game.json.parseJSONFromFile(
+        "resources/tiled/tileset1616.json",
+        null,
+        game.json.TiledTileSet,
     );
+
+    const tile_set = game.json.convertTiledTileSet(tiled_tile_set);
+    const json = std.json.stringifyAlloc(
+        api.LOAD_ALLOC,
+        tile_set,
+        .{ .emit_null_optional_fields = false, .whitespace = .minified },
+    ) catch |err| api.handleError(err, "Failed to stringify json for tiled tile set", .{});
+
+    api.writeToFile(dest_file, json, encryption_pwd);
 }

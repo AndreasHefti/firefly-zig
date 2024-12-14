@@ -349,7 +349,6 @@ pub const EMultiplier = struct {
     positions: []const Vector2f = undefined,
 
     pub fn destruct(self: *EMultiplier) void {
-        firefly.api.ALLOC.free(self.positions);
         self.positions = undefined;
     }
 

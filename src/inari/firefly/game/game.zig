@@ -7,7 +7,7 @@ const physics = firefly.physics;
 
 const behavior = @import("behavior.zig");
 const tile = @import("tile.zig");
-const json = @import("json.zig");
+pub const json = @import("json.zig");
 const world = @import("world.zig");
 const platformer = @import("platformer.zig");
 
@@ -92,9 +92,6 @@ pub const TileMapping = tile.TileMapping;
 pub const TileSetMapping = tile.TileSetMapping;
 pub const TileLayerData = tile.TileLayerData;
 
-pub const JSONTile = json.JSONTile;
-pub const JSONTileSet = json.JSONTileSet;
-
 pub const Player = world.Player;
 pub const Room = world.Room;
 pub const RoomState = world.RoomState;
@@ -141,12 +138,13 @@ pub const TaskAttributes = struct {
     pub const JSON_RESOURCE_TILE_MAP_FILE: String = "JSON_RESOURCE_TILE_MAP_FILE";
     pub const JSON_RESOURCE_ROOM_FILE: String = "JSON_RESOURCE_ROOM_FILE";
     pub const JSON_RESOURCE_WORLD_FILE: String = "JSON_RESOURCE_WORLD_FILE";
-    pub const JSON_RESOURCE_DESTINATION_DIR: String = "JSON_RESOURCE_DESTINATION_DIR";
     pub const JSON_RESOURCE_ENCRYPT_PWD: String = "JSON_RESOURCE_ENCRYPT_PWD";
     pub const JSON_RESOURCE_DECRYPT_PWD: String = "JSON_RESOURCE_DECRYPT_PWD";
 
     // The room name within the context
-    pub const ROOM_NAME: String = "room";
+    pub const ROOM_NAME: String = "room_name";
+
+    pub const TARGET_FILE: String = "TARGET_FILE";
 };
 
 pub const Tasks = struct {
@@ -158,7 +156,7 @@ pub const Tasks = struct {
     pub const JSON_LOAD_TILED_TILE_SET: String = "JSON_LOAD_TILED_TILE_SET_TASK";
     pub const JSON_LOAD_TILED_ROOM: String = "JSON_LOAD_TILED_ROOM_TASK";
 
-    pub const JSON_CONVERT_TILED_TILE_SET: String = "JSON_CONVERT_TILED_TILE_SET_TASK";
+    // pub const JSON_CONVERT_TILED_TILE_SET: String = "JSON_CONVERT_TILED_TILE_SET_TASK";
 
     pub const SIMPLE_ROOM_TRANSITION_SCENE_BUILDER: String = "simple_room_transition_scene";
     pub const ROOM_TRANSITION_BUILDER: String = "room_transition_builder";

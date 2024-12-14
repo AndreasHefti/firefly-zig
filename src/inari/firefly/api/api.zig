@@ -54,8 +54,20 @@ pub var COMPONENT_ALLOC: Allocator = undefined;
 /// ENTITY_ALLOC works the same way as COMPONENT_ALLOC and is used allocation of entity components
 pub var ENTITY_ALLOC: Allocator = undefined;
 
-/// ALLOC is a general purpose allocate that needs to be managed by the user
+/// ALLOC is a general purpose allocator that needs to be managed by the user
 pub var ALLOC: Allocator = undefined;
+
+/// The POOL_ALLOC allocator is an arena allocator that can be used for arbitrary data that needs
+/// longer lifetime and is freed all at once at the de-initialization of the program.
+/// Or you can free it at an defined point in program.
+pub var POOL_ALLOC: Allocator = undefined;
+var pool_alloc_arena: std.heap.ArenaAllocator = undefined;
+
+pub fn freePoolAllocator() void {
+    if (initialized) {
+        pool_alloc_arena.reset(.{.free_all});
+    }
+}
 
 /// LOAD_ALLOC is an arena allocator that can be used for arbitrary load tasks. It uses ALLOC as child allocator.
 /// Practically one can reset it after a heavy load task has been done and memory is not used anymore.
@@ -68,35 +80,6 @@ pub fn freeLoadAllocator() void {
         load_alloc_arena.reset(.{.free_all});
     }
 }
-// pub const ArenaAlloc = struct {
-//     arena: std.heap.ArenaAllocator,
-//     //_allocator: ?Allocator = null,
-
-//     pub fn new() ArenaAlloc {
-//         return ArenaAlloc{
-//             .arena = std.heap.ArenaAllocator.init(ALLOC),
-//         };
-//         // result._allocator = result.arena.allocator();
-//         // return ArenaAlloc{
-//         //     .arena = std.heap.ArenaAllocator.init(ALLOC),
-//         // };
-//     }
-
-//     pub fn allocator(self: *ArenaAlloc) Allocator {
-//         return self.arena.allocator();
-//         // if (self._allocator == null) {
-//         //     self._allocator = self.arena.allocator();
-//         // }
-
-//         // return self._allocator.?;
-//     }
-
-//     pub fn deinit(self: *ArenaAlloc) void {
-//         self.arena.deinit();
-//         self.arena = undefined;
-//         //self._allocator = null;
-//     }
-// };
 
 pub var rendering: IRenderAPI() = undefined;
 pub var window: IWindowAPI() = undefined;
@@ -179,11 +162,15 @@ pub fn init(context: InitContext) !void {
     if (initialized)
         return;
 
-    Logger.info("*** Starting Firefly Engine *** \n", .{});
-
     COMPONENT_ALLOC = context.component_allocator;
     ENTITY_ALLOC = context.entity_allocator;
     ALLOC = context.allocator;
+
+    Logger.log_buffer = ALLOC.alloc(u8, 1000) catch unreachable;
+    Logger.info("*** Starting Firefly Engine *** \n", .{});
+
+    pool_alloc_arena = std.heap.ArenaAllocator.init(ALLOC);
+    POOL_ALLOC = pool_alloc_arena.allocator();
     load_alloc_arena = std.heap.ArenaAllocator.init(ALLOC);
     LOAD_ALLOC = load_alloc_arena.allocator();
 
@@ -246,9 +233,11 @@ pub fn deinit() void {
     RENDER_EVENT_DISPATCHER.deinit();
     VIEW_RENDER_EVENT_DISPATCHER.deinit();
 
+    pool_alloc_arena.deinit();
     load_alloc_arena.deinit();
 
     Logger.info("*** Firefly Engine stopped *** \n", .{});
+    ALLOC.free(Logger.log_buffer);
 }
 
 //////////////////////////////////////////////////////////////
@@ -317,8 +306,9 @@ pub const FUNCTION_NAMES = struct {
 //// Global Logger and Error Handling
 //////////////////////////////////////////////////////////////
 
-var log_buffer = [_]u8{0} ** 10000;
 pub const Logger = struct {
+    var log_buffer: []u8 = undefined;
+
     pub const API_TAG = "[Firefly]";
 
     const INFO_LOG_ON = true;
@@ -341,7 +331,7 @@ pub const Logger = struct {
     }
 
     fn format(comptime msg: String, args: anytype) String {
-        return std.fmt.bufPrint(&log_buffer, msg, args) catch unreachable;
+        return std.fmt.bufPrint(log_buffer, msg, args) catch unreachable;
     }
 };
 
@@ -350,7 +340,7 @@ pub inline fn handleError(err: anyerror, comptime msg: ?String, args: anytype) v
     if (msg) |m|
         Logger.err(m, args);
 
-    utils.panic(ALLOC, "Panic because of: {any}", .{@errorName(err)});
+    utils.panic(ALLOC, "Panic because of: {s}", .{@errorName(err)});
 }
 
 //////////////////////////////////////////////////////////////
@@ -555,12 +545,12 @@ pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) voi
 
 // TODO do with arena
 pub fn allocFloatArray(array: anytype) []Float {
-    return firefly.api.ALLOC.dupe(Float, &array) catch unreachable;
+    return firefly.api.POOL_ALLOC.dupe(Float, &array) catch unreachable;
 }
 
 // TODO do with arena
 pub fn allocVec2FArray(array: anytype) []const Vector2f {
-    return firefly.api.ALLOC.dupe(Vector2f, &array) catch unreachable;
+    return firefly.api.POOL_ALLOC.dupe(Vector2f, &array) catch unreachable;
 }
 
 pub fn encrypt(text: String, password: [32]u8, allocator: Allocator) String {

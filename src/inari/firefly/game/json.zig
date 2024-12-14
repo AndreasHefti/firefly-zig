@@ -53,22 +53,22 @@ pub fn deinit() void {
 pub fn initJSONTasks() void {
     _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_TILE_SET,
-        .function = loadTileSetFromJSON,
+        .function = loadTileSetFromJSONTask,
     });
 
     _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_TILE_MAPPING,
-        .function = loadTileMappingFromJSON,
+        .function = loadTileMappingFromJSONTask,
     });
 
     _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_ROOM,
-        .function = loadRoomFromJSON,
+        .function = loadRoomFromJSONTask,
     });
 
     _ = api.Task.Component.new(.{
         .name = game.Tasks.JSON_LOAD_WORLD,
-        .function = loadWorldFromJSON,
+        .function = loadWorldFromJSONTask,
     });
 
     dispose_json_tasks = true;
@@ -85,6 +85,17 @@ pub const JSONAttribute = struct {
     name: String,
     value: String,
 };
+
+pub fn parseJSONFromFile(file: String, decryption_pwd: ?String, comptime T: type) T {
+    const json = api.loadFromFile(file, decryption_pwd);
+    const parsed = std.json.parseFromSlice(
+        T,
+        firefly.api.LOAD_ALLOC,
+        json,
+        .{ .ignore_unknown_fields = true },
+    ) catch unreachable;
+    return parsed.value;
+}
 
 pub fn parseJSONFromAttributes(attributes_id: ?Index, file_attribute: ?String, comptime T: type) T {
     if (attributes_id == null)
@@ -175,7 +186,7 @@ pub const JSONTileSet = struct {
     tiles: []const JSONTile,
 };
 
-fn loadTileSetFromJSON(ctx: *api.CallContext) void {
+fn loadTileSetFromJSONTask(ctx: *api.CallContext) void {
     const jsonTileSet = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
@@ -357,7 +368,7 @@ pub const JSONTileGrid = struct {
     codes: String,
 };
 
-fn loadTileMappingFromJSON(ctx: *api.CallContext) void {
+fn loadTileMappingFromJSONTask(ctx: *api.CallContext) void {
     const jsonTileMapping = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_TILE_MAP_FILE,
@@ -573,7 +584,7 @@ pub const JSONRoomObject = struct {
     attributes: ?[]const JSONAttribute = null,
 };
 
-fn loadRoomFromJSON(ctx: *api.CallContext) void {
+fn loadRoomFromJSONTask(ctx: *api.CallContext) void {
     const jsonRoom = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_ROOM_FILE,
@@ -756,7 +767,7 @@ pub const JSONRoomTransition = struct {
     attributes: ?[]const JSONAttribute = null,
 };
 
-fn loadWorldFromJSON(ctx: *api.CallContext) void {
+fn loadWorldFromJSONTask(ctx: *api.CallContext) void {
     const jsonWorld = parseJSONFromAttributes(
         ctx.attributes_id,
         game.TaskAttributes.JSON_RESOURCE_WORLD_FILE,
@@ -867,11 +878,6 @@ pub fn initTiledTasks() void {
         .function = loadTiledRoomTask,
     });
 
-    _ = api.Task.Component.new(.{
-        .name = game.Tasks.JSON_CONVERT_TILED_TILE_SET,
-        .function = convertAndSaveTiledTileSetTask,
-    });
-
     dispose_tiled_tasks = true;
 }
 
@@ -897,6 +903,9 @@ const P_NAME_TILE_SET_REFS: String = "tile_sets";
 const P_NAME_BUILD_TASK: String = "build_task";
 const P_NAME_LAYER: String = "layer";
 const P_NAME_BOUNDS: String = "bounds";
+
+const TILE_LAYER_NAME: String = "tilelayer";
+const OBJECT_GROUP_NAME: String = "objectgroup";
 
 pub fn getPropertyValue(properties: []const TiledProperty, name: String) ?String {
     for (0..properties.len) |i| {
@@ -948,47 +957,7 @@ pub const TiledTileSet = struct {
     tiles: []const TiledTile,
 };
 
-fn loadTiledTileSetTask(ctx: *api.CallContext) void {
-    const tiled_tile_set = parseJSONFromAttributes(
-        ctx.attributes_id,
-        game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
-        TiledTileSet,
-    );
-    const tile_set = convertTiledTileSet(tiled_tile_set);
-    const tile_set_id = loadTileSet(tile_set);
-
-    if (ctx.c_ref_callback) |callback|
-        callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
-}
-
-fn convertAndSaveTiledTileSetTask(ctx: *api.CallContext) void {
-    var attrs = api.Attributes.Component.byId(ctx.attributes_id.?);
-
-    const source = attrs.get(game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE).?;
-    const file_name = source[std.mem.lastIndexOf(u8, source, "/").?..];
-    const dest_path = attrs.get(game.TaskAttributes.JSON_RESOURCE_DESTINATION_DIR).?;
-    const dest_file = utils.NamePool.format("{s}{s}", .{ dest_path, file_name });
-    const encryption_pwd = attrs.get(game.TaskAttributes.JSON_RESOURCE_ENCRYPT_PWD);
-    const tiled_tile_set = parseJSONFromAttributes(
-        ctx.attributes_id,
-        game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
-        TiledTileSet,
-    );
-
-    api.Logger.info("tile set JSON file name: {s}", .{file_name});
-    api.Logger.info("tile set JSON file path: {s}", .{dest_file});
-
-    const tile_set = convertTiledTileSet(tiled_tile_set);
-    const json = std.json.stringifyAlloc(
-        api.LOAD_ALLOC,
-        tile_set,
-        .{ .emit_null_optional_fields = false, .whitespace = .minified },
-    ) catch |err| api.handleError(err, "Failed to stringify json for tiled tile set", .{});
-
-    api.writeToFile(dest_file, json, encryption_pwd);
-}
-
-fn convertTiledTileSet(tiled: TiledTileSet) JSONTileSet {
+pub fn convertTiledTileSet(tiled: TiledTileSet) JSONTileSet {
     const tiles: []JSONTile = api.LOAD_ALLOC.alloc(JSONTile, tiled.tiles.len) catch undefined;
 
     for (0..tiled.tiles.len) |i| {
@@ -1012,6 +981,19 @@ fn convertTiledTileSet(tiled: TiledTileSet) JSONTileSet {
         .tile_height = tiled.tileheight,
         .tiles = tiles,
     };
+}
+
+fn loadTiledTileSetTask(ctx: *api.CallContext) void {
+    const tiled_tile_set = parseJSONFromAttributes(
+        ctx.attributes_id,
+        game.TaskAttributes.JSON_RESOURCE_TILE_SET_FILE,
+        TiledTileSet,
+    );
+    const tile_set = convertTiledTileSet(tiled_tile_set);
+    const tile_set_id = loadTileSet(tile_set);
+
+    if (ctx.c_ref_callback) |callback|
+        callback(game.TileSet.Component.getReference(tile_set_id, true).?, ctx);
 }
 
 // // Tiled TileMap / Room JSON Mapping
@@ -1054,14 +1036,8 @@ pub const TiledObject = struct {
     properties: []const TiledProperty,
 };
 
-fn loadTiledRoomTask(ctx: *api.CallContext) void {
-    const tiles_tile_map = parseJSONFromAttributes(
-        ctx.attributes_id,
-        game.TaskAttributes.JSON_RESOURCE_ROOM_FILE,
-        TiledTileMap,
-    );
+pub fn convertTiledTileMapToJSONRoom(tiles_tile_map: TiledTileMap) JSONRoom {
 
-    // convert TiledTileMap to JSONRoom
     // global attributes
     const attr_string = getPropertyValue(tiles_tile_map.properties, P_NAME_ATTRIBUTES).?;
     const attrs = toJSONAttributes(attr_string);
@@ -1079,8 +1055,8 @@ fn loadTiledRoomTask(ctx: *api.CallContext) void {
         }
     }
 
-    const jsonRoom = JSONRoom{
-        .file_type = "Room",
+    return JSONRoom{
+        .file_type = JSONFileTypes.ROOM,
         .name = getPropertyValue(tiles_tile_map.properties, P_NAME_NAME).?,
         .bounds = utils.NamePool.format("0,0,{d},{d}", .{
             tiles_tile_map.width * tiles_tile_map.tilewidth,
@@ -1093,6 +1069,16 @@ fn loadTiledRoomTask(ctx: *api.CallContext) void {
         .tile_mapping = convertTiledTileMap(tiles_tile_map),
         .objects = convertTiledObjects(tiles_tile_map.layers),
     };
+}
+
+fn loadTiledRoomTask(ctx: *api.CallContext) void {
+    const tiles_tile_map = parseJSONFromAttributes(
+        ctx.attributes_id,
+        game.TaskAttributes.JSON_RESOURCE_ROOM_FILE,
+        TiledTileMap,
+    );
+
+    const jsonRoom = convertTiledTileMapToJSONRoom(tiles_tile_map);
 
     // load tile-sets from Tiled files so they are not tried to be loaded from regular JSON files later on
     if (jsonRoom.tile_mapping) |tile_mapping| {
@@ -1120,7 +1106,7 @@ fn convertTiledTileMap(tiled_tile_map: TiledTileMap) JSONTileMapping {
     const layers = tiled_tile_map.layers;
 
     for (0..layers.len) |i| {
-        if (utils.stringEquals(layers[i].type, "tilelayer")) {
+        if (utils.stringEquals(layers[i].type, TILE_LAYER_NAME)) {
             var new_layer = layer_list.addOne() catch unreachable;
             new_layer.layer_name = layers[i].name;
             new_layer.offset = utils.NamePool.format("{d},{d}", .{ layers[i].x, layers[i].y });
@@ -1180,7 +1166,7 @@ fn toCodes(data: ?[]const Index) String {
 fn convertTiledObjects(layers: []const TiledMapLayer) ?[]const JSONRoomObject {
     var list = std.ArrayList(JSONRoomObject).init(api.LOAD_ALLOC);
     for (0..layers.len) |i| {
-        if (utils.stringEquals(layers[i].type, "objectgroup")) {
+        if (utils.stringEquals(layers[i].type, OBJECT_GROUP_NAME)) {
             if (layers[i].objects) |object| {
                 for (0..object.len) |j| {
                     var new = list.addOne() catch unreachable;

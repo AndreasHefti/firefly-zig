@@ -53,7 +53,6 @@ pub const EShape = struct {
 
     pub fn destruct(self: *EShape) void {
         self.shape_type = ShapeType.POINT;
-        firefly.api.ALLOC.free(self.vertices);
         self.vertices = undefined;
         self.fill = true;
         self.color = undefined;

@@ -32,7 +32,7 @@ fn init() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    var pos = firefly.api.ALLOC.alloc(Vector2f, 100000) catch unreachable;
+    var pos = firefly.api.POOL_ALLOC.alloc(Vector2f, 100000) catch unreachable;
     var rndx = std.rand.DefaultPrng.init(32);
     const rx = rndx.random();
     for (0..100000) |i| {

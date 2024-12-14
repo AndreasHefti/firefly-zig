@@ -95,7 +95,19 @@ fn init() void {
     const eid = Entity.Component.new(.{ .name = "RefEntity" });
     EView.Component.new(eid, .{ .view_id = view.id });
     ETransform.Component.new(eid, .{ .position = .{ 100, 100 } });
-    EMultiplier.Component.new(eid, .{ .positions = firefly.api.allocVec2FArray([_]Vector2f{ .{ 50, 50 }, .{ 200, 50 }, .{ 50, 150 }, .{ 200, 150 }, .{ 300, 250 }, .{ 400, 350 }, .{ 500, 450 }, .{ 200, 450 }, .{ 300, 350 }, .{ 400, 250 }, .{ 500, 150 } }) });
+    EMultiplier.Component.new(eid, .{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
+        .{ 50, 50 },
+        .{ 200, 50 },
+        .{ 50, 150 },
+        .{ 200, 150 },
+        .{ 300, 250 },
+        .{ 400, 350 },
+        .{ 500, 450 },
+        .{ 200, 450 },
+        .{ 300, 350 },
+        .{ 400, 250 },
+        .{ 500, 150 },
+    }) });
     Entity.Activation.activate(eid);
 
     _ = Entity.newActive(.{ .name = "Border" }, .{
