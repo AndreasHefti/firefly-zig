@@ -3,7 +3,7 @@ const firefly = @import("../../firefly.zig");
 const rl = @cImport(@cInclude("raylib.h"));
 const rlgl = @cImport(@cInclude("rlgl.h"));
 
-const NamePool = firefly.utils.NamePool;
+const NamePool = firefly.api.NamePool;
 const Texture2D = rl.Texture2D;
 const Font = rl.Font;
 const RenderTexture2D = rl.RenderTexture2D;
@@ -206,7 +206,7 @@ const RaylibRenderAPI = struct {
         filter: TextureFilter,
         wrap: TextureWrap,
     ) TextureBinding {
-        const res = NamePool._getCName(resource);
+        const res = NamePool.allocCName(resource);
         var tex = rl.LoadTexture(res);
         defer NamePool.freeCNames();
         if (is_mipmap) {
@@ -276,7 +276,7 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadImageFromFile(resource: String) ImageBinding {
-        const img: Image = rl.LoadImage(NamePool._getCName(resource));
+        const img: Image = rl.LoadImage(NamePool.allocCName(resource));
         defer NamePool.freeCNames();
         const img_id = images.add(img);
         return ImageBinding{
@@ -314,10 +314,10 @@ const RaylibRenderAPI = struct {
         defer NamePool.freeCNames();
 
         const font = if (size == null and char_num == null and code_points == null)
-            rl.LoadFont(NamePool._getCName(resource))
+            rl.LoadFont(NamePool.allocCName(resource))
         else
             rl.LoadFontEx(
-                NamePool._getCName(resource),
+                NamePool.allocCName(resource),
                 size orelse default_font_size,
                 code_points orelse 0,
                 char_num orelse default_char_num,
@@ -355,13 +355,13 @@ const RaylibRenderAPI = struct {
         var shader: Shader = undefined;
         if (file) {
             shader = rl.LoadShader(
-                NamePool._getCName(vertex_shader orelse EMPTY_STRING),
-                NamePool._getCName(fragment_shade orelse EMPTY_STRING),
+                NamePool.allocCName(vertex_shader orelse EMPTY_STRING),
+                NamePool.allocCName(fragment_shade orelse EMPTY_STRING),
             );
         } else {
             shader = rl.LoadShaderFromMemory(
-                NamePool._getCName(vertex_shader orelse EMPTY_STRING),
-                NamePool._getCName(fragment_shade orelse EMPTY_STRING),
+                NamePool.allocCName(vertex_shader orelse EMPTY_STRING),
+                NamePool.allocCName(fragment_shade orelse EMPTY_STRING),
             );
         }
 

@@ -17,86 +17,6 @@ pub fn stringStartsWith(str: ?String, prefix: String) bool {
     return false;
 }
 
-//////////////////////////////////////////////////////////////
-//// Name Pool used for none constant Strings not living
-//// in zigs data mem. These can be de-allocated by call
-//// or will be freed all on package deinit
-//////////////////////////////////////////////////////////////
-
-pub const NamePool = struct {
-    var names: std.BufSet = undefined;
-    var c_names: std.ArrayList([:0]const u8) = undefined;
-
-    var _ally: std.mem.Allocator = undefined;
-
-    pub fn init(allocator: std.mem.Allocator) void {
-        _ally = allocator;
-        names = std.BufSet.init(allocator);
-        c_names = std.ArrayList([:0]const u8).init(allocator);
-    }
-
-    pub fn deinit() void {
-        names.deinit();
-
-        freeCNames();
-        c_names.deinit();
-    }
-
-    pub fn alloc(name: ?String) ?String {
-        if (name) |n| {
-            if (names.contains(n))
-                return names.hash_map.getKey(n);
-
-            names.insert(n) catch unreachable;
-            //std.debug.print("************ NamePool names add: {s}\n", .{n});
-            return names.hash_map.getKey(n);
-        }
-        return null;
-    }
-
-    pub fn format(comptime fmt: String, args: anytype) String {
-        const formatted = std.fmt.allocPrint(_ally, fmt, args) catch unreachable;
-        defer _ally.free(formatted);
-        return alloc(formatted).?;
-    }
-
-    pub fn getCName(name: ?String) ?CString {
-        if (name) |n| {
-            const _n = _ally.dupeZ(u8, n) catch unreachable;
-            c_names.append(_n) catch unreachable;
-            //std.debug.print("************ NamePool c_names add: {s}\n", .{_n});
-            return @ptrCast(_n);
-        }
-        return null;
-    }
-
-    pub fn _getCName(name: String) CString {
-        const _n = _ally.dupeZ(u8, name) catch unreachable;
-        c_names.append(_n) catch unreachable;
-        return @ptrCast(_n);
-    }
-
-    pub fn freeCNames() void {
-        for (c_names.items) |item|
-            _ally.free(item);
-        c_names.clearRetainingCapacity();
-    }
-
-    pub fn indexToString(index: ?utils.Index) ?String {
-        if (index) |i| {
-            const str = std.fmt.allocPrint(_ally, "{d}", i) catch return null;
-            defer _ally.free(str);
-            names.insert(str) catch unreachable;
-            return names.hash_dict.getKey(str);
-        }
-        return null;
-    }
-
-    pub fn free(name: String) void {
-        names.remove(name);
-    }
-};
-
 pub const StringBuffer = struct {
     buffer: std.ArrayList(u8),
 
@@ -151,7 +71,7 @@ pub const StringPropertyIterator = struct {
 
     pub inline fn nextName(self: *StringPropertyIterator) ?String {
         if (self.delegate.next()) |s|
-            return NamePool.alloc(utils.parseName(s));
+            return utils.parseName(s);
         return null;
     }
 

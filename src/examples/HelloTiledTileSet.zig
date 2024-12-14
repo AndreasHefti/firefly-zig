@@ -70,13 +70,13 @@ fn init() void {
     }
 
     // and convert the tiled tile set to an in-house JSON tile set
-    convertAndSaveTiledTileSet();
+    convertAndSaveTiledTileSet() catch unreachable;
 }
 
-fn convertAndSaveTiledTileSet() void {
+fn convertAndSaveTiledTileSet() !void {
     const dest_file = "zig-out/tileset1616";
     const encryption_pwd = "passwordpasswordpasswordpassword";
-    const tiled_tile_set = game.json.parseJSONFromFile(
+    const tiled_tile_set = try game.json.parseJSONFromFile(
         "resources/tiled/tileset1616.json",
         null,
         game.json.TiledTileSet,
@@ -87,7 +87,10 @@ fn convertAndSaveTiledTileSet() void {
         api.LOAD_ALLOC,
         tile_set,
         .{ .emit_null_optional_fields = false, .whitespace = .minified },
-    ) catch |err| api.handleError(err, "Failed to stringify json for tiled tile set", .{});
+    ) catch |err| {
+        api.Logger.err("Failed to stringify json for tiled tile set", .{});
+        return err;
+    };
 
-    api.writeToFile(dest_file, json, encryption_pwd);
+    try api.writeToFile(dest_file, json, encryption_pwd);
 }

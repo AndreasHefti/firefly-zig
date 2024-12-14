@@ -229,7 +229,7 @@ pub const Room = struct {
                 scene.call_context.caller_id = self.id;
                 scene.callback = runRoom;
                 scene.run();
-            } else utils.panic(api.ALLOC, "Start scene with name {s} not found", .{scene_name});
+            } else std.debug.panic("Start scene with name {s} not found", .{scene_name});
         } else {
             // just run the Room immediately
             game.resumeGame();
@@ -270,7 +270,7 @@ pub const Room = struct {
                 scene.call_context.caller_id = self.id;
                 scene.callback = stopRoomCallback;
                 scene.run();
-            } else utils.panic(api.ALLOC, "End scene with name {s} not found", .{scene_name});
+            } else std.debug.panic("End scene with name {s} not found", .{scene_name});
         } else {
             // just end the Room immediately
             api.Composite.Activation.deactivate(self.id);
@@ -465,7 +465,7 @@ fn roomUnloadedCallback(_: Index) void {
         // start new room
         target_room.start(player.name.?, null);
     } else {
-        utils.panic(api.ALLOC, "No Room with name: {s} found", .{target_room_name});
+        std.debug.panic("No Room with name: {s} found", .{target_room_name});
     }
 }
 

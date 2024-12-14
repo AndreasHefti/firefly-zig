@@ -285,7 +285,7 @@ pub fn EntityComponentMixin(comptime T: type) type {
                 @panic("Entity Component id mismatch");
 
             if (pool.exists(entity_id))
-                utils.panic(api.ALLOC, "Entity {d} has already component of type {any}\n", .{ entity_id, T });
+                std.debug.panic("Entity {d} has already component of type {any}\n", .{ entity_id, T });
 
             var comp = pool.set(component, entity_id);
             comp.id = entity_id;

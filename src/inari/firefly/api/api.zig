@@ -35,6 +35,12 @@ fn dummyDeinit() void {}
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
+pub const ERRORS = error{
+    NO_ATTRIBUTES,
+    ATTRIBUTE_NOT_FOUND,
+    ENCRYPTION_KEY_LENGTH_MISMATCH,
+};
+
 pub const RUN_ON = enum { RAYLIB, TEST };
 pub const RUN_ON_SET: RUN_ON = RUN_ON.RAYLIB;
 
@@ -190,7 +196,9 @@ pub fn init(context: InitContext) !void {
         audio = IAudioAPI().initDummy();
     }
 
-    utils.NamePool.init(ALLOC);
+    NamePool.names = std.BufSet.init(POOL_ALLOC);
+    NamePool.c_names = std.ArrayList([:0]const u8).init(POOL_ALLOC);
+
     Component.init();
     Timer.init();
     system.init();
@@ -227,7 +235,6 @@ pub fn deinit() void {
     audio.deinit();
     audio = undefined;
     Timer.deinit();
-    utils.NamePool.deinit();
 
     UPDATE_EVENT_DISPATCHER.deinit();
     RENDER_EVENT_DISPATCHER.deinit();
@@ -303,6 +310,169 @@ pub const FUNCTION_NAMES = struct {
 };
 
 //////////////////////////////////////////////////////////////
+//// Convenient Functions
+//////////////////////////////////////////////////////////////
+
+pub fn loadFromFile(file_name: String, decryption_pwd: ?String) !String {
+    const file_content = std.fs.cwd().readFileAlloc(
+        LOAD_ALLOC,
+        file_name,
+        1000000,
+    ) catch |err| {
+        Logger.err("Failed to load file: {s} error: {s}", .{ file_name, @errorName(err) });
+        return err;
+    };
+
+    if (decryption_pwd) |pwd| {
+        if (pwd.len != 32)
+            return ERRORS.ENCRYPTION_KEY_LENGTH_MISMATCH;
+
+        return try decrypt(file_content, pwd[0..32].*, LOAD_ALLOC);
+    }
+    return file_content;
+}
+
+pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !void {
+    const file: std.fs.File = std.fs.cwd().createFile(
+        file_name,
+        .{ .read = true },
+    ) catch |err| {
+        Logger.err("Failed to write to file: {s} error {s}", .{ file_name, @errorName(err) });
+        return err;
+    };
+
+    defer file.close();
+
+    var bytes: String = undefined;
+    if (encryption_pwd) |pwd| {
+        if (pwd.len != 32)
+            return ERRORS.ENCRYPTION_KEY_LENGTH_MISMATCH;
+
+        bytes = try encrypt(text, pwd[0..32].*, LOAD_ALLOC);
+    } else {
+        bytes = text;
+    }
+
+    try file.writeAll(bytes);
+}
+
+pub fn allocFloatArray(array: anytype) []Float {
+    return firefly.api.POOL_ALLOC.dupe(Float, &array) catch unreachable;
+}
+
+pub fn allocVec2FArray(array: anytype) []const Vector2f {
+    return firefly.api.POOL_ALLOC.dupe(Vector2f, &array) catch unreachable;
+}
+
+pub fn encrypt(text: String, password: [32]u8, allocator: Allocator) !String {
+    const ad = "";
+    var tag: [Aes256Gcm.tag_length]u8 = undefined;
+    const cypher: []u8 = allocator.alloc(u8, text.len) catch unreachable;
+    defer allocator.free(cypher);
+
+    Aes256Gcm.encrypt(cypher, &tag, text, ad, nonce, password);
+
+    const s: []const []const u8 = &[_]String{ cypher, &tag };
+    return try std.mem.concat(allocator, u8, s);
+}
+
+pub fn decrypt(cypher: String, password: [32]u8, allocator: Allocator) !String {
+    const ad = "";
+    var tag: [Aes256Gcm.tag_length]u8 = undefined;
+    const text: []u8 = allocator.alloc(u8, cypher.len - Aes256Gcm.tag_length) catch unreachable;
+    std.mem.copyForwards(u8, &tag, cypher[cypher.len - Aes256Gcm.tag_length ..]);
+
+    Aes256Gcm.decrypt(
+        text,
+        cypher[0 .. cypher.len - Aes256Gcm.tag_length],
+        tag,
+        ad,
+        nonce,
+        password,
+    ) catch |err| {
+        Logger.err("Failed to decrypt, error: {s}", .{@errorName(err)});
+        return err;
+    };
+    return text;
+}
+
+/// Formats a String as usual in zig. The resulting String lives in NamePool / POOL_ALLOC
+pub fn format(comptime fmt: String, args: anytype) String {
+    const formatted = std.fmt.allocPrint(ALLOC, fmt, args) catch unreachable;
+    defer ALLOC.free(formatted);
+    return NamePool.alloc(formatted) orelse fmt;
+}
+
+/// Converts an integer Index to String value. The String lives in NamePool / POOL_ALLOC
+pub fn indexToString(index: ?utils.Index) ?String {
+    if (index) |i| {
+        const str = std.fmt.allocPrint(ALLOC, "{d}", i) catch |err| {
+            Logger.err("Failed to convert integer: {d} to String. Error: {s}", .{ index, @errorName(err) });
+            return null;
+        };
+
+        defer POOL_ALLOC.free(str);
+        return NamePool.alloc(str);
+    }
+    return null;
+}
+
+//////////////////////////////////////////////////////////////
+//// Name Pool used for none constant Strings not living
+//// in zigs data mem. These can be de-allocated by call
+//// or will be freed all on package deinit
+//////////////////////////////////////////////////////////////
+
+pub const NamePool = struct {
+    var names: std.BufSet = undefined;
+    var c_names: std.ArrayList([:0]const u8) = undefined;
+
+    pub fn alloc(name: ?String) ?String {
+        if (name) |n| {
+            if (names.contains(n))
+                return names.hash_map.getKey(n);
+
+            names.insert(n) catch unreachable;
+            //std.debug.print("************ NamePool names add: {s}\n", .{n});
+            return names.hash_map.getKey(n);
+        }
+        return null;
+    }
+
+    pub fn allocCNameOptional(name: ?String) ?CString {
+        if (name) |n| {
+            const _n = POOL_ALLOC.dupeZ(u8, n) catch unreachable;
+            c_names.append(_n) catch unreachable;
+            //std.debug.print("************ NamePool c_names add: {s}\n", .{_n});
+            return @ptrCast(_n);
+        }
+        return null;
+    }
+
+    pub fn allocCName(name: String) CString {
+        const _n = POOL_ALLOC.dupeZ(u8, name) catch unreachable;
+        //c_names.append(_n) catch unreachable;
+        return @ptrCast(_n);
+    }
+
+    pub fn freeCNames() void {
+        for (c_names.items) |item|
+            POOL_ALLOC.free(item);
+        c_names.clearRetainingCapacity();
+    }
+
+    pub fn freeName(name: String) void {
+        names.remove(name);
+    }
+
+    pub fn freeNames() void {
+        var it = names.iterator();
+        while (it.next()) |n|
+            names.remove(n);
+    }
+};
+
+//////////////////////////////////////////////////////////////
 //// Global Logger and Error Handling
 //////////////////////////////////////////////////////////////
 
@@ -317,20 +487,25 @@ pub const Logger = struct {
 
     pub fn info(comptime msg: String, args: anytype) void {
         if (INFO_LOG_ON)
-            std.log.info("{s} {s}", .{ API_TAG, format(msg, args) });
+            std.log.info("{s} {s}", .{ API_TAG, _format(msg, args) });
     }
 
     pub fn warn(comptime msg: String, args: anytype) void {
         if (WARN_LOG_ON)
-            std.log.warn("{s} {s}", .{ API_TAG, format(msg, args) });
+            std.log.warn("{s} {s}", .{ API_TAG, _format(msg, args) });
     }
 
     pub fn err(comptime msg: String, args: anytype) void {
         if (ERROR_LOG_ON)
-            std.log.err("{s} {s}", .{ API_TAG, format(msg, args) });
+            std.log.err("{s} {s}", .{ API_TAG, _format(msg, args) });
     }
 
-    fn format(comptime msg: String, args: anytype) String {
+    pub fn errWith(comptime msg: String, args: anytype, e: anyerror) void {
+        if (ERROR_LOG_ON)
+            std.log.err("{s} {s} : {s}", .{ API_TAG, @errorName(e), _format(msg, args) });
+    }
+
+    fn _format(comptime msg: String, args: anytype) String {
         return std.fmt.bufPrint(log_buffer, msg, args) catch unreachable;
     }
 };
@@ -350,6 +525,9 @@ pub inline fn handleError(err: anyerror, comptime msg: ?String, args: anytype) v
 pub const Attributes = struct {
     pub const Component = firefly.api.Component.Mixin(Attributes);
     pub const Naming = firefly.api.Component.NameMappingMixin(Attributes);
+    pub const Global = struct {
+        const IGNORE_ERROR: String = "IGNORE_ERROR";
+    };
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
@@ -452,8 +630,19 @@ pub const CallContext = struct {
         };
     }
 
+    pub fn handleError(self: *CallContext, err: anyerror, comptime msg: String, args: anytype) void {
+        self.result = .Failure;
+        Logger.errWith(msg, args, err);
+        if (self.boolean(Attributes.Global.IGNORE_ERROR))
+            return;
+
+        @panic("error");
+    }
+
     pub fn optionalAttribute(self: *CallContext, name: String) ?String {
-        return utils.NamePool.alloc(self.getAttrs().get(name));
+        if (self.getAttrs()) |attrs|
+            return attrs.get(name);
+        return null;
     }
 
     pub fn attribute(self: *CallContext, name: String) String {
@@ -461,7 +650,7 @@ pub const CallContext = struct {
     }
 
     pub fn optionalString(self: *CallContext, name: String) ?String {
-        return utils.NamePool.alloc(utils.parseName(self.getAttrs().get(name)));
+        return utils.parseName(self.optionalAttribute(name));
     }
 
     pub fn string(self: *CallContext, name: String) String {
@@ -485,13 +674,13 @@ pub const CallContext = struct {
     }
 
     inline fn miss(name: String) void {
-        utils.panic(ALLOC, "No attribute with name: {s}", .{name});
+        std.debug.panic("No attribute with name: {s}", .{name});
     }
 
-    inline fn getAttrs(self: *CallContext) *Attributes {
+    inline fn getAttrs(self: *CallContext) ?*Attributes {
         if (self.attributes_id) |id|
             return Attributes.Component.byId(id);
-        @panic("No Attributes initialized");
+        return null;
     }
 
     pub fn deinit(self: *CallContext) void {
@@ -499,81 +688,30 @@ pub const CallContext = struct {
             Attributes.Component.dispose(aid);
         self.attributes_id = null;
     }
+
+    pub fn format(
+        self: CallContext,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("CallContext({d}:{s})[\n", .{ utils.IndexFormatter{ .index = self.caller_id }, self.caller_name orelse "-" });
+        if (self.id_1 != UNDEF_INDEX)
+            try writer.print("  id_1: {d}\n", .{self.id_1});
+        if (self.id_1 != UNDEF_INDEX)
+            try writer.print("  id_2: {d}\n", .{self.id_2});
+        if (self.id_1 != UNDEF_INDEX)
+            try writer.print("  id_3: {d}\n", .{self.id_3});
+        if (self.id_1 != UNDEF_INDEX)
+            try writer.print("  id_4: {d}\n", .{self.id_4});
+        if (self.result) |r|
+            try writer.print("  result: {s}\n", .{@tagName(r)});
+        if (self.attributes_id) |aid|
+            try writer.print("  {any}\n", .{Attributes.Component.byId(aid)});
+
+        try writer.print("]", .{});
+    }
 };
-
-//////////////////////////////////////////////////////////////
-//// Convenient Functions
-//////////////////////////////////////////////////////////////
-
-pub fn loadFromFile(file_name: String, decryption_pwd: ?String) String {
-    const file_content = std.fs.cwd().readFileAlloc(
-        LOAD_ALLOC,
-        file_name,
-        1000000,
-    ) catch |err| handleError(err, "Failed to load from file: {s}", .{file_name});
-
-    if (decryption_pwd) |pwd| {
-        if (pwd.len != 32)
-            @panic("Decryption password length mismatch. Must be 32 Byte.");
-
-        return decrypt(file_content, pwd[0..32].*, LOAD_ALLOC);
-    }
-    return file_content;
-}
-
-pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) void {
-    const file: std.fs.File = std.fs.cwd().createFile(
-        file_name,
-        .{ .read = true },
-    ) catch |err| handleError(err, "Failed to create file: {s}", .{file_name});
-
-    defer file.close();
-
-    var bytes: String = undefined;
-    if (encryption_pwd) |pwd| {
-        if (pwd.len != 32)
-            @panic("Encryption password length mismatch. Must be 32 Byte.");
-
-        bytes = encrypt(text, pwd[0..32].*, LOAD_ALLOC);
-    } else {
-        bytes = text;
-    }
-
-    file.writeAll(bytes) catch |err|
-        handleError(err, "Failed to write to file: {s}", .{file_name});
-}
-
-// TODO do with arena
-pub fn allocFloatArray(array: anytype) []Float {
-    return firefly.api.POOL_ALLOC.dupe(Float, &array) catch unreachable;
-}
-
-// TODO do with arena
-pub fn allocVec2FArray(array: anytype) []const Vector2f {
-    return firefly.api.POOL_ALLOC.dupe(Vector2f, &array) catch unreachable;
-}
-
-pub fn encrypt(text: String, password: [32]u8, allocator: Allocator) String {
-    const ad = "";
-    var tag: [Aes256Gcm.tag_length]u8 = undefined;
-    const cypher: []u8 = allocator.alloc(u8, text.len) catch unreachable;
-    defer allocator.free(cypher);
-
-    Aes256Gcm.encrypt(cypher, &tag, text, ad, nonce, password);
-
-    const s: []const []const u8 = &[_]String{ cypher, &tag };
-    return std.mem.concat(allocator, u8, s) catch unreachable;
-}
-
-pub fn decrypt(cypher: String, password: [32]u8, allocator: Allocator) String {
-    const ad = "";
-    var tag: [Aes256Gcm.tag_length]u8 = undefined;
-    const text: []u8 = allocator.alloc(u8, cypher.len - Aes256Gcm.tag_length) catch unreachable;
-    std.mem.copyForwards(u8, &tag, cypher[cypher.len - Aes256Gcm.tag_length ..]);
-
-    Aes256Gcm.decrypt(text, cypher[0 .. cypher.len - Aes256Gcm.tag_length], tag, ad, nonce, password) catch unreachable;
-    return text;
-}
 
 //////////////////////////////////////////////////////////////
 //// Update Event and Render Event declarations

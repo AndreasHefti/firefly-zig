@@ -101,8 +101,8 @@ const RaylibAudioAPI = struct {
     }
 
     fn loadSound(file: String, channels: usize) api.SoundBinding {
-        const sound = rl.LoadSound(firefly.utils.NamePool.getCName(file).?);
-        defer firefly.utils.NamePool.freeCNames();
+        const sound = rl.LoadSound(firefly.api.NamePool.allocCName(file));
+        defer firefly.api.NamePool.freeCNames();
         var sound_binding = api.SoundBinding{ .id = sounds.add(sound) };
         if (channels > 0) sound_binding.channel_1 = sounds.add(rl.LoadSoundAlias(sound));
         if (channels > 1) sound_binding.channel_2 = sounds.add(rl.LoadSoundAlias(sound));
@@ -200,8 +200,8 @@ const RaylibAudioAPI = struct {
     }
 
     fn loadMusic(file: String) BindingId {
-        const m = rl.LoadMusicStream(firefly.utils.NamePool.getCName(file).?);
-        defer firefly.utils.NamePool.freeCNames();
+        const m = rl.LoadMusicStream(firefly.api.NamePool.allocCName(file));
+        defer firefly.api.NamePool.freeCNames();
         return music.add(m);
     }
 

@@ -563,47 +563,41 @@ pub const Easing = struct {
         return self._f(self._ptr, t);
     }
 
-    pub const Linear = LinearEasing.default.easing();
-    pub const Exponential_In = ExponentialInEasing.default.easing();
-    pub const Exponential_Out = ExponentialOutEasing.default.easing();
-    pub const Exponential_In_Out = ExponentialInOutEasing.default.easing();
-    pub const Sin_In = SinInEasing.default.easing();
-    pub const Sin_Out = SinOutEasing.default.easing();
-    pub const Sin_In_Out = SinInOutEasing.default.easing();
-    pub const Circ_In = CircInEasing.default.easing();
-    pub const Circ_Out = CircOutEasing.default.easing();
-    pub const Circ_In_Out = CircInOutEasing.default.easing();
-    pub const Back_In = BackInEasing.default.easing();
-    pub const Back_Out = BackOutEasing.default.easing();
-    pub const Elastic_In = ElasticInEasing.default.easing();
-    pub const Elastic_Out = ElasticOutEasing.default.easing();
-    pub const Bounce_In = BounceInEasing.default.easing();
-    pub const Bounce_Out = BounceOutEasing.default.easing();
-    pub const Quad_In = PolyInEasing.quad.easing();
-    pub const Cubic_In = PolyInEasing.cubic.easing();
-    pub const Quart_In = PolyInEasing.quart.easing();
-    pub const Quint_In = PolyInEasing.quint.easing();
-    pub const Quad_Out = PolyOutEasing.quad.easing();
-    pub const Cubic_Out = PolyOutEasing.cubic.easing();
-    pub const Quart_Out = PolyOutEasing.quart.easing();
-    pub const Quint_Out = PolyOutEasing.quint.easing();
-    pub const Quad_In_Out = PolyInOutEasing.quad.easing();
-    pub const Cubic_In_Out = PolyInOutEasing.cubic.easing();
-    pub const Quart_In_Out = PolyInOutEasing.quart.easing();
-    pub const Quint_In_Out = PolyInOutEasing.quint.easing();
+    pub const Linear = Easing.init(&LinearEasing.default);
+    pub const Exponential_In = Easing.init(&ExponentialInEasing.default);
+    pub const Exponential_Out = Easing.init(&ExponentialOutEasing.default);
+    pub const Exponential_In_Out = Easing.init(&ExponentialInOutEasing.default);
+    pub const Sin_In = Easing.init(&SinInEasing.default);
+    pub const Sin_Out = Easing.init(&SinOutEasing.default);
+    pub const Sin_In_Out = Easing.init(&SinInOutEasing.default);
+    pub const Circ_In = Easing.init(&CircInEasing.default);
+    pub const Circ_Out = Easing.init(&CircOutEasing.default);
+    pub const Circ_In_Out = Easing.init(&CircInOutEasing.default);
+    pub const Back_In = Easing.init(&BackInEasing.default);
+    pub const Back_Out = Easing.init(&BackOutEasing.default);
+    pub const Elastic_In = Easing.init(&ElasticInEasing.default);
+    pub const Elastic_Out = Easing.init(&ElasticOutEasing.default);
+    pub const Bounce_In = Easing.init(&BounceInEasing.default);
+    pub const Bounce_Out = Easing.init(&BounceOutEasing.default);
+    pub const Quad_In = Easing.init(&PolyInEasing.quad);
+    pub const Cubic_In = Easing.init(&PolyInEasing.cubic);
+    pub const Quart_In = Easing.init(&PolyInEasing.quart);
+    pub const Quint_In = Easing.init(&PolyInEasing.quint);
+    pub const Quad_Out = Easing.init(&PolyOutEasing.quad);
+    pub const Cubic_Out = Easing.init(&PolyOutEasing.cubic);
+    pub const Quart_Out = Easing.init(&PolyOutEasing.quart);
+    pub const Quint_Out = Easing.init(&PolyOutEasing.quint);
+    pub const Quad_In_Out = Easing.init(&PolyInOutEasing.quad);
+    pub const Cubic_In_Out = Easing.init(&PolyInOutEasing.cubic);
+    pub const Quart_In_Out = Easing.init(&PolyInOutEasing.quart);
+    pub const Quint_In_Out = Easing.init(&PolyInOutEasing.quint);
 };
 
 const LinearEasing = struct {
-    var default = LinearEasing{ .exp = 1 };
-
-    exp: Float = 2,
+    var default = LinearEasing{};
 
     fn f(_: *LinearEasing, t: Float) Float {
         return t;
-    }
-
-    fn easing(self: *LinearEasing) Easing {
-        return Easing.init(self);
     }
 };
 
@@ -613,10 +607,6 @@ const ExponentialInEasing = struct {
     fn f(_: *ExponentialInEasing, t: Float) Float {
         return std.math.pow(Float, 2, 10.0 * t - 10.0);
     }
-
-    fn easing(self: *ExponentialInEasing) Easing {
-        return Easing.init(self);
-    }
 };
 
 const ExponentialOutEasing = struct {
@@ -624,10 +614,6 @@ const ExponentialOutEasing = struct {
 
     fn f(_: *ExponentialOutEasing, t: Float) Float {
         return 1 - std.math.pow(Float, 2, -10.0 * t);
-    }
-
-    fn easing(self: *ExponentialOutEasing) Easing {
-        return Easing.init(self);
     }
 };
 
@@ -641,10 +627,6 @@ const ExponentialInOutEasing = struct {
         else
             (2 - std.math.pow(Float, 2, 10.0 - 10.0 * tt)) / 2;
     }
-
-    fn easing(self: *ExponentialInOutEasing) Easing {
-        return Easing.init(self);
-    }
 };
 
 const SinInEasing = struct {
@@ -652,10 +634,6 @@ const SinInEasing = struct {
 
     fn f(_: *SinInEasing, t: Float) Float {
         return 1 - std.math.cos(t * HALF_PI);
-    }
-
-    fn easing(self: *SinInEasing) Easing {
-        return Easing.init(self);
     }
 };
 
@@ -665,10 +643,6 @@ const SinOutEasing = struct {
     fn f(_: *SinOutEasing, t: Float) Float {
         return std.math.sin(t * HALF_PI);
     }
-
-    fn easing(self: *SinOutEasing) Easing {
-        return Easing.init(self);
-    }
 };
 
 const SinInOutEasing = struct {
@@ -676,10 +650,6 @@ const SinInOutEasing = struct {
 
     fn f(_: *SinInOutEasing, t: Float) Float {
         return (1 - std.math.cos(std.math.pi * t)) / 2;
-    }
-
-    fn easing(self: *SinInOutEasing) Easing {
-        return Easing.init(self);
     }
 };
 
@@ -689,10 +659,6 @@ const CircInEasing = struct {
     fn f(_: *CircInEasing, t: Float) Float {
         return 1 - std.math.sqrt(1 - t * t);
     }
-
-    fn easing(self: *CircInEasing) Easing {
-        return Easing.init(self);
-    }
 };
 
 const CircOutEasing = struct {
@@ -701,10 +667,6 @@ const CircOutEasing = struct {
     fn f(_: *CircOutEasing, t: Float) Float {
         const tt = t - 1;
         return std.math.sqrt(1 - tt * tt);
-    }
-
-    fn easing(self: *CircOutEasing) Easing {
-        return Easing.init(self);
     }
 };
 
@@ -720,17 +682,21 @@ const CircInOutEasing = struct {
             return (std.math.sqrt(1 - ttt * ttt) + 1) / 2.0;
         }
     }
-
-    fn easing(self: *CircInOutEasing) Easing {
-        return Easing.init(self);
-    }
 };
 
-pub fn easingBackIn(back_factor: Float) Easing {
-    return (BackInEasing{ .back_factor = back_factor }).easing();
+pub fn createEasing(instance: anytype, allocator: std.mem.Allocator) Easing {
+    const t = allocator.create(@TypeOf(instance)) catch unreachable;
+    t.* = instance;
+    return Easing.init(t);
 }
 
-const BackInEasing = struct {
+pub fn easingBackIn(back_factor: Float, allocator: std.mem.Allocator) Easing {
+    var t = allocator.create(BackInEasing) catch unreachable;
+    t.back_factor = back_factor;
+    return Easing.init(t);
+}
+
+pub const BackInEasing = struct {
     var default = BackInEasing{};
 
     back_factor: Float = 1.70158,
@@ -738,15 +704,7 @@ const BackInEasing = struct {
     fn f(self: *BackInEasing, t: Float) Float {
         return t * t * ((self.back_factor + 1) * t - self.back_factor);
     }
-
-    fn easing(self: *BackInEasing) Easing {
-        return Easing.init(self);
-    }
 };
-
-pub fn easingBackOut(back_factor: Float) Easing {
-    return (BackInEasing{ .back_factor = back_factor }).easing();
-}
 
 const BackOutEasing = struct {
     var default = BackOutEasing{};
@@ -757,15 +715,7 @@ const BackOutEasing = struct {
         const tt = t - 1;
         return tt * tt * ((self.back_factor + 1) * tt + self.back_factor) + 1;
     }
-
-    fn easing(self: *BackOutEasing) Easing {
-        return Easing.init(self);
-    }
 };
-
-pub fn easingElasticIn(amplitude: Float, period: Float) Easing {
-    return (ElasticInEasing{ .amplitude = amplitude, .period = period }).easing();
-}
 
 const ElasticInEasing = struct {
     var default = ElasticInEasing{};
@@ -780,15 +730,7 @@ const ElasticInEasing = struct {
         const tt = t - 1;
         return a * std.math.pow(Float, 2, 10 * tt) * std.math.sin((s - tt) / p);
     }
-
-    fn easing(self: *ElasticInEasing) Easing {
-        return Easing.init(self);
-    }
 };
-
-pub fn easingElasticOut(amplitude: Float, period: Float) Easing {
-    return (ElasticOutEasing{ .amplitude = amplitude, .period = period }).easing();
-}
 
 const ElasticOutEasing = struct {
     var default = ElasticOutEasing{};
@@ -803,15 +745,7 @@ const ElasticOutEasing = struct {
         const tt: Float = t + 1;
         return 1.0 - (a * std.math.pow(Float, 2, -10 * tt) * std.math.sin((tt + s) / p));
     }
-
-    fn easing(self: *ElasticOutEasing) Easing {
-        return Easing.init(self);
-    }
 };
-
-pub fn easingBounceIn(b1: Float, b2: Float, b3: Float, b4: Float, b5: Float, b6: Float, b7: Float, b8: Float, b9: Float) Easing {
-    return (BounceInEasing{ .b1 = b1, .b2 = b2, .b3 = b3, .b4 = b4, .b5 = b5, .b6 = b6, .b7 = b7, .b8 = b8, .b9 = b9 }).easing();
-}
 
 const BounceInEasing = struct {
     var default = BounceInEasing{};
@@ -844,15 +778,8 @@ const BounceInEasing = struct {
         const tt = _t - self.b8;
         return 1.0 - (b0 * tt * tt + self.b9);
     }
-
-    fn easing(self: *BounceInEasing) Easing {
-        return Easing.init(self);
-    }
 };
 
-pub fn easingBounceOut(b1: Float, b2: Float, b3: Float, b4: Float, b5: Float, b6: Float, b7: Float, b8: Float, b9: Float) Easing {
-    return (BounceOutEasing{ .b1 = b1, .b2 = b2, .b3 = b3, .b4 = b4, .b5 = b5, .b6 = b6, .b7 = b7, .b8 = b8, .b9 = b9 }).easing();
-}
 const BounceOutEasing = struct {
     var default = BounceOutEasing{};
 
@@ -882,15 +809,8 @@ const BounceOutEasing = struct {
         const tt = t - self.b8;
         return b0 * tt * tt + self.b9;
     }
-
-    fn easing(self: *BounceOutEasing) Easing {
-        return Easing.init(self);
-    }
 };
 
-pub fn easingPolyIn(exp: Float) Easing {
-    return (PolyInEasing{ .exp = exp }).easing();
-}
 const PolyInEasing = struct {
     var quad = PolyInEasing{};
     var cubic = PolyInEasing{ .exp = 3 };
@@ -902,15 +822,7 @@ const PolyInEasing = struct {
     fn f(self: *PolyInEasing, t: Float) Float {
         return std.math.pow(Float, t, self.exp);
     }
-
-    fn easing(self: *PolyInEasing) Easing {
-        return Easing.init(self);
-    }
 };
-
-pub fn easingPolyOut(exp: Float) Easing {
-    return (PolyOutEasing{ .exp = exp }).easing();
-}
 
 const PolyOutEasing = struct {
     var quad = PolyOutEasing{ .exp = 2 };
@@ -923,15 +835,7 @@ const PolyOutEasing = struct {
     fn f(self: *PolyOutEasing, t: Float) Float {
         return 1 - (std.math.pow(Float, 1 - t, self.exp));
     }
-
-    fn easing(self: *PolyOutEasing) Easing {
-        return Easing.init(self);
-    }
 };
-
-pub fn easingPolyInOut(exp: Float) Easing {
-    return (PolyInOutEasing{ .exp = exp }).easing();
-}
 
 const PolyInOutEasing = struct {
     var quad = PolyInOutEasing{ .exp = 2 };
@@ -947,10 +851,6 @@ const PolyInOutEasing = struct {
             std.math.pow(Float, tt, self.exp) / 2
         else
             (2 - std.math.pow(Float, 2.0 - tt, self.exp)) / 2;
-    }
-
-    fn easing(self: *PolyInOutEasing) Easing {
-        return Easing.init(self);
     }
 };
 

@@ -17,7 +17,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
-    firefly.Engine.start(600, 900, 60, "Easing", init);
+    firefly.Engine.start(600, 1000, 60, "Easing", init);
 }
 
 var ypos: Float = 30;
@@ -60,6 +60,8 @@ fn init() void {
     create("Back Out:", Easing.Back_Out);
     create("Bounce In:", Easing.Bounce_In);
     create("Bounce Out:", Easing.Bounce_Out);
+    create("BackIn(5):", utils.createEasing(utils.BackInEasing{ .back_factor = 5 }, firefly.api.POOL_ALLOC));
+    create("BackIn(10):", utils.createEasing(utils.BackInEasing{ .back_factor = 10 }, firefly.api.POOL_ALLOC));
 }
 
 fn create(name: String, easing: Easing) void {

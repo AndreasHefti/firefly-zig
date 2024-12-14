@@ -117,7 +117,7 @@ pub const Composite = struct {
 
     pub fn withTaskRef(self: *Composite, task_ref: CompositeTaskRef) *Composite {
         if (task_ref.task_ref == null and task_ref.task_name == null)
-            utils.panic(api.ALLOC, "CompositeTaskRef has whether id nor name. {any}", .{task_ref});
+            std.debug.panic("CompositeTaskRef has whether id nor name. {any}", .{task_ref});
 
         _ = self.task_refs.add(task_ref);
         return self;
@@ -237,7 +237,7 @@ pub fn CompositeMixin() type {
         fn checkInCreationState(c_id: Index) void {
             const composite = api.Composite.Component.byId(c_id);
             if (composite.loaded)
-                utils.panic(api.ALLOC, "Composite is already loaded: {?s}", .{composite.name});
+                std.debug.panic("Composite is already loaded: {?s}", .{composite.name});
         }
     };
 }

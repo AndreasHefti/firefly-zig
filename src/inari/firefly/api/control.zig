@@ -208,7 +208,7 @@ pub const Task = struct {
         if (Naming.byName(task_name)) |task| {
             var ctx = context;
             task.runWith(&ctx, false);
-        } else utils.panic(api.ALLOC, "No Task with name {s} found!", .{task_name});
+        } else std.debug.panic("No Task with name {s} found!", .{task_name});
     }
 
     pub fn runOwnedTaskByName(task_name: String, context: *api.CallContext) void {

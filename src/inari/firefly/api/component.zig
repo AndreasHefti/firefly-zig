@@ -239,7 +239,7 @@ pub fn Mixin(comptime T: type) type {
             if (has_naming) {
                 if (result.name) |n| {
                     if (NameMappingMixin(T).mapping.contains(n))
-                        utils.panic(api.ALLOC, "Component name already exists: {s}", .{n});
+                        std.debug.panic("Component name already exists: {s}", .{n});
 
                     NameMappingMixin(T).mapping.put(n, id) catch unreachable;
                 }
@@ -513,7 +513,7 @@ pub fn NameMappingMixin(comptime T: type) type {
         }
 
         inline fn missName(name: String) void {
-            utils.panic(api.ALLOC, "no component with name: {s}", .{name});
+            std.debug.panic("no component with name: {s}", .{name});
         }
     };
 }
@@ -616,7 +616,7 @@ pub fn AttributeMixin(comptime T: type) type {
         }
 
         fn getAttributesName(self: *T) ?String {
-            return utils.NamePool.format("{s}_{d}_{?s}", .{
+            return api.format("{s}_{d}_{?s}", .{
                 if (@hasDecl(T, "aspect")) T.aspect.name else @typeName(T),
                 self.id,
                 self.name,
@@ -966,7 +966,7 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
         fn _register(base_type: *T, subtype: SubType) *SubType {
             const result = data.getOrPut(base_type.id) catch unreachable;
             if (result.found_existing)
-                utils.panic(api.ALLOC, "Component Subtype with id already exists: {d}", .{base_type.id});
+                std.debug.panic("Component Subtype with id already exists: {d}", .{base_type.id});
 
             result.value_ptr.* = subtype;
             result.value_ptr.*.id = base_type.id;

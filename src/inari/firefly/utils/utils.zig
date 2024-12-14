@@ -20,7 +20,6 @@ pub const Byte = u8;
 
 pub const String = string.String;
 pub const CString = string.CString;
-pub const NamePool = string.NamePool;
 pub const StringBuffer = string.StringBuffer;
 pub const StringPropertyIterator = string.StringPropertyIterator;
 pub const StringAttributeIterator = string.StringAttributeIterator;
@@ -42,8 +41,22 @@ pub usingnamespace @import("bitset.zig");
 
 pub const EMPTY_STRING: String = "";
 pub const UNDEF_INDEX = std.math.maxInt(Index);
+pub const IndexFormatter = struct {
+    index: Index,
 
-//pub const Test = struct { array: []Index = &[_]Index{ 1, 2, 3 } };
+    pub fn format(
+        self: IndexFormatter,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        if (self.index == UNDEF_INDEX) {
+            try writer.print("-", .{});
+        } else {
+            try writer.print("{d}", .{self.index});
+        }
+    }
+};
 
 pub inline fn usize_i32(v: usize) i32 {
     return @as(i32, @intCast(v));
@@ -125,13 +138,6 @@ pub inline fn parseName(value: ?String) ?String {
 pub fn getNullPointer(comptime T: type) *const ?T {
     const t: ?T = null;
     return &t;
-}
-
-pub inline fn panic(allocator: Allocator, comptime template: String, args: anytype) void {
-    const msg = std.fmt.allocPrint(allocator, template, args) catch unreachable;
-    errdefer allocator.free(msg);
-
-    @panic(msg);
 }
 
 pub fn enumByName(comptime E: type, name: ?String) ?E {
