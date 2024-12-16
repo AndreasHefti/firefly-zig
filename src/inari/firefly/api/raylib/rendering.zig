@@ -336,6 +336,10 @@ const RaylibRenderAPI = struct {
             @intFromFloat(projection.width),
             @intFromFloat(projection.height),
         );
+
+        rl.SetTextureFilter(tex.texture, rlgl.RL_TEXTURE_FILTER_LINEAR);
+        rl.SetTextureWrap(tex.texture, rlgl.RL_TEXTURE_WRAP_CLAMP);
+
         const id = render_textures.add(tex);
         return RenderTextureBinding{
             .id = id,

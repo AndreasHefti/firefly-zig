@@ -27,6 +27,8 @@ pub fn init() void {
 
     // register components
     api.Component.register(ContactConstraint, "ContactConstraint");
+    api.Component.register(CollisionResolver, comptime "CollisionResolver");
+    api.Component.Subtype.register(CollisionResolver, VoidCollisionResolver, "VoidCollisionResolver");
 
     // register entity components
     api.Entity.registerComponent(EContact, "EContact");
@@ -487,37 +489,40 @@ pub const ContactScan = struct {
 //// Collision Resolving
 //////////////////////////////////////////////////////////////
 
-pub const CollisionResolverFunction = *const fn (entity_id: Index, _instance_id: ?Index) void;
-pub const CollisionResolverInit = *const fn (entity_id: Index, _instance_id: Index) void;
+pub const CollisionResolverFunction = *const fn (entity_id: Index, instance_id: Index) void;
+pub const ResolverRegistrationFunction = *const fn (entity_id: Index, instance_id: Index, active: bool) void;
+
 pub const CollisionResolver = struct {
-    _resolve: CollisionResolverFunction,
-    _instance_id: ?Index = null,
-    _init: ?CollisionResolverInit = null,
+    pub const Component = api.Component.Mixin(CollisionResolver);
+    pub const Naming = api.Component.NameMappingMixin(CollisionResolver);
+    pub const Activation = api.Component.ActivationMixin(CollisionResolver);
+    pub const Subscription = api.Component.SubscriptionMixin(CollisionResolver);
+    pub const Subtypes = api.Component.SubTypingMixin(CollisionResolver);
 
-    pub fn resolve(self: *CollisionResolver, entity_id: Index) void {
-        self._resolve(entity_id, self._instance_id);
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+    resolve: CollisionResolverFunction,
+    register: ?ResolverRegistrationFunction = null,
+
+    pub fn createForSubType(subtype: anytype) *CollisionResolver {
+        const c_subtype_type = @TypeOf(subtype);
+        const resolve = if (@hasDecl(c_subtype_type, api.FUNCTION_NAMES.COMPONENT_RESOLVE_FUNCTION)) c_subtype_type.resolve else subtype.resolve;
+        const name = if (@hasField(c_subtype_type, api.FIELD_NAMES.COMPONENT_NAME_FIELD)) subtype.name else @typeName(c_subtype_type);
+        return Component.newForSubType(CollisionResolver{
+            .name = name,
+            .resolve = resolve,
+            .register = if (@hasDecl(c_subtype_type, api.FUNCTION_NAMES.COMPONENT_REGISTER_FUNCTION)) c_subtype_type.register else null,
+        });
     }
 };
-pub const DebugCollisionResolver: CollisionResolver = .{
-    ._resolve = debugCollisionResolver,
+
+pub const VoidCollisionResolver = struct {
+    pub const Component = api.Component.SubTypeMixin(CollisionResolver, VoidCollisionResolver);
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+    resolve: CollisionResolverFunction,
 };
-
-fn debugCollisionResolver(entity_id: Index, _: ?Index) void {
-    const entity = api.Entity.Component.byId(entity_id);
-    const transform = graphics.ETransform.Component.byId(entity_id);
-    const scans = EContactScan.Component.byId(entity_id);
-
-    std.debug.print("******************************************\n", .{});
-    std.debug.print("Resolve collision on entity: {any}\n\n", .{entity});
-    std.debug.print("Transform: {any}\n\n", .{transform});
-    var next = scans.constraints.nextSetBit(0);
-    while (next) |i| {
-        const constraint = ContactConstraint.Component.byId(i);
-        std.debug.print("Contact Constraint: \n{any}\n\n", .{constraint});
-        next = scans.constraints.nextSetBit(i + 1);
-    }
-    std.debug.print("******************************************\n", .{});
-}
 
 //////////////////////////////////////////////////////////////
 //// EContact and EContactScan Entity Component
@@ -539,7 +544,7 @@ pub const EContactScan = struct {
 
     id: Index = UNDEF_INDEX,
 
-    collision_resolver: ?CollisionResolver = null,
+    collision_resolver: ?Index = null,
     constraints: utils.BitSet = undefined,
 
     pub fn construct(self: *EContactScan) void {
@@ -547,15 +552,20 @@ pub const EContactScan = struct {
     }
 
     pub fn destruct(self: *EContactScan) void {
+        if (self.collision_resolver) |id|
+            CollisionResolver.Component.dispose(id);
+
         self.collision_resolver = null;
         self.constraints.deinit();
         self.constraints = undefined;
     }
 
     pub fn activation(self: *EContactScan, active: bool) void {
-        if (active)
-            if (self.collision_resolver) |cr|
-                if (cr._init) |c_init| c_init(self.id, cr._instance_id.?);
+        if (self.collision_resolver) |cr_id| {
+            if (CollisionResolver.Component.byIdOptional(cr_id)) |cr|
+                if (cr.register) |register|
+                    register(self.id, cr_id, active);
+        }
     }
 
     pub fn clear(self: *EContactScan) void {
@@ -564,12 +574,6 @@ pub const EContactScan = struct {
             ContactConstraint.Component.byId(i).clear();
             next = self.constraints.nextSetBit(i + 1);
         }
-    }
-
-    // TODO remove
-    pub fn addToComponent(_: Index, _: ContactConstraint) void {
-        @panic("Use create");
-        //Component.byId(c_id).constraints.set(ContactConstraint.Component.new(constraint));
     }
 
     pub fn withConstraint(self: *EContactScan, constraint: ContactConstraint) *EContactScan {
@@ -718,8 +722,8 @@ pub const ContactSystem = struct {
         }
 
         if (has_any_contact) {
-            if (e_scan.collision_resolver) |*resolver|
-                resolver.resolve(e_scan.id);
+            if (e_scan.collision_resolver) |r_id|
+                CollisionResolver.Component.byId(r_id).resolve(e_scan.id, r_id);
         }
     }
 

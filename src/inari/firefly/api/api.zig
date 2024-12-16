@@ -293,6 +293,8 @@ pub const FUNCTION_NAMES = struct {
     pub const COMPONENT_DESTRUCTOR_FUNCTION: String = "destruct";
     pub const COMPONENT_ACTIVATION_FUNCTION: String = "activation";
     pub const COMPONENT_UPDATE_FUNCTION: String = "update";
+    pub const COMPONENT_RESOLVE_FUNCTION: String = "resolve";
+    pub const COMPONENT_REGISTER_FUNCTION: String = "register";
     pub const COMPONENT_CONTROLLED_TYPE_FUNCTION: String = "controlledComponentType";
 
     pub const ENTITY_CREATE_COMPONENT_FUNCTION: String = "createEComponent";

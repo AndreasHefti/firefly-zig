@@ -9,7 +9,7 @@ const EShape = firefly.graphics.EShape;
 const ShapeType = firefly.api.ShapeType;
 const EContact = firefly.physics.EContact;
 const EContactScan = firefly.physics.EContactScan;
-const DebugCollisionResolver = firefly.physics.DebugCollisionResolver;
+//const DebugCollisionResolver = firefly.physics.DebugCollisionResolver;
 const ESprite = firefly.graphics.ESprite;
 const EMovement = firefly.physics.EMovement;
 const Allocator = std.mem.Allocator;
@@ -52,7 +52,7 @@ fn init() void {
     var x: Float = 10;
 
     _ = Entity.newActive(.{}, .{
-        firefly.api.EControl{ .update = control },                    ETransform{ .position = .{ x, 0 } }, ESprite{ .template_id = sprite_id },
+        firefly.api.EControl{ .update = control },                                            ETransform{ .position = .{ x, 0 } }, ESprite{ .template_id = sprite_id },
         EMovement{
             .gravity_vector = .{ 2, firefly.physics.EARTH_GRAVITY },
             .mass = 1,
@@ -64,14 +64,9 @@ fn init() void {
             .vertices = firefly.api.allocFloatArray([_]Float{ 0, 0, 33, 33 }),
             .color = .{ 0, 0, 255, 255 },
         },
-        EContactScan{ .collision_resolver = DebugCollisionResolver },
+        EContactScan{ .collision_resolver = firefly.physics.getDebugCollisionResolver().id },
         ContactConstraint{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } }, .full_scan = true },
     });
-    // TODO move this to Entity creation
-    // EContactScan.addToComponent(eid, .{
-    //     .bounds = .{ .rect = .{ 0, 0, 32, 32 } },
-    //     .full_scan = true,
-    // });
 
     x += 50;
 

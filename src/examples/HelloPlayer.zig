@@ -130,7 +130,7 @@ fn create_player(_: *api.CallContext) void {
             .integrator = physics.EulerIntegrator,
         },
         physics.EContactScan{
-            .collision_resolver = game.PlatformerCollisionResolver.new(.{
+            .collision_resolver = game.PlatformerCollisionResolver.Component.new(.{
                 .contact_bounds = .{ 4, 1, 8, 14 },
                 .view_id = graphics.View.Naming.getId(view_name),
                 .layer_id = graphics.Layer.Naming.getId(layer2),

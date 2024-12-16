@@ -5,6 +5,8 @@ const movement = @import("movement.zig");
 const audio = @import("audio.zig");
 const contact = @import("contact.zig");
 const Float = firefly.utils.Float;
+const Index = firefly.utils.Index;
+const String = firefly.utils.String;
 
 //////////////////////////////////////////////////////////////
 //// Public API declarations
@@ -58,6 +60,7 @@ pub const ContactGizmosRenderer = contact.ContactGizmosRenderer;
 pub const ContactScanGizmosRenderer = contact.ContactScanGizmosRenderer;
 pub const CollisionResolverFunction = contact.CollisionResolverFunction;
 pub const CollisionResolver = contact.CollisionResolver;
+pub const VoidCollisionResolver = contact.VoidCollisionResolver;
 pub const ContactConstraint = contact.ContactConstraint;
 pub const ContactCallbackFunction = contact.ContactCallbackFunction;
 pub const IContactMap = contact.IContactMap;
@@ -69,8 +72,6 @@ pub const ContactTypeKind = ContactTypeAspectGroup.Kind;
 pub const ContactMaterialAspectGroup = firefly.utils.AspectGroup("ContactMaterial");
 pub const ContactMaterialAspect = ContactMaterialAspectGroup.Aspect;
 pub const ContactMaterialKind = ContactMaterialAspectGroup.Kind;
-
-pub const DebugCollisionResolver = contact.DebugCollisionResolver;
 
 //////////////////////////////////////////////////////////////
 //// module init
@@ -98,4 +99,32 @@ pub fn deinit() void {
     movement.deinit();
     audio.deinit();
     contact.deinit();
+}
+
+pub fn getDebugCollisionResolver() *CollisionResolver {
+    if (!VoidCollisionResolver.Component.existsByName("DEBUG_RESOLVER")) {
+        _ = VoidCollisionResolver.Component.new(.{
+            .name = "DEBUG_RESOLVER",
+            .resolve = debugCollisionResolver,
+        });
+    }
+
+    return CollisionResolver.Naming.byName("DEBUG_RESOLVER").?;
+}
+
+fn debugCollisionResolver(entity_id: Index, _: Index) void {
+    const entity = firefly.api.Entity.Component.byId(entity_id);
+    const transform = firefly.graphics.ETransform.Component.byId(entity_id);
+    const scans = EContactScan.Component.byId(entity_id);
+
+    std.debug.print("******************************************\n", .{});
+    std.debug.print("Resolve collision on entity: {any}\n\n", .{entity});
+    std.debug.print("Transform: {any}\n\n", .{transform});
+    var next = scans.constraints.nextSetBit(0);
+    while (next) |i| {
+        const constraint = ContactConstraint.Component.byId(i);
+        std.debug.print("Contact Constraint: \n{any}\n\n", .{constraint});
+        next = scans.constraints.nextSetBit(i + 1);
+    }
+    std.debug.print("******************************************\n", .{});
 }

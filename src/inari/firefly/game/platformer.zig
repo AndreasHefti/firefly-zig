@@ -27,7 +27,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    PlatformerCollisionResolver.init();
+    api.Component.Subtype.register(physics.CollisionResolver, PlatformerCollisionResolver, "PlatformerCollisionResolver");
     api.Component.Subtype.register(api.Control, SimplePlatformerHorizontalMoveControl, "SimplePlatformerHorizontalMoveControl");
     api.Component.Subtype.register(api.Control, SimplePlatformerJumpControl, "SimplePlatformerJumpControl");
 }
@@ -36,8 +36,6 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
-
-    PlatformerCollisionResolver.deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -72,6 +70,11 @@ const Sensor = struct {
 };
 
 pub const PlatformerCollisionResolver = struct {
+    pub const Component = api.Component.SubTypeMixin(physics.CollisionResolver, PlatformerCollisionResolver);
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+
     view_id: ?Index,
     layer_id: ?Index,
     contact_bounds: RectI,
@@ -92,39 +95,37 @@ pub const PlatformerCollisionResolver = struct {
     _ground_scan: BitMask = undefined,
     _terrain_constraint_ref: *physics.ContactConstraint = undefined,
 
-    var instances: utils.DynArray(PlatformerCollisionResolver) = undefined;
+    fn destruct(self: *PlatformerCollisionResolver) void {
+        defer self._initialized = false;
+        if (!self._initialized)
+            return;
 
-    fn init() void {
-        instances = utils.DynArray(PlatformerCollisionResolver).newWithRegisterSize(api.COMPONENT_ALLOC, 5);
+        self._entity_id = undefined;
+        self._north.deinit();
+        self._north = undefined;
+        self._south.deinit();
+        self._south = undefined;
+        self._west.deinit();
+        self._west = undefined;
+        self._east.deinit();
+        self._east = undefined;
+        self._ground_scan.deinit();
+        self._ground_scan = undefined;
     }
 
-    fn deinit() void {
-        var next = instances.slots.nextSetBit(0);
-        while (next) |i| {
-            if (instances.get(i)) |inst| {
-                inst._north.deinit();
-                inst._north = undefined;
-                inst._south.deinit();
-                inst._south = undefined;
-                inst._west.deinit();
-                inst._west = undefined;
-                inst._east.deinit();
-                inst._east = undefined;
-                inst._ground_scan.deinit();
-                inst._ground_scan = undefined;
-            }
-            next = instances.slots.nextSetBit(i + 1);
-        }
-
-        instances.deinit();
-        instances = undefined;
+    pub fn register(entity_id: Index, instance_id: Index, active: bool) void {
+        if (active)
+            initInstance(entity_id, instance_id);
     }
 
     fn initInstance(entity_id: Index, instance_id: Index) void {
-        var inst = instances.get(instance_id).?;
+        var inst = PlatformerCollisionResolver.Component.byId(instance_id);
         defer inst._initialized = true;
-        if (inst._initialized)
+        if (inst._initialized) {
+            if (inst._entity_id != entity_id)
+                @panic("PlatformerCollisionResolver entity integrity mismatch. A PlatformerCollisionResolver instance can only be assigned to one entity instance");
             return;
+        }
 
         inst._entity_id = entity_id;
         inst._transform = graphics.ETransform.Component.byId(entity_id);
@@ -157,52 +158,44 @@ pub const PlatformerCollisionResolver = struct {
             .pos1 = .{ 2, 0 },
             .pos2 = .{ x_half, 0 },
             .pos3 = .{ x_full, 0 },
-            .s1 = BitMask.new(api.ALLOC, 1, inst.scan_length),
-            .s2 = BitMask.new(api.ALLOC, 1, inst.scan_length),
-            .s3 = BitMask.new(api.ALLOC, 1, inst.scan_length),
+            .s1 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length),
+            .s2 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length),
+            .s3 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length),
         };
         inst._south = Sensor{
             .pos1 = .{ 2, y_full },
             .pos2 = .{ x_half, y_full },
             .pos3 = .{ x_full, y_full },
-            .s1 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
-            .s2 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
-            .s3 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
+            .s1 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
+            .s2 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
+            .s3 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
         };
         inst._west = Sensor{
             .pos1 = .{ 0, 2 },
             .pos2 = .{ 0, y_half },
             .pos3 = .{ 0, y_full },
-            .s1 = BitMask.new(api.ALLOC, inst.scan_length, 1),
-            .s2 = BitMask.new(api.ALLOC, inst.scan_length, 1),
-            .s3 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s1 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
+            .s2 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
+            .s3 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
         };
         inst._east = Sensor{
             .pos1 = .{ x_full, 2 },
             .pos2 = .{ x_full, y_half },
             .pos3 = .{ x_full, y_full },
-            .s1 = BitMask.new(api.ALLOC, inst.scan_length, 1),
-            .s2 = BitMask.new(api.ALLOC, inst.scan_length, 1),
-            .s3 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s1 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
+            .s2 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
+            .s3 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
         };
         inst._ground_offset = .{ 2, inst.contact_bounds[3] };
         inst._ground_scan = BitMask.new(
-            api.ALLOC,
+            api.POOL_ALLOC,
             utils.cint_usize(inst.contact_bounds[2] - 3),
             1,
         );
     }
 
-    pub fn new(template: PlatformerCollisionResolver) physics.CollisionResolver {
-        return physics.CollisionResolver{
-            ._instance_id = instances.add(template),
-            ._resolve = resolve,
-            ._init = initInstance,
-        };
-    }
-
-    fn resolve(entity_id: Index, instance_id: ?Index) void {
-        const data = instances.get(instance_id.?) orelse return;
+    pub fn resolve(entity_id: Index, instance_id: Index) void {
+        const data = PlatformerCollisionResolver.Component.byId(instance_id);
 
         if (data._terrain_constraint_ref.scan.hasAnyContact()) {
             var move = physics.EMovement.Component.byId(entity_id);

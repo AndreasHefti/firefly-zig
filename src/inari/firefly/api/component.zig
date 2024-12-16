@@ -232,6 +232,9 @@ pub fn Mixin(comptime T: type) type {
         }
 
         fn register(t: T) *T {
+            if (!_type_init)
+                @panic("Type is not initialized yet");
+
             const id = pool.add(t);
             const result: *T = pool.get(id) orelse unreachable;
 
@@ -265,6 +268,9 @@ pub fn Mixin(comptime T: type) type {
         }
 
         pub fn byIdOptional(id: Index) ?*T {
+            if (!_type_init)
+                return null;
+
             return pool.get(id);
         }
 

@@ -57,7 +57,7 @@ fn init() void {
         view_id,
         game.SimplePivotCamera{
             .name = "Camera1",
-            .pixel_perfect = false,
+            .pixel_perfect = true,
             .snap_to_bounds = .{ 0, 0, room_pixel_width, room_pixel_height },
             .pivot = &pivot,
             .velocity_relative_to_pivot = .{ 0.5, 0.5 },
