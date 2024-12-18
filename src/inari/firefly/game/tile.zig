@@ -108,7 +108,7 @@ pub const TileSet = struct {
     tile_templates: utils.DynArray(TileTemplate) = undefined,
 
     pub fn componentTypeInit() !void {
-        contact_mask_cache = std.StringHashMap(utils.BitMask).init(firefly.api.ALLOC);
+        contact_mask_cache = std.StringHashMap(utils.BitMask).init(firefly.api.COMPONENT_ALLOC);
         return;
     }
 
@@ -169,7 +169,7 @@ pub const TileSet = struct {
             const width: usize = firefly.utils.f32_usize(@abs(st.texture_bounds[2]));
             const height: usize = firefly.utils.f32_usize(@abs(st.texture_bounds[3]));
             var result: utils.BitMask = utils.BitMask.new(
-                firefly.api.ALLOC,
+                firefly.api.COMPONENT_ALLOC,
                 width,
                 height,
             );
@@ -382,7 +382,7 @@ pub const TileMapping = struct {
                         );
 
                     var entity_mapping: *utils.DynIndexArray = self.layer_entity_mapping.set(
-                        utils.DynIndexArray.new(firefly.api.ALLOC, 100),
+                        utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 100),
                         layer.id,
                     );
 

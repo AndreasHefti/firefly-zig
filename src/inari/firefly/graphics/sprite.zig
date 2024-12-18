@@ -312,11 +312,10 @@ pub const SpriteSet = struct {
     fn getMapName(name: ?String, prefix: String, x: usize, y: ?usize) String {
         if (name) |n| return n;
 
-        if (y) |_y| {
-            return std.fmt.allocPrint(firefly.api.ALLOC, "{s}_{d}_{d}", .{ prefix, x, _y }) catch unreachable;
-        } else {
-            return std.fmt.allocPrint(firefly.api.ALLOC, "{s}_{d}", .{ prefix, x }) catch unreachable;
-        }
+        return if (y) |_y|
+            return api.format("{s}_{d}_{d}", .{ prefix, x, _y })
+        else
+            return api.format("{s}_{d}", .{ prefix, x });
     }
 };
 

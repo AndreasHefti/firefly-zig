@@ -413,7 +413,7 @@ fn loadTileMapping(jsonTileMapping: JSONTileMapping, view_name: String) Index {
 
     // process tile sets and make code offset mapping, if not exists, load it
     var code_offset: Index = 1;
-    var code_offset_mapping = utils.DynIndexArray.new(api.ALLOC, 10);
+    var code_offset_mapping = utils.DynIndexArray.new(api.LOAD_ALLOC, 10);
     defer code_offset_mapping.deinit();
 
     for (0..jsonTileMapping.tile_sets.len) |i| {
@@ -658,8 +658,8 @@ fn loadRoom(jsonRoom: JSONRoom, ctx: *api.CallContext) Index {
             ).id,
         );
     } else if (jsonRoom.tile_mapping) |tm| {
-        const tileMappingJSON = std.json.stringifyAlloc(api.ALLOC, tm, .{}) catch unreachable;
-        defer api.ALLOC.free(tileMappingJSON);
+        const tileMappingJSON = std.json.stringifyAlloc(api.LOAD_ALLOC, tm, .{}) catch unreachable;
+        defer api.LOAD_ALLOC.free(tileMappingJSON);
 
         game.Room.Composite.addTaskByName(
             room_id,

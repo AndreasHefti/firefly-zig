@@ -660,7 +660,7 @@ pub const ContactSystem = struct {
     }
 
     pub fn systemInit() void {
-        simple_mapping = utils.BitSet.new(api.ALLOC);
+        simple_mapping = utils.BitSet.new(api.COMPONENT_ALLOC);
         entity_condition = api.EntityTypeCondition{
             .accept_kind = api.EComponentAspectGroup.newKindOf(.{EContact}),
             .dismiss_kind = api.EComponentAspectGroup.newKindOf(.{graphics.ETile}),

@@ -32,7 +32,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
-    firefly.Engine.start(600, 480, 60, "Hello Contact", init);
+    firefly.Engine.start(600, 480, 60, "Hello Camera", init);
 }
 
 fn init() void {
@@ -95,6 +95,7 @@ fn init() void {
     const eid = Entity.Component.new(.{ .name = "RefEntity" });
     EView.Component.new(eid, .{ .view_id = view.id });
     ETransform.Component.new(eid, .{ .position = .{ 100, 100 } });
+    ESprite.Component.new(eid, .{ .template_id = sprite_id });
     EMultiplier.Component.new(eid, .{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
         .{ 50, 50 },
         .{ 200, 50 },
