@@ -272,7 +272,10 @@ pub const View = struct {
     pub fn activation(view: *View, active: bool) void {
         if (active) {
             addViewMapping(view);
-            view.render_texture_binding = firefly.api.rendering.createRenderTexture(&view.projection);
+            view.render_texture_binding = firefly.api.rendering.createRenderTexture(&view.projection) catch |err| {
+                api.Logger.errWith("Failed to load RenderTexture for View: {any}", .{view}, err);
+                return;
+            };
         } else {
             removeViewMapping(view);
             if (view.render_texture_binding) |b| {

@@ -163,7 +163,10 @@ pub const TileSet = struct {
             var image: api.ImageBinding = firefly.api.rendering.loadImageRegionFromTexture(
                 tex._binding.?.id,
                 st.texture_bounds,
-            );
+            ) catch |err| {
+                api.Logger.errWith("Failed to load texture region from texture: {any}", .{tex}, err);
+                return null;
+            };
             defer firefly.api.rendering.disposeImage(image.id);
 
             const width: usize = firefly.utils.f32_usize(@abs(st.texture_bounds[2]));

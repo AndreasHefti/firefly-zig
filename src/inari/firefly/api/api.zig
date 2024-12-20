@@ -41,6 +41,16 @@ pub const ERRORS = error{
     ENCRYPTION_KEY_LENGTH_MISMATCH,
 };
 
+pub const IOErrors = error{
+    UNKNOWN_LOAD_ERROR,
+    FILE_DOES_NOT_EXIST,
+    LOAD_TEXTURE_ERROR,
+    LOAD_IMAGE_ERROR,
+    LOAD_FONT_ERROR,
+    LOAD_RENDER_TEXTURE_ERROR,
+    LOAD_SHADER_ERROR,
+};
+
 pub const RUN_ON = enum { RAYLIB, TEST };
 pub const RUN_ON_SET: RUN_ON = RUN_ON.RAYLIB;
 
@@ -478,6 +488,18 @@ pub const NamePool = struct {
 //// Global Logger and Error Handling
 //////////////////////////////////////////////////////////////
 
+pub inline fn handleUnknownError(err: anyerror) void {
+    Logger.errWith("Unknown error happened:", .{}, err);
+    @panic("Unknown error happened see logs");
+}
+
+pub inline fn handleError(err: anyerror, comptime msg: ?String, args: anytype) void {
+    if (msg) |m|
+        Logger.err(m, args);
+
+    utils.panic(ALLOC, "Panic because of: {s}", .{@errorName(err)});
+}
+
 pub const Logger = struct {
     var log_buffer: []u8 = undefined;
 
@@ -511,14 +533,6 @@ pub const Logger = struct {
         return std.fmt.bufPrint(log_buffer, msg, args) catch unreachable;
     }
 };
-
-// TODO better error handling?
-pub inline fn handleError(err: anyerror, comptime msg: ?String, args: anytype) void {
-    if (msg) |m|
-        Logger.err(m, args);
-
-    utils.panic(ALLOC, "Panic because of: {s}", .{@errorName(err)});
-}
 
 //////////////////////////////////////////////////////////////
 //// Attributes
@@ -953,23 +967,23 @@ pub fn IRenderAPI() type {
 
         /// Loads image data from file system and create new texture data loaded into GPU
         /// @param textureData The texture DAO. Sets binding, width and height to the DAO
-        loadTexture: *const fn (resource: String, is_mipmap: bool, filter: TextureFilter, wrap: TextureWrap) TextureBinding = undefined,
+        loadTexture: *const fn (resource: String, is_mipmap: bool, filter: TextureFilter, wrap: TextureWrap) IOErrors!TextureBinding = undefined,
         /// Disposes the texture with given texture binding id from GPU memory
         /// @param textureId binding identifier of the texture to dispose.
         disposeTexture: *const fn (BindingId) void = undefined,
 
-        loadImageFromTexture: *const fn (BindingId) ImageBinding = undefined,
-        loadImageRegionFromTexture: *const fn (BindingId, RectF) ImageBinding = undefined,
-        loadImageFromFile: *const fn (String) ImageBinding = undefined,
+        loadImageFromTexture: *const fn (BindingId) IOErrors!ImageBinding = undefined,
+        loadImageRegionFromTexture: *const fn (BindingId, RectF) IOErrors!ImageBinding = undefined,
+        loadImageFromFile: *const fn (String) IOErrors!ImageBinding = undefined,
         disposeImage: *const fn (BindingId) void = undefined,
 
-        loadFont: *const fn (resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) BindingId = undefined,
+        loadFont: *const fn (resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) IOErrors!BindingId = undefined,
         disposeFont: *const fn (BindingId) void = undefined,
 
-        createRenderTexture: *const fn (projection: *Projection) RenderTextureBinding = undefined,
+        createRenderTexture: *const fn (projection: *Projection) IOErrors!RenderTextureBinding = undefined,
         disposeRenderTexture: *const fn (BindingId) void = undefined,
         /// create new shader from given shader data and load it to GPU
-        createShader: *const fn (vertex_shader: ?String, fragment_shade: ?String, file: bool) ShaderBinding = undefined,
+        createShader: *const fn (vertex_shader: ?String, fragment_shade: ?String, file: bool) IOErrors!ShaderBinding = undefined,
         /// Dispose the shader with the given binding identifier (shaderId) from GPU
         /// @param shaderId identifier of the shader to dispose.
         disposeShader: *const fn (BindingId) void = undefined,

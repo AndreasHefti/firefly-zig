@@ -205,10 +205,14 @@ const RaylibRenderAPI = struct {
         is_mipmap: bool,
         filter: TextureFilter,
         wrap: TextureWrap,
-    ) TextureBinding {
+    ) firefly.api.IOErrors!TextureBinding {
         const res = NamePool.allocCName(resource);
-        var tex = rl.LoadTexture(res);
         defer NamePool.freeCNames();
+
+        var tex = rl.LoadTexture(res);
+        if (!rl.IsTextureReady(tex))
+            return firefly.api.IOErrors.LOAD_TEXTURE_ERROR;
+
         if (is_mipmap) {
             rl.GenTextureMipmaps(&tex);
         }
@@ -230,9 +234,13 @@ const RaylibRenderAPI = struct {
         textures.delete(binding);
     }
 
-    fn loadImageFromTexture(texture_id: BindingId) ImageBinding {
+    fn loadImageFromTexture(texture_id: BindingId) firefly.api.IOErrors!ImageBinding {
         const texture: *Texture2D = textures.get(texture_id).?;
         const img: Image = rl.LoadImageFromTexture(texture.*);
+
+        if (!rl.IsImageReady(img))
+            return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
+
         const img_id = images.add(img);
         return ImageBinding{
             .id = img_id,
@@ -246,9 +254,13 @@ const RaylibRenderAPI = struct {
         };
     }
 
-    fn loadImageRegionFromTexture(texture_id: BindingId, region: RectF) ImageBinding {
+    fn loadImageRegionFromTexture(texture_id: BindingId, region: RectF) firefly.api.IOErrors!ImageBinding {
         const texture: *Texture2D = textures.get(texture_id).?;
         const img: Image = rl.LoadImageFromTexture(texture.*);
+
+        if (!rl.IsImageReady(img))
+            return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
+
         var img_region = rl.ImageFromImage(
             img,
             .{
@@ -258,6 +270,10 @@ const RaylibRenderAPI = struct {
                 .height = @abs(region[3]),
             },
         );
+
+        if (!rl.IsImageReady(img_region))
+            return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
+
         if (region[2] < 0)
             rl.ImageFlipHorizontal(&img_region);
         if (region[3] < 0)
@@ -275,9 +291,13 @@ const RaylibRenderAPI = struct {
         };
     }
 
-    fn loadImageFromFile(resource: String) ImageBinding {
-        const img: Image = rl.LoadImage(NamePool.allocCName(resource));
+    fn loadImageFromFile(resource: String) firefly.api.IOErrors!ImageBinding {
         defer NamePool.freeCNames();
+        const img: Image = rl.LoadImage(NamePool.allocCName(resource));
+
+        if (!rl.IsImageReady(img))
+            return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
+
         const img_id = images.add(img);
         return ImageBinding{
             .id = img_id,
@@ -310,7 +330,7 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn loadFont(resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) BindingId {
+    fn loadFont(resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) firefly.api.IOErrors!BindingId {
         defer NamePool.freeCNames();
 
         const font = if (size == null and char_num == null and code_points == null)
@@ -322,6 +342,10 @@ const RaylibRenderAPI = struct {
                 code_points orelse 0,
                 char_num orelse default_char_num,
             );
+
+        if (!rl.IsFontReady(font))
+            return firefly.api.IOErrors.LOAD_FONT_ERROR;
+
         return fonts.add(font);
     }
 
@@ -331,11 +355,14 @@ const RaylibRenderAPI = struct {
         fonts.delete(binding);
     }
 
-    fn createRenderTexture(projection: *Projection) RenderTextureBinding {
+    fn createRenderTexture(projection: *Projection) firefly.api.IOErrors!RenderTextureBinding {
         const tex = rl.LoadRenderTexture(
             @intFromFloat(projection.width),
             @intFromFloat(projection.height),
         );
+
+        if (!rl.IsRenderTextureReady(tex))
+            return firefly.api.IOErrors.LOAD_RENDER_TEXTURE_ERROR;
 
         rl.SetTextureFilter(tex.texture, rlgl.RL_TEXTURE_FILTER_LINEAR);
         rl.SetTextureWrap(tex.texture, rlgl.RL_TEXTURE_WRAP_CLAMP);
@@ -354,7 +381,7 @@ const RaylibRenderAPI = struct {
         render_textures.delete(id);
     }
 
-    fn createShader(vertex_shader: ?String, fragment_shade: ?String, file: bool) ShaderBinding {
+    fn createShader(vertex_shader: ?String, fragment_shade: ?String, file: bool) firefly.api.IOErrors!ShaderBinding {
         defer NamePool.freeCNames();
         var shader: Shader = undefined;
         if (file) {
@@ -368,6 +395,9 @@ const RaylibRenderAPI = struct {
                 NamePool.allocCName(fragment_shade orelse EMPTY_STRING),
             );
         }
+
+        if (!rl.IsShaderReady(shader))
+            return firefly.api.IOErrors.LOAD_SHADER_ERROR;
 
         return .{
             .id = shaders.add(shader),

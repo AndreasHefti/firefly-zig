@@ -208,12 +208,18 @@ pub const Shader = struct {
                 self.vertex_shader_resource,
                 self.fragment_shader_resource,
                 self.file_resource,
-            );
+            ) catch |err| {
+                api.Logger.errWith("Failed to load shader: {any}", .{self}, err);
+                api.Asset.assetLoadError(self.id, err);
+                return;
+            };
+            api.Asset.assetLoaded(self.id, true);
         } else {
             if (self._binding) |b| {
                 firefly.api.rendering.disposeShader(b.id);
                 self._binding = null;
             }
+            api.Asset.assetLoaded(self.id, false);
         }
     }
 
@@ -291,12 +297,18 @@ pub const Texture = struct {
                 self.is_mipmap,
                 self.filter,
                 self.wrap,
-            );
+            ) catch |err| {
+                api.Logger.errWith("Failed to load texture: {any}", .{self}, err);
+                api.Asset.assetLoadError(self.id, err);
+                return;
+            };
+            api.Asset.assetLoaded(self.id, true);
         } else {
             if (self._binding) |b| {
                 firefly.api.rendering.disposeTexture(b.id);
                 self._binding = null;
             }
+            api.Asset.assetLoaded(self.id, false);
         }
     }
 };

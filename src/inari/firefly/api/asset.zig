@@ -25,6 +25,7 @@ pub fn deinit() void {
 //////////////////////////////////////////////////////////////////////////
 //// Public API
 //////////////////////////////////////////////////////////////////////////
+
 pub const Asset = struct {
     pub const Component = api.Component.Mixin(Asset);
     pub const Naming = api.Component.NameMappingMixin(Asset);
@@ -34,6 +35,9 @@ pub const Asset = struct {
 
     id: Index = UNDEF_INDEX,
     name: ?String = null,
+
+    loaded: bool = false,
+    load_error: ?api.IOErrors = null,
 
     pub fn createForSubType(SubType: anytype) *Asset {
         return api.Asset.Component.newForSubType(.{ .name = SubType.name });
@@ -45,5 +49,15 @@ pub const Asset = struct {
 
     pub fn close(self: *Asset) void {
         Activation.byId(self.id, false);
+    }
+
+    pub fn assetLoaded(id: Index, state: bool) void {
+        Asset.Component.byId(id).loaded = state;
+        Asset.Component.byId(id).load_error = null;
+    }
+
+    pub fn assetLoadError(id: Index, err: api.IOErrors) void {
+        Asset.Component.byId(id).loaded = false;
+        Asset.Component.byId(id).load_error = err;
     }
 };

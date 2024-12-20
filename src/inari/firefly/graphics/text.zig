@@ -62,12 +62,18 @@ pub const Font = struct {
                 self.size,
                 self.char_num,
                 self.code_points,
-            );
+            ) catch |err| {
+                api.Logger.errWith("Failed to load Font: {any}", .{self}, err);
+                api.Asset.assetLoadError(self.id, err);
+                return;
+            };
+            api.Asset.assetLoaded(self.id, true);
         } else {
             if (self._binding) |b| {
                 firefly.api.rendering.disposeFont(b);
                 self._binding = null;
             }
+            api.Asset.assetLoaded(self.id, false);
         }
     }
 };
