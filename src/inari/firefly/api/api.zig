@@ -740,7 +740,6 @@ var VIEW_RENDER_EVENT_DISPATCHER: utils.EventDispatch(ViewRenderEvent) = undefin
 pub const UpdateEvent = struct {};
 pub const UpdateListener = *const fn (UpdateEvent) void;
 pub const RenderEventType = enum {
-    PRE_RENDER,
     RENDER,
     POST_RENDER,
 };

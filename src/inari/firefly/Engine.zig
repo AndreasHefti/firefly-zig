@@ -16,7 +16,7 @@ const CString = firefly.utils.CString;
 const CInt = firefly.utils.CInt;
 
 var UPDATE_EVENT = UpdateEvent{};
-var RENDER_EVENT = RenderEvent{ .type = RenderEventType.PRE_RENDER };
+var RENDER_EVENT = RenderEvent{ .type = .RENDER };
 var running = false;
 
 // TODO remove this after System refactoring. Use Mixins instead
@@ -166,11 +166,8 @@ pub fn tick() void {
     Timer.tick();
     firefly.api.update(UPDATE_EVENT);
 
-    if (!running) return;
-
-    // rendering
-    RENDER_EVENT.type = RenderEventType.PRE_RENDER;
-    firefly.api.render(RENDER_EVENT);
+    if (!running)
+        return;
 
     RENDER_EVENT.type = RenderEventType.RENDER;
     firefly.api.render(RENDER_EVENT);

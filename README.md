@@ -5,16 +5,10 @@ Firefly is a 2D Game API and engine strongly based on ECS design. Uses [raylib](
 Note: Firefly is under heavy development and way far from release or completed feature set. 
 
 TODO: 
-    - Error handling
-        - IO Tasks (File load/save, Tasks, Assets...) should have error handling possibilities
-        - Other Components and Entities do not need special error handling just global error handler for:
-            - unreachable (usually allocs)
-            - panics 
-            - others?
 
-    Allocation handling
-        - Use new arena allocators where possible and when it makes sense
-        - For Component-Fields and EntityComponent-Fields that needs allocation, consider overall pool allocation just like for components itself
+    - [ ] Autoscaling on Window size changes
+    - [ ] Controller example
+    - [ ] Next Release
 
 Features:
 
