@@ -121,7 +121,7 @@ pub const BehaviorTreeBuilder = struct {
     }
 
     pub fn newTree(root: BehaviorNode) *BehaviorTreeBuilder {
-        var tree = api.ALLOC.create(BehaviorTreeBuilder) catch unreachable;
+        var tree = api.ALLOC.create(BehaviorTreeBuilder) catch |err| api.handleUnknownError(err);
         tree.stack = utils.DynIndexArray.new(api.ALLOC, 10);
         tree.stack.add(BehaviorNode.Component.new(root));
         return tree;

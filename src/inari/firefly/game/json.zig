@@ -658,7 +658,7 @@ fn loadRoom(jsonRoom: JSONRoom, ctx: *api.CallContext) Index {
             ).id,
         );
     } else if (jsonRoom.tile_mapping) |tm| {
-        const tileMappingJSON = std.json.stringifyAlloc(api.LOAD_ALLOC, tm, .{}) catch unreachable;
+        const tileMappingJSON = std.json.stringifyAlloc(api.LOAD_ALLOC, tm, .{}) catch |err| api.handleUnknownError(err);
         defer api.LOAD_ALLOC.free(tileMappingJSON);
 
         game.Room.Composite.addTaskByName(
@@ -937,11 +937,11 @@ pub fn toJSONAttributes(attributes_str: String) []const JSONAttribute {
     var a_it = utils.StringAttributeIterator.new(attributes_str);
     var a_list = std.ArrayList(JSONAttribute).init(api.LOAD_ALLOC);
     while (a_it.next()) |r| {
-        var t_attr = a_list.addOne() catch unreachable;
+        var t_attr = a_list.addOne() catch |err| api.handleUnknownError(err);
         t_attr.name = r.name;
         t_attr.value = r.value;
     }
-    return a_list.toOwnedSlice() catch unreachable;
+    return a_list.toOwnedSlice() catch |err| api.handleUnknownError(err);
 }
 
 pub fn getAttributeValue(attrs: []const JSONAttribute, name: String) ?String {
@@ -1070,7 +1070,7 @@ pub fn convertTiledTileMapToJSONRoom(tiles_tile_map: TiledTileMap) JSONRoom {
         var task_it = utils.StringListIterator.new(taks_string);
         while (task_it.next()) |task_attr_str| {
             const task_attrs = toJSONAttributes(task_attr_str);
-            var new = task_list.addOne() catch unreachable;
+            var new = task_list.addOne() catch |err| api.handleUnknownError(err);
             new.name = getAttributeValue(task_attrs, P_NAME_NAME).?;
             new.life_cycle = getAttributeValue(task_attrs, P_NAME_LIFE_CYCLE).?;
             new.attributes = task_attrs;
@@ -1086,7 +1086,7 @@ pub fn convertTiledTileMapToJSONRoom(tiles_tile_map: TiledTileMap) JSONRoom {
         }),
         .start_scene = getPropertyValue(tiles_tile_map.properties, P_NAME_START_SCENE),
         .end_scene = getPropertyValue(tiles_tile_map.properties, P_NAME_END_SCENE),
-        .tasks = if (task_list.items.len > 0) task_list.toOwnedSlice() catch unreachable else null,
+        .tasks = if (task_list.items.len > 0) task_list.toOwnedSlice() catch |err| api.handleUnknownError(err) else null,
         .attributes = attrs,
         .tile_mapping = convertTiledTileMap(tiles_tile_map),
         .objects = convertTiledObjects(tiles_tile_map.layers),
@@ -1132,7 +1132,7 @@ fn convertTiledTileMap(tiled_tile_map: TiledTileMap) JSONTileMapping {
 
     for (0..layers.len) |i| {
         if (utils.stringEquals(layers[i].type, TILE_LAYER_NAME)) {
-            var new_layer = layer_list.addOne() catch unreachable;
+            var new_layer = layer_list.addOne() catch |err| api.handleUnknownError(err);
             new_layer.layer_name = layers[i].name;
             new_layer.offset = api.format("{d},{d}", .{ layers[i].x, layers[i].y });
             new_layer.parallax_factor = api.format("{d},{d}", .{ layers[i].parallaxx orelse 0, layers[i].parallaxy orelse 0 });
@@ -1140,7 +1140,7 @@ fn convertTiledTileMap(tiled_tile_map: TiledTileMap) JSONTileMapping {
             new_layer.blend_mode = getPropertyValue(layers[i].properties.?, P_NAME_BLEND_MODE);
             new_layer.tile_sets_refs = getPropertyValue(layers[i].properties.?, P_NAME_TILE_SET_REFS).?;
 
-            var new_grid = grid_list.addOne() catch unreachable;
+            var new_grid = grid_list.addOne() catch |err| api.handleUnknownError(err);
             new_grid.name = layers[i].name; // TODO same as layer?
             new_grid.layer = layers[i].name;
             new_grid.grid_tile_width = layers[i].width.?;
@@ -1159,7 +1159,7 @@ fn convertTiledTileMap(tiled_tile_map: TiledTileMap) JSONTileMapping {
         var tile_set_it = utils.StringListIterator.new(tile_sets_string);
         while (tile_set_it.next()) |tile_set_attr_str| {
             var tile_set_attrs = utils.StringAttributeMap.new(tile_set_attr_str, api.LOAD_ALLOC);
-            var new = tile_set_list.addOne() catch unreachable;
+            var new = tile_set_list.addOne() catch |err| api.handleUnknownError(err);
             new.code_offset = utils.parseUsize(tile_set_attrs.get(P_NAME_OFFSET));
             new.resource.name = tile_set_attrs.get(P_NAME_NAME);
             new.resource.file = tile_set_attrs.get(P_NAME_FILE);
@@ -1169,9 +1169,9 @@ fn convertTiledTileMap(tiled_tile_map: TiledTileMap) JSONTileMapping {
 
     return JSONTileMapping{
         .name = getPropertyValue(tiled_tile_map.properties, P_NAME_NAME).?,
-        .tile_sets = tile_set_list.toOwnedSlice() catch unreachable,
-        .tile_grids = grid_list.toOwnedSlice() catch unreachable,
-        .layer_mapping = layer_list.toOwnedSlice() catch unreachable,
+        .tile_sets = tile_set_list.toOwnedSlice() catch |err| api.handleUnknownError(err),
+        .tile_grids = grid_list.toOwnedSlice() catch |err| api.handleUnknownError(err),
+        .layer_mapping = layer_list.toOwnedSlice() catch |err| api.handleUnknownError(err),
     };
 }
 
@@ -1194,7 +1194,7 @@ fn convertTiledObjects(layers: []const TiledMapLayer) ?[]const JSONRoomObject {
         if (utils.stringEquals(layers[i].type, OBJECT_GROUP_NAME)) {
             if (layers[i].objects) |object| {
                 for (0..object.len) |j| {
-                    var new = list.addOne() catch unreachable;
+                    var new = list.addOne() catch |err| api.handleUnknownError(err);
                     new.name = object[j].name;
                     new.object_type = object[j].type;
                     new.attributes = convertObjectAttributes(object[j]);
@@ -1204,12 +1204,12 @@ fn convertTiledObjects(layers: []const TiledMapLayer) ?[]const JSONRoomObject {
             }
         }
     }
-    return list.toOwnedSlice() catch unreachable;
+    return list.toOwnedSlice() catch |err| api.handleUnknownError(err);
 }
 
 fn convertObjectAttributes(object: TiledObject) ?[]const JSONAttribute {
     var list = std.ArrayList(JSONAttribute).init(api.LOAD_ALLOC);
-    var bounds = list.addOne() catch unreachable;
+    var bounds = list.addOne() catch |err| api.handleUnknownError(err);
     bounds.name = P_NAME_BOUNDS;
     bounds.value = api.format("{d},{d},{d},{d}", .{
         object.x,
@@ -1219,10 +1219,10 @@ fn convertObjectAttributes(object: TiledObject) ?[]const JSONAttribute {
     });
 
     for (0..object.properties.len) |i| {
-        var new = list.addOne() catch unreachable;
+        var new = list.addOne() catch |err| api.handleUnknownError(err);
         new.name = object.properties[i].name;
         new.value = object.properties[i].value;
     }
 
-    return list.toOwnedSlice() catch unreachable;
+    return list.toOwnedSlice() catch |err| api.handleUnknownError(err);
 }

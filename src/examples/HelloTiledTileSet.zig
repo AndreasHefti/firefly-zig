@@ -70,7 +70,7 @@ fn init() void {
     }
 
     // and convert the tiled tile set to an in-house JSON tile set
-    convertAndSaveTiledTileSet() catch unreachable;
+    convertAndSaveTiledTileSet() catch |err| api.handleUnknownError(err);
 }
 
 fn convertAndSaveTiledTileSet() !void {

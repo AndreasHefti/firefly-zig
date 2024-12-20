@@ -182,7 +182,7 @@ pub fn init(context: InitContext) !void {
     ENTITY_ALLOC = context.entity_allocator;
     ALLOC = context.allocator;
 
-    Logger.log_buffer = ALLOC.alloc(u8, 1000) catch unreachable;
+    Logger.log_buffer = ALLOC.alloc(u8, 1000) catch |err| handleUnknownError(err);
     Logger.info("*** Starting Firefly Engine *** \n", .{});
 
     pool_alloc_arena = std.heap.ArenaAllocator.init(ALLOC);
@@ -369,17 +369,17 @@ pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !vo
 }
 
 pub fn allocFloatArray(array: anytype) []Float {
-    return firefly.api.POOL_ALLOC.dupe(Float, &array) catch unreachable;
+    return firefly.api.POOL_ALLOC.dupe(Float, &array) catch |err| handleUnknownError(err);
 }
 
 pub fn allocVec2FArray(array: anytype) []const Vector2f {
-    return firefly.api.POOL_ALLOC.dupe(Vector2f, &array) catch unreachable;
+    return firefly.api.POOL_ALLOC.dupe(Vector2f, &array) catch |err| handleUnknownError(err);
 }
 
 pub fn encrypt(text: String, password: [32]u8, allocator: Allocator) !String {
     const ad = "";
     var tag: [Aes256Gcm.tag_length]u8 = undefined;
-    const cypher: []u8 = allocator.alloc(u8, text.len) catch unreachable;
+    const cypher: []u8 = allocator.alloc(u8, text.len) catch |err| handleUnknownError(err);
     defer allocator.free(cypher);
 
     Aes256Gcm.encrypt(cypher, &tag, text, ad, nonce, password);
@@ -391,7 +391,7 @@ pub fn encrypt(text: String, password: [32]u8, allocator: Allocator) !String {
 pub fn decrypt(cypher: String, password: [32]u8, allocator: Allocator) !String {
     const ad = "";
     var tag: [Aes256Gcm.tag_length]u8 = undefined;
-    const text: []u8 = allocator.alloc(u8, cypher.len - Aes256Gcm.tag_length) catch unreachable;
+    const text: []u8 = allocator.alloc(u8, cypher.len - Aes256Gcm.tag_length) catch |err| handleUnknownError(err);
     std.mem.copyForwards(u8, &tag, cypher[cypher.len - Aes256Gcm.tag_length ..]);
 
     Aes256Gcm.decrypt(
@@ -410,7 +410,7 @@ pub fn decrypt(cypher: String, password: [32]u8, allocator: Allocator) !String {
 
 /// Formats a String as usual in zig. The resulting String lives in NamePool / POOL_ALLOC
 pub fn format(comptime fmt: String, args: anytype) String {
-    const formatted = std.fmt.allocPrint(ALLOC, fmt, args) catch unreachable;
+    const formatted = std.fmt.allocPrint(ALLOC, fmt, args) catch |err| handleUnknownError(err);
     defer ALLOC.free(formatted);
     return NamePool.alloc(formatted) orelse fmt;
 }
@@ -444,7 +444,7 @@ pub const NamePool = struct {
             if (names.contains(n))
                 return names.hash_map.getKey(n);
 
-            names.insert(n) catch unreachable;
+            names.insert(n) catch |err| handleUnknownError(err);
             //std.debug.print("************ NamePool names add: {s}\n", .{n});
             return names.hash_map.getKey(n);
         }
@@ -453,8 +453,8 @@ pub const NamePool = struct {
 
     pub fn allocCNameOptional(name: ?String) ?CString {
         if (name) |n| {
-            const _n = POOL_ALLOC.dupeZ(u8, n) catch unreachable;
-            c_names.append(_n) catch unreachable;
+            const _n = POOL_ALLOC.dupeZ(u8, n) catch |err| handleUnknownError(err);
+            c_names.append(_n) catch |err| handleUnknownError(err);
             //std.debug.print("************ NamePool c_names add: {s}\n", .{_n});
             return @ptrCast(_n);
         }
@@ -462,8 +462,8 @@ pub const NamePool = struct {
     }
 
     pub fn allocCName(name: String) CString {
-        const _n = POOL_ALLOC.dupeZ(u8, name) catch unreachable;
-        //c_names.append(_n) catch unreachable;
+        const _n = POOL_ALLOC.dupeZ(u8, name) catch |err| handleUnknownError(err);
+        //c_names.append(_n) catch |err| handleUnknownError(err);
         return @ptrCast(_n);
     }
 
@@ -530,7 +530,7 @@ pub const Logger = struct {
     }
 
     fn _format(comptime msg: String, args: anytype) String {
-        return std.fmt.bufPrint(log_buffer, msg, args) catch unreachable;
+        return std.fmt.bufPrint(log_buffer, msg, args) catch |e| handleUnknownError(e);
     }
 };
 
@@ -585,9 +585,9 @@ pub const Attributes = struct {
             self.remove(name);
 
         self._dict.put(
-            ALLOC.dupe(u8, name) catch unreachable,
-            ALLOC.dupe(u8, value) catch unreachable,
-        ) catch unreachable;
+            ALLOC.dupe(u8, name) catch |err| handleUnknownError(err),
+            ALLOC.dupe(u8, value) catch |err| handleUnknownError(err),
+        ) catch |err| handleUnknownError(err);
     }
 
     pub fn setAll(self: *Attributes, attributes: *Attributes) void {

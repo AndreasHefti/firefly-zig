@@ -186,7 +186,7 @@ pub const TileSet = struct {
                         result.setBitAt(x, y);
                 }
             }
-            contact_mask_cache.put(tile_template.contact_mask_name.?, result) catch unreachable;
+            contact_mask_cache.put(tile_template.contact_mask_name.?, result) catch |err| api.handleUnknownError(err);
         } else @panic("Missing texture with name");
 
         return contact_mask_cache.get(tile_template.contact_mask_name.?);

@@ -179,7 +179,7 @@ pub const Task = struct {
         if (self.blocking) {
             self._run(context, owned);
         } else {
-            _ = std.Thread.spawn(.{}, _run, .{ self, context, owned }) catch unreachable;
+            _ = std.Thread.spawn(.{}, _run, .{ self, context, owned }) catch |err| api.handleUnknownError(err);
         }
     }
 
@@ -327,7 +327,7 @@ pub const StateEngine = struct {
     update_scheduler: ?api.UpdateScheduler = null,
 
     pub fn construct(self: *StateEngine) void {
-        self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch unreachable;
+        self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch |err| api.handleUnknownError(err);
     }
 
     pub fn destruct(self: *StateEngine) void {

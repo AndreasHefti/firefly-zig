@@ -64,6 +64,6 @@ pub fn getScheduler(resolution: Float) *UpdateScheduler {
     }
 
     // otherwise create new one
-    scheduler.append(UpdateScheduler{ .resolution = resolution }) catch unreachable;
+    scheduler.append(UpdateScheduler{ .resolution = resolution }) catch |err| firefly.api.handleUnknownError(err);
     return &scheduler.items[scheduler.items.len - 1];
 }

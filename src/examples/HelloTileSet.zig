@@ -162,8 +162,8 @@ pub fn createTile(
         for (0..mask.height) |_y| {
             for (0..mask.width) |_x| {
                 if (mask.isBitSetAt(_x, _y)) {
-                    vert.append(firefly.utils.usize_f32(_x + 16)) catch unreachable;
-                    vert.append(firefly.utils.usize_f32(_y + 16)) catch unreachable;
+                    vert.append(firefly.utils.usize_f32(_x + 16)) catch |err| firefly.api.handleUnknownError(err);
+                    vert.append(firefly.utils.usize_f32(_y + 16)) catch |err| firefly.api.handleUnknownError(err);
                 }
             }
         }

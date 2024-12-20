@@ -244,7 +244,7 @@ pub fn Mixin(comptime T: type) type {
                     if (NameMappingMixin(T).mapping.contains(n))
                         std.debug.panic("Component name already exists: {s}", .{n});
 
-                    NameMappingMixin(T).mapping.put(n, id) catch unreachable;
+                    NameMappingMixin(T).mapping.put(n, id) catch |err| api.handleUnknownError(err);
                 }
             }
 
@@ -970,7 +970,7 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
         }
 
         fn _register(base_type: *T, subtype: SubType) *SubType {
-            const result = data.getOrPut(base_type.id) catch unreachable;
+            const result = data.getOrPut(base_type.id) catch |err| api.handleUnknownError(err);
             if (result.found_existing)
                 std.debug.panic("Component Subtype with id already exists: {d}", .{base_type.id});
 

@@ -15,7 +15,11 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     const tint_color: rl.Color = .{ .r = 255, .g = 255, .b = 255, .a = 255 };
     const clear_color: rl.Color = .{ .r = 0, .g = 0, .b = 0, .a = 255 };
 
-    var nanos = init_c.allocator.alloc(@Vector(4, f32), count) catch unreachable;
+    var nanos = init_c.allocator.alloc(
+        @Vector(4, f32),
+        count,
+    ) catch |err| firefly.api.handleUnknownError(err);
+
     defer init_c.allocator.free(nanos);
     var rndx = std.rand.DefaultPrng.init(32);
     const rx = rndx.random();

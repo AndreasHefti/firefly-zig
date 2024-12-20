@@ -114,9 +114,9 @@ pub const TileGrid = struct {
             @as(Float, @floatFromInt(self.dimensions[3])),
         };
 
-        self._grid = api.COMPONENT_ALLOC.alloc([]Index, self.dimensions[1]) catch unreachable;
+        self._grid = api.COMPONENT_ALLOC.alloc([]Index, self.dimensions[1]) catch |err| api.handleUnknownError(err);
         for (0..self.dimensions[1]) |i| {
-            self._grid[i] = api.COMPONENT_ALLOC.alloc(Index, self.dimensions[0]) catch unreachable;
+            self._grid[i] = api.COMPONENT_ALLOC.alloc(Index, self.dimensions[0]) catch |err| api.handleUnknownError(err);
         }
         self.clear();
     }
