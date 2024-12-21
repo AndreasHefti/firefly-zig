@@ -42,6 +42,13 @@ const RaylibWindowAPI = struct {
         interface.isWindowFocused = isWindowFocused;
         interface.isWindowState = isWindowState;
 
+        interface.getScreenWidth = getScreenWidth;
+        interface.getScreenHeight = getScreenHeight;
+        interface.getRenderWidth = getRenderWidth;
+        interface.getRenderHeight = getRenderHeight;
+        interface.getWindowPosition = getWindowPosition;
+        interface.getWindowScaleDPI = getWindowScaleDPI;
+
         interface.showFPS = showFPS;
         interface.getFPS = getFPS;
         interface.toggleFullscreen = toggleFullscreen;
@@ -126,6 +133,29 @@ const RaylibWindowAPI = struct {
             rl.CloseWindow();
 
         singleton = null;
+    }
+
+    fn getScreenWidth() CInt {
+        return rl.GetScreenWidth();
+    }
+    fn getScreenHeight() CInt {
+        return rl.GetScreenHeight();
+    }
+
+    fn getRenderWidth() CInt {
+        return rl.GetRenderWidth();
+    }
+
+    fn getRenderHeight() CInt {
+        return rl.GetRenderHeight();
+    }
+
+    fn getWindowPosition() firefly.utils.Vector2f {
+        return @bitCast(rl.GetWindowPosition());
+    }
+
+    fn getWindowScaleDPI() firefly.utils.Vector2f {
+        return @bitCast(rl.GetWindowScaleDPI());
     }
 
     fn showFPS(x: CInt, y: CInt) void {

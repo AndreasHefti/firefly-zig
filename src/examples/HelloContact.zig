@@ -9,7 +9,6 @@ const EShape = firefly.graphics.EShape;
 const ShapeType = firefly.api.ShapeType;
 const EContact = firefly.physics.EContact;
 const EContactScan = firefly.physics.EContactScan;
-//const DebugCollisionResolver = firefly.physics.DebugCollisionResolver;
 const ESprite = firefly.graphics.ESprite;
 const EMovement = firefly.physics.EMovement;
 const Allocator = std.mem.Allocator;
@@ -21,7 +20,6 @@ const ContactConstraint = firefly.physics.ContactConstraint;
 const Index = utils.Index;
 const ETile = firefly.graphics.ETile;
 const TileGrid = firefly.graphics.TileGrid;
-const WindowFlag = firefly.api.WindowFlag;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);

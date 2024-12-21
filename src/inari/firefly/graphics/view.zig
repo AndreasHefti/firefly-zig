@@ -42,6 +42,8 @@ pub fn deinit() void {
     defer initialized = false;
     if (!initialized)
         return;
+
+    WindowScalingAdaption.deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -172,9 +174,9 @@ pub const View = struct {
     name: ?String = null,
 
     position: PosF,
-    pivot: ?PosF = .{ 0, 0 },
-    scale: ?PosF = .{ 1, 1 },
-    rotation: ?Float = 0,
+    pivot: PosF = .{ 0, 0 },
+    scale: PosF = .{ 1, 1 },
+    rotation: Float = 0,
     tint_color: ?Color = .{ 255, 255, 255, 255 },
     blend_mode: ?BlendMode = BlendMode.ALPHA,
     projection: api.Projection = .{},
@@ -257,10 +259,10 @@ pub const View = struct {
 
     inline fn snapToBounds(self: *View, bounds: RectF) void {
         const _bounds: RectF = .{
-            bounds[0] * self.projection.zoom * self.scale.?[0],
-            bounds[1] * self.projection.zoom * self.scale.?[1],
-            bounds[2] * self.projection.zoom * self.scale.?[0],
-            bounds[3] * self.projection.zoom * self.scale.?[1],
+            bounds[0] * self.projection.zoom,
+            bounds[1] * self.projection.zoom,
+            bounds[2] * self.projection.zoom,
+            bounds[3] * self.projection.zoom,
         };
 
         self.projection.position[0] = @min(self.projection.position[0], _bounds[0] + _bounds[2] - self.projection.width);
@@ -747,6 +749,68 @@ pub const ViewRenderer = struct {
                 firefly.api.rendering.popShaderStack();
             // end rendering to FBO
             firefly.api.rendering.endRendering();
+        }
+    }
+};
+
+//////////////////////////////////////////////////////////////
+////  Window Scaling Adaption
+//////////////////////////////////////////////////////////////
+
+pub const WindowScalingAdaption = struct {
+    var adaption_initialized: bool = false;
+
+    var center_camera: bool = true;
+    var main_view_id: Index = undefined;
+    var _game_width: Float = 0;
+    var _game_height: Float = 0;
+    var _game_screen_ratio: Float = 0;
+
+    pub fn init(main_view_name: String, width: usize, height: usize) void {
+        _game_width = utils.usize_f32(width);
+        _game_height = utils.usize_f32(height);
+        _game_screen_ratio = _game_height / _game_width;
+        main_view_id = View.Naming.byName(main_view_name).?.id;
+        api.subscribeUpdate(update);
+        adaption_initialized = true;
+    }
+
+    fn deinit() void {
+        if (adaption_initialized)
+            api.unsubscribeUpdate(update);
+        adaption_initialized = false;
+    }
+
+    pub fn update(_: api.UpdateEvent) void {
+        if (firefly.api.window.isWindowResized()) {
+            // adapt main view to actual window in relation to the original proportions
+            const width = utils.cint_float(firefly.api.window.getScreenWidth());
+            const height = utils.cint_float(firefly.api.window.getScreenHeight());
+            if (width <= 0 or height <= 0)
+                return;
+
+            var view = View.Component.byId(main_view_id);
+            const target_ratio = height / width;
+            const fit_to_width = target_ratio > _game_screen_ratio;
+
+            var w: Float = 0;
+            var h: Float = 0;
+            if (fit_to_width) {
+                view.scale[0] = width / _game_width;
+                view.scale[1] = width / _game_width;
+                w = _game_width;
+                h = @ceil(_game_height / _game_screen_ratio * target_ratio);
+            } else {
+                view.scale[0] = height / _game_height;
+                view.scale[1] = height / _game_height;
+                w = @ceil(_game_width / target_ratio * _game_screen_ratio);
+                h = _game_height;
+            }
+
+            if (center_camera) {
+                view.position[0] = (w - _game_width) / 2 * view.scale[0];
+                view.position[1] = (h - _game_height) / 2 * view.scale[1];
+            }
         }
     }
 };

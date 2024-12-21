@@ -31,13 +31,13 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
-    firefly.Engine.start(
-        screen_width,
-        screen_height,
-        60,
-        "Hello Room",
-        init,
-    );
+    firefly.Engine.startWindow(.{
+        .width = screen_width,
+        .height = screen_height,
+        .fps = 60,
+        .title = "Hello Platformer",
+        .flags = &[_]api.WindowFlag{.FLAG_WINDOW_RESIZABLE},
+    }, init, null);
 }
 
 const speed = 1;
@@ -52,7 +52,7 @@ fn init() void {
     // we need to initialize the JSON integration tasks fist
     firefly.game.initJSONIntegration();
 
-    // create view with two layer
+    // create view
     _ = graphics.View.Component.new(.{
         .name = view_name,
         .position = .{ 0, 0 },
@@ -63,6 +63,8 @@ fn init() void {
             .zoom = zoom,
         },
     });
+
+    graphics.WindowScalingAdaption.init("TestView", screen_width, screen_height);
 
     // create the world from json file
     api.Task.runTaskByNameWith(

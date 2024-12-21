@@ -1004,9 +1004,9 @@ pub fn IRenderAPI() type {
         renderTexture: *const fn (
             texture_id: BindingId,
             position: PosF,
-            pivot: ?PosF,
-            scale: ?PosF,
-            rotation: ?Float,
+            pivot: PosF,
+            scale: PosF,
+            rotation: Float,
             tint_color: ?Color,
             blend_mode: ?BlendMode,
         ) void = undefined,
@@ -1134,6 +1134,13 @@ pub fn IWindowAPI() type {
         isWindowMaximized: *const fn () bool = undefined,
         isWindowFocused: *const fn () bool = undefined,
         isWindowState: *const fn (CUInt) bool = undefined,
+
+        getScreenWidth: *const fn () CInt = undefined,
+        getScreenHeight: *const fn () CInt = undefined,
+        getRenderWidth: *const fn () CInt = undefined,
+        getRenderHeight: *const fn () CInt = undefined,
+        getWindowPosition: *const fn () Vector2f = undefined,
+        getWindowScaleDPI: *const fn () Vector2f = undefined,
 
         showFPS: *const fn (CInt, CInt) void = undefined,
         getFPS: *const fn () Float = undefined,

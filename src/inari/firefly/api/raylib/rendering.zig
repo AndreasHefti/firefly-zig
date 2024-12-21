@@ -478,9 +478,9 @@ const RaylibRenderAPI = struct {
     fn renderTexture(
         texture_id: BindingId,
         position: PosF,
-        pivot: ?PosF,
-        scale: ?PosF,
-        rotation: ?Float,
+        pivot: PosF,
+        scale: PosF,
+        rotation: Float,
         tint_color: ?Color,
         blend_mode: ?BlendMode,
     ) void {
@@ -490,45 +490,24 @@ const RaylibRenderAPI = struct {
             if (blend_mode) |bm|
                 rl.BeginBlendMode(@intFromEnum(bm));
 
-            if (scale) |s| {
-                rl.DrawTexturePro(
-                    tex.texture,
-                    .{
-                        .x = 0,
-                        .y = 0,
-                        .width = @floatFromInt(tex.texture.width),
-                        .height = @floatFromInt(-tex.texture.height),
-                    },
-                    .{
-                        .x = position[0],
-                        .y = position[1],
-                        .width = s[0] * @as(Float, @floatFromInt(tex.texture.width)),
-                        .height = s[1] * @as(Float, @floatFromInt(tex.texture.height)),
-                    },
-                    @bitCast((pivot orelse default_pivot) * s),
-                    rotation orelse 0,
-                    if (tint_color) |tc| @bitCast(tc) else default_tint_color,
-                );
-            } else {
-                rl.DrawTexturePro(
-                    tex.texture,
-                    .{
-                        .x = 0,
-                        .y = 0,
-                        .width = @floatFromInt(tex.texture.width),
-                        .height = @floatFromInt(-tex.texture.height),
-                    },
-                    .{
-                        .x = position[0],
-                        .y = position[1],
-                        .width = @floatFromInt(tex.texture.width),
-                        .height = @floatFromInt(-tex.texture.height),
-                    },
-                    if (scale) |s| @bitCast((pivot orelse default_pivot) * s) else @bitCast(pivot orelse default_pivot),
-                    rotation orelse 0,
-                    if (tint_color) |tc| @bitCast(tc) else default_tint_color,
-                );
-            }
+            rl.DrawTexturePro(
+                tex.texture,
+                .{
+                    .x = 0,
+                    .y = 0,
+                    .width = @floatFromInt(tex.texture.width),
+                    .height = @floatFromInt(-tex.texture.height),
+                },
+                .{
+                    .x = position[0],
+                    .y = position[1],
+                    .width = scale[0] * @as(Float, @floatFromInt(tex.texture.width)),
+                    .height = scale[1] * @as(Float, @floatFromInt(tex.texture.height)),
+                },
+                @bitCast(pivot * scale),
+                rotation,
+                if (tint_color) |tc| @bitCast(tc) else default_tint_color,
+            );
         }
         rl.EndShaderMode();
     }

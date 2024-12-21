@@ -258,10 +258,7 @@ pub const SimplePivotCamera = struct {
         var view = graphics.View.Component.byId(view_id);
         const move = getMove(self, view);
         view.moveProjection(
-            .{
-                move[0] * view.projection.zoom * view.scale.?[0],
-                move[1] * view.projection.zoom * view.scale.?[1],
-            },
+            move * @as(Vector2f, @splat(view.projection.zoom)) * view.scale,
             true,
             self.snap_to_bounds,
         );
@@ -304,8 +301,8 @@ pub const SimplePivotCamera = struct {
 
     inline fn getMove(self: *SimplePivotCamera, view: *graphics.View) Vector2f {
         const cam_world_pivot: Vector2f = .{
-            (view.projection.position[0] + view.projection.width / 2) / view.projection.zoom / view.scale.?[0],
-            (view.projection.position[1] + view.projection.height / 2) / view.projection.zoom / view.scale.?[1],
+            (view.projection.position[0] + view.projection.width / 2) / view.projection.zoom,
+            (view.projection.position[1] + view.projection.height / 2) / view.projection.zoom,
         };
         return self.pivot.* + self.offset - cam_world_pivot;
     }
