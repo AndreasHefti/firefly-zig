@@ -53,7 +53,7 @@ Features:
     - [x] game - Platformer - Jump / Move Control and Collision Resolver
     - [x] game - Platformer - Area (created in code or loaded from JSON file)
     - [x] game - Platformer - Room (created in code or loaded from JSON file)
-    - [ ] game - Adaptable main View that fits to different screens without losing resolution
+    - [x] game - Adaptable main View that fits to different screens without losing resolution
 
 
  ## Code Example:
