@@ -6,8 +6,8 @@ Note: Firefly is under heavy development and way far from release or completed f
 
 TODO: 
 
-    - [ ] Autoscaling on Window size changes
-    - [ ] Controller example
+    - [x] Autoscaling on Window size changes
+    - [ ] Game Controller example
     - [ ] Next Release
 
 Features:
