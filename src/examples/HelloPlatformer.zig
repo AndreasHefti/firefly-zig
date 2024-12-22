@@ -125,9 +125,14 @@ fn playerLoadTask(_: *api.CallContext) void {
     });
 
     // init key control for the player
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_A, api.InputButtonType.LEFT);
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_D, api.InputButtonType.RIGHT);
-    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, api.InputButtonType.FIRE_1);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_A, .LEFT);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_D, .RIGHT);
+    firefly.api.input.setKeyMapping(api.KeyboardKey.KEY_SPACE, .FIRE_1);
+    // init controller mapping for the player
+    firefly.api.input.setGamepad1Mapping(.GAME_PAD_1);
+    firefly.api.input.setGamepadButtonMapping(.GAME_PAD_1, .GAMEPAD_BUTTON_LEFT_FACE_LEFT, .LEFT);
+    firefly.api.input.setGamepadButtonMapping(.GAME_PAD_1, .GAMEPAD_BUTTON_LEFT_FACE_RIGHT, .RIGHT);
+    firefly.api.input.setGamepadButtonMapping(.GAME_PAD_1, .GAMEPAD_BUTTON_RIGHT_FACE_DOWN, .FIRE_1);
 
     // create player entity with normal gravity movement, controller and collision scans
     player._entity_id = api.Entity.new(.{
@@ -177,5 +182,5 @@ fn playerLoadTask(_: *api.CallContext) void {
     );
 
     player._cam_id = game.SimplePivotCamera.Component.idByName(cam_name).?;
-    firefly.Engine.printState();
+    //firefly.Engine.printState();
 }

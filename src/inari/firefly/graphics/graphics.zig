@@ -284,7 +284,7 @@ pub const Texture = struct {
     resource: String,
     is_mipmap: bool = false,
     filter: api.TextureFilter = api.TextureFilter.TEXTURE_FILTER_POINT,
-    wrap: api.TextureWrap = api.TextureWrap.TEXTURE_WRAP_REPEAT,
+    wrap: api.TextureWrap = api.TextureWrap.TEXTURE_WRAP_CLAMP,
 
     _binding: ?api.TextureBinding = null,
 

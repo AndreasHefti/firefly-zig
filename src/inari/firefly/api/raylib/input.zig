@@ -132,26 +132,34 @@ const RaylibInputAPI = struct {
         keyboard_code_mapping.set(@intFromEnum(button), keycode);
     }
 
+    fn getGamePadId(device: api.InputDevice) c_int {
+        return switch (device) {
+            .GAME_PAD_1 => 0,
+            .GAME_PAD_2 => 1,
+            else => -1,
+        };
+    }
+
     // GAMEPAD
     // Check if a gamepad is available
     fn isGamepadAvailable(device: api.InputDevice) bool {
-        return rl.IsGamepadAvailable(@intFromEnum(device));
+        return rl.IsGamepadAvailable(getGamePadId(device));
     }
     // Get gamepad internal name id
     fn getGamepadName(device: api.InputDevice) String {
-        const name: [*c]const u8 = rl.GetGamepadName(@intFromEnum(device));
+        const name: [*c]const u8 = rl.GetGamepadName(getGamePadId(device));
         const _name: String = std.mem.sliceTo(name, 0);
         return _name;
     }
     fn getGamepadAxisMovement(device: api.InputDevice, axis: api.GamepadAxis) Float {
-        return rl.GetGamepadAxisMovement(@intFromEnum(device), @intFromEnum(axis));
+        return rl.GetGamepadAxisMovement(getGamePadId(device), @intFromEnum(axis));
     }
     // gamepad mappings
     fn setGamepad1Mapping(device: api.InputDevice) void {
-        gamepad_1_code = @intFromEnum(device);
+        gamepad_1_code = getGamePadId(device);
     }
     fn setGamepad2Mapping(device: api.InputDevice) void {
-        gamepad_2_code = @intFromEnum(device);
+        gamepad_2_code = getGamePadId(device);
     }
     fn setGamepadButtonMapping(device: api.InputDevice, action: api.GamepadAction, button: api.InputButtonType) void {
         switch (device) {
