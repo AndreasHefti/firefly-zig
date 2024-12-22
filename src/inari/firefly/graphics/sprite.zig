@@ -39,12 +39,13 @@ pub fn deinit() void {
 }
 
 //////////////////////////////////////////////////////////////
-//// Sprite Template Components
+//// Sprite Components
 //////////////////////////////////////////////////////////////
 
 pub const SpriteTemplate = struct {
     pub const Component = api.Component.Mixin(SpriteTemplate);
     pub const Naming = api.Component.NameMappingMixin(SpriteTemplate);
+    pub const Activation = api.Component.ActivationMixin(SpriteTemplate);
 
     id: Index = utils.UNDEF_INDEX,
     name: ?String = null,
@@ -68,64 +69,12 @@ pub const SpriteTemplate = struct {
         return self;
     }
 
-    pub fn componentTypeInit() !void {
-        api.Asset.Subscription.subscribe(notifyAssetEvent);
-    }
-
-    pub fn componentTypeDeinit() void {
-        api.Asset.Subscription.unsubscribe(notifyAssetEvent);
-    }
-
-    pub fn construct(self: *SpriteTemplate) void {
-        if (graphics.Texture.Component.byName(self.texture_name)) |tex| {
-            if (tex._binding) |b| {
-                self.texture_binding = b.id;
-            }
-        }
-    }
-
-    fn notifyAssetEvent(e: api.ComponentEvent) void {
-        if (e.c_id) |id| {
-            if (api.Asset.Subtypes.isOfType(id, graphics.Texture)) {
-                switch (e.event_type) {
-                    .ACTIVATED => onTextureLoad(graphics.Texture.Component.byId(id)),
-                    .DEACTIVATING => onTextureClose(graphics.Texture.Component.byId(id).name),
-                    .DISPOSING => onTextureDispose(graphics.Texture.Component.byId(id).name),
-                    else => {},
-                }
-            }
-        }
-    }
-
-    fn onTextureLoad(texture: *graphics.Texture) void {
-        if (texture._binding) |b| {
-            var next = SpriteTemplate.Component.nextId(0);
-            while (next) |id| {
-                next = SpriteTemplate.Component.nextId(id + 1);
-                var template = SpriteTemplate.Component.byId(id);
-                if (firefly.utils.stringEquals(template.texture_name, texture.name))
-                    template.texture_binding = b.id;
-            }
-        }
-    }
-
-    fn onTextureClose(name: String) void {
-        var next = SpriteTemplate.Component.nextId(0);
-        while (next) |id| {
-            next = SpriteTemplate.Component.nextId(id + 1);
-            var template = SpriteTemplate.Component.byId(id);
-            if (firefly.utils.stringEquals(template.texture_name, name))
-                template.texture_binding = utils.UNDEF_INDEX;
-        }
-    }
-
-    fn onTextureDispose(name: String) void {
-        var next = SpriteTemplate.Component.nextId(0);
-        while (next) |id| {
-            next = SpriteTemplate.Component.nextId(id + 1);
-            const template = SpriteTemplate.Component.byId(id);
-            if (firefly.utils.stringEquals(template.texture_name, name))
-                SpriteTemplate.Component.dispose(id);
+    pub fn activation(self: *SpriteTemplate, active: bool) void {
+        if (active) {
+            graphics.Texture.Component.activateByName(self.texture_name);
+            self.texture_binding = graphics.Texture.Component.byName(self.texture_name).?._binding.?.id;
+        } else {
+            self.texture_binding = utils.UNDEF_INDEX;
         }
     }
 
@@ -150,27 +99,31 @@ pub const ESprite = struct {
     pub const Component = api.EntityComponentMixin(ESprite);
 
     id: Index = utils.UNDEF_INDEX,
-    template_id: Index = utils.UNDEF_INDEX,
+    sprite_id: Index = utils.UNDEF_INDEX,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
 
     pub fn destruct(self: *ESprite) void {
-        self.template_id = utils.UNDEF_INDEX;
+        self.sprite_id = utils.UNDEF_INDEX;
         self.tint_color = null;
         self.blend_mode = null;
     }
 
     pub fn activation(self: *ESprite, active: bool) void {
         if (active) {
-            // check if template is valid
-            if (self.template_id == UNDEF_INDEX or SpriteTemplate.Component.byId(self.template_id).texture_binding == UNDEF_INDEX)
-                @panic("template_id is undefined");
+            // check if sprite_id is valid
+            if (self.sprite_id == UNDEF_INDEX) {
+                api.Logger.err("ESprite: No sprite_id is set for sprite", .{});
+                return;
+            }
+
+            SpriteTemplate.Activation.activate(self.sprite_id);
         }
     }
 
     pub const Property = struct {
         pub fn FrameId(id: Index) *Index {
-            return &ESprite.Component.byId(id).template_id;
+            return &ESprite.Component.byId(id).sprite_id;
         }
         pub fn TintColor(id: Index) *Color {
             var sprite = ESprite.Component.byId(id);
@@ -336,7 +289,7 @@ pub const DefaultSpriteRenderer = struct {
             const es = ESprite.Component.byId(id);
             const trans = graphics.ETransform.Component.byId(id);
 
-            const sprite_template = SpriteTemplate.Component.byId(es.template_id);
+            const sprite_template = SpriteTemplate.Component.byId(es.sprite_id);
             const multi = if (api.EMultiplier.Component.byIdOptional(id)) |m| m.positions else null;
             firefly.api.rendering.renderSprite(
                 sprite_template.texture_binding,

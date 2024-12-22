@@ -70,7 +70,7 @@ fn createEntity(state_engine: *EntityStateEngine, sprite_id: Index) void {
     const vy = random.float(Float) * 200 + 1;
     const entity_id = Entity.newActive(.{}, .{
         ETransform{ .position = .{ 0, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{
             .velocity = .{ vx, vy },
             .mass = 1,

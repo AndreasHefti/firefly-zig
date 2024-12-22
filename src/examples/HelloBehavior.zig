@@ -46,7 +46,7 @@ pub fn init() void {
 
     const entity_id = Entity.newActive(.{}, .{
         ETransform{ .position = .{ 0, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         game.EBehavior{ .root_node_id = behavior_id },
     });
 

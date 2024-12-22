@@ -72,7 +72,7 @@ fn init() void {
             .pivot = .{ 8, 8 },
             .scale = .{ 2, 2 },
         },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         firefly.physics.EAnimations{},
     });
 

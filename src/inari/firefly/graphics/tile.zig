@@ -55,19 +55,31 @@ pub const ETile = struct {
     pub const Component = api.EntityComponentMixin(ETile);
 
     id: Index = UNDEF_INDEX,
-    sprite_template_id: Index = UNDEF_INDEX,
+    sprite_id: Index = UNDEF_INDEX,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
 
     pub fn destruct(self: *ETile) void {
-        self.sprite_template_id = UNDEF_INDEX;
+        self.sprite_id = UNDEF_INDEX;
         self.tint_color = null;
         self.blend_mode = null;
     }
 
+    pub fn activation(self: *ETile, active: bool) void {
+        if (active) {
+            // check if template is valid
+            if (self.sprite_id == UNDEF_INDEX) {
+                api.Logger.err("ETile: No sprite_id is set for sprite", .{});
+                return;
+            }
+
+            graphics.SpriteTemplate.Activation.activate(self.sprite_id);
+        }
+    }
+
     pub const Property = struct {
         pub fn FrameId(id: Index) *Index {
-            return &ETile.Component.byId(id).sprite_template_id;
+            return &ETile.Component.byId(id).sprite_id;
         }
         pub fn TintColor(id: Index) *Color {
             var tile = ETile.byId(id);
@@ -358,7 +370,7 @@ pub const DefaultTileGridRenderer = struct {
 
                 const tile = ETile.Component.byId(entity_id);
                 const trans = graphics.ETransform.Component.byId(entity_id);
-                const sprite_template = graphics.SpriteTemplate.Component.byId(tile.sprite_template_id);
+                const sprite_template = graphics.SpriteTemplate.Component.byId(tile.sprite_id);
                 api.rendering.renderSprite(
                     sprite_template.texture_binding,
                     sprite_template.texture_bounds,

@@ -73,7 +73,7 @@ pub const TileTemplate = struct {
     contact_material_type: ?physics.ContactMaterialAspect = null,
     contact_mask_name: ?String = null,
 
-    _sprite_template_id: ?Index = null,
+    _sprite_id: ?Index = null,
 
     pub fn withAnimationFrame(self: TileTemplate, frame: TileAnimationFrame) TileTemplate {
         var _self = self;
@@ -159,7 +159,7 @@ pub const TileSet = struct {
         graphics.Texture.Component.activateByName(self.texture_name);
         if (graphics.Texture.Component.byName(self.texture_name)) |tex| {
             // load image of texture to CPU
-            const st = graphics.SpriteTemplate.Component.byId(tile_template._sprite_template_id.?);
+            const st = graphics.SpriteTemplate.Component.byId(tile_template._sprite_id.?);
             var image: api.ImageBinding = firefly.api.rendering.loadImageRegionFromTexture(
                 tex._binding.?.id,
                 st.texture_bounds,
@@ -211,7 +211,7 @@ pub const TileSet = struct {
                     _ = st.flipX();
                 if (tt.sprite_data.flip_y)
                     _ = st.flipY();
-                tt._sprite_template_id = st.id;
+                tt._sprite_id = st.id;
 
                 // animation if defined...
                 if (tt.animation) |*animations| {
@@ -249,8 +249,8 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                graphics.SpriteTemplate.Component.dispose(tt._sprite_template_id.?);
-                tt._sprite_template_id = null;
+                graphics.SpriteTemplate.Component.dispose(tt._sprite_id.?);
+                tt._sprite_id = null;
                 // cleanup animation if defined
                 if (tt.animation) |*animations| {
                     var next_a = animations.slots.nextSetBit(0);
@@ -414,7 +414,7 @@ pub const TileMapping = struct {
                                         graphics.ETransform{},
                                         graphics.EView{ .view_id = self.view_id, .layer_id = layer.id },
                                         graphics.ETile{
-                                            .sprite_template_id = tile_template._sprite_template_id.?,
+                                            .sprite_id = tile_template._sprite_id.?,
                                             .tint_color = layer_mapping.tint,
                                             .blend_mode = layer_mapping.blend,
                                         },

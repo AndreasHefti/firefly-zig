@@ -122,7 +122,7 @@ fn create_player(_: *api.CallContext) void {
     _ = api.Entity.newActive(.{ .name = "Player" }, .{
         graphics.ETransform{ .position = .{ 32, 32 }, .pivot = .{ 0, 0 } },
         graphics.EView{ .view_id = graphics.View.Naming.getId(view_name), .layer_id = graphics.Layer.Naming.getId(layer2) },
-        graphics.ESprite{ .template_id = sprite_id },
+        graphics.ESprite{ .sprite_id = sprite_id },
         physics.EMovement{
             .max_velocity_south = 80,
             .max_velocity_east = 50,

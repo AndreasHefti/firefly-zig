@@ -142,6 +142,6 @@ fn example() void {
             .pivot = .{ 16, 16 },
             .rotation = 180,
         },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
     });
 }

@@ -31,7 +31,7 @@ fn init() void {
 
     _ = Entity.newActive(.{ .name = "TestEntity" }, .{
         ETransform{ .position = .{ 100, 100 }, .scale = .{ 1.2, 1.2 }, .pivot = .{ 16, 16 }, .rotation = 45 },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMultiplier{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
             .{ 50, 50 },
             .{ 200, 50 },

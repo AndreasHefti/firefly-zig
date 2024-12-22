@@ -72,7 +72,7 @@ fn create(name: String, easing: Easing) void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ 200, ypos } },
-        ESprite{ .template_id = SpriteTemplate.Naming.byName("Sprite").?.id },
+        ESprite{ .sprite_id = SpriteTemplate.Naming.byName("Sprite").?.id },
         firefly.physics.EEasingAnimation{
             .duration = 5000,
             .looping = true,

@@ -51,7 +51,9 @@ fn init() void {
     var x: Float = 10;
 
     _ = Entity.newActive(.{}, .{
-        firefly.api.EControl{ .update = control },                                            ETransform{ .position = .{ x, 0 } }, ESprite{ .template_id = sprite_id },
+        firefly.api.EControl{ .update = control },
+        ETransform{ .position = .{ x, 0 } },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{
             .gravity_vector = .{ 2, firefly.physics.EARTH_GRAVITY },
             .mass = 1,
@@ -71,14 +73,14 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 200 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } },
     });
 
     // tile grid
     const tile_id = Entity.newActive(.{ .name = "TestEntity" }, .{
         ETransform{},
-        ETile{ .sprite_template_id = sprite_id },
+        ETile{ .sprite_id = sprite_id },
         EContact{ .bounds = .{ .rect = .{ 0, 0, 32, 32 } } },
     });
 

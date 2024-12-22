@@ -142,7 +142,7 @@ fn playerLoadTask(_: *api.CallContext) void {
     }, .{
         graphics.ETransform{ .position = .{ 32, 32 }, .pivot = .{ 0, 0 } },
         graphics.EView{ .view_id = graphics.View.Naming.getId(view_name), .layer_id = graphics.Layer.Naming.getId(layer2) },
-        graphics.ESprite{ .template_id = sprite_id },
+        graphics.ESprite{ .sprite_id = sprite_id },
         physics.EMovement{ .mass = 50, .max_velocity_south = 180, .max_velocity_east = 50, .max_velocity_west = 50, .integrator = physics.EulerIntegrator },
         physics.EContactScan{
             .collision_resolver = game.PlatformerCollisionResolver.Component.new(

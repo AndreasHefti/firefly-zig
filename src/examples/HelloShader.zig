@@ -75,7 +75,7 @@ fn example() void {
             .scale = .{ 2, 2 },
         },
         graphics.EView{ .view_id = view_id_1 },
-        graphics.ESprite{ .template_id = sprite_id },
+        graphics.ESprite{ .sprite_id = sprite_id },
     });
 
     _ = firefly.api.Entity.newActive(.{ .name = "Player2" }, .{
@@ -85,6 +85,6 @@ fn example() void {
             .scale = .{ 2, 2 },
         },
         graphics.EView{ .view_id = view_id_2 },
-        graphics.ESprite{ .template_id = sprite_id },
+        graphics.ESprite{ .sprite_id = sprite_id },
     });
 }

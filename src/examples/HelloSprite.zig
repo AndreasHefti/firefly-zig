@@ -42,7 +42,7 @@ fn _Example_One_Entity_No_Views() void {
             .pivot = .{ 16, 16 },
             .rotation = 180,
         },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EEasingAnimation{
             .duration = 1000,
             .looping = true,

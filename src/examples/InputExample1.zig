@@ -37,7 +37,7 @@ fn init() void {
 
     _ = Entity.newActive(.{ .name = "TestEntity" }, .{
         ETransform{ .position = .{ 100, 100 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
     });
 
     firefly.api.input.setKeyMapping(KeyboardKey.KEY_UP, InputButtonType.UP);

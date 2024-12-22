@@ -66,6 +66,6 @@ fn init() void {
             .scale = .{ 4, 4 },
         },
         graphics.EView{ .view_id = view_id },
-        graphics.ESprite{ .template_id = sprite_id },
+        graphics.ESprite{ .sprite_id = sprite_id },
     });
 }

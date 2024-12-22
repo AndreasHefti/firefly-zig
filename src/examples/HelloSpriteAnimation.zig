@@ -54,7 +54,7 @@ fn init() void {
         .{},
         .{
             ETransform{ .position = .{ 100, 100 }, .scale = .{ 2, 2 } },
-            ESprite{ .template_id = sid1 },
+            ESprite{ .sprite_id = sid1 },
             firefly.physics.EIndexFrameAnimation{
                 .duration = animation._duration,
                 .looping = true,
@@ -67,21 +67,21 @@ fn init() void {
 
     _ = Entity.newActive(.{ .name = "TestEntity1" }, .{
         ETransform{ .position = .{ 100, 200 }, .scale = .{ 2, 2 } },
-        ESprite{ .template_id = sid1 },
+        ESprite{ .sprite_id = sid1 },
     });
 
     _ = Entity.newActive(.{ .name = "TestEntity2" }, .{
         ETransform{ .position = .{ 150, 200 }, .scale = .{ 2, 2 } },
-        ESprite{ .template_id = sid2 },
+        ESprite{ .sprite_id = sid2 },
     });
 
     _ = Entity.newActive(.{ .name = "TestEntity3" }, .{
         ETransform{ .position = .{ 200, 200 }, .scale = .{ 2, 2 } },
-        ESprite{ .template_id = sid3 },
+        ESprite{ .sprite_id = sid3 },
     });
 
     _ = Entity.newActive(.{ .name = "TestEntity4" }, .{
         ETransform{ .position = .{ 250, 200 }, .scale = .{ 2, 2 } },
-        ESprite{ .template_id = sid4 },
+        ESprite{ .sprite_id = sid4 },
     });
 }

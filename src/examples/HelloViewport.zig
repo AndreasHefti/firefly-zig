@@ -66,7 +66,7 @@ fn loadWithView() void {
     _ = Entity.newActive(.{ .name = "TestEntity" }, .{
         ETransform{},
         EView{ .view_id = viewId },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
     });
 }
 

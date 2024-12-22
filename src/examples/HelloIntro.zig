@@ -27,7 +27,7 @@ pub fn init() void {
 }
 
 fn sceneInit(_: *api.CallContext) void {
-    _ = graphics.Texture.Component.newActive(.{
+    _ = graphics.Texture.Component.new(.{
         .name = "IntroTexture",
         .resource = "resources/inari.png",
         .is_mipmap = false,
@@ -51,7 +51,7 @@ fn sceneInit(_: *api.CallContext) void {
         .rotation = 0,
     });
     graphics.ESprite.Component.new(eid, .{
-        .template_id = sprite_id,
+        .sprite_id = sprite_id,
         .tint_color = .{ 255, 255, 255, 0 },
     });
     physics.EAnimations.add(eid, .{

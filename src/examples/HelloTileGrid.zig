@@ -28,7 +28,7 @@ fn loadWithView() void {
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
-    _ = Texture.Component.newActive(.{
+    _ = Texture.Component.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
@@ -36,7 +36,7 @@ fn loadWithView() void {
 
     const tile_id = Entity.newActive(.{ .name = "TestEntity" }, .{
         ETransform{},
-        ETile{ .sprite_template_id = sprite_id },
+        ETile{ .sprite_id = sprite_id },
     });
 
     var tile_grid = TileGrid.Component.newAndGet(.{

@@ -43,7 +43,7 @@ fn init() void {
 
     _ = Entity.newActive(.{ .name = "TestEntity" }, .{
         ETransform{ .position = .{ 0, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMultiplier{ .positions = pos },
     });
 }

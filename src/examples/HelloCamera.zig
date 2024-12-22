@@ -70,7 +70,7 @@ fn init() void {
         EControl{ .name = "PlayerControl", .update = entity_control },
         EView{ .view_id = view.id },
         ETransform{ .position = .{ 100, 100 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
     });
 
     View.Control.addActiveOf(
@@ -95,7 +95,7 @@ fn init() void {
     const eid = Entity.Component.new(.{ .name = "RefEntity" });
     EView.Component.new(eid, .{ .view_id = view.id });
     ETransform.Component.new(eid, .{ .position = .{ 100, 100 } });
-    ESprite.Component.new(eid, .{ .template_id = sprite_id });
+    ESprite.Component.new(eid, .{ .sprite_id = sprite_id });
     EMultiplier.Component.new(eid, .{ .positions = firefly.api.allocVec2FArray([_]Vector2f{
         .{ 50, 50 },
         .{ 200, 50 },

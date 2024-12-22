@@ -153,7 +153,7 @@ pub fn createTile(
     const eid = Entity.new(.{ .name = tile_template.name }, .{
         ETransform{ .position = .{ x, y } },
         EView{ .view_id = view_id },
-        ESprite{ .template_id = tile_template._sprite_template_id.? },
+        ESprite{ .sprite_id = tile_template._sprite_id.? },
     });
 
     if (tile_set.createContactMaskFromImage(tile_template)) |mask| {

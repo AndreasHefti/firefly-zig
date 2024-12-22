@@ -34,7 +34,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{},
     });
 
@@ -42,7 +42,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .integrator = firefly.physics.EulerIntegrator },
     });
 
@@ -50,7 +50,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .integrator = firefly.physics.VerletIntegrator },
     });
 
@@ -58,14 +58,14 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .integrator = firefly.physics.FPSStepIntegrator },
     });
 
     x += 50;
 
     _ = Entity.newActive(.{}, .{
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .mass = 1 },
         ETransform{ .position = .{ x, 0 } },
     });
@@ -74,7 +74,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .mass = 1, .integrator = firefly.physics.EulerIntegrator },
     });
 
@@ -82,7 +82,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .max_velocity_south = 50 },
     });
 
@@ -90,7 +90,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .max_velocity_south = 50, .integrator = firefly.physics.EulerIntegrator },
     });
 
@@ -98,7 +98,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .max_velocity_south = 100 },
     });
 
@@ -106,7 +106,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .max_velocity_south = 100, .integrator = firefly.physics.EulerIntegrator },
     });
 
@@ -114,7 +114,7 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
         EMovement{ .gravity_vector = Vector2f{ 2, firefly.physics.EARTH_GRAVITY }, .integrator = firefly.physics.EulerIntegrator },
     });
 
@@ -122,6 +122,6 @@ fn init() void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ x, 0 } },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = sprite_id },
     });
 }
