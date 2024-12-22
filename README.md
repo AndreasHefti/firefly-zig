@@ -180,7 +180,7 @@ launch.json, "firefly-zig-example" refer to the resulting exe
 
   - In the root directory add the following build.zig.zon file or edit the existing if available. This declares the needed dependencies which are raylib and firefly.
 
-``` 
+``` zig
 .{
     .name = "firefly-zig-example",
     .version = "0.0.1",
@@ -290,3 +290,5 @@ pub fn init() void {
   - Firefly and Windows setup is done within the main method. 
   - Then start the firefly engine with Windows details.
   - The init method that is given as callback for the Engine start, will be called from the Engine and creates just a text entity that gets rendered on screen.
+
+   ![](hello_firefly_example.png)
