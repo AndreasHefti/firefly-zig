@@ -114,7 +114,7 @@ _ = Entity.newActive(.{ .name = "TestEntity" }, .{
    - Install latest Zig (0.13) from https://ziglang.org/
    - create working directory and and use :zig init to initialize a zig project
 
-# With VS Code
+### With VS Code
 
     - Install and open VS code
     - Install newest Zig Language plugin and C/C++ Plugin for debugging if needed
@@ -122,7 +122,7 @@ _ = Entity.newActive(.{ .name = "TestEntity" }, .{
     - Create .vscode directory if it not yet exists and create the following tasks.json and launch.json files:
 
 tasks.json
-``` 
+``` json
 {
     // See https://go.microsoft.com/fwlink/?LinkId=733558
     // for the documentation about the tasks.json format
@@ -159,7 +159,7 @@ tasks.json
 ```
 
 launch.json, "firefly-zig-example" refer to the resulting exe
-```
+``` json
 {
     "version": "0.2.0",
     "configurations": [
@@ -180,7 +180,7 @@ launch.json, "firefly-zig-example" refer to the resulting exe
 
   - In the root directory add the following build.zig.zon file or edit the existing if available. This declares the needed dependencies which are raylib and firefly.
 
-```
+``` 
 .{
     .name = "firefly-zig-example",
     .version = "0.0.1",
@@ -204,7 +204,7 @@ launch.json, "firefly-zig-example" refer to the resulting exe
 
   - Edit the created build.zig fine accordingly:
 
-```
+``` zig
 const std = @import("std");
 
 // Although this function looks imperative, note that its job is to
@@ -252,7 +252,7 @@ pub fn build(b: *std.Build) void {
 
 The you are ready to start coding, have fun! Hello Firefly example:
 
-```
+``` zig
 const std = @import("std");
 const firefly = @import("firefly");
 const api = firefly.api;
