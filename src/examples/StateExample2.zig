@@ -22,6 +22,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     defer firefly.deinit();
 
     // Since the StateEngineSystem is not activated by default, we need to active it first
+    firefly.Engine.showFPS(.{ 0, 0 });
     firefly.Engine.start(600, 400, 60, "State Example", init);
 }
 

@@ -35,6 +35,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
         .width = screen_width,
         .height = screen_height,
         .fps = 60,
+        .show_fps = true,
         .title = "Hello Platformer",
         .flags = &[_]api.WindowFlag{.FLAG_WINDOW_RESIZABLE},
     }, init, null);

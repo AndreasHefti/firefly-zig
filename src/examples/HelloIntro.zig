@@ -12,6 +12,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
+    firefly.Engine.showFPS(.{ 0, 0 });
     firefly.Engine.start(600, 400, 60, "Hello Intro", init);
 }
 

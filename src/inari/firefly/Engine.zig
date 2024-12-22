@@ -117,6 +117,9 @@ pub fn startWindow(
     if (init_callback) |ic|
         ic();
 
+    if (window.show_fps)
+        firefly.api.rendering.showFPS(.{ 0, 0 });
+
     Timer.reset();
     running = true;
     while (!firefly.api.window.hasWindowClosed() and running)
@@ -124,6 +127,10 @@ pub fn startWindow(
 
     if (quit_callback) |q| q();
     firefly.api.window.closeWindow();
+}
+
+pub fn showFPS(pos: firefly.utils.Vector2f) void {
+    firefly.api.rendering.showFPS(pos);
 }
 
 pub fn stop() void {

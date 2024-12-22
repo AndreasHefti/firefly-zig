@@ -995,6 +995,8 @@ pub fn IRenderAPI() type {
         /// Clears the shader stack and resets the default shader as active shader
         clearShaderStack: *const fn () void = undefined,
 
+        showFPS: *const fn (pos: Vector2f) void = undefined,
+
         bindTexture: *const fn (String, BindingId) void = undefined,
         /// Start rendering to the given RenderTextureData or to the screen if no binding index is given
         /// Uses Projection to update camera projection and clear target before start rendering
@@ -1109,6 +1111,7 @@ pub const WindowData = struct {
     width: CInt,
     height: CInt,
     fps: CInt,
+    show_fps: bool = false,
     title: String,
     icon: ?String = null,
     flags: ?[]const WindowFlag = null,

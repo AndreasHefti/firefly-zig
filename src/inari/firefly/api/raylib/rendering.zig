@@ -62,6 +62,7 @@ const RaylibRenderAPI = struct {
         shader_stack = DynIndexArray.new(firefly.api.ALLOC, 10);
 
         interface.setRenderBatch = setRenderBatch;
+        interface.showFPS = showFPS;
 
         interface.setOffset = setOffset;
         interface.addOffset = addOffset;
@@ -101,6 +102,7 @@ const RaylibRenderAPI = struct {
         if (!initialized)
             return;
 
+        show_fps = false;
         var next = textures.slots.nextSetBit(0);
         while (next) |i| {
             disposeTexture(i);
@@ -152,6 +154,9 @@ const RaylibRenderAPI = struct {
     const default_pivot = PosF{ 0, 0 };
     const default_blend_mode = BlendMode.ALPHA;
 
+    var show_fps: bool = false;
+    var show_fps_x: c_int = 0;
+    var show_fps_y: c_int = 0;
     var default_font_size: CInt = 32;
     var default_char_num: CInt = 95;
 
@@ -183,6 +188,12 @@ const RaylibRenderAPI = struct {
         }
         render_batch = rlgl.rlLoadRenderBatch(buffer_number orelse 1, max_buffer_elements orelse 8192);
         rlgl.rlSetRenderBatchActive(&render_batch.?);
+    }
+
+    fn showFPS(pos: Vector2f) void {
+        show_fps = true;
+        show_fps_x = firefly.utils.f32_cint(pos[0]);
+        show_fps_y = firefly.utils.f32_cint(pos[1]);
     }
 
     fn setOffset(offset: PosF) void {
@@ -671,12 +682,11 @@ const RaylibRenderAPI = struct {
             rl.EndTextureMode();
             active_render_texture = null;
         } else {
-            rl.DrawFPS(0, 0);
+            if (show_fps)
+                rl.DrawFPS(show_fps_x, show_fps_y);
             rl.EndMode2D();
             rl.EndDrawing();
         }
-
-        // TODO something else?
     }
 
     fn setShaderValueFloat(shader_id: BindingId, name: CString, val: *Float) bool {
