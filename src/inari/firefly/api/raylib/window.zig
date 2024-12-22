@@ -79,7 +79,15 @@ const RaylibWindowAPI = struct {
 
         window_data = data;
         rl.SetTargetFPS(window_data.fps);
-        rl.InitWindow(window_data.width, window_data.height, window_data.title);
+        rl.InitWindow(
+            window_data.width,
+            window_data.height,
+            api.NamePool.allocCName(window_data.title),
+        );
+        if (data.icon) |icon| {
+            rl.SetWindowIcon(rl.LoadImage(api.NamePool.allocCName(icon)));
+        }
+
         if (window_data.flags) |wf|
             setWindowFlags(wf);
     }

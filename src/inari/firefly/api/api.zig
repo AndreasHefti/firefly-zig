@@ -1109,7 +1109,8 @@ pub const WindowData = struct {
     width: CInt,
     height: CInt,
     fps: CInt,
-    title: CString,
+    title: String,
+    icon: ?String = null,
     flags: ?[]const WindowFlag = null,
 };
 

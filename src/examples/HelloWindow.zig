@@ -20,6 +20,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
         .height = height,
         .fps = 60,
         .title = "Hello Window",
+        .icon = "resources/logo.png",
         .flags = &[_]WindowFlag{WindowFlag.FLAG_WINDOW_RESIZABLE},
     }, init, null);
 }

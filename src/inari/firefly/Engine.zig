@@ -70,11 +70,17 @@ pub fn start(
     w: CInt,
     h: CInt,
     fps: CInt,
-    title: CString,
+    title: String,
     init_callback: ?*const fn () void,
 ) void {
     startWindow(
-        .{ .width = w, .height = h, .fps = fps, .title = title },
+        .{
+            .width = w,
+            .height = h,
+            .fps = fps,
+            .title = title,
+            .icon = "resources/logo.png",
+        },
         init_callback,
         null,
     );
