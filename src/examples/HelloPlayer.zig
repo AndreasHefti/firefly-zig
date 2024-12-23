@@ -113,7 +113,7 @@ fn init() void {
 
 var player_pos_ptr: *utils.PosF = undefined;
 fn create_player(_: *api.CallContext) void {
-    const sprite_id = graphics.SpriteTemplate.Component.new(.{
+    const sprite_id = graphics.Sprite.Component.new(.{
         .texture_name = texture_name,
         .texture_bounds = utils.RectF{ 7 * 16, 1 * 16, 16, 16 },
     });

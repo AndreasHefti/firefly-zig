@@ -2,7 +2,7 @@ const std = @import("std");
 const firefly = @import("../inari/firefly/firefly.zig");
 const utils = firefly.utils;
 const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Sprite = firefly.graphics.Sprite;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
@@ -26,19 +26,19 @@ fn init() void {
         .is_mipmap = false,
     });
 
-    const sid1 = SpriteTemplate.Component.new(.{
+    const sid1 = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     });
-    const sid2 = SpriteTemplate.Component.newAndGet(.{
+    const sid2 = Sprite.Component.newAndGet(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipX().id;
-    const sid3 = SpriteTemplate.Component.newAndGet(.{
+    const sid3 = Sprite.Component.newAndGet(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipY().flipX().id;
-    const sid4 = SpriteTemplate.Component.newAndGet(.{
+    const sid4 = Sprite.Component.newAndGet(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     }).flipY().id;

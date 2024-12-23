@@ -2,7 +2,7 @@ const std = @import("std");
 const firefly = @import("../inari/firefly/firefly.zig");
 const utils = firefly.utils;
 const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Sprite = firefly.graphics.Sprite;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
@@ -37,7 +37,7 @@ fn _Example_One_Entity_No_Views() void {
             .pivot = .{ 16, 16 },
             .rotation = 180,
         },
-        ESprite{ .sprite_id = SpriteTemplate.Component.new(.{
+        ESprite{ .sprite_id = Sprite.Component.new(.{
             .texture_name = "TestTexture",
             .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
         }) },

@@ -73,7 +73,7 @@ pub const ETile = struct {
                 return;
             }
 
-            graphics.SpriteTemplate.Activation.activate(self.sprite_id);
+            graphics.Sprite.Activation.activate(self.sprite_id);
         }
     }
 
@@ -370,7 +370,7 @@ pub const DefaultTileGridRenderer = struct {
 
                 const tile = ETile.Component.byId(entity_id);
                 const trans = graphics.ETransform.Component.byId(entity_id);
-                const sprite_template = graphics.SpriteTemplate.Component.byId(tile.sprite_id);
+                const sprite_template = graphics.Sprite.Component.byId(tile.sprite_id);
                 api.rendering.renderSprite(
                     sprite_template.texture_binding,
                     sprite_template.texture_bounds,

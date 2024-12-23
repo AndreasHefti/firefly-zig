@@ -15,7 +15,7 @@ const Vector2f = utils.Vector2f;
 
 const System = firefly.api.System;
 const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Sprite = firefly.graphics.Sprite;
 const ESprite = firefly.graphics.ESprite;
 const EMultiplier = firefly.api.EMultiplier;
 const Engine = firefly.Engine;
@@ -63,7 +63,7 @@ fn example() void {
         .is_mipmap = false,
     });
 
-    const sprite_id = SpriteTemplate.Component.new(.{
+    const sprite_id = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });

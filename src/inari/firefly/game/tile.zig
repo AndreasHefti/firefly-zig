@@ -159,7 +159,7 @@ pub const TileSet = struct {
         graphics.Texture.Component.activateByName(self.texture_name);
         if (graphics.Texture.Component.byName(self.texture_name)) |tex| {
             // load image of texture to CPU
-            const st = graphics.SpriteTemplate.Component.byId(tile_template._sprite_id.?);
+            const st = graphics.Sprite.Component.byId(tile_template._sprite_id.?);
             var image: api.ImageBinding = firefly.api.rendering.loadImageRegionFromTexture(
                 tex._binding.?.id,
                 st.texture_bounds,
@@ -197,7 +197,7 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                var st = graphics.SpriteTemplate.Component.newAndGet(.{
+                var st = graphics.Sprite.Component.newAndGet(.{
                     .name = tt.name,
                     .texture_name = self.texture_name,
                     .texture_bounds = .{
@@ -218,7 +218,7 @@ pub const TileSet = struct {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            var ast = graphics.SpriteTemplate.Component.newAndGet(.{
+                            var ast = graphics.Sprite.Component.newAndGet(.{
                                 .texture_name = self.texture_name,
                                 .texture_bounds = .{
                                     frame.sprite_data.texture_pos[0],
@@ -249,14 +249,14 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                graphics.SpriteTemplate.Component.dispose(tt._sprite_id.?);
+                graphics.Sprite.Component.dispose(tt._sprite_id.?);
                 tt._sprite_id = null;
                 // cleanup animation if defined
                 if (tt.animation) |*animations| {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            graphics.SpriteTemplate.Component.dispose(frame._sprite_template_id.?);
+                            graphics.Sprite.Component.dispose(frame._sprite_template_id.?);
                             frame._sprite_template_id = null;
                         }
                         next_a = animations.slots.nextSetBit(ii + 1);

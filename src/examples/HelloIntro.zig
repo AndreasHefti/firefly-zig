@@ -33,7 +33,7 @@ fn sceneInit(_: *api.CallContext) void {
         .is_mipmap = false,
     });
 
-    const sprite_id = graphics.SpriteTemplate.Component.new(.{
+    const sprite_id = graphics.Sprite.Component.new(.{
         .texture_name = "IntroTexture",
         .texture_bounds = .{ 0, 0, 390, 50 },
     });

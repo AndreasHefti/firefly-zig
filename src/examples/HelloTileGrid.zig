@@ -2,7 +2,7 @@ const std = @import("std");
 const firefly = @import("../inari/firefly/firefly.zig");
 const utils = firefly.utils;
 const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Sprite = firefly.graphics.Sprite;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const EView = firefly.graphics.EView;
@@ -23,7 +23,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 fn loadWithView() void {
     //firefly.api.rendering.setRenderBatch(1, 81920);
 
-    const sprite_id = SpriteTemplate.Component.new(.{
+    const sprite_id = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });

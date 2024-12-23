@@ -20,7 +20,7 @@ const Vector4f = utils.Vector4f;
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
-pub const SpriteTemplate = sprite.SpriteTemplate;
+pub const Sprite = sprite.Sprite;
 pub const ESprite = sprite.ESprite;
 pub const SpriteSet = sprite.SpriteSet;
 pub const DefaultSpriteRenderer = sprite.DefaultSpriteRenderer;

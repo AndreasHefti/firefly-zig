@@ -2,7 +2,7 @@ const std = @import("std");
 const firefly = @import("../inari/firefly/firefly.zig");
 const utils = firefly.utils;
 const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Sprite = firefly.graphics.Sprite;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
@@ -29,7 +29,7 @@ fn init() void {
         .is_mipmap = false,
     });
 
-    _ = SpriteTemplate.Component.new(.{
+    _ = Sprite.Component.new(.{
         .name = "Sprite",
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
@@ -72,7 +72,7 @@ fn create(name: String, easing: Easing) void {
 
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ 200, ypos } },
-        ESprite{ .sprite_id = SpriteTemplate.Naming.byName("Sprite").?.id },
+        ESprite{ .sprite_id = Sprite.Naming.byName("Sprite").?.id },
         firefly.physics.EEasingAnimation{
             .duration = 5000,
             .looping = true,

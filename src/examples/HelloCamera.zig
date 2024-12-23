@@ -4,7 +4,7 @@ const utils = firefly.utils;
 
 const SimplePivotCamera = firefly.game.SimplePivotCamera;
 const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Sprite = firefly.graphics.Sprite;
 const Entity = firefly.api.Entity;
 const EView = firefly.graphics.EView;
 const ETransform = firefly.graphics.ETransform;
@@ -42,7 +42,7 @@ fn init() void {
         .is_mipmap = false,
     });
 
-    const sprite_id = SpriteTemplate.Component.new(.{
+    const sprite_id = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });

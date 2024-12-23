@@ -74,7 +74,7 @@ Features:
             .pivot = .{ 16, 16 },
             .rotation = 180,
         },
-        ESprite{ .sprite_id = SpriteTemplate.Component.new(.{
+        ESprite{ .sprite_id = Sprite.Component.new(.{
             .texture_name = "TestTexture",
             .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
         }) },

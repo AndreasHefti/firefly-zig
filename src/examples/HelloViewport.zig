@@ -2,7 +2,7 @@ const std = @import("std");
 const firefly = @import("../inari/firefly/firefly.zig");
 const utils = firefly.utils;
 const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Sprite = firefly.graphics.Sprite;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const EView = firefly.graphics.EView;
@@ -49,7 +49,7 @@ fn loadWithView() void {
     View.Control.add(viewId, view_control, null, true);
     View.Activation.activate(viewId);
 
-    const sprite_id = SpriteTemplate.Component.newAndGet(.{
+    const sprite_id = Sprite.Component.newAndGet(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     })

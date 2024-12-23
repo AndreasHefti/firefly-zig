@@ -7,7 +7,7 @@ const physics = firefly.physics;
 const game = firefly.game;
 
 const Texture = firefly.graphics.Texture;
-const SpriteTemplate = firefly.graphics.SpriteTemplate;
+const Sprite = firefly.graphics.Sprite;
 const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
@@ -31,7 +31,7 @@ pub fn init() void {
         .is_mipmap = false,
     });
 
-    const sprite_id = SpriteTemplate.Component.new(.{
+    const sprite_id = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });

@@ -27,7 +27,7 @@ pub fn init() !void {
         return;
 
     api.Component.Subtype.register(api.Asset, SpriteSet, "SpriteSet");
-    api.Component.register(SpriteTemplate, "SpriteTemplate");
+    api.Component.register(Sprite, "Sprite");
     api.Entity.registerComponent(ESprite, "ESprite");
     api.System.register(DefaultSpriteRenderer);
 }
@@ -42,10 +42,10 @@ pub fn deinit() void {
 //// Sprite Components
 //////////////////////////////////////////////////////////////
 
-pub const SpriteTemplate = struct {
-    pub const Component = api.Component.Mixin(SpriteTemplate);
-    pub const Naming = api.Component.NameMappingMixin(SpriteTemplate);
-    pub const Activation = api.Component.ActivationMixin(SpriteTemplate);
+pub const Sprite = struct {
+    pub const Component = api.Component.Mixin(Sprite);
+    pub const Naming = api.Component.NameMappingMixin(Sprite);
+    pub const Activation = api.Component.ActivationMixin(Sprite);
 
     id: Index = utils.UNDEF_INDEX,
     name: ?String = null,
@@ -57,19 +57,19 @@ pub const SpriteTemplate = struct {
     _flippedX: bool = false,
     _flippedY: bool = false,
 
-    pub fn flipX(self: *SpriteTemplate) *SpriteTemplate {
+    pub fn flipX(self: *Sprite) *Sprite {
         self.texture_bounds[2] = -self.texture_bounds[2];
         self._flippedX = !self._flippedX;
         return self;
     }
 
-    pub fn flipY(self: *SpriteTemplate) *SpriteTemplate {
+    pub fn flipY(self: *Sprite) *Sprite {
         self.texture_bounds[3] = -self.texture_bounds[3];
         self._flippedY = !self._flippedY;
         return self;
     }
 
-    pub fn activation(self: *SpriteTemplate, active: bool) void {
+    pub fn activation(self: *Sprite, active: bool) void {
         if (active) {
             graphics.Texture.Component.activateByName(self.texture_name);
             self.texture_binding = graphics.Texture.Component.byName(self.texture_name).?._binding.?.id;
@@ -79,13 +79,13 @@ pub const SpriteTemplate = struct {
     }
 
     pub fn format(
-        self: SpriteTemplate,
+        self: Sprite,
         comptime _: []const u8,
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
         try writer.print(
-            "SpriteTemplate[ id:{d}, name:{?s}, texture_name:{?s}, bounds:{any}, binding:{any}, flip_x:{any}, flip_y:{any} ]",
+            "Sprite[ id:{d}, name:{?s}, texture_name:{?s}, bounds:{any}, binding:{any}, flip_x:{any}, flip_y:{any} ]",
             self,
         );
     }
@@ -117,7 +117,7 @@ pub const ESprite = struct {
                 return;
             }
 
-            SpriteTemplate.Activation.activate(self.sprite_id);
+            Sprite.Activation.activate(self.sprite_id);
         }
     }
 
@@ -211,7 +211,7 @@ pub const SpriteSet = struct {
                 for (0..width) |x| { // 0..width
                     if (res._stamps.get(y * width + x)) |stamp| {
                         // use the stamp merged with default stamp
-                        res._loaded_sprite_template_refs.add(SpriteTemplate.Component.new(.{
+                        res._loaded_sprite_template_refs.add(Sprite.Component.new(.{
                             .name = getMapName(stamp.name, default_prefix, x, y),
                             .texture_name = res.texture_name,
                             .texture_bounds = stamp.sprite_dim.?,
@@ -220,7 +220,7 @@ pub const SpriteSet = struct {
                         }));
                     } else {
                         // use the default stamp
-                        res._loaded_sprite_template_refs.add(SpriteTemplate.Component.new(.{
+                        res._loaded_sprite_template_refs.add(Sprite.Component.new(.{
                             .name = getMapName(null, default_prefix, x, y),
                             .texture_name = res.texture_name,
                             .texture_bounds = RectF{
@@ -242,7 +242,7 @@ pub const SpriteSet = struct {
             while (next) |i| {
                 if (res._stamps.get(i)) |stamp| {
                     if (stamp.sprite_dim) |s_dim| {
-                        res._loaded_sprite_template_refs.add(SpriteTemplate.Component.new(.{
+                        res._loaded_sprite_template_refs.add(Sprite.Component.new(.{
                             .name = getMapName(stamp.name, default_prefix, i, null),
                             .texture_name = res.texture_name,
                             .texture_bounds = s_dim,
@@ -258,7 +258,7 @@ pub const SpriteSet = struct {
 
     fn close(res: *SpriteSet) void {
         for (res._loaded_sprite_template_refs.items) |index|
-            SpriteTemplate.Component.dispose(index);
+            Sprite.Component.dispose(index);
         res._loaded_sprite_template_refs.clear();
     }
 
@@ -289,7 +289,7 @@ pub const DefaultSpriteRenderer = struct {
             const es = ESprite.Component.byId(id);
             const trans = graphics.ETransform.Component.byId(id);
 
-            const sprite_template = SpriteTemplate.Component.byId(es.sprite_id);
+            const sprite_template = Sprite.Component.byId(es.sprite_id);
             const multi = if (api.EMultiplier.Component.byIdOptional(id)) |m| m.positions else null;
             firefly.api.rendering.renderSprite(
                 sprite_template.texture_binding,
