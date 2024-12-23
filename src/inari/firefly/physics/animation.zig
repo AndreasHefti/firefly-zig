@@ -41,7 +41,7 @@ pub fn deinit() void {
 //// Animation Component
 //////////////////////////////////////////////////////////////
 
-pub const AnimationCallback = *const fn (loop: ?usize) void;
+pub const AnimationCallback = *const fn (animation_id: Index, loop: ?usize) void;
 
 pub const Animation = struct {
     pub const Component = api.Component.Mixin(Animation);
@@ -126,7 +126,7 @@ pub const Animation = struct {
                 if (!self._inverted) {
                     self._loop_count += 1;
                     if (self.callback) |c|
-                        c(self._loop_count);
+                        c(self.id, self._loop_count);
                 }
             }
         }
@@ -139,7 +139,7 @@ pub const Animation = struct {
             reset(self);
 
         if (self.callback) |c|
-            c(null);
+            c(self.id, null);
 
         Animation.Activation.deactivate(self.id);
     }
@@ -402,7 +402,7 @@ pub const EasedColorIntegrator = struct {
 //// Index Frame
 //////////////////////////////////////////////////////////////
 pub const IndexFrame = struct {
-    sprite_id: Index = UNDEF_INDEX,
+    index: Index = UNDEF_INDEX,
     duration: usize = 0,
 };
 
@@ -424,9 +424,20 @@ pub const IndexFrameList = struct {
         self._duration = 0;
     }
 
-    pub fn withFrame(self: *IndexFrameList, sprite_id: Index, frame_duration: usize) *IndexFrameList {
-        _ = self.frames.add(.{ .sprite_id = sprite_id, .duration = frame_duration });
+    pub fn withFrame(self: *IndexFrameList, index: Index, frame_duration: usize) *IndexFrameList {
+        _ = self.frames.add(.{ .index = index, .duration = frame_duration });
         self._duration += frame_duration;
+        return self;
+    }
+
+    pub fn withSprite(self: *IndexFrameList, sprite_name: String, frame_duration: usize) *IndexFrameList {
+        if (firefly.graphics.Sprite.Naming.byName(sprite_name)) |sprite| {
+            _ = self.frames.add(.{ .index = sprite.id, .duration = frame_duration });
+            self._duration += frame_duration;
+        } else {
+            api.Logger.warn("Failed to get sprite with name: {s}", .{sprite_name});
+        }
+
         return self;
     }
 
@@ -440,7 +451,7 @@ pub const IndexFrameList = struct {
                     _t -= f.duration;
                 }
                 if (_t <= t)
-                    return self.frames.get(i).?.sprite_id;
+                    return self.frames.get(i).?.index;
                 _next = self.frames.slots.prevSetBit(i - 1);
             }
         } else {
@@ -451,7 +462,7 @@ pub const IndexFrameList = struct {
                     _t += f.duration;
                 }
                 if (_t >= t)
-                    return self.frames.get(i).?.sprite_id;
+                    return self.frames.get(i).?.index;
                 _next = self.frames.slots.nextSetBit(i + 1);
             }
         }
@@ -484,7 +495,7 @@ pub const IndexFrameList = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Index Frame Animation Integrator
+//// Index Frame Animation
 //////////////////////////////////////////////////////////////
 
 pub const EIndexFrameAnimation = struct {
@@ -555,6 +566,162 @@ pub const IndexFrameIntegrator = struct {
             animation._t_normalized,
             animation._inverted,
         );
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Multi Index Frame Animation
+//////////////////////////////////////////////////////////////
+
+pub const EFrameSetAnimation = struct {
+    name: ?String = null,
+    reset_on_finish: bool = true,
+    active_on_init: bool = true,
+    callback: ?AnimationCallback = null,
+    animations: []AnimationPart,
+    property_ref: ?*const fn (Index) *Index,
+
+    pub fn createEComponent(entity_id: Index, template: EFrameSetAnimation) void {
+        _ = EAnimations.Component.byIdOptional(entity_id) orelse
+            EAnimations.Component.new(entity_id, .{});
+
+        // create components
+        EAnimations.add(
+            entity_id,
+            Animation{
+                .name = template.name,
+                .duration = 0,
+                .reset_on_finish = template.reset_on_finish,
+                .active_on_init = template.active_on_init,
+                .callback = template.callback,
+            },
+            MultiIndexFrameIntegrator{
+                .property_ref = template.property_ref,
+            },
+        );
+
+        // add all animations and initialize with first one found
+        var integrator: *MultiIndexFrameIntegrator = MultiIndexFrameIntegrator.Component.byId(entity_id);
+        for (0..template.animations.len) |i| {
+            const anim: *AnimationPart = integrator.animations.addAndGet(template.animations[i]);
+            if (integrator._timeline == null) {
+                if (anim.set_on_init) {
+                    integrator.setAnimation(anim);
+                } else if (anim.condition) |c| {
+                    if (c(integrator.call_context))
+                        integrator.setAnimation(anim);
+                }
+            }
+        }
+    }
+};
+
+pub const AnimationPart = struct {
+    name: String,
+    condition: ?api.CallPredicate,
+    timeline: IndexFrameList,
+    wait_for_suspend: bool = true,
+    next_on_finish: ?String,
+    set_on_init: bool = false,
+    looping: bool = false,
+    inverse_on_loop: bool = true,
+};
+
+pub const MultiIndexFrameIntegrator = struct {
+    pub const Component = api.Component.SubTypeMixin(Animation, MultiIndexFrameIntegrator);
+    pub const CallContext = api.Component.CallContextMixin(MultiIndexFrameIntegrator);
+
+    id: Index = UNDEF_INDEX,
+    name: ?String = null,
+
+    call_context: api.CallContext = undefined,
+    property_ref: ?*const fn (Index) *Index,
+    animations: utils.DynArray(AnimationPart) = undefined,
+
+    _timeline: ?*AnimationPart = null,
+    _property: *Index = undefined,
+
+    pub fn construct(self: *MultiIndexFrameIntegrator) void {
+        Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
+            .init = MultiIndexFrameIntegrator.init,
+            .integrate = MultiIndexFrameIntegrator.integrate,
+        };
+        self.animations = utils.DynArray(AnimationPart).new(api.COMPONENT_ALLOC);
+    }
+
+    pub fn destruct(self: *MultiIndexFrameIntegrator) void {
+        self.animations.deinit();
+        self.animations = undefined;
+    }
+
+    pub fn init(animation_id: Index, component_id: Index) void {
+        var self = Component.byId(animation_id);
+        if (self.property_ref) |ref|
+            self._property = ref(component_id);
+    }
+
+    pub fn integrate(animation: *Animation) void {
+        var self = Component.byId(animation.id);
+        self.update();
+        if (self._timeline) |timeline| {
+            self._property.* = timeline.getAt(
+                animation._t_normalized,
+                animation._inverted,
+            );
+        }
+    }
+
+    pub fn activation(self: *MultiIndexFrameIntegrator, active: bool) void {
+        if (!active) {
+            if (self.findNext()) |next| {
+                self.setAnimation(next);
+            } else {
+                if (self._timeline) |current| {
+                    if (current.next_on_finish) |next_name| {
+                        var next = self.animations.slots.nextSetBit(0);
+                        while (next) |i| {
+                            next = self.animations.slots.nextSetBit(i + 1);
+                            const part = self.animations.get(i).?;
+                            if (utils.stringEquals(part.name, next_name))
+                                self.setAnimation(part);
+                        }
+                    }
+                }
+            }
+            Animation.Activation.activate(self.id);
+        }
+    }
+
+    fn update(self: *MultiIndexFrameIntegrator) void {
+        if (self.findNext()) |next| {
+            if (self._timeline) |current| {
+                if (current.wait_for_suspend)
+                    return;
+            }
+            self.setAnimation(next);
+        }
+    }
+
+    fn findNext(self: *MultiIndexFrameIntegrator) ?*AnimationPart {
+        // check if there is some next animation
+        var next = self.animations.slots.nextSetBit(0);
+        while (next) |i| {
+            next = self.animations.slots.nextSetBit(i + 1);
+            const anim = self.animations.get(i).?;
+            if (anim.condition) |c|
+                if (c(self.call_context))
+                    return anim;
+        }
+        return null;
+    }
+
+    fn setAnimation(self: *MultiIndexFrameIntegrator, animation: AnimationPart) void {
+        var anim = Animation.Component.byId(self.id);
+        self._timeline = animation;
+        anim._t_normalized = 0;
+        anim.duration = animation.timeline._duration;
+        anim.looping = animation.looping;
+        anim.inverse_on_loop = animation.inverse_on_loop;
     }
 };
 

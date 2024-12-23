@@ -66,14 +66,14 @@ fn _Example_One_Entity_No_Views() void {
     });
 }
 
-fn loopCallback1(count: ?usize) void {
+fn loopCallback1(_: utils.Index, count: ?usize) void {
     if (count) |c|
         std.log.info("Loop1: {any}", .{c})
     else
         std.log.info("Animation finished", .{});
 }
 
-fn loopCallback2(count: ?usize) void {
+fn loopCallback2(_: utils.Index, count: ?usize) void {
     if (count) |c|
         std.log.info("Loop2: {any}", .{c})
     else

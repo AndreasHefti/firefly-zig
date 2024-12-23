@@ -232,6 +232,7 @@ pub const TileSet = struct {
                             if (frame.sprite_data.flip_y)
                                 _ = ast.flipY();
                             frame._sprite_template_id = ast.id;
+                            graphics.Sprite.Activation.activate(ast.id);
                         }
                         next_a = animations.slots.nextSetBit(ii + 1);
                     }
