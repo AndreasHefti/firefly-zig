@@ -46,7 +46,7 @@ fn _Example_One_Entity_No_Views() void {
             .looping = true,
             .inverse_on_loop = true,
             .active_on_init = true,
-            .loop_callback = loopCallback1,
+            .callback = loopCallback1,
             .start_value = 164.0,
             .end_value = 264.0,
             .easing = Easing.Linear,
@@ -57,6 +57,7 @@ fn _Example_One_Entity_No_Views() void {
             .looping = true,
             .inverse_on_loop = true,
             .active_on_init = true,
+            .callback = loopCallback2,
             .start_value = 0.0,
             .end_value = 180.0,
             .easing = Easing.Linear,
@@ -65,6 +66,16 @@ fn _Example_One_Entity_No_Views() void {
     });
 }
 
-fn loopCallback1(count: usize) void {
-    std.log.info("Loop: {any}", .{count});
+fn loopCallback1(count: ?usize) void {
+    if (count) |c|
+        std.log.info("Loop1: {any}", .{c})
+    else
+        std.log.info("Animation finished", .{});
+}
+
+fn loopCallback2(count: ?usize) void {
+    if (count) |c|
+        std.log.info("Loop2: {any}", .{c})
+    else
+        std.log.info("Animation finished", .{});
 }

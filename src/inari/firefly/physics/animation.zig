@@ -41,6 +41,8 @@ pub fn deinit() void {
 //// Animation Component
 //////////////////////////////////////////////////////////////
 
+pub const AnimationCallback = *const fn (loop: ?usize) void;
+
 pub const Animation = struct {
     pub const Component = api.Component.Mixin(Animation);
     pub const Naming = api.Component.NameMappingMixin(Animation);
@@ -57,10 +59,7 @@ pub const Animation = struct {
     inverse_on_loop: bool = false,
     reset_on_finish: bool = true,
     active_on_init: bool = true,
-
-    // callbacks
-    loop_callback: ?*const fn (usize) void = null,
-    finish_callback: ?*const fn () void = null,
+    callback: ?AnimationCallback = null,
 
     // internal state
     _suspending: bool = false,
@@ -126,9 +125,8 @@ pub const Animation = struct {
                     self._inverted = !self._inverted;
                 if (!self._inverted) {
                     self._loop_count += 1;
-                    if (self.loop_callback) |c| {
+                    if (self.callback) |c|
                         c(self._loop_count);
-                    }
                 }
             }
         }
@@ -139,8 +137,10 @@ pub const Animation = struct {
     fn finish(self: *Animation) void {
         if (self.reset_on_finish)
             reset(self);
-        if (self.finish_callback) |c|
-            c();
+
+        if (self.callback) |c|
+            c(null);
+
         Animation.Activation.deactivate(self.id);
     }
 };
@@ -226,8 +226,7 @@ pub const EEasingAnimation = struct {
     inverse_on_loop: bool = false,
     reset_on_finish: bool = true,
     active_on_init: bool = true,
-    loop_callback: ?*const fn (usize) void = null,
-    finish_callback: ?*const fn () void = null,
+    callback: ?AnimationCallback = null,
     start_value: Float = 0.0,
     end_value: Float = 0.0,
     easing: Easing = Easing.Linear,
@@ -246,8 +245,7 @@ pub const EEasingAnimation = struct {
                 .inverse_on_loop = template.inverse_on_loop,
                 .reset_on_finish = template.reset_on_finish,
                 .active_on_init = template.active_on_init,
-                .loop_callback = template.loop_callback,
-                .finish_callback = template.finish_callback,
+                .callback = template.callback,
             },
             EasedValueIntegrator{
                 .start_value = template.start_value,
@@ -310,8 +308,7 @@ pub const EEasedColorAnimation = struct {
     inverse_on_loop: bool = false,
     reset_on_finish: bool = true,
     active_on_init: bool = true,
-    loop_callback: ?*const fn (usize) void = null,
-    finish_callback: ?*const fn () void = null,
+    callback: ?AnimationCallback = null,
     start_value: utils.Color = .{ 0, 0, 0, 255 },
     end_value: utils.Color = .{ 0, 0, 0, 255 },
     easing: Easing = Easing.Linear,
@@ -330,8 +327,7 @@ pub const EEasedColorAnimation = struct {
                 .inverse_on_loop = template.inverse_on_loop,
                 .reset_on_finish = template.reset_on_finish,
                 .active_on_init = template.active_on_init,
-                .loop_callback = template.loop_callback,
-                .finish_callback = template.finish_callback,
+                .callback = template.callback,
             },
             EasedColorIntegrator{
                 .start_value = template.start_value,
@@ -403,45 +399,8 @@ pub const EasedColorIntegrator = struct {
 };
 
 //////////////////////////////////////////////////////////////
-//// Index Frame Animation Integrator
+//// Index Frame
 //////////////////////////////////////////////////////////////
-
-pub const EIndexFrameAnimation = struct {
-    name: ?String = null,
-    duration: usize = 0,
-    looping: bool = false,
-    inverse_on_loop: bool = false,
-    reset_on_finish: bool = true,
-    active_on_init: bool = true,
-    loop_callback: ?*const fn (usize) void = null,
-    finish_callback: ?*const fn () void = null,
-    timeline: IndexFrameList,
-    property_ref: ?*const fn (Index) *Index,
-
-    pub fn createEComponent(entity_id: Index, template: EIndexFrameAnimation) void {
-        _ = EAnimations.Component.byIdOptional(entity_id) orelse
-            EAnimations.Component.new(entity_id, .{});
-
-        EAnimations.add(
-            entity_id,
-            Animation{
-                .name = template.name,
-                .duration = template.duration,
-                .looping = template.looping,
-                .inverse_on_loop = template.inverse_on_loop,
-                .reset_on_finish = template.reset_on_finish,
-                .active_on_init = template.active_on_init,
-                .loop_callback = template.loop_callback,
-                .finish_callback = template.finish_callback,
-            },
-            IndexFrameIntegrator{
-                .timeline = template.timeline,
-                .property_ref = template.property_ref,
-            },
-        );
-    }
-};
-
 pub const IndexFrame = struct {
     sprite_id: Index = UNDEF_INDEX,
     duration: usize = 0,
@@ -521,6 +480,44 @@ pub const IndexFrameList = struct {
             return self.frames.get(n);
         }
         return null;
+    }
+};
+
+//////////////////////////////////////////////////////////////
+//// Index Frame Animation Integrator
+//////////////////////////////////////////////////////////////
+
+pub const EIndexFrameAnimation = struct {
+    name: ?String = null,
+    duration: usize = 0,
+    looping: bool = false,
+    inverse_on_loop: bool = false,
+    reset_on_finish: bool = true,
+    active_on_init: bool = true,
+    callback: ?AnimationCallback = null,
+    timeline: IndexFrameList,
+    property_ref: ?*const fn (Index) *Index,
+
+    pub fn createEComponent(entity_id: Index, template: EIndexFrameAnimation) void {
+        _ = EAnimations.Component.byIdOptional(entity_id) orelse
+            EAnimations.Component.new(entity_id, .{});
+
+        EAnimations.add(
+            entity_id,
+            Animation{
+                .name = template.name,
+                .duration = template.duration,
+                .looping = template.looping,
+                .inverse_on_loop = template.inverse_on_loop,
+                .reset_on_finish = template.reset_on_finish,
+                .active_on_init = template.active_on_init,
+                .callback = template.callback,
+            },
+            IndexFrameIntegrator{
+                .timeline = template.timeline,
+                .property_ref = template.property_ref,
+            },
+        );
     }
 };
 
