@@ -157,12 +157,18 @@ pub const Sound = struct {
             if (self._binding != null)
                 return; // already loaded
 
-            self._binding = firefly.api.audio.loadSound(self.resource, self.channels);
+            self._binding = firefly.api.audio.loadSound(self.resource, self.channels) catch |err| {
+                api.Logger.errWith("Failed to load sound from: {any}", .{self}, err);
+                api.Asset.assetLoadError(self.id, api.IOErrors.LOAD_SOUND_ERROR);
+                return;
+            };
+            api.Asset.assetLoaded(self.id, true);
         } else {
             if (self._binding) |b| {
                 firefly.api.audio.disposeSound(b);
                 self._binding = null;
             }
+            api.Asset.assetLoaded(self.id, false);
         }
     }
 };
@@ -188,12 +194,18 @@ pub const Music = struct {
             if (self._binding != null)
                 return; // already loaded
 
-            self._binding = firefly.api.audio.loadMusic(self.resource);
+            self._binding = firefly.api.audio.loadMusic(self.resource) catch |err| {
+                api.Logger.errWith("Failed to load music from: {any}", .{self}, err);
+                api.Asset.assetLoadError(self.id, api.IOErrors.LOAD_SOUND_ERROR);
+                return;
+            };
+            api.Asset.assetLoaded(self.id, true);
         } else {
             if (self._binding) |b| {
                 firefly.api.audio.disposeMusic(b);
                 self._binding = null;
             }
+            api.Asset.assetLoaded(self.id, false);
         }
     }
 };

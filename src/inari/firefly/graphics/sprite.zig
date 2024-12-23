@@ -188,19 +188,25 @@ pub const SpriteSet = struct {
         if (active) {
             load(self);
         } else {
-            close(self);
+            dispose(self);
         }
     }
 
     fn load(res: *SpriteSet) void {
         if (res.set_dimensions) |dim| {
             // in this case we interpret the texture as a grid-map of sprites and use default stamp
-            if (res.default_stamp == null)
-                @panic("SpriteSet needs default_stamp when loading with set_dimensions");
+            if (res.default_stamp == null) {
+                api.Logger.err("SpriteSet needs default_stamp when loading with set_dimensions: {any}", .{res});
+                api.Asset.assetLoadError(res.id, api.IOErrors.LOAD_SPRITE_SET_ERROR);
+                return;
+            }
 
             const default_stamp = res.default_stamp.?;
-            if (default_stamp.sprite_dim == null)
-                @panic("SpriteSet needs default_stamp with sprite_dim");
+            if (default_stamp.sprite_dim == null) {
+                api.Logger.err("SpriteSet needs default_stamp with sprite_dim: {any}", .{res});
+                api.Asset.assetLoadError(res.id, api.IOErrors.LOAD_SPRITE_SET_ERROR);
+                return;
+            }
 
             const width: usize = @intFromFloat(dim[0]);
             const height: usize = @intFromFloat(dim[1]);
@@ -254,16 +260,19 @@ pub const SpriteSet = struct {
                 next = res._stamps.slots.nextSetBit(i + 1);
             }
         }
+        api.Asset.assetLoaded(res.id, true);
     }
 
-    fn close(res: *SpriteSet) void {
+    fn dispose(res: *SpriteSet) void {
         for (res._loaded_sprite_template_refs.items) |index|
             Sprite.Component.dispose(index);
         res._loaded_sprite_template_refs.clear();
+        api.Asset.assetLoaded(res.id, false);
     }
 
     fn getMapName(name: ?String, prefix: String, x: usize, y: ?usize) String {
-        if (name) |n| return n;
+        if (name) |n|
+            return n;
 
         return if (y) |_y|
             return api.format("{s}_{d}_{d}", .{ prefix, x, _y })

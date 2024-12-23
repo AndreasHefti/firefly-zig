@@ -45,10 +45,13 @@ pub const IOErrors = error{
     UNKNOWN_LOAD_ERROR,
     FILE_DOES_NOT_EXIST,
     LOAD_TEXTURE_ERROR,
+    LOAD_SPRITE_SET_ERROR,
     LOAD_IMAGE_ERROR,
     LOAD_FONT_ERROR,
     LOAD_RENDER_TEXTURE_ERROR,
     LOAD_SHADER_ERROR,
+    LOAD_SOUND_ERROR,
+    LOAD_MUSIC_ERROR,
 };
 
 pub const RUN_ON = enum { RAYLIB, TEST };
@@ -1470,7 +1473,7 @@ pub fn IAudioAPI() type {
         setMasterVolume: *const fn (volume: Float) void = undefined,
         getMasterVolume: *const fn () Float = undefined,
 
-        loadSound: *const fn (file: String, channels: usize) SoundBinding = undefined,
+        loadSound: *const fn (file: String, channels: usize) IOErrors!SoundBinding = undefined,
         disposeSound: *const fn (SoundBinding) void = undefined,
         playSound: *const fn (BindingId, volume: ?Float, pitch: ?Float, pan: ?Float) void = undefined,
         stopSound: *const fn (BindingId) void = undefined,
@@ -1481,7 +1484,7 @@ pub fn IAudioAPI() type {
         setSoundPitch: *const fn (BindingId, pitch: Float) void = undefined,
         setSoundPan: *const fn (BindingId, pan: Float) void = undefined,
 
-        loadMusic: *const fn (file: String) BindingId = undefined,
+        loadMusic: *const fn (file: String) IOErrors!BindingId = undefined,
         disposeMusic: *const fn (BindingId) void = undefined,
         playMusic: *const fn (BindingId) void = undefined,
         stopMusic: *const fn (BindingId) void = undefined,
