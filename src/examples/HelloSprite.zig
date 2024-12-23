@@ -24,15 +24,10 @@ fn _Example_One_Entity_No_Views() void {
     firefly.graphics.View.screen_projection.clear_color = .{ 0, 0, 0, 0 };
     //firefly.api.window.setOpacity(0.5);
 
-    _ = Texture.Component.newActive(.{
+    _ = Texture.Component.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",
         .is_mipmap = false,
-    });
-
-    const sprite_id = SpriteTemplate.Component.new(.{
-        .texture_name = "TestTexture",
-        .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
     });
 
     _ = Entity.newActive(.{ .name = "TestEntity" }, .{
@@ -42,7 +37,10 @@ fn _Example_One_Entity_No_Views() void {
             .pivot = .{ 16, 16 },
             .rotation = 180,
         },
-        ESprite{ .sprite_id = sprite_id },
+        ESprite{ .sprite_id = SpriteTemplate.Component.new(.{
+            .texture_name = "TestTexture",
+            .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
+        }) },
         EEasingAnimation{
             .duration = 1000,
             .looping = true,

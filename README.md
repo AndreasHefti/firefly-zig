@@ -61,25 +61,23 @@ Features:
 ![](inari.gif)
 
 ``` zig
-_ = Texture.Component.newActive(.{
-    .name = "TestTexture",
-    .resource = "resources/logo.png",
-    .is_mipmap = false,
-});
+    _ = Texture.Component.new(.{
+        .name = "TestTexture",
+        .resource = "resources/logo.png",
+        .is_mipmap = false,
+    });
 
-const sprite_id = SpriteTemplate.Component.new(.{
-    .texture_name = "TestTexture",
-    .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-});
-
-_ = Entity.newActive(.{ .name = "TestEntity" }, .{
+    _ = Entity.newActive(.{ .name = "TestEntity" }, .{
         ETransform{
             .position = .{ 64, 164 },
             .scale = .{ 4, 4 },
             .pivot = .{ 16, 16 },
             .rotation = 180,
         },
-        ESprite{ .template_id = sprite_id },
+        ESprite{ .sprite_id = SpriteTemplate.Component.new(.{
+            .texture_name = "TestTexture",
+            .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
+        }) },
         EEasingAnimation{
             .duration = 1000,
             .looping = true,
