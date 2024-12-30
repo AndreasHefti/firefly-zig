@@ -197,7 +197,7 @@ pub const TileSet = struct {
         var next = self.tile_templates.slots.nextSetBit(0);
         while (next) |i| {
             if (self.tile_templates.get(i)) |tt| {
-                var st = graphics.Sprite.Component.newAndGet(.{
+                tt._sprite_id = graphics.Sprite.Component.new(.{
                     .name = tt.name,
                     .texture_name = self.texture_name,
                     .texture_bounds = .{
@@ -206,19 +206,16 @@ pub const TileSet = struct {
                         self.tile_width,
                         self.tile_height,
                     },
+                    .flip_x = tt.sprite_data.flip_x,
+                    .flip_y = tt.sprite_data.flip_y,
                 });
-                if (tt.sprite_data.flip_x)
-                    _ = st.flipX();
-                if (tt.sprite_data.flip_y)
-                    _ = st.flipY();
-                tt._sprite_id = st.id;
 
                 // animation if defined...
                 if (tt.animation) |*animations| {
                     var next_a = animations.slots.nextSetBit(0);
                     while (next_a) |ii| {
                         if (animations.get(ii)) |frame| {
-                            var ast = graphics.Sprite.Component.newAndGet(.{
+                            frame._sprite_template_id = graphics.Sprite.Component.new(.{
                                 .texture_name = self.texture_name,
                                 .texture_bounds = .{
                                     frame.sprite_data.texture_pos[0],
@@ -226,13 +223,10 @@ pub const TileSet = struct {
                                     self.tile_width,
                                     self.tile_height,
                                 },
+                                .flip_x = frame.sprite_data.flip_x,
+                                .flip_y = frame.sprite_data.flip_y,
                             });
-                            if (frame.sprite_data.flip_x)
-                                _ = ast.flipX();
-                            if (frame.sprite_data.flip_y)
-                                _ = ast.flipY();
-                            frame._sprite_template_id = ast.id;
-                            graphics.Sprite.Activation.activate(ast.id);
+                            graphics.Sprite.Activation.activate(frame._sprite_template_id.?);
                         }
                         next_a = animations.slots.nextSetBit(ii + 1);
                     }

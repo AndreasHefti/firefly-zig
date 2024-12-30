@@ -49,13 +49,12 @@ fn loadWithView() void {
     View.Control.add(viewId, view_control, null, true);
     View.Activation.activate(viewId);
 
-    const sprite_id = Sprite.Component.newAndGet(.{
+    const sprite_id = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 0, 0, 32, 32 },
-    })
-        .flipX()
-        .flipY()
-        .id;
+        .flip_x = true,
+        .flip_y = true,
+    });
 
     _ = Texture.Component.newActive(.{
         .name = "TestTexture",

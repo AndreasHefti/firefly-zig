@@ -30,18 +30,22 @@ fn init() void {
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
     });
-    const sid2 = Sprite.Component.newAndGet(.{
+    const sid2 = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
-    }).flipX().id;
-    const sid3 = Sprite.Component.newAndGet(.{
+        .flip_x = true,
+    });
+    const sid3 = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
-    }).flipY().flipX().id;
-    const sid4 = Sprite.Component.newAndGet(.{
+        .flip_x = true,
+        .flip_y = true,
+    });
+    const sid4 = Sprite.Component.new(.{
         .texture_name = "TestTexture",
         .texture_bounds = utils.RectF{ 16, 0, 16, 16 },
-    }).flipY().id;
+        .flip_y = true,
+    });
 
     var animation: IndexFrameList = IndexFrameList.new();
 

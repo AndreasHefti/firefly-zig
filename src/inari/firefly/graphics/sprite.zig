@@ -52,21 +52,16 @@ pub const Sprite = struct {
 
     texture_name: String,
     texture_bounds: RectF,
+    flip_x: bool = false,
+    flip_y: bool = false,
+
     texture_binding: BindingId = utils.UNDEF_INDEX,
 
-    _flippedX: bool = false,
-    _flippedY: bool = false,
-
-    pub fn flipX(self: *Sprite) *Sprite {
-        self.texture_bounds[2] = -self.texture_bounds[2];
-        self._flippedX = !self._flippedX;
-        return self;
-    }
-
-    pub fn flipY(self: *Sprite) *Sprite {
-        self.texture_bounds[3] = -self.texture_bounds[3];
-        self._flippedY = !self._flippedY;
-        return self;
+    pub fn construct(self: *Sprite) void {
+        if (self.flip_x)
+            self.texture_bounds[2] = -self.texture_bounds[2];
+        if (self.flip_y)
+            self.texture_bounds[3] = -self.texture_bounds[3];
     }
 
     pub fn activation(self: *Sprite, active: bool) void {
@@ -221,8 +216,8 @@ pub const SpriteSet = struct {
                             .name = getMapName(stamp.name, default_prefix, x, y),
                             .texture_name = res.texture_name,
                             .texture_bounds = stamp.sprite_dim.?,
-                            ._flippedX = stamp.flip_x,
-                            ._flippedY = stamp.flip_y,
+                            .flip_x = stamp.flip_x,
+                            .flip_y = stamp.flip_y,
                         }));
                     } else {
                         // use the default stamp
@@ -235,8 +230,8 @@ pub const SpriteSet = struct {
                                 default_dim[2],
                                 default_dim[3],
                             },
-                            ._flippedX = default_stamp.flip_x,
-                            ._flippedY = default_stamp.flip_y,
+                            .flip_x = default_stamp.flip_x,
+                            .flip_y = default_stamp.flip_y,
                         }));
                     }
                 }
@@ -252,8 +247,8 @@ pub const SpriteSet = struct {
                             .name = getMapName(stamp.name, default_prefix, i, null),
                             .texture_name = res.texture_name,
                             .texture_bounds = s_dim,
-                            ._flippedX = stamp.flip_x,
-                            ._flippedY = stamp.flip_y,
+                            .flip_x = stamp.flip_x,
+                            .flip_y = stamp.flip_y,
                         }));
                     }
                 }
