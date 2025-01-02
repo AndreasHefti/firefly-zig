@@ -500,7 +500,6 @@ pub const IndexFrameList = struct {
 
 pub const EIndexFrameAnimation = struct {
     name: ?String = null,
-    duration: usize = 0,
     looping: bool = false,
     inverse_on_loop: bool = false,
     reset_on_finish: bool = true,
@@ -517,7 +516,7 @@ pub const EIndexFrameAnimation = struct {
             entity_id,
             Animation{
                 .name = template.name,
-                .duration = template.duration,
+                .duration = template.timeline._duration,
                 .looping = template.looping,
                 .inverse_on_loop = template.inverse_on_loop,
                 .reset_on_finish = template.reset_on_finish,

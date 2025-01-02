@@ -60,7 +60,6 @@ fn init() void {
             ETransform{ .position = .{ 100, 100 }, .scale = .{ 2, 2 } },
             ESprite{ .sprite_id = sid1 },
             firefly.physics.EIndexFrameAnimation{
-                .duration = animation._duration,
                 .looping = true,
                 .active_on_init = true,
                 .timeline = animation,
