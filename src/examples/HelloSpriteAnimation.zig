@@ -47,12 +47,11 @@ fn init() void {
         .flip_y = true,
     });
 
-    var animation: IndexFrameList = IndexFrameList.new();
-
-    _ = animation.withFrame(sid1, 1000);
-    _ = animation.withFrame(sid2, 1000);
-    _ = animation.withFrame(sid3, 1000);
-    _ = animation.withFrame(sid4, 1000);
+    const animation: IndexFrameList = IndexFrameList.new()
+        .withFrame(sid1, 1000)
+        .withFrame(sid2, 1000)
+        .withFrame(sid3, 1000)
+        .withFrame(sid4, 1000);
 
     _ = Entity.newActive(
         .{},

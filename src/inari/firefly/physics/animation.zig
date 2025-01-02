@@ -424,21 +424,23 @@ pub const IndexFrameList = struct {
         self._duration = 0;
     }
 
-    pub fn withFrame(self: *IndexFrameList, index: Index, frame_duration: usize) *IndexFrameList {
-        _ = self.frames.add(.{ .index = index, .duration = frame_duration });
-        self._duration += frame_duration;
-        return self;
+    pub fn withFrame(self: IndexFrameList, index: Index, frame_duration: usize) IndexFrameList {
+        var _self = self;
+        _ = _self.frames.add(.{ .index = index, .duration = frame_duration });
+        _self._duration += frame_duration;
+        return _self;
     }
 
-    pub fn withSprite(self: *IndexFrameList, sprite_name: String, frame_duration: usize) *IndexFrameList {
+    pub fn withSprite(self: IndexFrameList, sprite_name: String, frame_duration: usize) IndexFrameList {
+        var _self = self;
         if (firefly.graphics.Sprite.Naming.byName(sprite_name)) |sprite| {
-            _ = self.frames.add(.{ .index = sprite.id, .duration = frame_duration });
-            self._duration += frame_duration;
+            _ = _self.frames.add(.{ .index = sprite.id, .duration = frame_duration });
+            _self._duration += frame_duration;
         } else {
             api.Logger.warn("Failed to get sprite with name: {s}", .{sprite_name});
         }
 
-        return self;
+        return _self;
     }
 
     pub fn getAt(self: *IndexFrameList, t_normalized: Float, invert: bool) Index {

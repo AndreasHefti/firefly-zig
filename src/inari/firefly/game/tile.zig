@@ -483,7 +483,7 @@ pub const TileMapping = struct {
             var next = frames.slots.nextSetBit(0);
             while (next) |i| {
                 if (frames.get(i)) |frame|
-                    _ = list.withFrame(frame._sprite_template_id.?, frame.duration);
+                    list = list.withFrame(frame._sprite_template_id.?, frame.duration);
                 next = frames.slots.nextSetBit(i + 1);
             }
 
