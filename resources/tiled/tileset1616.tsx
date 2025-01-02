@@ -89,63 +89,63 @@
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_1_2"/>
-   <property name="props" value="1,0|1|0|TERRAIN|1|-"/>
+   <property name="props" value="1,0|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="12">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_2_2"/>
-   <property name="props" value="2,0|1|0|TERRAIN|1|-"/>
+   <property name="props" value="2,0|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="13">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_3_2"/>
-   <property name="props" value="3,0|1|0|TERRAIN|1|-"/>
+   <property name="props" value="3,0|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="14">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_4_2"/>
-   <property name="props" value="4,0|1|0|TERRAIN|1|-"/>
+   <property name="props" value="4,0|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="15">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_5_2"/>
-   <property name="props" value="5,0|1|0|TERRAIN|1|-"/>
+   <property name="props" value="5,0|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="16">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="rect_half_2"/>
-   <property name="props" value="6,0|0|1|TERRAIN|1|-"/>
+   <property name="props" value="6,0|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="17">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="spiky_down"/>
-   <property name="props" value="4,1|0|1|TERRAIN|1|-"/>
+   <property name="props" value="4,1|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="18">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="spike_down"/>
-   <property name="props" value="2,1|0|1|TERRAIN|1|-"/>
+   <property name="props" value="2,1|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="19">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="rect_mini_2"/>
-   <property name="props" value="6,1|1|0|TERRAIN|1|-"/>
+   <property name="props" value="6,1|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="20">
@@ -159,35 +159,35 @@
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_1_3"/>
-   <property name="props" value="1,0|0|1|TERRAIN|1|-"/>
+   <property name="props" value="1,0|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="22">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_2_3"/>
-   <property name="props" value="2,0|0|1|TERRAIN|1|-"/>
+   <property name="props" value="2,0|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="23">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_3_3"/>
-   <property name="props" value="3,0|0|1|TERRAIN|1|-"/>
+   <property name="props" value="3,0|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="24">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_4_3"/>
-   <property name="props" value="4,0|0|1|TERRAIN|1|-"/>
+   <property name="props" value="4,0|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="25">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="slope_5_3"/>
-   <property name="props" value="5,0|0|1|TERRAIN|1|-"/>
+   <property name="props" value="5,0|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="26">
@@ -264,28 +264,28 @@
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="rect_half_4"/>
-   <property name="props" value="7,0|1|0|TERRAIN|1|-"/>
+   <property name="props" value="7,0|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="37">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="spiky_left"/>
-   <property name="props" value="5,1|1|0|TERRAIN|1|-"/>
+   <property name="props" value="5,1|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="38">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="spike_left"/>
-   <property name="props" value="3,1|1|0|TERRAIN|1|-"/>
+   <property name="props" value="3,1|0|1|TERRAIN|1|-"/>
   </properties>
  </tile>
  <tile id="39">
   <properties>
    <property name="animation" value=""/>
    <property name="name" value="rect_mini_4"/>
-   <property name="props" value="6,1|0|1|TERRAIN|1|-"/>
+   <property name="props" value="6,1|1|0|TERRAIN|1|-"/>
   </properties>
  </tile>
 </tileset>

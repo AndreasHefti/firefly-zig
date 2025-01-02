@@ -7,7 +7,6 @@ const Entity = firefly.api.Entity;
 const ETransform = firefly.graphics.ETransform;
 const ESprite = firefly.graphics.ESprite;
 const EEasingAnimation = firefly.physics.EEasingAnimation;
-//const EAnimations = firefly.physics.EAnimations;
 const AnimationSystem = firefly.physics.AnimationSystem;
 const EasedValueIntegrator = firefly.physics.EasedValueIntegrator;
 const Allocator = std.mem.Allocator;
@@ -21,9 +20,6 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 }
 
 fn _Example_One_Entity_No_Views() void {
-    firefly.graphics.View.screen_projection.clear_color = .{ 0, 0, 0, 0 };
-    //firefly.api.window.setOpacity(0.5);
-
     _ = Texture.Component.new(.{
         .name = "TestTexture",
         .resource = "resources/logo.png",

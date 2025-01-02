@@ -59,9 +59,9 @@ pub const Sprite = struct {
 
     pub fn construct(self: *Sprite) void {
         if (self.flip_x)
-            self.texture_bounds[2] = -self.texture_bounds[2];
-        if (self.flip_y)
             self.texture_bounds[3] = -self.texture_bounds[3];
+        if (self.flip_y)
+            self.texture_bounds[2] = -self.texture_bounds[2];
     }
 
     pub fn activation(self: *Sprite, active: bool) void {

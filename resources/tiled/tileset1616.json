@@ -245,7 +245,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"1,0|1|0|TERRAIN|1|-"
+                 "value":"1,0|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -264,7 +264,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"2,0|1|0|TERRAIN|1|-"
+                 "value":"2,0|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -283,7 +283,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"3,0|1|0|TERRAIN|1|-"
+                 "value":"3,0|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -302,7 +302,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"4,0|1|0|TERRAIN|1|-"
+                 "value":"4,0|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -321,7 +321,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"5,0|1|0|TERRAIN|1|-"
+                 "value":"5,0|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -340,7 +340,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"6,0|0|1|TERRAIN|1|-"
+                 "value":"6,0|1|0|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -359,7 +359,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"4,1|0|1|TERRAIN|1|-"
+                 "value":"4,1|1|0|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -378,7 +378,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"2,1|0|1|TERRAIN|1|-"
+                 "value":"2,1|1|0|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -397,7 +397,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"6,1|1|0|TERRAIN|1|-"
+                 "value":"6,1|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -435,7 +435,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"1,0|0|1|TERRAIN|1|-"
+                 "value":"1,0|1|0|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -454,7 +454,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"2,0|0|1|TERRAIN|1|-"
+                 "value":"2,0|1|0|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -473,7 +473,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"3,0|0|1|TERRAIN|1|-"
+                 "value":"3,0|1|0|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -492,7 +492,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"4,0|0|1|TERRAIN|1|-"
+                 "value":"4,0|1|0|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -511,7 +511,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"5,0|0|1|TERRAIN|1|-"
+                 "value":"5,0|1|0|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -720,7 +720,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"7,0|1|0|TERRAIN|1|-"
+                 "value":"7,0|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -739,7 +739,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"5,1|1|0|TERRAIN|1|-"
+                 "value":"5,1|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -758,7 +758,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"3,1|1|0|TERRAIN|1|-"
+                 "value":"3,1|0|1|TERRAIN|1|-"
                 }]
         }, 
         {
@@ -777,7 +777,7 @@
                 {
                  "name":"props",
                  "type":"string",
-                 "value":"6,1|0|1|TERRAIN|1|-"
+                 "value":"6,1|1|0|TERRAIN|1|-"
                 }]
         }],
  "tilewidth":16,
