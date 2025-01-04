@@ -63,6 +63,7 @@ const RaylibAudioAPI = struct {
 
         interface.deinit = deinit;
 
+        rl.InitAudioDevice();
         api.subscribeUpdate(updateLoopingSounds);
     }
 
@@ -88,6 +89,8 @@ const RaylibAudioAPI = struct {
         }
         music.clear();
         music.deinit();
+
+        rl.CloseAudioDevice();
     }
 
     pub fn updateLoopingSounds(_: api.UpdateEvent) void {
