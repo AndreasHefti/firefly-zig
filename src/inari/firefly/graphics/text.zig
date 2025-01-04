@@ -93,6 +93,7 @@ pub const EText = struct {
     size: ?Float = null,
     char_spacing: ?Float = null,
     line_spacing: ?Float = null,
+    _font_binding: ?BindingId = null,
 
     pub fn destruct(self: *EText) void {
         self.font_id = UNDEF_INDEX;
@@ -101,6 +102,14 @@ pub const EText = struct {
         self.size = null;
         self.char_spacing = null;
         self.line_spacing = null;
+    }
+
+    pub fn activation(self: *EText, active: bool) void {
+        if (active and self.font_id != UNDEF_INDEX) {
+            self._font_binding = Font.Component.byId(self.font_id)._binding;
+        } else {
+            self._font_binding = null;
+        }
     }
 };
 
@@ -121,7 +130,7 @@ pub const DefaultTextRenderer = struct {
             if (EText.Component.byIdOptional(id)) |text| {
                 const trans = graphics.ETransform.Component.byId(id);
                 firefly.api.rendering.renderText(
-                    text.font_id,
+                    text._font_binding,
                     text.text,
                     trans.position,
                     trans.pivot,

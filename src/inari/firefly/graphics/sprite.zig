@@ -108,7 +108,10 @@ pub const ESprite = struct {
         if (active) {
             // check if sprite_id is valid
             if (self.sprite_id == UNDEF_INDEX) {
-                api.Logger.err("ESprite: No sprite_id is set for sprite", .{});
+                api.Logger.warn(
+                    "ESprite: No sprite_id is set for sprite: {?s} {d}",
+                    .{ api.Entity.Component.byId(self.id).name, self.id },
+                );
                 return;
             }
 
