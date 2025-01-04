@@ -1467,13 +1467,13 @@ pub const SoundBinding = struct {
         if (channel == null)
             return self.id;
 
-        return switch (channel) {
-            1 => if (self.channel_1) |b| b orelse self.id,
-            2 => if (self.channel_2) |b| b orelse self.id,
-            3 => if (self.channel_3) |b| b orelse self.id,
-            4 => if (self.channel_4) |b| b orelse self.id,
-            5 => if (self.channel_5) |b| b orelse self.id,
-            6 => if (self.channel_6) |b| b orelse self.id,
+        return switch (channel.?) {
+            1 => if (self.channel_1) |b| b else self.id,
+            2 => if (self.channel_2) |b| b else self.id,
+            3 => if (self.channel_3) |b| b else self.id,
+            4 => if (self.channel_4) |b| b else self.id,
+            5 => if (self.channel_5) |b| b else self.id,
+            6 => if (self.channel_6) |b| b else self.id,
             else => self.id,
         };
     }
