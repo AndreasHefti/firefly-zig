@@ -1462,6 +1462,18 @@ pub const SoundBinding = struct {
     channel_4: ?BindingId = null,
     channel_5: ?BindingId = null,
     channel_6: ?BindingId = null,
+
+    pub fn getBindingId(self: SoundBinding, channel: usize) BindingId {
+        return switch (channel) {
+            1 => if (self.channel_1) |b| b orelse self.id,
+            2 => if (self.channel_2) |b| b orelse self.id,
+            3 => if (self.channel_3) |b| b orelse self.id,
+            4 => if (self.channel_4) |b| b orelse self.id,
+            5 => if (self.channel_5) |b| b orelse self.id,
+            6 => if (self.channel_6) |b| b orelse self.id,
+            else => self.id,
+        };
+    }
 };
 
 pub fn IAudioAPI() type {
