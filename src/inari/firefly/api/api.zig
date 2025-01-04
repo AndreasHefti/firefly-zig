@@ -1475,7 +1475,7 @@ pub fn IAudioAPI() type {
 
         loadSound: *const fn (file: String, channels: usize) IOErrors!SoundBinding = undefined,
         disposeSound: *const fn (SoundBinding) void = undefined,
-        playSound: *const fn (BindingId, volume: ?Float, pitch: ?Float, pan: ?Float) void = undefined,
+        playSound: *const fn (BindingId, volume: ?Float, pitch: ?Float, pan: ?Float, looping: bool) void = undefined,
         stopSound: *const fn (BindingId) void = undefined,
         pauseSound: *const fn (BindingId) void = undefined,
         resumeSound: *const fn (BindingId) void = undefined,

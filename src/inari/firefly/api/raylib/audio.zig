@@ -21,6 +21,7 @@ const RaylibAudioAPI = struct {
 
     var sounds: utils.DynArray(rl.Sound) = undefined;
     var music: utils.DynArray(rl.Music) = undefined;
+    var looping_sounds: utils.BitSet = undefined;
 
     fn initImpl(interface: *api.IAudioAPI()) void {
         defer initialized = true;
@@ -29,6 +30,7 @@ const RaylibAudioAPI = struct {
 
         sounds = utils.DynArray(rl.Sound).new(firefly.api.ALLOC);
         music = utils.DynArray(rl.Music).new(firefly.api.ALLOC);
+        looping_sounds = utils.BitSet.new(firefly.api.ALLOC);
 
         interface.initAudioDevice = initAudioDevice;
         interface.closeAudioDevice = closeAudioDevice;
@@ -60,6 +62,8 @@ const RaylibAudioAPI = struct {
         interface.getMusicTimePlayed = getMusicTimePlayed;
 
         interface.deinit = deinit;
+
+        api.subscribeUpdate(updateLoopingSounds);
     }
 
     fn deinit() void {
@@ -67,6 +71,7 @@ const RaylibAudioAPI = struct {
         if (!initialized)
             return;
 
+        api.unsubscribeUpdate(updateLoopingSounds);
         var next = sounds.slots.nextSetBit(0);
         while (next) |i| {
             rl.UnloadSoundAlias(sounds.get(i).?.*);
@@ -74,6 +79,7 @@ const RaylibAudioAPI = struct {
         }
         sounds.clear();
         sounds.deinit();
+        looping_sounds.deinit();
 
         next = music.slots.nextSetBit(0);
         while (next) |i| {
@@ -82,6 +88,18 @@ const RaylibAudioAPI = struct {
         }
         music.clear();
         music.deinit();
+    }
+
+    pub fn updateLoopingSounds(_: api.UpdateEvent) void {
+        var next = looping_sounds.nextSetBit(0);
+        while (next) |i| {
+            next = looping_sounds.nextSetBit(i + 1);
+            if (sounds.get(i)) |s| {
+                if (!rl.IsSoundPlaying(s.*)) {
+                    rl.PlaySound(s.*);
+                }
+            }
+        }
     }
 
     fn initAudioDevice() void {
@@ -149,11 +167,12 @@ const RaylibAudioAPI = struct {
         }
     }
 
-    fn playSound(id: BindingId, volume: ?Float, pitch: ?Float, pan: ?Float) void {
+    fn playSound(id: BindingId, volume: ?Float, pitch: ?Float, pan: ?Float, looping: bool) void {
         if (sounds.get(id)) |sound| {
             if (volume) |v| rl.SetSoundVolume(sound.*, v);
             if (pitch) |p| rl.SetSoundPitch(sound.*, p);
             if (pan) |p| rl.SetSoundPan(sound.*, p);
+            if (looping) looping_sounds.set(id);
 
             rl.PlaySound(sound.*);
         }
@@ -162,6 +181,7 @@ const RaylibAudioAPI = struct {
     fn stopSound(id: BindingId) void {
         if (sounds.get(id)) |sound| {
             rl.StopSound(sound.*);
+            looping_sounds.setValue(id, false);
         }
     }
 
