@@ -118,19 +118,20 @@ const RaylibAudioAPI = struct {
         return rl.GetMasterVolume();
     }
 
-    fn loadSound(file: String, channels: usize) api.IOErrors!api.SoundBinding {
+    fn loadSound(file: String, channels: utils.IntBitMask) api.IOErrors!api.SoundBinding {
         const sound = rl.LoadSound(firefly.api.NamePool.allocCName(file));
         if (!rl.IsSoundReady(sound))
             return api.IOErrors.LOAD_SOUND_ERROR;
 
         defer firefly.api.NamePool.freeCNames();
         var sound_binding = api.SoundBinding{ .id = sounds.add(sound) };
-        if (channels > 0) sound_binding.channel_1 = sounds.add(rl.LoadSoundAlias(sound));
-        if (channels > 1) sound_binding.channel_2 = sounds.add(rl.LoadSoundAlias(sound));
-        if (channels > 2) sound_binding.channel_3 = sounds.add(rl.LoadSoundAlias(sound));
-        if (channels > 3) sound_binding.channel_4 = sounds.add(rl.LoadSoundAlias(sound));
-        if (channels > 4) sound_binding.channel_5 = sounds.add(rl.LoadSoundAlias(sound));
-        if (channels > 5) sound_binding.channel_6 = sounds.add(rl.LoadSoundAlias(sound));
+
+        if (channels & utils.maskBit(0) != 0) sound_binding.channel_1 = sounds.add(rl.LoadSoundAlias(sound));
+        if (channels & utils.maskBit(1) != 0) sound_binding.channel_2 = sounds.add(rl.LoadSoundAlias(sound));
+        if (channels & utils.maskBit(2) != 0) sound_binding.channel_3 = sounds.add(rl.LoadSoundAlias(sound));
+        if (channels & utils.maskBit(3) != 0) sound_binding.channel_4 = sounds.add(rl.LoadSoundAlias(sound));
+        if (channels & utils.maskBit(4) != 0) sound_binding.channel_5 = sounds.add(rl.LoadSoundAlias(sound));
+        if (channels & utils.maskBit(5) != 0) sound_binding.channel_6 = sounds.add(rl.LoadSoundAlias(sound));
 
         return sound_binding;
     }

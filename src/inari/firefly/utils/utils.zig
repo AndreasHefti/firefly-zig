@@ -18,6 +18,8 @@ pub const CUInt = c_uint;
 pub const Float = f32;
 pub const Byte = u8;
 
+pub const IntBitMask = usize;
+
 pub const String = string.String;
 pub const CString = string.CString;
 pub const StringBuffer = string.StringBuffer;
@@ -100,6 +102,26 @@ pub inline fn usize_cint(v: usize) c_int {
 
 pub inline fn f32_cint(v: f32) c_int {
     return @as(c_int, @intCast(f32_usize(v)));
+}
+
+pub inline fn maskBit(index: usize) usize {
+    return @as(usize, 1) << @as(std.math.Log2Int(usize), @truncate(index));
+}
+
+pub inline fn setBit(index: usize, mask: IntBitMask) usize {
+    return mask | maskBit(index);
+}
+
+pub fn setBits(bits: anytype) usize {
+    var res: usize = 0;
+    inline for (bits) |b| {
+        res |= maskBit(b);
+    }
+    return res;
+}
+
+pub fn resetBit(index: usize, mask: IntBitMask) usize {
+    return mask & ~maskBit(index);
 }
 
 pub inline fn digit(num: usize, position: u8) u8 {

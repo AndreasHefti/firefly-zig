@@ -148,7 +148,7 @@ pub const Sound = struct {
     volume: Float = 1,
     pitch: Float = 0,
     pan: Float = 0,
-    channels: usize = 0,
+    channels: utils.IntBitMask = 0,
     looping: bool = false,
 
     _binding: ?api.SoundBinding = null,
