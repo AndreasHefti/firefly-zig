@@ -1463,7 +1463,10 @@ pub const SoundBinding = struct {
     channel_5: ?BindingId = null,
     channel_6: ?BindingId = null,
 
-    pub fn getBindingId(self: SoundBinding, channel: usize) BindingId {
+    pub fn getBindingId(self: SoundBinding, channel: ?usize) BindingId {
+        if (channel == null)
+            return self.id;
+
         return switch (channel) {
             1 => if (self.channel_1) |b| b orelse self.id,
             2 => if (self.channel_2) |b| b orelse self.id,
