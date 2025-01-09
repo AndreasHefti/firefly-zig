@@ -624,8 +624,8 @@ pub const ViewRenderer = struct {
             }
 
             // 2. render all FBO that has not screen as target but another FBO
-            for (0..View.active_views_to_fbo.size_pointer) |id| {
-                const source_view: *View = View.Component.byId(id);
+            for (0..View.active_views_to_fbo.size_pointer) |i| {
+                const source_view: *View = View.Component.byId(View.active_views_to_fbo.get(i));
                 if (source_view.target_view_id) |tid| {
                     const target_view: *View = View.Component.byId(tid);
                     if (target_view.render_texture_binding) |b| {
@@ -660,8 +660,8 @@ pub const ViewRenderer = struct {
             // activate render to screen
             firefly.api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
-            for (0..View.active_views_to_screen.size_pointer) |id| {
-                const view: *View = View.Component.byId(id);
+            for (0..View.active_views_to_screen.size_pointer) |i| {
+                const view: *View = View.Component.byId(View.active_views_to_screen.get(i));
                 if (view.render_texture_binding) |b| {
 
                     // set shader for view texture rendering

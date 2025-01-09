@@ -193,7 +193,7 @@ pub const TileGrid = struct {
             const r = self._grid[y % self.dimensions[1]][x % self.dimensions[0]];
             if (r == UNDEF_INDEX) return null else return r;
         } else {
-            if (checkBounds) {
+            if (self.checkBounds(x, y)) {
                 const r = self._grid[y][x];
                 if (r == UNDEF_INDEX) return null else return r;
             } else return null;

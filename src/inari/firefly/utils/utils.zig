@@ -42,7 +42,7 @@ pub usingnamespace @import("event.zig");
 pub usingnamespace @import("bitset.zig");
 
 pub const EMPTY_STRING: String = "";
-pub const UNDEF_INDEX = std.math.maxInt(Index);
+pub const UNDEF_INDEX: Index = std.math.maxInt(Index);
 pub const IndexFormatter = struct {
     index: Index,
 

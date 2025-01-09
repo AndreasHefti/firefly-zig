@@ -384,13 +384,13 @@ pub const Orientation = enum {
     pub fn byName(name: ?String) Orientation {
         if (name) |n| {
             if (utils.stringEquals("NORTH", n)) {
-                return Orientation.NORTH;
+                return .NORTH;
             } else if (utils.stringEquals("EAST", n)) {
-                return Orientation.EAST;
+                return .EAST;
             } else if (utils.stringEquals("SOUTH", n)) {
-                return Orientation.SOUTH;
+                return .SOUTH;
             } else if (utils.stringEquals("WEST", n)) {
-                return Orientation.WEST;
+                return .WEST;
             }
         }
         return .NONE;
@@ -398,20 +398,21 @@ pub const Orientation = enum {
 };
 
 pub const Direction = struct {
+    id: usize = 0,
     /// horizontal direction component
-    horizontal: Orientation = Orientation.NONE,
+    horizontal: Orientation = .NONE,
     /// vertical direction component
-    vertical: Orientation = Orientation.NONE,
+    vertical: Orientation = .NONE,
 
-    pub const NO_DIRECTION = Direction{};
-    pub const NORTH = Direction{ Orientation.NONE, Orientation.NORTH };
-    pub const NORTH_EAST = Direction{ Orientation.EAST, Orientation.NORTH };
-    pub const EAST = Direction{ Orientation.EAST, Orientation.NONE };
-    pub const SOUTH_EAST = Direction{ Orientation.EAST, Orientation.SOUTH };
-    pub const SOUTH = Direction{ Orientation.NONE, Orientation.SOUTH };
-    pub const SOUTH_WEST = Direction{ Orientation.WEST, Orientation.SOUTH };
-    pub const WEST = Direction{ Orientation.WEST, Orientation.NONE };
-    pub const NORTH_WEST = Direction{ Orientation.WEST, Orientation.NORTH };
+    pub const NO_DIRECTION = Direction{ .id = 0, .horizontal = .NONE, .vertical = .NORTH };
+    pub const NORTH = Direction{ .id = 1, .horizontal = .NONE, .vertical = .NORTH };
+    pub const NORTH_EAST = Direction{ .id = 2, .horizontal = .EAST, .vertical = .NORTH };
+    pub const EAST = Direction{ .id = 3, .horizontal = .EAST, .vertical = .NONE };
+    pub const SOUTH_EAST = Direction{ .id = 4, .horizontal = .EAST, .vertical = .SOUTH };
+    pub const SOUTH = Direction{ .id = 5, .horizontal = .NONE, .vertical = .SOUTH };
+    pub const SOUTH_WEST = Direction{ .id = 6, .horizontal = .WEST, .vertical = .SOUTH };
+    pub const WEST = Direction{ .id = 7, .horizontal = .WEST, .vertical = .NONE };
+    pub const NORTH_WEST = Direction{ .id = 8, .horizontal = .WEST, .vertical = .NORTH };
 };
 
 fn angleX(v: Vector2f) Float {
