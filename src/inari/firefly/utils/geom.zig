@@ -27,6 +27,13 @@ pub const Vector3i = @Vector(3, CInt);
 /// Four Two dimensional vector of i32 values
 pub const Vector4i = @Vector(4, CInt);
 
+/// Two dimensional vector of i32 values
+pub const Vector2ui = @Vector(2, usize);
+/// Three dimensional vector of i32 values
+pub const Vector3ui = @Vector(3, usize);
+/// Four Two dimensional vector of i32 values
+pub const Vector4ui = @Vector(4, usize);
+
 /// Two dimensional vector of f32 values
 pub const Vector2f = @Vector(2, Float);
 /// Three dimensional vector of f32 values
