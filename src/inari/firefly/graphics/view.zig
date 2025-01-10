@@ -189,6 +189,10 @@ pub const View = struct {
     texture_render_shader: ?BindingId = null,
     /// If not null, this view is rendered to another view instead of the screen
     target_view_id: ?Index = null,
+    /// This indicates if the view is a direct render target or not.
+    /// Usually if you have a view that acts only as target for other views and has no primer rendering on it
+    /// this can be set to false. If false, no sprite or shape or other render data will be rendered to this view.
+    is_render_target: bool = true,
 
     /// Sorted list of active layer ids of this View. This is maintained by the system, do not change.
     ordered_active_layer: ?utils.DynArray(Index) = null,
@@ -198,23 +202,36 @@ pub const View = struct {
     // Overall screen shader used when rendering to screen and no other shader has been defined
     pub var screen_shader_binding: ?BindingId = null;
 
-    var active_views_to_fbo: utils.DynIndexArray = undefined;
-    var active_views_to_screen: utils.DynIndexArray = undefined;
+    var fbo_target_mapping: utils.DynArray(utils.BitSet) = undefined;
+    var screen_target_mapping: utils.BitSet = undefined;
+    // var active_views_to_fbo: utils.DynIndexArray = undefined;
+    // var active_views_to_screen: utils.DynIndexArray = undefined;
     var eventDispatch: utils.EventDispatch(ViewChangeEvent) = undefined;
 
     pub fn componentTypeInit() !void {
         eventDispatch = utils.EventDispatch(ViewChangeEvent).new(firefly.api.COMPONENT_ALLOC);
-        active_views_to_fbo = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
-        active_views_to_screen = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
+        fbo_target_mapping = utils.DynArray(utils.BitSet).newWithRegisterSize(api.COMPONENT_ALLOC, 10);
+        screen_target_mapping = utils.BitSet.new(api.COMPONENT_ALLOC);
+        // active_views_to_fbo = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
+        // active_views_to_screen = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
         Layer.Subscription.subscribe(onLayerAction);
     }
 
     pub fn componentTypeDeinit() void {
         Layer.Subscription.unsubscribe(onLayerAction);
-        active_views_to_fbo.deinit();
-        active_views_to_fbo = undefined;
-        active_views_to_screen.deinit();
-        active_views_to_screen = undefined;
+        var next = fbo_target_mapping.slots.nextSetBit(0);
+        while (next) |i| {
+            next = fbo_target_mapping.slots.nextSetBit(i + 1);
+            if (fbo_target_mapping.get(i)) |s| s.deinit();
+        }
+        fbo_target_mapping.deinit();
+        fbo_target_mapping = undefined;
+        screen_target_mapping.deinit();
+        screen_target_mapping = undefined;
+        // active_views_to_fbo.deinit();
+        // active_views_to_fbo = undefined;
+        // active_views_to_screen.deinit();
+        // active_views_to_screen = undefined;
         eventDispatch.deinit();
         eventDispatch = undefined;
     }
@@ -303,23 +320,24 @@ pub const View = struct {
     }
 
     fn addViewMapping(view: *View) void {
-        if (view.target_view_id) |_| {
-            _ = active_views_to_fbo.add(view.id);
-        } else {
-            _ = active_views_to_screen.add(view.id);
-        }
+        if (view.target_view_id) |target_id| {
+            if (!fbo_target_mapping.slots.isSet(target_id))
+                _ = fbo_target_mapping.set(utils.BitSet.new(api.COMPONENT_ALLOC), target_id);
 
-        // Note: For now none screen target mapping is flat and if a view
-        //       that has a target view itself ist a target of another view
-        //       that might not be rendered correctly, depending on the order
-        //       of active_views_to_fbo
-        // TODO sort active_views_to_fbo in the manner that views that are targets
-        //      itself are later in the list and first are the once that are no targets.
+            if (fbo_target_mapping.get(target_id)) |map|
+                map.set(view.id);
+        } else {
+            _ = screen_target_mapping.set(view.id);
+        }
     }
 
     fn removeViewMapping(view: *View) void {
-        active_views_to_fbo.removeFirst(view.id);
-        active_views_to_screen.removeFirst(view.id);
+        if (view.target_view_id) |target_id| {
+            if (fbo_target_mapping.get(target_id)) |map|
+                map.setValue(view.id, false);
+        }
+
+        screen_target_mapping.setValue(view.id, false);
     }
 
     fn addLayerMapping(layer: *const Layer) void {
@@ -601,7 +619,7 @@ pub const ViewRenderer = struct {
         if (View.screen_shader_binding) |sb|
             firefly.api.rendering.putShaderStack(sb);
 
-        if (View.active_views_to_screen.items.len == 0) {
+        if (View.screen_target_mapping.nextSetBit(0) == null) {
 
             // In this case we have only the screen, no FBO. Start render to screen
             firefly.api.rendering.startRendering(null, &View.screen_projection);
@@ -615,23 +633,31 @@ pub const ViewRenderer = struct {
             firefly.api.rendering.endRendering();
         } else {
 
-            // In this case we have a render pipeline where we first render all to FBOs and that all FBOs to screen.
-            // 1. render objects to all FBOs
+            // In this case we have a render pipeline where we first render all to FBOs and than all FBOs to screen.
+            // 1. render objects to all FBOs that are direct render targets
             var next = View.Activation.nextId(0);
             while (next) |id| {
-                renderToFBO(View.Component.byId(id));
                 next = View.Activation.nextId(id + 1);
+                const view = View.Component.byId(id);
+                if (view.is_render_target)
+                    renderToFBO(view);
             }
 
             // 2. render all FBO that has not screen as target but another FBO
-            for (0..View.active_views_to_fbo.size_pointer) |i| {
-                const source_view: *View = View.Component.byId(View.active_views_to_fbo.get(i));
-                if (source_view.target_view_id) |tid| {
-                    const target_view: *View = View.Component.byId(tid);
-                    if (target_view.render_texture_binding) |b| {
+            next = View.fbo_target_mapping.slots.nextSetBit(0);
+            while (next) |i| {
+                next = View.fbo_target_mapping.slots.nextSetBit(i + 1);
+                const target_view: *View = View.Component.byId(i);
+                var sources = View.fbo_target_mapping.get(i).?;
 
-                        // start render to target view
-                        firefly.api.rendering.startRendering(b.id, &target_view.projection);
+                // start render to target view
+                if (target_view.render_texture_binding) |b| {
+                    firefly.api.rendering.startRendering(b.id, &target_view.projection);
+
+                    var next_source = sources.nextSetBit(0);
+                    while (next_source) |s_id| {
+                        next_source = sources.nextSetBit(s_id + 1);
+                        const source_view: *View = View.Component.byId(s_id);
 
                         // set shader of source View for view texture rendering
                         if (source_view.texture_render_shader) |sb|
@@ -650,18 +676,51 @@ pub const ViewRenderer = struct {
                         //rest shader if needed
                         if (source_view.texture_render_shader != null)
                             firefly.api.rendering.popShaderStack();
-
-                        firefly.api.rendering.endRendering();
                     }
+
+                    firefly.api.rendering.endRendering();
                 }
             }
+            // for (0..View.active_views_to_fbo.size_pointer) |i| {
+            //     const source_view: *View = View.Component.byId(View.active_views_to_fbo.get(i));
+            //     if (source_view.target_view_id) |tid| {
+            //         const target_view: *View = View.Component.byId(tid);
+            //         if (target_view.render_texture_binding) |b| {
+
+            //             // start render to target view
+            //             firefly.api.rendering.startRendering(b.id, &target_view.projection);
+
+            //             // set shader of source View for view texture rendering
+            //             if (source_view.texture_render_shader) |sb|
+            //                 firefly.api.rendering.putShaderStack(sb);
+
+            //             firefly.api.rendering.renderTexture(
+            //                 source_view.render_texture_binding.?.id,
+            //                 source_view.position,
+            //                 source_view.pivot,
+            //                 source_view.scale,
+            //                 source_view.rotation,
+            //                 source_view.tint_color,
+            //                 source_view.blend_mode,
+            //             );
+
+            //             //rest shader if needed
+            //             if (source_view.texture_render_shader != null)
+            //                 firefly.api.rendering.popShaderStack();
+
+            //             firefly.api.rendering.endRendering();
+            //         }
+            //     }
+            // }
 
             // 3. render all FBO to screen that has screen as target
             // activate render to screen
             firefly.api.rendering.startRendering(null, &View.screen_projection);
             // render all FBO as textures to the screen
-            for (0..View.active_views_to_screen.size_pointer) |i| {
-                const view: *View = View.Component.byId(View.active_views_to_screen.get(i));
+            next = View.screen_target_mapping.nextSetBit(0);
+            while (next) |i| {
+                next = View.screen_target_mapping.nextSetBit(i + 1);
+                const view: *View = View.Component.byId(i);
                 if (view.render_texture_binding) |b| {
 
                     // set shader for view texture rendering
