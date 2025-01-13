@@ -1372,7 +1372,7 @@ pub const GamepadAction = enum(usize) {
     GAMEPAD_BUTTON_RIGHT_THUMB = 17, // Gamepad joystick pressed button right
 };
 
-pub const GamepadAxis = enum(CInt) {
+pub const GamepadAxis = enum(usize) {
     GAMEPAD_AXIS_LEFT_X = 0, // Gamepad left stick X axis
     GAMEPAD_AXIS_LEFT_Y = 1, // Gamepad left stick Y axis
     GAMEPAD_AXIS_RIGHT_X = 2, // Gamepad right stick X axis
@@ -1415,9 +1415,9 @@ pub fn IInputAPI() type {
 
         // KEYBOARD
         // Get key pressed (keycode), call it multiple times for keys queued, returns 0 when the queue is empty
-        getKeyPressed: *const fn () CInt = undefined,
+        getKeyPressed: *const fn () usize = undefined,
         // Get char pressed (unicode), call it multiple times for chars queued, returns 0 when the queue is empty
-        getCharPressed: *const fn () CInt = undefined,
+        getCharPressed: *const fn () usize = undefined,
         // key mappings
         setKeyButtonMapping: *const fn (keycode: usize, InputButtonType) void = undefined,
 

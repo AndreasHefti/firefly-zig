@@ -119,12 +119,12 @@ const RaylibInputAPI = struct {
 
     // KEYBOARD
     // Get key pressed (keycode), call it multiple times for keys queued, returns 0 when the queue is empty
-    fn getKeyPressed() CInt {
-        return rl.GetKeyPressed();
+    fn getKeyPressed() usize {
+        return @intCast(rl.GetKeyPressed());
     }
     // Get char pressed (unicode), call it multiple times for chars queued, returns 0 when the queue is empty
-    fn getCharPressed() CInt {
-        return rl.GetCharPressed();
+    fn getCharPressed() usize {
+        return @intCast(rl.GetCharPressed());
     }
     // key mappings
     fn setKeyButtonMapping(keycode: usize, button: api.InputButtonType) void {
@@ -152,7 +152,7 @@ const RaylibInputAPI = struct {
         return _name;
     }
     fn getGamepadAxisMovement(device: api.InputDevice, axis: api.GamepadAxis) Float {
-        return rl.GetGamepadAxisMovement(getGamePadId(device), @intFromEnum(axis));
+        return rl.GetGamepadAxisMovement(getGamePadId(device), @intCast(@intFromEnum(axis)));
     }
     // gamepad mappings
     fn setGamepad1Mapping(device: api.InputDevice) void {
@@ -198,50 +198,54 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkKeyboard(button: api.InputButtonType, action: api.InputActionType) bool {
-        const code: CInt = @intCast(keyboard_code_mapping.get(@intFromEnum(button)));
+        const code = keyboard_code_mapping.get(@intFromEnum(button));
         if (code != UNDEF_INDEX) {
             return switch (action) {
-                .ON => rl.IsKeyDown(code),
-                .OFF => rl.IsKeyUp(code),
-                .TYPED => rl.IsKeyPressed(code),
-                .RELEASED => rl.IsKeyReleased(code),
+                .ON => rl.IsKeyDown(@intCast(code)),
+                .OFF => rl.IsKeyUp(@intCast(code)),
+                .TYPED => rl.IsKeyPressed(@intCast(code)),
+                .RELEASED => rl.IsKeyReleased(@intCast(code)),
             };
         }
+        return false;
     }
 
     inline fn checkPad1(button: api.InputButtonType, action: api.InputActionType) bool {
-        const code: CInt = @intCast(gamepad_1_code_mapping.get(@intFromEnum(button)));
+        const code = gamepad_1_code_mapping.get(@intFromEnum(button));
         if (code != UNDEF_INDEX) {
             return switch (action) {
-                .ON => rl.IsGamepadButtonDown(gamepad_1_code, code),
-                .OFF => rl.IsGamepadButtonUp(gamepad_1_code, code),
-                .TYPED => rl.IsGamepadButtonPressed(gamepad_1_code, code),
-                .RELEASED => rl.IsGamepadButtonReleased(gamepad_1_code, code),
+                .ON => rl.IsGamepadButtonDown(gamepad_1_code, @intCast(code)),
+                .OFF => rl.IsGamepadButtonUp(gamepad_1_code, @intCast(code)),
+                .TYPED => rl.IsGamepadButtonPressed(gamepad_1_code, @intCast(code)),
+                .RELEASED => rl.IsGamepadButtonReleased(gamepad_1_code, @intCast(code)),
             };
         }
+        return false;
     }
 
     inline fn checkPad2(button: api.InputButtonType, action: api.InputActionType) bool {
-        const code: CInt = @intCast(gamepad_2_code_mapping.get(@intFromEnum(button)));
+        const code = gamepad_2_code_mapping.get(@intFromEnum(button));
         if (code != UNDEF_INDEX) {
             return switch (action) {
-                .ON => rl.IsGamepadButtonDown(gamepad_2_code, code),
-                .OFF => rl.IsGamepadButtonUp(gamepad_2_code, code),
-                .TYPED => rl.IsGamepadButtonPressed(gamepad_2_code, code),
-                .RELEASED => rl.IsGamepadButtonReleased(gamepad_2_code, code),
+                .ON => rl.IsGamepadButtonDown(gamepad_2_code, @intCast(code)),
+                .OFF => rl.IsGamepadButtonUp(gamepad_2_code, @intCast(code)),
+                .TYPED => rl.IsGamepadButtonPressed(gamepad_2_code, @intCast(code)),
+                .RELEASED => rl.IsGamepadButtonReleased(gamepad_2_code, @intCast(code)),
             };
         }
+        return false;
     }
 
     inline fn checkMouse(button: api.InputButtonType, action: api.InputActionType) bool {
-        const code: CInt = @intCast(mouse_code_mapping.get(@intFromEnum(button)));
+        const code = mouse_code_mapping.get(@intFromEnum(button));
         if (code != UNDEF_INDEX) {
             return switch (action) {
-                .ON => rl.IsMouseButtonDown(code),
-                .OFF => rl.IsMouseButtonUp(code),
-                .TYPED => rl.IsMouseButtonPressed(code),
-                .RELEASED => rl.IsMouseButtonReleased(code),
+                .ON => rl.IsMouseButtonDown(@intCast(code)),
+                .OFF => rl.IsMouseButtonUp(@intCast(code)),
+                .TYPED => rl.IsMouseButtonPressed(@intCast(code)),
+                .RELEASED => rl.IsMouseButtonReleased(@intCast(code)),
             };
         }
+        return false;
     }
 };
