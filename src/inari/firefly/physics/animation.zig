@@ -224,7 +224,7 @@ pub const EAnimationReference = struct {
             EAnimations.Component.newAndGet(entity_id, .{});
 
         const animation_id = if (template.animation_name != null)
-            Animation.Naming.getIdOpt(template.animation_name) orelse template.animation_id
+            Animation.Naming.getIdOpt(template.animation_name.?) orelse template.animation_id
         else
             template.animation_id;
 
