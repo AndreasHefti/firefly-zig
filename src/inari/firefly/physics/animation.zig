@@ -194,7 +194,6 @@ pub const EAnimations = struct {
             if (active) {
                 Animation.Component.byId(i).initForComponent(self.id);
                 Animation.resetById(i);
-                Animation.Activation.activate(i);
             } else {
                 Animation.Activation.deactivate(i);
             }
