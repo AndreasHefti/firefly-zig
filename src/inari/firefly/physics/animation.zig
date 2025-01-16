@@ -293,6 +293,7 @@ pub const EasedValueIntegrator = struct {
             .init = EasedValueIntegrator.init,
             .integrate = EasedValueIntegrator.integrate,
         };
+        self._easing_v = self.end_value - self.start_value;
     }
 
     fn init(animation_id: Index, component_id: Index) void {
@@ -300,7 +301,6 @@ pub const EasedValueIntegrator = struct {
         if (self.property_ref) |p_ref|
             self._property = p_ref(component_id);
 
-        self._easing_v = self.end_value - self.start_value;
         self._property.* = self.start_value;
     }
 
@@ -559,7 +559,9 @@ pub const IndexFrameIntegrator = struct {
 
     timeline: IndexFrameList,
     property_ref: ?*const fn (Index) *Index,
+    multiplexer: bool = false,
 
+    _component_ids: utils.BitSet = undefined,
     _property: *Index = undefined,
 
     pub fn construct(self: *IndexFrameIntegrator) void {
@@ -567,20 +569,42 @@ pub const IndexFrameIntegrator = struct {
             .init = IndexFrameIntegrator.init,
             .integrate = IndexFrameIntegrator.integrate,
         };
+        if (self.multiplexer)
+            self._component_ids = utils.BitSet.new(api.COMPONENT_ALLOC);
+    }
+
+    pub fn destruct(self: *IndexFrameIntegrator) void {
+        if (self.multiplexer)
+            self._component_ids.deinit();
+        self._component_ids = undefined;
     }
 
     pub fn init(animation_id: Index, component_id: Index) void {
         var self = Component.byId(animation_id);
-        if (self.property_ref) |ref|
-            self._property = ref(component_id);
+        if (self.multiplexer) {
+            self._component_ids.set(component_id);
+        } else {
+            if (self.property_ref) |ref|
+                self._property = ref(component_id);
+        }
     }
 
     pub fn integrate(animation: *Animation) void {
         var self = Component.byId(animation.id);
-        self._property.* = self.timeline.getAt(
+        const val = self.timeline.getAt(
             animation._t_normalized,
             animation._inverted,
         );
+        if (self.multiplexer) {
+            var next = self._component_ids.nextSetBit(0);
+            while (next) |i| {
+                next = self._component_ids.nextSetBit(i + 1);
+                if (self.property_ref) |ref|
+                    ref(i).* = val;
+            }
+        } else {
+            self._property.* = val;
+        }
     }
 };
 
