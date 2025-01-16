@@ -221,7 +221,7 @@ pub const EAnimationReference = struct {
 
     pub fn createEComponent(entity_id: Index, template: EAnimationReference) void {
         var e_anim = EAnimations.Component.byIdOptional(entity_id) orelse
-            EAnimations.Component.new(entity_id, .{});
+            EAnimations.Component.newAndGet(entity_id, .{});
 
         const animation_id = if (template.animation_name != null)
             Animation.Naming.getIdOpt(template.animation_name) orelse template.animation_id
