@@ -44,7 +44,7 @@ fn init() void {
         .property_ref_x = ETransform.Property.XPos,
         .property_ref_y = ETransform.Property.YPos,
         .property_ref_a = ETransform.Property.Rotation,
-    }).id;
+    });
 
     var spline = BezierSplineIntegrator.Component.byId(anim_id);
     spline.addSegment(.{

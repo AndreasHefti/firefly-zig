@@ -951,8 +951,8 @@ pub fn SubTypeMixin(comptime T: type, comptime SubType: type) type {
             return data.contains(id);
         }
 
-        pub fn createSubtype(base: T, subtype: SubType) *SubType {
-            return _register(T.Component.register(base), subtype);
+        pub fn createSubtype(base: T, subtype: SubType) Index {
+            return _register(T.Component.register(base), subtype).id;
         }
 
         pub fn newActive(st: SubType) Index {

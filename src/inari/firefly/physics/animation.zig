@@ -79,7 +79,7 @@ pub const Animation = struct {
         component_id: ?Index,
     ) void {
         const i_type = @TypeOf(integrator);
-        const aid = i_type.Component.createSubtype(animation, integrator).id;
+        const aid = i_type.Component.createSubtype(animation, integrator);
         if (component_id) |cid|
             Component.byId(aid).initForComponent(cid);
     }
@@ -178,7 +178,7 @@ pub const EAnimations = struct {
 
     pub fn add(entity_id: Index, animation: Animation, integrator: anytype) void {
         const i_type = @TypeOf(integrator);
-        const a_id = i_type.Component.createSubtype(animation, integrator).id;
+        const a_id = i_type.Component.createSubtype(animation, integrator);
         if (Component.byIdOptional(entity_id)) |c| {
             c.animations.set(a_id);
         } else {
