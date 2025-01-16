@@ -23,6 +23,7 @@ pub const EasedColorIntegrator = animation.EasedColorIntegrator;
 pub const IndexFrameIntegrator = animation.IndexFrameIntegrator;
 pub const BezierSplineIntegrator = animation.BezierSplineIntegrator;
 pub const EAnimations = animation.EAnimations;
+pub const EAnimationReference = animation.EAnimationReference;
 pub const EEasingAnimation = animation.EEasingAnimation;
 pub const EEasedColorAnimation = animation.EEasedColorAnimation;
 pub const EIndexFrameAnimation = animation.EIndexFrameAnimation;

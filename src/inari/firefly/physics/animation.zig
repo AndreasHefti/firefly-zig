@@ -215,6 +215,24 @@ pub const EAnimations = struct {
     }
 };
 
+pub const EAnimationReference = struct {
+    animation_id: Index = UNDEF_INDEX,
+    animation_name: ?String = null,
+
+    pub fn createEComponent(entity_id: Index, template: EAnimationReference) void {
+        var e_anim = EAnimations.Component.byIdOptional(entity_id) orelse
+            EAnimations.Component.new(entity_id, .{});
+
+        const animation_id = if (template.animation_name != null)
+            Animation.Naming.getIdOpt(template.animation_name) orelse template.animation_id
+        else
+            template.animation_id;
+
+        if (animation_id != UNDEF_INDEX)
+            e_anim.animations.set(animation_id);
+    }
+};
+
 //////////////////////////////////////////////////////////////
 //// Eased Value Animation Integrator
 //////////////////////////////////////////////////////////////
