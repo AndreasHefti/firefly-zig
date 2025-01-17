@@ -81,7 +81,7 @@ pub const Animation = struct {
         const i_type = @TypeOf(integrator);
         const aid = i_type.Component.createSubtype(animation, integrator);
         if (component_id) |cid|
-            Component.byId(aid).initForComponent(cid);
+            Component.byId(aid).applyComponent(cid, true);
     }
 
     pub fn resetById(id: Index) void {
@@ -106,8 +106,8 @@ pub const Animation = struct {
         self._suspending = true;
     }
 
-    pub fn initForComponent(self: *Animation, c_id: Index) void {
-        self._integrator_ref.init(self.id, c_id);
+    pub fn applyComponent(self: *Animation, c_id: Index, active: bool) void {
+        self._integrator_ref.apply(self.id, c_id, active);
     }
 
     fn update(self: *Animation) void {
@@ -146,7 +146,7 @@ pub const Animation = struct {
 };
 
 pub const IntegratorRef = struct {
-    init: *const fn (animation_id: Index, component_id: Index) void,
+    apply: *const fn (animation_id: Index, component_id: Index, active: bool) void,
     integrate: *const fn (animation: *Animation) void,
 };
 
@@ -191,12 +191,9 @@ pub const EAnimations = struct {
 
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
-            if (active) {
-                Animation.Component.byId(i).initForComponent(self.id);
+            if (active)
                 Animation.resetById(i);
-            } else {
-                Animation.Activation.deactivate(i);
-            }
+            Animation.Component.byId(i).applyComponent(self.id, active);
             next = self.animations.nextSetBit(i + 1);
         }
     }
@@ -290,18 +287,23 @@ pub const EasedValueIntegrator = struct {
 
     pub fn construct(self: *EasedValueIntegrator) void {
         Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
-            .init = EasedValueIntegrator.init,
+            .apply = EasedValueIntegrator.apply,
             .integrate = EasedValueIntegrator.integrate,
         };
         self._easing_v = self.end_value - self.start_value;
     }
 
-    fn init(animation_id: Index, component_id: Index) void {
+    fn apply(animation_id: Index, component_id: Index, active: bool) void {
         var self = Component.byId(animation_id);
-        if (self.property_ref) |p_ref|
-            self._property = p_ref(component_id);
+        if (active) {
+            if (self.property_ref) |p_ref|
+                self._property = p_ref(component_id);
 
-        self._property.* = self.start_value;
+            self._property.* = self.start_value;
+        } else {
+            self._property = undefined;
+            Animation.Activation.deactivate(animation_id);
+        }
     }
 
     fn integrate(animation: *Animation) void {
@@ -373,30 +375,34 @@ pub const EasedColorIntegrator = struct {
 
     pub fn construct(self: *EasedColorIntegrator) void {
         Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
-            .init = EasedColorIntegrator.init,
+            .apply = EasedColorIntegrator.apply,
             .integrate = EasedColorIntegrator.integrate,
         };
-    }
-
-    pub fn init(animation_id: Index, component_id: Index) void {
-        var self = EasedColorIntegrator.Component.byId(animation_id);
-        if (self.property_ref) |i|
-            self._property = i(component_id);
-
         self._norm_range = .{
             @floatFromInt(self.end_value[0] - self.start_value[0]),
             @floatFromInt(self.end_value[1] - self.start_value[1]),
             @floatFromInt(self.end_value[2] - self.start_value[2]),
             @floatFromInt(self.end_value[3] - self.start_value[3]),
         };
-
-        self._property.*[0] = self.start_value[0];
-        self._property.*[1] = self.start_value[1];
-        self._property.*[2] = self.start_value[2];
-        self._property.*[3] = self.start_value[3];
     }
 
-    pub fn integrate(animation: *Animation) void {
+    fn apply(animation_id: Index, component_id: Index, active: bool) void {
+        var self = EasedColorIntegrator.Component.byId(animation_id);
+        if (active) {
+            if (self.property_ref) |i|
+                self._property = i(component_id);
+
+            self._property.*[0] = self.start_value[0];
+            self._property.*[1] = self.start_value[1];
+            self._property.*[2] = self.start_value[2];
+            self._property.*[3] = self.start_value[3];
+        } else {
+            self._property = undefined;
+            Animation.Activation.deactivate(animation_id);
+        }
+    }
+
+    fn integrate(animation: *Animation) void {
         var self = Component.byId(animation.id);
         const v_normalized: Float = self.easing.f(animation._t_normalized);
 
@@ -566,7 +572,7 @@ pub const IndexFrameIntegrator = struct {
 
     pub fn construct(self: *IndexFrameIntegrator) void {
         Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
-            .init = IndexFrameIntegrator.init,
+            .apply = IndexFrameIntegrator.apply,
             .integrate = IndexFrameIntegrator.integrate,
         };
         if (self.multiplexer)
@@ -579,17 +585,26 @@ pub const IndexFrameIntegrator = struct {
         self._component_ids = undefined;
     }
 
-    pub fn init(animation_id: Index, component_id: Index) void {
+    fn apply(animation_id: Index, component_id: Index, active: bool) void {
         var self = Component.byId(animation_id);
-        if (self.multiplexer) {
-            self._component_ids.set(component_id);
+        if (active) {
+            if (self.multiplexer) {
+                self._component_ids.set(component_id);
+            } else {
+                if (self.property_ref) |ref|
+                    self._property = ref(component_id);
+            }
         } else {
-            if (self.property_ref) |ref|
-                self._property = ref(component_id);
+            if (self.multiplexer) {
+                self._component_ids.setValue(component_id, false);
+            } else {
+                self._property = undefined;
+                Animation.Activation.deactivate(animation_id);
+            }
         }
     }
 
-    pub fn integrate(animation: *Animation) void {
+    fn integrate(animation: *Animation) void {
         var self = Component.byId(animation.id);
         const val = self.timeline.getAt(
             animation._t_normalized,
@@ -682,7 +697,7 @@ pub const MultiIndexFrameIntegrator = struct {
 
     pub fn construct(self: *MultiIndexFrameIntegrator) void {
         Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
-            .init = MultiIndexFrameIntegrator.init,
+            .apply = MultiIndexFrameIntegrator.apply,
             .integrate = MultiIndexFrameIntegrator.integrate,
         };
         self.animations = utils.DynArray(AnimationPart).new(api.COMPONENT_ALLOC);
@@ -693,13 +708,18 @@ pub const MultiIndexFrameIntegrator = struct {
         self.animations = undefined;
     }
 
-    pub fn init(animation_id: Index, component_id: Index) void {
+    fn apply(animation_id: Index, component_id: Index, active: bool) void {
         var self = Component.byId(animation_id);
-        if (self.property_ref) |ref|
-            self._property = ref(component_id);
+        if (active) {
+            if (self.property_ref) |ref|
+                self._property = ref(component_id);
+        } else {
+            self._property = undefined;
+            Animation.Activation.deactivate(animation_id);
+        }
     }
 
-    pub fn integrate(animation: *Animation) void {
+    fn integrate(animation: *Animation) void {
         var self = Component.byId(animation.id);
         self.update();
         if (self._timeline) |timeline| {
@@ -788,7 +808,7 @@ pub const BezierSplineIntegrator = struct {
 
     pub fn construct(self: *BezierSplineIntegrator) void {
         Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
-            .init = BezierSplineIntegrator.init,
+            .apply = BezierSplineIntegrator.apply,
             .integrate = BezierSplineIntegrator.integrate,
         };
         self.bezier_spline = utils.DynArray(utils.BezierSplineSegment).new(api.COMPONENT_ALLOC);
@@ -817,18 +837,25 @@ pub const BezierSplineIntegrator = struct {
         }
     }
 
-    pub fn init(animation_id: Index, component_id: Index) void {
+    fn apply(animation_id: Index, component_id: Index, active: bool) void {
         var self = Component.byId(animation_id);
-        if (self.property_ref_x) |i|
-            self._property_x = i(component_id);
-        if (self.property_ref_y) |i|
-            self._property_y = i(component_id);
-        if (self.property_ref_a) |i|
-            self._property_a = i(component_id);
-        Animation.Component.byId(animation_id).duration = self.spline_duration;
+        if (active) {
+            if (self.property_ref_x) |i|
+                self._property_x = i(component_id);
+            if (self.property_ref_y) |i|
+                self._property_y = i(component_id);
+            if (self.property_ref_a) |i|
+                self._property_a = i(component_id);
+            Animation.Component.byId(animation_id).duration = self.spline_duration;
+        } else {
+            self._property_x = undefined;
+            self._property_y = undefined;
+            self._property_a = undefined;
+            Animation.Activation.deactivate(animation_id);
+        }
     }
 
-    pub fn integrate(a: *Animation) void {
+    fn integrate(a: *Animation) void {
         const self = Component.byId(a.id);
         const norm_time: Float = if (a._inverted) 1 - a._t_normalized else a._t_normalized;
         setCurrentSegment(self, norm_time);
