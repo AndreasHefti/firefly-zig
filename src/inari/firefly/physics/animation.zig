@@ -187,26 +187,21 @@ pub const EAnimations = struct {
     }
 
     pub fn activation(self: *EAnimations, active: bool) void {
-        if (!initialized) return;
+        if (!initialized)
+            return;
 
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
+            next = self.animations.nextSetBit(i + 1);
             if (active)
                 Animation.resetById(i);
-            Animation.Component.byId(i).applyComponent(self.id, active);
-            next = self.animations.nextSetBit(i + 1);
+
+            if (Animation.Component.byIdOptional(i)) |a|
+                a.applyComponent(self.id, active);
         }
     }
 
     pub fn destruct(self: *EAnimations) void {
-        if (initialized) {
-            var next = self.animations.nextSetBit(0);
-            while (next) |i| {
-                Animation.Component.dispose(i);
-                next = self.animations.nextSetBit(i + 1);
-            }
-        }
-
         self.animations.deinit();
         self.animations = undefined;
     }
