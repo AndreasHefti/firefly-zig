@@ -193,9 +193,6 @@ pub const EAnimations = struct {
         var next = self.animations.nextSetBit(0);
         while (next) |i| {
             next = self.animations.nextSetBit(i + 1);
-            if (active)
-                Animation.resetById(i);
-
             if (Animation.Component.byIdOptional(i)) |a|
                 a.applyComponent(self.id, active);
         }
