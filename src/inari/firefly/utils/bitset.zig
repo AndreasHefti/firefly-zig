@@ -136,20 +136,36 @@ pub const BitSet = struct {
     }
 
     pub fn setAnd(self: *BitSet, other: *BitSet) void {
-        const self_num_masks = self.unmanaged.numMasks(self.bit_length);
-        const other_num_masks = other.unmanaged.numMasks(other.bit_length);
+        const self_num_masks = numMasks(self.unmanaged.bit_length);
+        const other_num_masks = numMasks(other.unmanaged.bit_length);
         const min_num_masks = @min(self_num_masks, other_num_masks);
-        for (self.masks[0..min_num_masks], 0..) |*mask, i| {
-            mask.* &= other.masks[i];
+        for (self.unmanaged.masks[0..min_num_masks], 0..) |*mask, i| {
+            mask.* &= other.unmanaged.masks[i];
+        }
+    }
+
+    pub fn setAndUnion(self: *BitSet, other: *BitSet) void {
+        self.setValue(other.capacity() - 1, false);
+        const self_num_masks = numMasks(self.unmanaged.bit_length);
+        for (self.unmanaged.masks[0..self_num_masks], 0..) |*mask, i| {
+            mask.* &= other.unmanaged.masks[i];
         }
     }
 
     pub fn setOr(self: *BitSet, other: *BitSet) void {
-        const self_num_masks = self.unmanaged.numMasks(self.bit_length);
-        const other_num_masks = other.unmanaged.numMasks(other.bit_length);
+        const self_num_masks = numMasks(self.unmanaged.bit_length);
+        const other_num_masks = numMasks(other.unmanaged.bit_length);
         const min_num_masks = @min(self_num_masks, other_num_masks);
-        for (self.masks[0..min_num_masks], 0..) |*mask, i| {
-            mask.* |= other.masks[i];
+        for (self.unmanaged.masks[0..min_num_masks], 0..) |*mask, i| {
+            mask.* |= other.unmanaged.masks[i];
+        }
+    }
+
+    pub fn setOrUnion(self: *BitSet, other: *BitSet) void {
+        self.setValue(other.capacity() - 1, false);
+        const self_num_masks = numMasks(self.unmanaged.bit_length);
+        for (self.unmanaged.masks[0..self_num_masks], 0..) |*mask, i| {
+            mask.* |= other.unmanaged.masks[i];
         }
     }
 
@@ -263,5 +279,24 @@ pub const BitSet = struct {
                 std.log.err("Failed to increase capacity: {}", .{err});
             };
         }
+    }
+
+    fn numMasks(bit_length: usize) usize {
+        return (bit_length + (@bitSizeOf(MaskInt) - 1)) / @bitSizeOf(MaskInt);
+    }
+
+    pub fn format(
+        self: BitSet,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        try writer.print("BitSet({d},{d})[ ", .{ self.capacity(), numMasks(self.unmanaged.bit_length) });
+        var next = self.nextSetBit(0);
+        while (next) |i| {
+            next = self.nextSetBit(i + 1);
+            try writer.print("{d}, ", .{i});
+        }
+        try writer.print("]", .{});
     }
 };
