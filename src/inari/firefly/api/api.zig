@@ -84,7 +84,10 @@ var pool_alloc_arena: std.heap.ArenaAllocator = undefined;
 
 pub fn freePoolAllocator() void {
     if (initialized) {
-        pool_alloc_arena.reset(.{.free_all});
+        if (!pool_alloc_arena.reset(.free_all))
+            Logger.warn("Failed to free whole POOL_ALLOC", .{})
+        else
+            Logger.info("Successfully freed whole POOL_ALLOC", .{});
     }
 }
 
@@ -96,7 +99,10 @@ var load_alloc_arena: std.heap.ArenaAllocator = undefined;
 
 pub fn freeLoadAllocator() void {
     if (initialized) {
-        load_alloc_arena.reset(.{.free_all});
+        if (load_alloc_arena.reset(.free_all))
+            Logger.warn("Failed to free whole LOAD_ALLOC", .{})
+        else
+            Logger.info("Successfully freed whole LOAD_ALLOC", .{});
     }
 }
 
