@@ -339,6 +339,9 @@ pub fn Mixin(comptime T: type) type {
                     }
                 }
 
+                if (has_control)
+                    ControlMixin(T).indexes.removeAll(id);
+
                 t.id = UNDEF_INDEX;
                 pool.delete(id);
             }
