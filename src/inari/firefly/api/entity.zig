@@ -287,17 +287,25 @@ pub fn EntityComponentMixin(comptime T: type) type {
             if (pool.exists(entity_id))
                 std.debug.panic("Entity {d} has already component of type {any}\n", .{ entity_id, T });
 
+            // add entity component to pool
             var comp = pool.set(component, entity_id);
             comp.id = entity_id;
 
+            // add entity component aspect to entity kind
             var entity = Entity.Component.byId(entity_id);
             entity.kind = entity.kind.withAspect(aspect);
 
+            // if entity component has a constructor. call it
             if (has_construct)
                 comp.construct();
 
+            // if entity component has call context, init it
             if (has_call_context)
                 api.Component.CallContextMixin(T).construct(comp);
+
+            // if entity is active, activate also new entity component
+            if (Entity.Activation.isActive(entity_id) and has_activation)
+                comp.activation(true);
 
             return comp;
         }
