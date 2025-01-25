@@ -219,6 +219,11 @@ pub const EAnimationReference = struct {
 
         if (animation_id != UNDEF_INDEX)
             e_anim.animations.set(animation_id);
+
+        // activate if entity is active
+        if (api.Entity.Activation.isActive(entity_id))
+            if (Animation.Component.byIdOptional(animation_id)) |a|
+                a.applyComponent(entity_id, true);
     }
 };
 
