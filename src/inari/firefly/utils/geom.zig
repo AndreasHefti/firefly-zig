@@ -411,7 +411,7 @@ pub const Direction = struct {
     /// vertical direction component
     vertical: Orientation = .NONE,
 
-    pub const NO_DIRECTION = Direction{ .id = 0, .horizontal = .NONE, .vertical = .NORTH };
+    pub const NO_DIRECTION = Direction{ .id = 0, .horizontal = .NONE, .vertical = .NONE };
     pub const NORTH = Direction{ .id = 1, .horizontal = .NONE, .vertical = .NORTH };
     pub const NORTH_EAST = Direction{ .id = 2, .horizontal = .EAST, .vertical = .NORTH };
     pub const EAST = Direction{ .id = 3, .horizontal = .EAST, .vertical = .NONE };
