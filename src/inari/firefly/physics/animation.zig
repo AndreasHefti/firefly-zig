@@ -279,7 +279,7 @@ pub const EasedValueIntegrator = struct {
     end_value: Float = 0.0,
     easing: Easing = Easing.Linear,
     property_ref: ?*const fn (Index) *Float = null,
-    _property: *Float = undefined,
+    _property: ?*Float = null,
     _easing_v: Float = 0,
 
     pub fn construct(self: *EasedValueIntegrator) void {
@@ -293,24 +293,26 @@ pub const EasedValueIntegrator = struct {
     fn apply(animation_id: Index, component_id: Index, active: bool) void {
         var self = Component.byId(animation_id);
         if (active) {
-            if (self.property_ref) |p_ref|
+            if (self.property_ref) |p_ref| {
                 self._property = p_ref(component_id);
-
-            self._property.* = self.start_value;
+                self._property.?.* = self.start_value;
+            }
         } else {
-            self._property = undefined;
+            self._property = null;
             Animation.Activation.deactivate(animation_id);
         }
     }
 
     fn integrate(animation: *Animation) void {
         var self = Component.byId(animation.id);
-        self._property.* = @mulAdd(
-            Float,
-            if (animation._inverted) -self._easing_v else self._easing_v,
-            self.easing.f(animation._t_normalized),
-            if (animation._inverted) self.end_value else self.start_value,
-        );
+        if (self._property) |p| {
+            p.* = @mulAdd(
+                Float,
+                if (animation._inverted) -self._easing_v else self._easing_v,
+                self.easing.f(animation._t_normalized),
+                if (animation._inverted) self.end_value else self.start_value,
+            );
+        }
     }
 };
 
@@ -366,7 +368,7 @@ pub const EasedColorIntegrator = struct {
     end_value: utils.Color = .{ 0, 0, 0, 255 },
     easing: Easing = Easing.Linear,
     property_ref: ?*const fn (Index) *utils.Color = null,
-    _property: *utils.Color = undefined,
+    _property: ?*utils.Color = null,
 
     _norm_range: @Vector(4, Float) = .{ 0, 0, 0, 0 },
 
@@ -386,23 +388,25 @@ pub const EasedColorIntegrator = struct {
     fn apply(animation_id: Index, component_id: Index, active: bool) void {
         var self = EasedColorIntegrator.Component.byId(animation_id);
         if (active) {
-            if (self.property_ref) |i|
+            if (self.property_ref) |i| {
                 self._property = i(component_id);
-
-            self._property.*[0] = self.start_value[0];
-            self._property.*[1] = self.start_value[1];
-            self._property.*[2] = self.start_value[2];
-            self._property.*[3] = self.start_value[3];
+                self._property.?.*[0] = self.start_value[0];
+                self._property.?.*[1] = self.start_value[1];
+                self._property.?.*[2] = self.start_value[2];
+                self._property.?.*[3] = self.start_value[3];
+            }
         } else {
-            self._property = undefined;
+            self._property = null;
             Animation.Activation.deactivate(animation_id);
         }
     }
 
     fn integrate(animation: *Animation) void {
         var self = Component.byId(animation.id);
-        const v_normalized: Float = self.easing.f(animation._t_normalized);
+        if (self._property == null)
+            return;
 
+        const v_normalized: Float = self.easing.f(animation._t_normalized);
         for (0..4) |slot| {
             if (self._norm_range[slot] != 0)
                 _integrate(self, v_normalized, animation._inverted, slot);
@@ -410,12 +414,14 @@ pub const EasedColorIntegrator = struct {
     }
 
     inline fn _integrate(self: *EasedColorIntegrator, v_normalized: Float, inv: bool, slot: usize) void {
-        self._property.*[slot] = @intFromFloat(@mulAdd(
-            Float,
-            if (inv) -self._norm_range[slot] else self._norm_range[slot],
-            v_normalized,
-            @floatFromInt(if (inv) self.end_value[slot] else self.start_value[slot]),
-        ));
+        if (self._property) |p| {
+            p.*[slot] = @intFromFloat(@mulAdd(
+                Float,
+                if (inv) -self._norm_range[slot] else self._norm_range[slot],
+                v_normalized,
+                @floatFromInt(if (inv) self.end_value[slot] else self.start_value[slot]),
+            ));
+        }
     }
 };
 
@@ -565,7 +571,7 @@ pub const IndexFrameIntegrator = struct {
     multiplexer: bool = false,
 
     _component_ids: utils.BitSet = undefined,
-    _property: *Index = undefined,
+    _property: ?*Index = null,
 
     pub fn construct(self: *IndexFrameIntegrator) void {
         Animation.Component.byId(self.id)._integrator_ref = IntegratorRef{
@@ -595,7 +601,7 @@ pub const IndexFrameIntegrator = struct {
             if (self.multiplexer) {
                 self._component_ids.setValue(component_id, false);
             } else {
-                self._property = undefined;
+                self._property = null;
                 Animation.Activation.deactivate(animation_id);
             }
         }
@@ -615,7 +621,7 @@ pub const IndexFrameIntegrator = struct {
                     ref(i).* = val;
             }
         } else {
-            self._property.* = val;
+            if (self._property) |p| p.* = val;
         }
     }
 };
