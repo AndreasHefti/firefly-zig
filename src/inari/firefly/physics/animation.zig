@@ -535,6 +535,7 @@ pub const EIndexFrameAnimation = struct {
     active_on_init: bool = true,
     callback: ?AnimationCallback = null,
     timeline: IndexFrameList,
+    multiplexer: bool = false,
     property_ref: ?*const fn (Index) *Index,
 
     pub fn createEComponent(entity_id: Index, template: EIndexFrameAnimation) void {
@@ -555,6 +556,7 @@ pub const EIndexFrameAnimation = struct {
             IndexFrameIntegrator{
                 .timeline = template.timeline,
                 .property_ref = template.property_ref,
+                .multiplexer = template.multiplexer,
             },
         );
     }
