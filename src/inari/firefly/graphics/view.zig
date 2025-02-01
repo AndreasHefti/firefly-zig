@@ -552,7 +552,6 @@ pub const Scene = struct {
             if (self.init_function) |f|
                 f(&self.call_context);
         } else {
-            stop(self);
             defer self._active = false;
             if (!self._active)
                 return;
