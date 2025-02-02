@@ -940,11 +940,12 @@ pub const RenderTextureBinding = struct {
 pub const ShaderBinding = struct {
     id: BindingId,
 
-    _set_uniform_float: *const fn (BindingId, CString, *Float) bool,
-    _set_uniform_vec2: *const fn (BindingId, CString, *Vector2f) bool,
-    _set_uniform_vec3: *const fn (BindingId, CString, *Vector3f) bool,
-    _set_uniform_vec4: *const fn (BindingId, CString, *Vector4f) bool,
-    _set_uniform_texture: *const fn (BindingId, CString, BindingId) bool,
+    _apply_call: ?*const fn (self: ShaderBinding) void = null,
+    _set_uniform_float: *const fn (BindingId, String, Float) bool,
+    _set_uniform_vec2: *const fn (BindingId, String, Vector2f) bool,
+    _set_uniform_vec3: *const fn (BindingId, String, Vector3f) bool,
+    _set_uniform_vec4: *const fn (BindingId, String, Vector4f) bool,
+    _set_uniform_texture: *const fn (BindingId, String, BindingId) bool,
 };
 
 pub const ImageBinding = struct {

@@ -224,51 +224,66 @@ pub const Shader = struct {
         }
     }
 
-    pub fn setByNameUniformFloat(asset_name: String, name: String, v_ptr: *Float) bool {
-        if (Shader.getResourceByName(asset_name)) |s| {
-            return s._set_uniform_float(s.binding_id, name, v_ptr);
+    pub fn setByNameUniformFloat(asset_name: String, name: String, v: Float) bool {
+        if (Shader.Component.byName(asset_name)) |s| {
+            if (s._binding) |b|
+                return b._set_uniform_float(s.binding_id, name, v);
         }
         return false;
     }
-    pub fn setByNameUniformVec2(asset_name: String, name: String, v_ptr: *Vector2f) bool {
-        if (Shader.getResourceByName(asset_name)) |s| {
-            return s._set_uniform_vec2(s.binding_id, name, v_ptr);
+    pub fn setByNameUniformVec2(asset_name: String, name: String, v: Vector2f) bool {
+        if (Shader.Component.byName(asset_name)) |s| {
+            if (s._binding) |b|
+                return b._set_uniform_vec2(b.id, name, v);
         }
         return false;
     }
-    pub fn setByNameUniformVec3(asset_name: String, name: String, v_ptr: *Vector3f) bool {
-        if (Shader.getResourceByName(asset_name)) |s| {
-            return s._set_uniform_vec3(s.binding_id, name, v_ptr);
+    pub fn setByNameUniformVec3(asset_name: String, name: String, v: Vector3f) bool {
+        if (Shader.Component.byName(asset_name)) |s| {
+            if (s._binding) |b|
+                return b._set_uniform_vec3(b.id, name, v);
         }
         return false;
     }
-    pub fn setByNameUniformVec4(asset_name: String, name: String, v_ptr: *Vector4f) bool {
-        if (Shader.getResourceByName(asset_name)) |s| {
-            return s._set_uniform_vec4(s.binding_id, name, v_ptr);
+    pub fn setByNameUniformVec4(asset_name: String, name: String, v: Vector4f) bool {
+        if (Shader.Component.byName(asset_name)) |s| {
+            if (s._binding) |b|
+                return b._set_uniform_vec4(b.id, name, v);
         }
         return false;
     }
     pub fn setByNameUniformTexture(asset_name: String, name: String, tex_binding: api.BindingId) bool {
-        if (Shader.getResourceByName(asset_name)) |s| {
-            return s._set_uniform_texture(s.binding_id, name, tex_binding);
+        if (Shader.Component.byName(asset_name)) |s| {
+            if (s._binding) |b|
+                return b._set_uniform_texture(b.id, name, tex_binding);
         }
         return false;
     }
 
-    pub fn setUniformFloat(self: *Shader, name: String, v_ptr: *Float) bool {
-        return self._set_uniform_float(self.binding_id, name, v_ptr);
+    pub fn setUniformFloat(self: *Shader, name: String, v: Float) bool {
+        if (self._binding) |b|
+            return b._set_uniform_float(b.id, name, v);
+        return false;
     }
-    pub fn setUniformVec2(self: *Shader, name: String, v_ptr: *Vector2f) bool {
-        return self._set_uniform_vec2(self.binding_id, name, v_ptr);
+    pub fn setUniformVec2(self: *Shader, name: String, v: Vector2f) bool {
+        if (self._binding) |b|
+            return b._set_uniform_vec2(b.id, name, v);
+        return false;
     }
-    pub fn setUniformVec3(self: *Shader, name: String, v_ptr: *Vector3f) bool {
-        return self._set_uniform_vec3(self.binding_id, name, v_ptr);
+    pub fn setUniformVec3(self: *Shader, name: String, v: Vector3f) bool {
+        if (self._binding) |b|
+            return b._set_uniform_vec3(b.id, name, v);
+        return false;
     }
-    pub fn setUniformVec4(self: *Shader, name: String, v_ptr: *Vector4f) bool {
-        return self._set_uniform_vec4(self.binding_id, name, v_ptr);
+    pub fn setUniformVec4(self: *Shader, name: String, v: Vector4f) bool {
+        if (self._binding) |b|
+            return b._set_uniform_vec4(b.id, name, v);
+        return false;
     }
     pub fn setUniformTexture(self: *Shader, name: String, tex_binding: api.BindingId) bool {
-        return self._set_uniform_texture(self.binding_id, name, tex_binding);
+        if (self._binding) |b|
+            return b._set_uniform_texture(b.id, name, tex_binding);
+        return false;
     }
 };
 

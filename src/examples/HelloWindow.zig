@@ -35,7 +35,12 @@ fn init() void {
         },
     });
 
-    graphics.WindowScalingAdaption.init("TestView", width, height);
+    graphics.WindowScalingAdaption.init(
+        "TestView",
+        width,
+        height,
+        windowResChanged,
+    );
 
     _ = api.Entity.newActive(.{ .name = "Border" }, .{
         graphics.ETransform{ .position = .{ 0, 0 } },
@@ -68,4 +73,9 @@ fn init() void {
         graphics.EView{ .view_id = view_id },
         graphics.ESprite{ .sprite_id = sprite_id },
     });
+}
+
+fn windowResChanged(view_id: Index) void {
+    const view = graphics.View.Component.byId(view_id);
+    api.Logger.info("Window Resolution changed: {any}", .{view});
 }

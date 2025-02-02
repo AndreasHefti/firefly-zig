@@ -824,13 +824,16 @@ pub const WindowScalingAdaption = struct {
     var _game_height: Float = 0;
     var _game_screen_ratio: Float = 0;
 
-    pub fn init(main_view_name: String, width: usize, height: usize) void {
+    var window_resolution_change_listener: ?*const fn (view_id: Index) void = null;
+
+    pub fn init(main_view_name: String, width: usize, height: usize, listener: ?*const fn (view_id: Index) void) void {
         _game_width = utils.usize_f32(width);
         _game_height = utils.usize_f32(height);
         _game_screen_ratio = _game_height / _game_width;
         main_view_id = View.Naming.byName(main_view_name).?.id;
         api.subscribeUpdate(update);
         adaption_initialized = true;
+        window_resolution_change_listener = listener;
     }
 
     fn deinit() void {
@@ -869,6 +872,8 @@ pub const WindowScalingAdaption = struct {
                 view.position[0] = (w - _game_width) / 2 * view.scale[0];
                 view.position[1] = (h - _game_height) / 2 * view.scale[1];
             }
+
+            if (window_resolution_change_listener) |l| l(main_view_id);
         }
     }
 };

@@ -65,7 +65,12 @@ fn init() void {
         },
     });
 
-    graphics.WindowScalingAdaption.init("TestView", screen_width, screen_height);
+    graphics.WindowScalingAdaption.init(
+        "TestView",
+        screen_width,
+        screen_height,
+        null,
+    );
 
     // create the world from json file
     api.Task.runTaskByNameWith(

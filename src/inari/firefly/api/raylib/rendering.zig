@@ -689,33 +689,37 @@ const RaylibRenderAPI = struct {
         }
     }
 
-    fn setShaderValueFloat(shader_id: BindingId, name: CString, val: *Float) bool {
-        return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_FLOAT);
+    fn setShaderValueFloat(shader_id: BindingId, name: String, val: Float) bool {
+        return setShaderValue(shader_id, name, &val, rl.SHADER_UNIFORM_FLOAT);
     }
-    fn setShaderValueVec2(shader_id: BindingId, name: CString, val: *Vector2f) bool {
-        return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC2);
+    fn setShaderValueVec2(shader_id: BindingId, name: String, val: Vector2f) bool {
+        return setShaderValue(shader_id, name, &val, rl.SHADER_UNIFORM_VEC2);
     }
-    fn setShaderValueVec3(shader_id: BindingId, name: CString, val: *Vector3f) bool {
-        return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC3);
+    fn setShaderValueVec3(shader_id: BindingId, name: String, val: Vector3f) bool {
+        return setShaderValue(shader_id, name, &val, rl.SHADER_UNIFORM_VEC3);
     }
-    fn setShaderValueVec4(shader_id: BindingId, name: CString, val: *Vector4f) bool {
-        return setShaderValue(shader_id, name, val, rl.SHADER_UNIFORM_VEC4);
+    fn setShaderValueVec4(shader_id: BindingId, name: String, val: Vector4f) bool {
+        return setShaderValue(shader_id, name, &val, rl.SHADER_UNIFORM_VEC4);
     }
-    fn setShaderValueTex(shader_id: BindingId, name: CString, val: BindingId) bool {
+    fn setShaderValueTex(shader_id: BindingId, name: String, val: BindingId) bool {
         if (render_textures.get(val)) |rt| {
             return setShaderValue(shader_id, name, rt, rl.SHADER_UNIFORM_SAMPLER2D);
         }
         return false;
     }
 
-    fn setShaderValue(shader_id: BindingId, name: CString, val: anytype, v_type: CInt) bool {
+    fn setShaderValue(shader_id: BindingId, name: String, val: anytype, v_type: CInt) bool {
         if (shaders.get(shader_id)) |shader| {
+            const c_name = NamePool.allocCName(name);
+            defer NamePool.freeCNames();
             const location = rl.GetShaderLocation(
                 shader.*,
-                name,
+                c_name,
             );
-            if (location < 0)
+            if (location < 0) {
+                firefly.api.Logger.warn("No shader uniform value with name: {s} found", .{name});
                 return false;
+            }
 
             rl.SetShaderValue(shader.*, location, val, v_type);
             return true;

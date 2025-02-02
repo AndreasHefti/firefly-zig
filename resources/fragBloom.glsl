@@ -6,13 +6,12 @@ in vec4 fragColor;
 
 // Input uniform values
 uniform sampler2D texture0;
-uniform vec4 colDiffuse;
 
 // Output fragment color
 out vec4 finalColor;
 
-float bloom_spread = .5;
-float bloom_intensity = .2;
+uniform float bloom_spread = .5;
+uniform float bloom_intensity = .2;
 
 void main()
 {
