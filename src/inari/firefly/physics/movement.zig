@@ -112,7 +112,6 @@ pub const EMovement = struct {
     kind: physics.MovementKind = undefined,
     integrator: MoveIntegrator = SimpleStepIntegrator,
     constraint: ?EMovementConstraint = DefaultVelocityConstraint,
-    update_scheduler: ?*api.UpdateScheduler = null,
 
     active: bool = true,
 
@@ -347,14 +346,8 @@ pub const MovementSystem = struct {
                 // calc acceleration: (force + gravity) * mass
                 m.acceleration = (m.force + m.gravity_vector) * m._mass_vec;
 
-                // delta time
-                const dt = if (m.update_scheduler != null)
-                    delta_time_seconds * (60 / @min(60, m.update_scheduler.?.resolution))
-                else
-                    delta_time_seconds;
-
                 // do velocity integration
-                m.integrator.velocity_integration(m._m_point, dt);
+                m.integrator.velocity_integration(m._m_point, delta_time_seconds);
 
                 // apply velocity constraint if available
                 if (m.constraint) |c|
@@ -362,7 +355,7 @@ pub const MovementSystem = struct {
                     c(i);
 
                 // integrate position
-                m.integrator.position_integration(m._m_point, dt);
+                m.integrator.position_integration(m._m_point, delta_time_seconds);
                 moved.setValue(i, m.velocity[0] != 0 or m.velocity[1] != 0);
             }
         }

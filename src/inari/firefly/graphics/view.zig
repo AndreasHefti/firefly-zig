@@ -510,7 +510,7 @@ pub const Scene = struct {
     name: ?String = null,
 
     delete_after_run: bool = false,
-    scheduler: ?*api.UpdateScheduler = null,
+    scheduler: ?*api.FrameScheduler = null,
 
     init_function: ?api.CallFunction = null,
     dispose_function: ?api.CallFunction = null,
@@ -585,7 +585,7 @@ pub const Scene = struct {
             next = Activation.nextId(i + 1);
             var scene = Component.byId(i);
             if (scene.scheduler) |s| {
-                if (!s.needs_update)
+                if (!s.needsUpdate())
                     continue;
             }
 

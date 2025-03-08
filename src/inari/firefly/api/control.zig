@@ -324,7 +324,6 @@ pub const StateEngine = struct {
     states: utils.DynArray(State) = undefined,
     call_context: api.CallContext = undefined,
     current_state: ?*State = null,
-    update_scheduler: ?api.UpdateScheduler = null,
 
     pub fn construct(self: *StateEngine) void {
         self.states = utils.DynArray(State).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10) catch |err| api.handleUnknownError(err);
@@ -430,9 +429,6 @@ pub const StateSystem = struct {
     }
 
     fn processEngine(state_engine: *StateEngine) void {
-        if (state_engine.update_scheduler) |u| if (!u.needs_update)
-            return;
-
         state_engine.call_context.id_1 = if (state_engine.current_state) |s| s.id else UNDEF_INDEX;
 
         var next = state_engine.states.slots.nextSetBit(0);

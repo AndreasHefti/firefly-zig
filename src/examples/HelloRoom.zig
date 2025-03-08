@@ -85,7 +85,7 @@ fn init() void {
     _ = graphics.Scene.Component.new(.{
         .name = start_scene_name,
         .update_action = startSceneAction,
-        .scheduler = api.Timer.getScheduler(20),
+        .scheduler = api.Timer.getScheduler(3),
     });
 
     // load room from file
