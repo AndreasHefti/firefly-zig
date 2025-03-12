@@ -494,8 +494,8 @@ const RaylibRenderAPI = struct {
         rotation: Float,
         tint_color: ?Color,
         blend_mode: ?BlendMode,
-        flip_horizontal: bool,
-        flip_vertical: bool,
+        flip_x: bool,
+        flip_y: bool,
     ) void {
         if (render_textures.get(texture_id)) |tex| {
 
@@ -508,8 +508,8 @@ const RaylibRenderAPI = struct {
                 .{
                     .x = 0,
                     .y = 0,
-                    .width = @floatFromInt(if (flip_horizontal) -tex.texture.width else tex.texture.width),
-                    .height = @floatFromInt(if (flip_vertical) tex.texture.height else -tex.texture.height),
+                    .width = @floatFromInt(if (flip_y) -tex.texture.width else tex.texture.width),
+                    .height = @floatFromInt(if (flip_x) tex.texture.height else -tex.texture.height),
                 },
                 .{
                     .x = position[0],

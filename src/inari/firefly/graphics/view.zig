@@ -663,8 +663,8 @@ pub const ViewRenderer = struct {
                             source_view.rotation,
                             source_view.tint_color,
                             source_view.blend_mode,
-                            source_view.projection.flip_horizontal,
-                            source_view.projection.flip_vertical,
+                            source_view.projection.flip_x,
+                            source_view.projection.flip_y,
                         );
 
                         //rest shader if needed
@@ -698,8 +698,8 @@ pub const ViewRenderer = struct {
                         view.rotation,
                         view.tint_color,
                         view.blend_mode,
-                        view.projection.flip_horizontal,
-                        view.projection.flip_vertical,
+                        view.projection.flip_x,
+                        view.projection.flip_y,
                     );
 
                     //rest shader if needed

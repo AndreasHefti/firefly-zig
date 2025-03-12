@@ -887,8 +887,8 @@ pub const Projection = struct {
     pivot: PosF = .{ 0, 0 },
     zoom: Float = 1,
     rotation: Float = 0,
-    flip_horizontal: bool = false,
-    flip_vertical: bool = false,
+    flip_x: bool = false,
+    flip_y: bool = false,
 
     pub fn format(
         self: Projection,
@@ -1023,8 +1023,8 @@ pub fn IRenderAPI() type {
             rotation: Float,
             tint_color: ?Color,
             blend_mode: ?BlendMode,
-            flip_horizontal: bool,
-            flip_vertical: bool,
+            flip_x: bool,
+            flip_y: bool,
         ) void = undefined,
 
         renderSprite: *const fn (
