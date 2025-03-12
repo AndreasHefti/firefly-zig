@@ -212,8 +212,6 @@ pub const View = struct {
         eventDispatch = utils.EventDispatch(ViewChangeEvent).new(firefly.api.COMPONENT_ALLOC);
         fbo_target_mapping = utils.DynArray(utils.BitSet).newWithRegisterSize(api.COMPONENT_ALLOC, 10);
         screen_target_mapping = utils.BitSet.new(api.COMPONENT_ALLOC);
-        // active_views_to_fbo = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
-        // active_views_to_screen = utils.DynIndexArray.new(firefly.api.COMPONENT_ALLOC, 10);
         Layer.Subscription.subscribe(onLayerAction);
     }
 
@@ -228,10 +226,6 @@ pub const View = struct {
         fbo_target_mapping = undefined;
         screen_target_mapping.deinit();
         screen_target_mapping = undefined;
-        // active_views_to_fbo.deinit();
-        // active_views_to_fbo = undefined;
-        // active_views_to_screen.deinit();
-        // active_views_to_screen = undefined;
         eventDispatch.deinit();
         eventDispatch = undefined;
     }
@@ -245,7 +239,6 @@ pub const View = struct {
     pub fn setFullscreen() void {
         firefly.api.window.toggleFullscreen();
         // adapt view to full screen
-        //const window = firefly.api.window.getWindowData();
         api.Logger.info("Set fullscreen, screen: {d} {d}", .{
             firefly.api.window.getMonitorWidth(1),
             firefly.api.window.getMonitorHeight(1),
@@ -670,6 +663,8 @@ pub const ViewRenderer = struct {
                             source_view.rotation,
                             source_view.tint_color,
                             source_view.blend_mode,
+                            source_view.projection.flip_horizontal,
+                            source_view.projection.flip_vertical,
                         );
 
                         //rest shader if needed
@@ -680,37 +675,6 @@ pub const ViewRenderer = struct {
                     firefly.api.rendering.endRendering();
                 }
             }
-            // for (0..View.active_views_to_fbo.size_pointer) |i| {
-            //     const source_view: *View = View.Component.byId(View.active_views_to_fbo.get(i));
-            //     if (source_view.target_view_id) |tid| {
-            //         const target_view: *View = View.Component.byId(tid);
-            //         if (target_view.render_texture_binding) |b| {
-
-            //             // start render to target view
-            //             firefly.api.rendering.startRendering(b.id, &target_view.projection);
-
-            //             // set shader of source View for view texture rendering
-            //             if (source_view.texture_render_shader) |sb|
-            //                 firefly.api.rendering.putShaderStack(sb);
-
-            //             firefly.api.rendering.renderTexture(
-            //                 source_view.render_texture_binding.?.id,
-            //                 source_view.position,
-            //                 source_view.pivot,
-            //                 source_view.scale,
-            //                 source_view.rotation,
-            //                 source_view.tint_color,
-            //                 source_view.blend_mode,
-            //             );
-
-            //             //rest shader if needed
-            //             if (source_view.texture_render_shader != null)
-            //                 firefly.api.rendering.popShaderStack();
-
-            //             firefly.api.rendering.endRendering();
-            //         }
-            //     }
-            // }
 
             // 3. render all FBO to screen that has screen as target
             // activate render to screen
@@ -734,6 +698,8 @@ pub const ViewRenderer = struct {
                         view.rotation,
                         view.tint_color,
                         view.blend_mode,
+                        view.projection.flip_horizontal,
+                        view.projection.flip_vertical,
                     );
 
                     //rest shader if needed
