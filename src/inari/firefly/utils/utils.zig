@@ -22,6 +22,7 @@ pub const IntBitMask = usize;
 
 pub const String = string.String;
 pub const CString = string.CString;
+pub const String0 = string.String0;
 pub const StringBuffer = string.StringBuffer;
 pub const StringPropertyIterator = string.StringPropertyIterator;
 pub const StringAttributeIterator = string.StringAttributeIterator;

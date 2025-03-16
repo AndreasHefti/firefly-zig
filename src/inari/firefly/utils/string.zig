@@ -5,6 +5,7 @@ const Writer = std.io.Writer;
 
 pub const String = []const u8;
 pub const CString = [*c]const u8;
+pub const String0 = [:0]const u8;
 
 pub fn stringEquals(s1: String, s2: String) bool {
     return std.mem.eql(u8, s1, s2);

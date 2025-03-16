@@ -13,6 +13,7 @@ const control = @import("control.zig");
 
 const String = utils.String;
 const CString = utils.CString;
+const String0 = firefly.utils.String0;
 const Index = utils.Index;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const CInt = utils.CInt;
@@ -456,7 +457,7 @@ pub const NamePool = struct {
         if (name.len <= len)
             return NamePool.alloc(name).?;
 
-        var str = ALLOC.alloc(u8, len) catch |err| handleUnknownError(err);
+        var str = ALLOC.dupeZ(u8, len) catch |err| handleUnknownError(err);
         defer ALLOC.free(str);
         std.mem.copyForwards(u8, str, name[0..len]);
         str[len - 1] = '.';
@@ -1074,7 +1075,7 @@ pub fn IRenderAPI() type {
 
         renderText: *const fn (
             font_id: ?BindingId,
-            text: String,
+            text: String0,
             position: PosF,
             pivot: ?PosF,
             rotation: ?Float,

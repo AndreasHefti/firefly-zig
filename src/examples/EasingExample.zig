@@ -67,7 +67,7 @@ fn init() void {
 fn create(name: String, easing: Easing) void {
     _ = Entity.newActive(.{}, .{
         ETransform{ .position = .{ 10, ypos } },
-        EText{ .text = name, .size = 20, .char_spacing = 2 },
+        EText{ .text = @ptrCast(name), .size = 20, .char_spacing = 2 },
     });
 
     _ = Entity.newActive(.{}, .{

@@ -32,6 +32,7 @@ const DynIndexArray = firefly.utils.DynIndexArray;
 const StringBuffer = firefly.utils.StringBuffer;
 const CInt = firefly.utils.CInt;
 const CString = firefly.utils.CString;
+const String0 = firefly.utils.String0;
 const Float = firefly.utils.Float;
 const WindowHandle = firefly.api.WindowHandle;
 const EMPTY_STRING = firefly.utils.EMPTY_STRING;
@@ -643,7 +644,7 @@ const RaylibRenderAPI = struct {
 
     fn renderText(
         font_id: ?BindingId,
-        text: String,
+        text: String0,
         position: PosF,
         pivot: ?PosF,
         rotation: ?Float,

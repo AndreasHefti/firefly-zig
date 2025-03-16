@@ -11,7 +11,7 @@ const Index = utils.Index;
 const Float = utils.Float;
 const String = utils.String;
 const CInt = utils.CInt;
-const CString = utils.CString;
+const String0 = utils.String0;
 const UNDEF_INDEX = utils.UNDEF_INDEX;
 const BindingId = api.BindingId;
 
@@ -87,7 +87,7 @@ pub const EText = struct {
 
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
-    text: String,
+    text: String0,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
     size: ?Float = null,
