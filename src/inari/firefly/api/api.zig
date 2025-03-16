@@ -460,7 +460,7 @@ pub const NamePool = struct {
         if (name.len <= len)
             return NamePool.alloc(name).?;
 
-        var str = ALLOC.alloc(u8, len, 0) catch |err| handleUnknownError(err);
+        var str = ALLOC.alloc(u8, len) catch |err| handleUnknownError(err);
         defer ALLOC.free(str);
         std.mem.copyForwards(u8, str, name[0..len]);
         str[len - 1] = '.';
