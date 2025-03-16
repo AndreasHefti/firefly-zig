@@ -122,11 +122,13 @@ const RaylibAudioAPI = struct {
     }
 
     fn loadSound(file: String, channels: utils.IntBitMask) api.IOErrors!api.SoundBinding {
-        const sound = rl.LoadSound(firefly.api.NamePool.allocCName(file));
+        const name = api.ALLOC.dupeZ(u8, file) catch |err| api.handleUnknownError(err);
+        defer api.ALLOC.free(name);
+
+        const sound = rl.LoadSound(name);
         if (!rl.IsSoundReady(sound))
             return api.IOErrors.LOAD_SOUND_ERROR;
 
-        defer firefly.api.NamePool.freeCNames();
         var sound_binding = api.SoundBinding{ .id = sounds.add(sound) };
 
         if (channels & utils.maskBit(0) != 0) sound_binding.channel_1 = sounds.add(rl.LoadSoundAlias(sound));
@@ -227,11 +229,13 @@ const RaylibAudioAPI = struct {
     }
 
     fn loadMusic(file: String) api.IOErrors!BindingId {
-        const m = rl.LoadMusicStream(firefly.api.NamePool.allocCName(file));
+        const name = api.ALLOC.dupeZ(u8, file) catch |err| api.handleUnknownError(err);
+        defer api.ALLOC.free(name);
+
+        const m = rl.LoadMusicStream(name);
         if (!rl.IsMusicReady(m))
             return api.IOErrors.LOAD_MUSIC_ERROR;
 
-        defer firefly.api.NamePool.freeCNames();
         return music.add(m);
     }
 

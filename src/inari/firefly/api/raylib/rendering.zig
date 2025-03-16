@@ -31,7 +31,6 @@ const DynArray = firefly.utils.DynArray;
 const DynIndexArray = firefly.utils.DynIndexArray;
 const StringBuffer = firefly.utils.StringBuffer;
 const CInt = firefly.utils.CInt;
-const CString = firefly.utils.CString;
 const String0 = firefly.utils.String0;
 const Float = firefly.utils.Float;
 const WindowHandle = firefly.api.WindowHandle;
@@ -218,8 +217,8 @@ const RaylibRenderAPI = struct {
         filter: TextureFilter,
         wrap: TextureWrap,
     ) firefly.api.IOErrors!TextureBinding {
-        const res = NamePool.allocCName(resource);
-        defer NamePool.freeCNames();
+        const res = firefly.api.ALLOC.dupeZ(u8, resource) catch |err| firefly.api.handleUnknownError(err);
+        defer firefly.api.ALLOC.free(res);
 
         var tex = rl.LoadTexture(res);
         if (!rl.IsTextureReady(tex))
@@ -304,8 +303,9 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadImageFromFile(resource: String) firefly.api.IOErrors!ImageBinding {
-        defer NamePool.freeCNames();
-        const img: Image = rl.LoadImage(NamePool.allocCName(resource));
+        const res = firefly.api.ALLOC.dupeZ(u8, resource) catch |err| firefly.api.handleUnknownError(err);
+        defer firefly.api.ALLOC.free(res);
+        const img: Image = rl.LoadImage(res);
 
         if (!rl.IsImageReady(img))
             return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
@@ -343,13 +343,14 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadFont(resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) firefly.api.IOErrors!BindingId {
-        defer NamePool.freeCNames();
+        const res = firefly.api.ALLOC.dupeZ(u8, resource) catch |err| firefly.api.handleUnknownError(err);
+        defer firefly.api.ALLOC.free(res);
 
         const font = if (size == null and char_num == null and code_points == null)
-            rl.LoadFont(NamePool.allocCName(resource))
+            rl.LoadFont(res)
         else
             rl.LoadFontEx(
-                NamePool.allocCName(resource),
+                res,
                 size orelse default_font_size,
                 code_points orelse 0,
                 char_num orelse default_char_num,
@@ -394,18 +395,16 @@ const RaylibRenderAPI = struct {
     }
 
     fn createShader(vertex_shader: ?String, fragment_shade: ?String, file: bool) firefly.api.IOErrors!ShaderBinding {
-        defer NamePool.freeCNames();
+        const vert = firefly.api.ALLOC.dupeZ(u8, vertex_shader orelse EMPTY_STRING) catch |err| firefly.api.handleUnknownError(err);
+        defer firefly.api.ALLOC.free(vert);
+        const frag = firefly.api.ALLOC.dupeZ(u8, fragment_shade orelse EMPTY_STRING) catch |err| firefly.api.handleUnknownError(err);
+        defer firefly.api.ALLOC.free(frag);
+
         var shader: Shader = undefined;
         if (file) {
-            shader = rl.LoadShader(
-                NamePool.allocCName(vertex_shader orelse EMPTY_STRING),
-                NamePool.allocCName(fragment_shade orelse EMPTY_STRING),
-            );
+            shader = rl.LoadShader(vert, frag);
         } else {
-            shader = rl.LoadShaderFromMemory(
-                NamePool.allocCName(vertex_shader orelse EMPTY_STRING),
-                NamePool.allocCName(fragment_shade orelse EMPTY_STRING),
-            );
+            shader = rl.LoadShaderFromMemory(vert, frag);
         }
 
         if (!rl.IsShaderReady(shader))
@@ -713,11 +712,12 @@ const RaylibRenderAPI = struct {
 
     fn setShaderValue(shader_id: BindingId, name: String, val: anytype, v_type: CInt) bool {
         if (shaders.get(shader_id)) |shader| {
-            const c_name = NamePool.allocCName(name);
-            defer NamePool.freeCNames();
+            const n = firefly.api.ALLOC.dupeZ(u8, name) catch |err| firefly.api.handleUnknownError(err);
+            defer firefly.api.ALLOC.free(n);
+
             const location = rl.GetShaderLocation(
                 shader.*,
-                c_name,
+                n,
             );
             if (location < 0) {
                 firefly.api.Logger.warn("No shader uniform value with name: {s} found", .{name});

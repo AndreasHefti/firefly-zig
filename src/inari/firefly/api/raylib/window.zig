@@ -77,15 +77,20 @@ const RaylibWindowAPI = struct {
         if (!initialized)
             @panic("Not initialized");
 
+        const title = firefly.api.ALLOC.dupeZ(u8, window_data.title) catch |err| firefly.api.handleUnknownError(err);
+        defer firefly.api.ALLOC.free(title);
+
         window_data = data;
         rl.SetTargetFPS(window_data.fps);
         rl.InitWindow(
             window_data.width,
             window_data.height,
-            api.NamePool.allocCName(window_data.title),
+            title,
         );
         if (data.icon) |icon| {
-            rl.SetWindowIcon(rl.LoadImage(api.NamePool.allocCName(icon)));
+            const ic = firefly.api.ALLOC.dupeZ(u8, icon) catch |err| firefly.api.handleUnknownError(err);
+            defer firefly.api.ALLOC.free(ic);
+            rl.SetWindowIcon(rl.LoadImage(ic));
         }
 
         if (window_data.flags) |wf|

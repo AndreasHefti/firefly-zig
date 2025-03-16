@@ -216,9 +216,7 @@ pub fn init(context: InitContext) !void {
         audio = IAudioAPI().initDummy();
     }
 
-    NamePool.names = std.BufSet.init(POOL_ALLOC);
-    NamePool.c_names = std.ArrayList([:0]const u8).init(POOL_ALLOC);
-
+    NamePool.init();
     Component.init();
     Timer.init();
     system.init();
@@ -259,6 +257,8 @@ pub fn deinit() void {
     UPDATE_EVENT_DISPATCHER.deinit();
     RENDER_EVENT_DISPATCHER.deinit();
     VIEW_RENDER_EVENT_DISPATCHER.deinit();
+
+    NamePool.deinit();
 
     pool_alloc_arena.deinit();
     load_alloc_arena.deinit();
@@ -447,7 +447,10 @@ pub fn indexToString(index: ?utils.Index) ?String {
 
 pub const NamePool = struct {
     var names: std.BufSet = undefined;
-    var c_names: std.ArrayList([:0]const u8) = undefined;
+
+    fn init() void {
+        names = std.BufSet.init(POOL_ALLOC);
+    }
 
     /// This cuts the given name to the given len and allocates it within the NamePool
     /// If name length is lesser then len it just allocates it within the NamePool
@@ -457,7 +460,7 @@ pub const NamePool = struct {
         if (name.len <= len)
             return NamePool.alloc(name).?;
 
-        var str = ALLOC.dupeZ(u8, len) catch |err| handleUnknownError(err);
+        var str = ALLOC.alloc(u8, len, 0) catch |err| handleUnknownError(err);
         defer ALLOC.free(str);
         std.mem.copyForwards(u8, str, name[0..len]);
         str[len - 1] = '.';
@@ -478,26 +481,8 @@ pub const NamePool = struct {
         return null;
     }
 
-    pub fn allocCNameOptional(name: ?String) ?CString {
-        if (name) |n| {
-            const _n = POOL_ALLOC.dupeZ(u8, n) catch |err| handleUnknownError(err);
-            c_names.append(_n) catch |err| handleUnknownError(err);
-            //std.debug.print("************ NamePool c_names add: {s}\n", .{_n});
-            return @ptrCast(_n);
-        }
-        return null;
-    }
-
-    pub fn allocCName(name: String) CString {
-        const _n = POOL_ALLOC.dupeZ(u8, name) catch |err| handleUnknownError(err);
-        //c_names.append(_n) catch |err| handleUnknownError(err);
-        return @ptrCast(_n);
-    }
-
-    pub fn freeCNames() void {
-        for (c_names.items) |item|
-            POOL_ALLOC.free(item);
-        c_names.clearRetainingCapacity();
+    pub fn deinit() void {
+        names.deinit();
     }
 
     pub fn freeName(name: String) void {
@@ -505,9 +490,7 @@ pub const NamePool = struct {
     }
 
     pub fn freeNames() void {
-        var it = names.iterator();
-        while (it.next()) |n|
-            names.remove(n);
+        names.deinit();
     }
 };
 
