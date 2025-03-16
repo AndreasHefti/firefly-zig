@@ -448,6 +448,23 @@ pub const NamePool = struct {
     var names: std.BufSet = undefined;
     var c_names: std.ArrayList([:0]const u8) = undefined;
 
+    /// This cuts the given name to the given len and allocates it within the NamePool
+    /// If name length is lesser then len it just allocates it within the NamePool
+    /// if name length is greater then len, it copies the chars from 0 to len to new slice
+    /// and adds three '.' at the end of the name, indicating that the name got cut.
+    pub fn cutName(name: String, len: usize) String {
+        if (name.len <= len)
+            return NamePool.alloc(name).?;
+
+        var str = ALLOC.alloc(u8, len) catch |err| handleUnknownError(err);
+        defer ALLOC.free(str);
+        std.mem.copyForwards(u8, str, name[0..len]);
+        str[len - 1] = '.';
+        str[len - 2] = '.';
+        str[len - 3] = '.';
+        return NamePool.alloc(str).?;
+    }
+
     pub fn alloc(name: ?String) ?String {
         if (name) |n| {
             if (names.contains(n))
