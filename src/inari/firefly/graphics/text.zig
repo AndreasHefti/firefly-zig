@@ -88,6 +88,7 @@ pub const EText = struct {
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
     text: String0,
+    text_owned: bool = false,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
     size: ?Float = null,
@@ -96,6 +97,8 @@ pub const EText = struct {
     _font_binding: ?BindingId = null,
 
     pub fn destruct(self: *EText) void {
+        if (self.text_owned)
+            api.NamePool.free0(self.text);
         self.font_id = UNDEF_INDEX;
         self.tint_color = null;
         self.blend_mode = null;
@@ -113,8 +116,10 @@ pub const EText = struct {
     }
 
     pub fn setText(self: *EText, text: String) void {
-        api.NamePool.free0(self.text);
+        if (self.text_owned)
+            api.NamePool.free0(self.text);
         self.text = api.NamePool.alloc0(text);
+        self.text_owned = true;
     }
 };
 
