@@ -482,10 +482,7 @@ pub const NamePool = struct {
     }
 
     pub fn alloc0(name: String) String0 {
-        if (name) |n|
-            return POOL_ALLOC.dupeZ(u8, n) catch |err| handleUnknownError(err);
-
-        return null;
+        return POOL_ALLOC.dupeZ(u8, name) catch |err| handleUnknownError(err);
     }
 
     pub fn free0(name: String0) void {
