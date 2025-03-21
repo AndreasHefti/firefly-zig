@@ -1165,7 +1165,7 @@ pub fn IWindowAPI() type {
         getFPS: *const fn () Float = undefined,
         toggleFullscreen: *const fn () void = undefined,
         toggleBorderlessWindowed: *const fn () void = undefined,
-        setWindowFlags: *const fn ([]WindowFlag) void = undefined,
+        setWindowFlags: *const fn ([]const WindowFlag) void = undefined,
         setOpacity: *const fn (o: Float) void = undefined,
         setExitKey: *const fn (KeyboardKey) void = undefined,
 
