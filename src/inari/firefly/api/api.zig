@@ -458,6 +458,7 @@ pub const NamePool = struct {
 
     pub fn deinit() void {
         names.deinit();
+        s0_alloc_arena.deinit();
     }
 
     pub fn alloc(name: ?String) ?String {
