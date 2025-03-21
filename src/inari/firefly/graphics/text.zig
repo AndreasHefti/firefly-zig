@@ -83,11 +83,12 @@ pub const Font = struct {
 //////////////////////////////////////////////////////////////
 
 pub const EText = struct {
+    pub const empty_string = "";
     pub const Component = api.EntityComponentMixin(EText);
 
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
-    text: String0,
+    text: String0 = empty_string,
     text_owned: bool = false,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
@@ -97,8 +98,7 @@ pub const EText = struct {
     _font_binding: ?BindingId = null,
 
     pub fn destruct(self: *EText) void {
-        if (self.text_owned)
-            api.NamePool.free0(self.text);
+        self.text = empty_string;
         self.font_id = UNDEF_INDEX;
         self.tint_color = null;
         self.blend_mode = null;
