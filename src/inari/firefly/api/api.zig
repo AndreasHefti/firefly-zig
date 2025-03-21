@@ -1175,6 +1175,7 @@ pub fn IWindowAPI() type {
         toggleBorderlessWindowed: *const fn () void = undefined,
         setWindowFlags: *const fn ([]WindowFlag) void = undefined,
         setOpacity: *const fn (o: Float) void = undefined,
+        setExitKey: *const fn (KeyboardKey) void = undefined,
 
         deinit: DeinitFunction = undefined,
 

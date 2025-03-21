@@ -55,6 +55,7 @@ const RaylibWindowAPI = struct {
         interface.toggleBorderlessWindowed = toggleBorderlessWindowed;
         interface.setWindowFlags = setWindowFlags;
         interface.setOpacity = setOpacity;
+        interface.setExitKey = setExitKey;
 
         interface.deinit = deinit;
     }
@@ -189,6 +190,10 @@ const RaylibWindowAPI = struct {
 
     fn setOpacity(o: Float) void {
         rl.SetWindowOpacity(o);
+    }
+
+    fn setExitKey(key: api.KeyboardKey) void {
+        rl.SetExitKey(firefly.utils.usize_cint(@intFromEnum(key)));
     }
 
     fn setWindowFlags(flags: []const api.WindowFlag) void {
