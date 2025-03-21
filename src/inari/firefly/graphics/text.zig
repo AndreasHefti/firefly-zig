@@ -114,13 +114,6 @@ pub const EText = struct {
             self._font_binding = null;
         }
     }
-
-    pub fn setText(self: *EText, text: String) void {
-        if (self.text_owned)
-            api.NamePool.free0(self.text);
-        self.text = api.NamePool.alloc0(text);
-        self.text_owned = true;
-    }
 };
 
 //////////////////////////////////////////////////////////////

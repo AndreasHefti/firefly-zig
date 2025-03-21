@@ -447,26 +447,17 @@ pub fn indexToString(index: ?utils.Index) ?String {
 
 pub const NamePool = struct {
     var names: std.BufSet = undefined;
+    var S0_ALLOC: Allocator = undefined;
+    var s0_alloc_arena: std.heap.ArenaAllocator = undefined;
 
     fn init() void {
         names = std.BufSet.init(POOL_ALLOC);
+        s0_alloc_arena = std.heap.ArenaAllocator.init(ALLOC);
+        S0_ALLOC = s0_alloc_arena.allocator();
     }
 
-    /// This cuts the given name to the given len and allocates it within the NamePool
-    /// If name length is lesser then len it just allocates it within the NamePool
-    /// if name length is greater then len, it copies the chars from 0 to len to new slice
-    /// and adds three '.' at the end of the name, indicating that the name got cut.
-    pub fn cutName(name: String, len: usize) String {
-        if (name.len <= len)
-            return NamePool.alloc(name).?;
-
-        var str = ALLOC.alloc(u8, len) catch |err| handleUnknownError(err);
-        defer ALLOC.free(str);
-        std.mem.copyForwards(u8, str, name[0..len]);
-        str[len - 1] = '.';
-        str[len - 2] = '.';
-        str[len - 3] = '.';
-        return NamePool.alloc(str).?;
+    pub fn deinit() void {
+        names.deinit();
     }
 
     pub fn alloc(name: ?String) ?String {
@@ -482,15 +473,15 @@ pub const NamePool = struct {
     }
 
     pub fn alloc0(name: String) String0 {
-        return POOL_ALLOC.dupeZ(u8, name) catch |err| handleUnknownError(err);
+        return S0_ALLOC.dupeZ(u8, name) catch |err| handleUnknownError(err);
     }
 
     pub fn free0(name: String0) void {
-        POOL_ALLOC.free(name);
+        S0_ALLOC.free(name);
     }
 
-    pub fn deinit() void {
-        names.deinit();
+    pub fn freeS0Pool() void {
+        s0_alloc_arena.reset(.free_all);
     }
 
     pub fn freeName(name: String) void {
