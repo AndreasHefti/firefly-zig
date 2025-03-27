@@ -208,7 +208,7 @@ pub fn init(context: InitContext) !void {
         rendering = try @import("raylib/rendering.zig").createRenderAPI();
         window = try @import("raylib/window.zig").createWindowAPI();
         input = try @import("raylib/input.zig").createInputAPI();
-        audio = try @import("raylib/audio.zig").createInputAPI();
+        audio = try @import("raylib/audio.zig").createAudioAPI();
     } else {
         rendering = IRenderAPI().initDummy();
         window = IWindowAPI().initDummy();
@@ -1515,6 +1515,7 @@ pub fn IAudioAPI() type {
         loadMusic: *const fn (file: String) IOErrors!BindingId = undefined,
         disposeMusic: *const fn (BindingId) void = undefined,
         playMusic: *const fn (BindingId) void = undefined,
+        updateMusicStream: *const fn (BindingId) void = undefined,
         stopMusic: *const fn (BindingId) void = undefined,
         pauseMusic: *const fn (BindingId) void = undefined,
         resumeMusic: *const fn (BindingId) void = undefined,

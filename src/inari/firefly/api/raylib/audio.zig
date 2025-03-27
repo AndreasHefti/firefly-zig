@@ -9,7 +9,7 @@ const String = firefly.utils.String;
 const BindingId = firefly.api.BindingId;
 
 var singleton: ?api.IAudioAPI() = null;
-pub fn createInputAPI() !api.IAudioAPI() {
+pub fn createAudioAPI() !api.IAudioAPI() {
     if (singleton == null)
         singleton = api.IAudioAPI().init(RaylibAudioAPI.initImpl);
 
@@ -51,6 +51,7 @@ const RaylibAudioAPI = struct {
         interface.loadMusic = loadMusic;
         interface.disposeMusic = disposeMusic;
         interface.playMusic = playMusic;
+        interface.updateMusicStream = updateMusicStream;
         interface.stopMusic = stopMusic;
         interface.pauseMusic = pauseMusic;
         interface.resumeMusic = resumeMusic;
@@ -249,6 +250,12 @@ const RaylibAudioAPI = struct {
     fn playMusic(id: BindingId) void {
         if (music.get(id)) |m| {
             rl.PlayMusicStream(m.*);
+        }
+    }
+
+    fn updateMusicStream(id: BindingId) void {
+        if (music.get(id)) |m| {
+            rl.UpdateMusicStream(m.*);
         }
     }
 
