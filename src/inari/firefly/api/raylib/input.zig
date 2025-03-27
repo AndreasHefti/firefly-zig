@@ -30,7 +30,7 @@ const RaylibInputAPI = struct {
     var gamepad_1_code: CInt = 0;
     var gamepad_2_code: CInt = 1;
 
-    var keyboard_code_mapping: utils.DynIndexArray = undefined;
+    var keyboard_code_mapping: utils.DynArray(utils.BitSet) = undefined;
     var gamepad_1_code_mapping: utils.DynIndexArray = undefined;
     var gamepad_2_code_mapping: utils.DynIndexArray = undefined;
     var mouse_code_mapping: utils.DynIndexArray = undefined;
@@ -40,7 +40,7 @@ const RaylibInputAPI = struct {
         if (initialized)
             return;
 
-        keyboard_code_mapping = utils.DynIndexArray.new(firefly.api.ALLOC, 10);
+        keyboard_code_mapping = utils.DynArray(utils.BitSet).newWithRegisterSize(firefly.api.ALLOC, 10);
         gamepad_1_code_mapping = utils.DynIndexArray.new(firefly.api.ALLOC, 10);
         gamepad_2_code_mapping = utils.DynIndexArray.new(firefly.api.ALLOC, 10);
         mouse_code_mapping = utils.DynIndexArray.new(firefly.api.ALLOC, 10);
@@ -73,6 +73,11 @@ const RaylibInputAPI = struct {
         gamepad_2_on = false;
         mouse_on = false;
 
+        var next = keyboard_code_mapping.slots.nextSetBit(0);
+        while (next) |i| {
+            next = keyboard_code_mapping.slots.nextSetBit(i + 1);
+            keyboard_code_mapping.get(i).?.deinit();
+        }
         keyboard_code_mapping.deinit();
         gamepad_1_code_mapping.deinit();
         gamepad_2_code_mapping.deinit();
@@ -129,7 +134,12 @@ const RaylibInputAPI = struct {
     // key mappings
     fn setKeyButtonMapping(keycode: usize, button: api.InputButtonType) void {
         defer keyboard_on = true;
-        keyboard_code_mapping.set(@intFromEnum(button), keycode);
+
+        const button_code = @intFromEnum(button);
+        if (!keyboard_code_mapping.slots.isSet(button_code))
+            _ = keyboard_code_mapping.set(utils.BitSet.new(api.ALLOC), button_code);
+        if (keyboard_code_mapping.get(button_code)) |bs|
+            bs.set(keycode);
     }
 
     fn getGamePadId(device: api.InputDevice) c_int {
@@ -198,14 +208,17 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkKeyboard(button: api.InputButtonType, action: api.InputActionType) bool {
-        const code = keyboard_code_mapping.get(@intFromEnum(button));
-        if (code != UNDEF_INDEX) {
-            return switch (action) {
-                .ON => rl.IsKeyDown(@intCast(code)),
-                .OFF => rl.IsKeyUp(@intCast(code)),
-                .TYPED => rl.IsKeyPressed(@intCast(code)),
-                .RELEASED => rl.IsKeyReleased(@intCast(code)),
-            };
+        if (keyboard_code_mapping.get(@intFromEnum(button))) |set| {
+            var next = set.nextSetBit(0);
+            while (next) |i| {
+                next = set.nextSetBit(i + 1);
+                switch (action) {
+                    .ON => if (rl.IsKeyDown(@intCast(i))) return true,
+                    .OFF => if (rl.IsKeyUp(@intCast(i))) return true,
+                    .TYPED => if (rl.IsKeyPressed(@intCast(i))) return true,
+                    .RELEASED => if (rl.IsKeyReleased(@intCast(i))) return true,
+                }
+            }
         }
         return false;
     }
