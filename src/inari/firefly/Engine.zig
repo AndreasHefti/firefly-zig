@@ -41,8 +41,8 @@ pub const CoreSystems = struct {
         CoreSystems.VIEW_RENDERER,
         CoreSystems.TILE_RENDERER,
         CoreSystems.SPRITE_RENDERER,
-        CoreSystems.SHAPE_RENDERER,
         CoreSystems.TEXT_RENDERER,
+        CoreSystems.SHAPE_RENDERER,
     };
 };
 
