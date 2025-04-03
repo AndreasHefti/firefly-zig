@@ -8,8 +8,8 @@ const Float = utils.Float;
 const Index = utils.Index;
 const WindowFlag = firefly.api.WindowFlag;
 
-const width: usize = 800;
-const height: usize = 600;
+const width: usize = 960;
+const height: usize = 640;
 
 pub fn run(init_c: firefly.api.InitContext) !void {
     try firefly.init(init_c);
@@ -22,7 +22,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
         .title = "Hello Window",
         .icon = "resources/logo.png",
         .flags = &[_]WindowFlag{WindowFlag.FLAG_WINDOW_RESIZABLE},
-    }, init, null);
+    }, init, dispose);
 }
 
 fn init() void {
@@ -73,6 +73,31 @@ fn init() void {
         graphics.EView{ .view_id = view_id },
         graphics.ESprite{ .sprite_id = sprite_id },
     });
+
+    api.input.setKeyMapping(.KEY_F, .ENTER);
+    api.subscribeUpdate(update);
+}
+
+var fullscreen = false;
+fn update(_: api.UpdateEvent) void {
+    if (api.input.checkButtonTyped(.ENTER)) {
+        if (!fullscreen) {
+            api.window.toggleBorderlessWindowed();
+            graphics.WindowScalingAdaption.adapt();
+            fullscreen = true;
+        } else {
+            //api.window.setWindowFlags(&[_]api.WindowFlag{api.WindowFlag.FLAG_WINDOW_MINIMIZED});
+            api.window.restoreWindow();
+            graphics.WindowScalingAdaption.adapt();
+            fullscreen = false;
+        }
+        // api.window.toggleFullscreen();
+        // graphics.WindowScalingAdaption.adapt();
+    }
+}
+
+fn dispose() void {
+    api.unsubscribeUpdate(update);
 }
 
 fn windowResChanged(view_id: Index) void {

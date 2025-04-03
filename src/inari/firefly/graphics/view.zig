@@ -797,49 +797,56 @@ pub const WindowScalingAdaption = struct {
         _game_height = utils.usize_f32(height);
         _game_screen_ratio = _game_height / _game_width;
         main_view_id = View.Naming.byName(main_view_name).?.id;
-        api.subscribeUpdate(update);
+        api.subscribeUpdate(updateResizing);
         adaption_initialized = true;
         window_resolution_change_listener = listener;
     }
 
     fn deinit() void {
         if (adaption_initialized)
-            api.unsubscribeUpdate(update);
+            api.unsubscribeUpdate(updateResizing);
         adaption_initialized = false;
     }
 
-    pub fn update(_: api.UpdateEvent) void {
-        if (firefly.api.window.isWindowResized()) {
-            // adapt main view to actual window in relation to the original proportions
-            const width = utils.cint_float(firefly.api.window.getScreenWidth());
-            const height = utils.cint_float(firefly.api.window.getScreenHeight());
-            if (width <= 0 or height <= 0)
-                return;
+    pub fn adapt() void {
+        _update();
+    }
 
-            var view = View.Component.byId(main_view_id);
-            const target_ratio = height / width;
-            const fit_to_width = target_ratio > _game_screen_ratio;
+    fn updateResizing(_: api.UpdateEvent) void {
+        if (firefly.api.window.isWindowResized())
+            _update();
+    }
 
-            var w: Float = 0;
-            var h: Float = 0;
-            if (fit_to_width) {
-                view.scale[0] = width / _game_width;
-                view.scale[1] = width / _game_width;
-                w = _game_width;
-                h = @ceil(_game_height / _game_screen_ratio * target_ratio);
-            } else {
-                view.scale[0] = height / _game_height;
-                view.scale[1] = height / _game_height;
-                w = @ceil(_game_width / target_ratio * _game_screen_ratio);
-                h = _game_height;
-            }
+    fn _update() void {
+        // adapt main view to actual window in relation to the original proportions
+        const width = utils.cint_float(firefly.api.window.getScreenWidth());
+        const height = utils.cint_float(firefly.api.window.getScreenHeight());
+        if (width <= 0 or height <= 0)
+            return;
 
-            if (center_camera) {
-                view.position[0] = (w - _game_width) / 2 * view.scale[0];
-                view.position[1] = (h - _game_height) / 2 * view.scale[1];
-            }
+        var view = View.Component.byId(main_view_id);
+        const target_ratio = height / width;
+        const fit_to_width = target_ratio > _game_screen_ratio;
 
-            if (window_resolution_change_listener) |l| l(main_view_id);
+        var w: Float = 0;
+        var h: Float = 0;
+        if (fit_to_width) {
+            view.scale[0] = width / _game_width;
+            view.scale[1] = width / _game_width;
+            w = _game_width;
+            h = @ceil(_game_height / _game_screen_ratio * target_ratio);
+        } else {
+            view.scale[0] = height / _game_height;
+            view.scale[1] = height / _game_height;
+            w = @ceil(_game_width / target_ratio * _game_screen_ratio);
+            h = _game_height;
         }
+
+        if (center_camera) {
+            view.position[0] = (w - _game_width) / 2 * view.scale[0];
+            view.position[1] = (h - _game_height) / 2 * view.scale[1];
+        }
+
+        if (window_resolution_change_listener) |l| l(main_view_id);
     }
 };

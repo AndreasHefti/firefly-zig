@@ -89,7 +89,6 @@ pub const EText = struct {
     id: Index = UNDEF_INDEX,
     font_id: Index = UNDEF_INDEX,
     text: String0 = empty_string,
-    text_owned: bool = false,
     tint_color: ?Color = null,
     blend_mode: ?BlendMode = null,
     size: ?Float = null,

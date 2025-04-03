@@ -1125,6 +1125,7 @@ pub const WindowFlag = enum(CUInt) {
 pub const WindowData = struct {
     width: CInt,
     height: CInt,
+    position: ?utils.Vector2f = null,
     fps: CInt,
     show_fps: bool = false,
     title: String,
@@ -1160,6 +1161,9 @@ pub fn IWindowAPI() type {
         getRenderHeight: *const fn () CInt = undefined,
         getWindowPosition: *const fn () Vector2f = undefined,
         getWindowScaleDPI: *const fn () Vector2f = undefined,
+
+        setWindowSize: *const fn (CInt, CInt) void = undefined,
+        restoreWindow: *const fn () void = undefined,
 
         showFPS: *const fn (CInt, CInt) void = undefined,
         getFPS: *const fn () Float = undefined,

@@ -49,6 +49,9 @@ const RaylibWindowAPI = struct {
         interface.getWindowPosition = getWindowPosition;
         interface.getWindowScaleDPI = getWindowScaleDPI;
 
+        interface.setWindowSize = setWindowSize;
+        interface.restoreWindow = restoreWindow;
+
         interface.showFPS = showFPS;
         interface.getFPS = getFPS;
         interface.toggleFullscreen = toggleFullscreen;
@@ -96,6 +99,9 @@ const RaylibWindowAPI = struct {
 
         if (window_data.flags) |wf|
             setWindowFlags(wf);
+
+        const pos = rl.GetWindowPosition();
+        window_data.position = @bitCast(pos);
     }
 
     fn isWindowReady() bool {
@@ -201,5 +207,23 @@ const RaylibWindowAPI = struct {
         for (flags) |f|
             flag |= @intFromEnum(f);
         rl.SetWindowState(flag);
+    }
+
+    fn setWindowSize(w: CInt, h: CInt) void {
+        rl.SetWindowSize(w, h);
+    }
+
+    fn restoreWindow() void {
+        if (rl.IsWindowFullscreen()) {
+            rl.ToggleFullscreen();
+        }
+
+        rl.SetWindowSize(window_data.width, window_data.height);
+        if (window_data.position) |pos| {
+            rl.SetWindowPosition(firefly.utils.f32_cint(pos[0]), firefly.utils.f32_cint(pos[1]));
+        }
+        if (rl.IsWindowState(@intFromEnum(api.WindowFlag.FLAG_BORDERLESS_WINDOWED_MODE))) {
+            rl.ToggleBorderlessWindowed();
+        }
     }
 };
