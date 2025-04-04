@@ -51,7 +51,7 @@ pub const ViewRenderEvent = firefly.api.ViewRenderEvent;
 pub const ViewRenderListener = firefly.api.ViewRenderListener;
 pub const ViewRenderer = view.ViewRenderer;
 pub const Scene = view.Scene;
-pub const WindowScalingAdaption = view.WindowScalingAdaption;
+pub const WindowResolutionAdaption = view.WindowResolutionAdaption;
 
 //////////////////////////////////////////////////////////////
 //// module init

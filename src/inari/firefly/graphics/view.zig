@@ -43,7 +43,7 @@ pub fn deinit() void {
     if (!initialized)
         return;
 
-    WindowScalingAdaption.deinit();
+    WindowResolutionAdaption.deinit();
 }
 
 //////////////////////////////////////////////////////////////
@@ -778,10 +778,11 @@ pub const ViewRenderer = struct {
 };
 
 //////////////////////////////////////////////////////////////
-////  Window Scaling Adaption
+////  Window Resolution Adaption
 //////////////////////////////////////////////////////////////
 
-pub const WindowScalingAdaption = struct {
+pub const WindowResolutionChangeListener = *const fn (view_id: Index) void;
+pub const WindowResolutionAdaption = struct {
     var adaption_initialized: bool = false;
 
     var center_camera: bool = true;
@@ -790,16 +791,20 @@ pub const WindowScalingAdaption = struct {
     var _game_height: Float = 0;
     var _game_screen_ratio: Float = 0;
 
-    var window_resolution_change_listener: ?*const fn (view_id: Index) void = null;
+    var _listener: ?WindowResolutionChangeListener = null;
 
-    pub fn init(main_view_name: String, width: usize, height: usize, listener: ?*const fn (view_id: Index) void) void {
+    pub fn init(main_view_name: String, width: usize, height: usize, listener: ?WindowResolutionChangeListener) void {
         _game_width = utils.usize_f32(width);
         _game_height = utils.usize_f32(height);
         _game_screen_ratio = _game_height / _game_width;
         main_view_id = View.Naming.byName(main_view_name).?.id;
         api.subscribeUpdate(updateResizing);
         adaption_initialized = true;
-        window_resolution_change_listener = listener;
+        _listener = listener;
+    }
+
+    pub fn setWindowResolutionChangeListener(listener: ?WindowResolutionChangeListener) void {
+        _listener = listener;
     }
 
     fn deinit() void {
@@ -847,6 +852,6 @@ pub const WindowScalingAdaption = struct {
             view.position[1] = (h - _game_height) / 2 * view.scale[1];
         }
 
-        if (window_resolution_change_listener) |l| l(main_view_id);
+        if (_listener) |l| l(main_view_id);
     }
 };

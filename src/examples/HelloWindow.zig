@@ -35,7 +35,7 @@ fn init() void {
         },
     });
 
-    graphics.WindowScalingAdaption.init(
+    graphics.WindowResolutionAdaption.init(
         "TestView",
         width,
         height,
@@ -83,12 +83,12 @@ fn update(_: api.UpdateEvent) void {
     if (api.input.checkButtonTyped(.ENTER)) {
         if (!fullscreen) {
             api.window.toggleBorderlessWindowed();
-            graphics.WindowScalingAdaption.adapt();
+            graphics.WindowResolutionAdaption.adapt();
             fullscreen = true;
         } else {
             //api.window.setWindowFlags(&[_]api.WindowFlag{api.WindowFlag.FLAG_WINDOW_MINIMIZED});
             api.window.restoreWindow();
-            graphics.WindowScalingAdaption.adapt();
+            graphics.WindowResolutionAdaption.adapt();
             fullscreen = false;
         }
         // api.window.toggleFullscreen();

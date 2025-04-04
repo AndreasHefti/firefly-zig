@@ -65,7 +65,7 @@ fn init() void {
         },
     });
 
-    graphics.WindowScalingAdaption.init(
+    graphics.WindowResolutionAdaption.init(
         "TestView",
         screen_width,
         screen_height,
