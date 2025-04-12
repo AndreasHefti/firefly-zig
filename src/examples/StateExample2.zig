@@ -30,7 +30,7 @@ var min_x: Float = 0;
 var min_y: Float = 0;
 var max_x: Float = 550;
 var max_y: Float = 350;
-var rndx = std.rand.DefaultPrng.init(32);
+var rndx = std.Random.DefaultPrng.init(32);
 const random = rndx.random();
 
 fn init() void {

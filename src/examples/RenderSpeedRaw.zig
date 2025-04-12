@@ -21,7 +21,7 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     ) catch |err| firefly.api.handleUnknownError(err);
 
     defer init_c.allocator.free(nanos);
-    var rndx = std.rand.DefaultPrng.init(32);
+    var rndx = std.Random.DefaultPrng.init(32);
     const rx = rndx.random();
     for (0..count) |i| {
         nanos[i][0] = 0;

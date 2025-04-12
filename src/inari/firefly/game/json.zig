@@ -263,12 +263,12 @@ fn loadTileSet(jsonTileSet: JSONTileSet) Index {
             };
 
             if (jsonTileSet.tiles[i].animation) |a| {
-                var it_a1 = std.mem.split(u8, a, "|");
+                var it_a1 = std.mem.splitScalar(u8, a, '|');
                 while (it_a1.next()) |frame| {
                     if (frame.len == 0)
                         continue;
 
-                    var it_a2 = std.mem.split(u8, frame, ",");
+                    var it_a2 = std.mem.splitScalar(u8, frame, ',');
                     tile_template = tile_template.withAnimationFrame(.{
                         .duration = utils.parseUsize(it_a2.next().?),
                         .sprite_data = .{

@@ -221,7 +221,7 @@ const RaylibRenderAPI = struct {
         defer firefly.api.ALLOC.free(res);
 
         var tex = rl.LoadTexture(res);
-        if (!rl.IsTextureReady(tex))
+        if (!rl.IsTextureValid(tex))
             return firefly.api.IOErrors.LOAD_TEXTURE_ERROR;
 
         if (is_mipmap) {
@@ -249,7 +249,7 @@ const RaylibRenderAPI = struct {
         const texture: *Texture2D = textures.get(texture_id).?;
         const img: Image = rl.LoadImageFromTexture(texture.*);
 
-        if (!rl.IsImageReady(img))
+        if (!rl.IsImageValid(img))
             return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
 
         const img_id = images.add(img);
@@ -269,7 +269,7 @@ const RaylibRenderAPI = struct {
         const texture: *Texture2D = textures.get(texture_id).?;
         const img: Image = rl.LoadImageFromTexture(texture.*);
 
-        if (!rl.IsImageReady(img))
+        if (!rl.IsImageValid(img))
             return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
 
         var img_region = rl.ImageFromImage(
@@ -282,7 +282,7 @@ const RaylibRenderAPI = struct {
             },
         );
 
-        if (!rl.IsImageReady(img_region))
+        if (!rl.IsImageValid(img_region))
             return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
 
         if (region[2] < 0)
@@ -307,7 +307,7 @@ const RaylibRenderAPI = struct {
         defer firefly.api.ALLOC.free(res);
         const img: Image = rl.LoadImage(res);
 
-        if (!rl.IsImageReady(img))
+        if (!rl.IsImageValid(img))
             return firefly.api.IOErrors.LOAD_IMAGE_ERROR;
 
         const img_id = images.add(img);
@@ -356,7 +356,7 @@ const RaylibRenderAPI = struct {
                 char_num orelse default_char_num,
             );
 
-        if (!rl.IsFontReady(font))
+        if (!rl.IsFontValid(font))
             return firefly.api.IOErrors.LOAD_FONT_ERROR;
 
         return fonts.add(font);
@@ -374,7 +374,7 @@ const RaylibRenderAPI = struct {
             @intFromFloat(projection.height),
         );
 
-        if (!rl.IsRenderTextureReady(tex))
+        if (!rl.IsRenderTextureValid(tex))
             return firefly.api.IOErrors.LOAD_RENDER_TEXTURE_ERROR;
 
         rl.SetTextureFilter(tex.texture, rlgl.RL_TEXTURE_FILTER_LINEAR);
@@ -407,7 +407,7 @@ const RaylibRenderAPI = struct {
             shader = rl.LoadShaderFromMemory(vert, frag);
         }
 
-        if (!rl.IsShaderReady(shader))
+        if (!rl.IsShaderValid(shader))
             return firefly.api.IOErrors.LOAD_SHADER_ERROR;
 
         return .{
@@ -470,7 +470,7 @@ const RaylibRenderAPI = struct {
 
         if (active_render_texture) |tex_id| {
             if (render_textures.get(tex_id)) |tex| {
-                if (!rl.IsRenderTextureReady(tex.*))
+                if (!rl.IsRenderTextureValid(tex.*))
                     @panic("Render Texture not ready!?");
 
                 rl.BeginTextureMode(tex.*);

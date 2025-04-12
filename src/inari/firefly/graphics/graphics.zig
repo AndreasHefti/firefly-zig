@@ -103,7 +103,7 @@ pub fn deinit() void {
 pub fn EntityRendererMixin(comptime T: type) type {
     return struct {
         comptime {
-            if (@typeInfo(T) != .Struct)
+            if (@typeInfo(T) != .@"struct")
                 @compileError("Expects component type is a struct.");
             if (!@hasDecl(T, "renderEntities"))
                 @compileError("Expects type has fn: renderEntities(*utils.BitSet)");
@@ -151,7 +151,7 @@ pub fn EntityRendererMixin(comptime T: type) type {
 pub fn ComponentRendererMixin(comptime T: type, comptime CType: type) type {
     return struct {
         comptime {
-            if (@typeInfo(T) != .Struct)
+            if (@typeInfo(T) != .@"struct")
                 @compileError("Expects component type is a struct.");
             if (!@hasDecl(T, api.FUNCTION_NAMES.SYSTEM_RENDER_COMPONENT_FUNCTION))
                 @compileError("Expects type has fn: renderComponents(*utils.BitSet)");

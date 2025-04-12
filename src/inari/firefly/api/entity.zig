@@ -175,8 +175,8 @@ pub inline fn checkValidEntityComponentInstance(any_component: anytype) void {
 fn isValid(any_component: anytype) bool {
     const info: std.builtin.Type = @typeInfo(@TypeOf(any_component));
     const c_type = switch (info) {
-        .Pointer => @TypeOf(any_component.*),
-        .Struct => @TypeOf(any_component),
+        .pointer => @TypeOf(any_component.*),
+        .@"struct" => @TypeOf(any_component),
         else => {
             std.log.err("No valid type entity component: {any}", .{any_component});
             return false;
@@ -202,7 +202,7 @@ pub fn EntityComponentMixin(comptime T: type) type {
     const has_call_context: bool = @hasDecl(T, api.DECLARATION_NAMES.CALL_CONTEXT_MIXIN);
 
     comptime {
-        if (@typeInfo(T) != .Struct)
+        if (@typeInfo(T) != .@"struct")
             @compileError("Expects component type is a struct.");
         if (!@hasField(T, api.FIELD_NAMES.COMPONENT_ID_FIELD))
             @compileError("Expects component type to have field named id");
@@ -368,7 +368,7 @@ pub const EMultiplier = struct {
 pub fn EntityUpdateSystemMixin(comptime T: type) type {
     return struct {
         comptime {
-            if (@typeInfo(T) != .Struct)
+            if (@typeInfo(T) != .@"struct")
                 @compileError("Expects component type is a struct.");
             if (!@hasDecl(T, api.FUNCTION_NAMES.ENTITY_COMPONENT_UPDATE_FUNCTION))
                 @compileError("Expects type has fn: updateEntities(*utils.BitSet)");

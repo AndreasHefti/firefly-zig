@@ -84,7 +84,7 @@ pub fn SystemMixin(comptime T: type) type {
     const is_entity_renderer: bool = @hasDecl(T, api.DECLARATION_NAMES.SYSTEM_ENTITY_RENDERER_MIXIN);
     const is_component_renderer: bool = @hasDecl(T, api.DECLARATION_NAMES.SYSTEM_COMPONENT_RENDERER_MIXIN);
 
-    if (@typeInfo(T) != .Struct)
+    if (@typeInfo(T) != .@"struct")
         @compileError("Expects component type is a struct.");
 
     return struct {
@@ -273,7 +273,7 @@ pub fn SystemMixin(comptime T: type) type {
             if (entity_registration) |e_reg| {
                 if (e.c_id) |id| {
                     if (entity_condition) |*etc| {
-                        if (@typeInfo(@TypeOf(etc)) == .Optional) {
+                        if (@typeInfo(@TypeOf(etc)) == .optional) {
                             if (etc) |*ec| {
                                 if (!ec.check(id))
                                     return;

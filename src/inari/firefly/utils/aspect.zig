@@ -80,10 +80,10 @@ pub fn AspectGroup(comptime group_name: String) type {
 
         pub fn newKindOf(aspects: anytype) Kind {
             const args_type_info = @typeInfo(@TypeOf(aspects));
-            if (args_type_info != .Struct) {
+            if (args_type_info != .@"struct") {
                 @compileError("expected struct argument, found " ++ @typeName(@TypeOf(aspects)));
             }
-            const fields_info = args_type_info.Struct.fields;
+            const fields_info = args_type_info.@"struct".fields;
 
             var kind = Kind{};
             comptime var i = 0;
@@ -153,7 +153,7 @@ pub fn AspectGroup(comptime group_name: String) type {
             pub fn fromStringList(aspect_names: ?String) ?Kind {
                 if (aspect_names) |a_string| {
                     var result: Kind = Kind{};
-                    var it = std.mem.split(u8, a_string, ",");
+                    var it = std.mem.splitScalar(u8, a_string, ',');
                     while (it.next()) |aspect_name|
                         result.addAspect(Group.getAspect(aspect_name));
                     return result;

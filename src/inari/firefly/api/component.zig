@@ -109,7 +109,7 @@ pub fn print(string_buffer: *utils.StringBuffer) void {
 //////////////////////////////////////////////////////////////
 
 pub fn Mixin(comptime T: type) type {
-    if (@typeInfo(T) != .Struct)
+    if (@typeInfo(T) != .@"struct")
         @compileError("Expects component type is a struct.");
     if (!@hasField(T, api.FIELD_NAMES.COMPONENT_ID_FIELD))
         @compileError("Expects component type to have field: id: Index, that holds the index-id of the component instance");
@@ -363,7 +363,7 @@ pub fn Mixin(comptime T: type) type {
 }
 
 pub fn ActivationMixin(comptime T: type) type {
-    if (@typeInfo(T) != .Struct)
+    if (@typeInfo(T) != .@"struct")
         @compileError("Expects component type is a struct.");
     if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
@@ -463,7 +463,7 @@ pub fn ActivationMixin(comptime T: type) type {
 }
 
 pub fn NameMappingMixin(comptime T: type) type {
-    if (@typeInfo(T) != .Struct)
+    if (@typeInfo(T) != .@"struct")
         @compileError("Expects component type is a struct.");
     if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
@@ -528,7 +528,7 @@ pub fn NameMappingMixin(comptime T: type) type {
 }
 
 pub fn SubscriptionMixin(comptime T: type) type {
-    if (@typeInfo(T) != .Struct)
+    if (@typeInfo(T) != .@"struct")
         @panic("Expects component type is a struct.");
     if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @panic("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
@@ -576,7 +576,7 @@ pub fn SubscriptionMixin(comptime T: type) type {
 }
 
 pub fn CallContextMixin(comptime T: type) type {
-    if (@typeInfo(T) != .Struct)
+    if (@typeInfo(T) != .@"struct")
         @compileError("Expects component type is a struct.");
     if (!@hasField(T, api.FIELD_NAMES.CALL_CONTEXT_FIELD))
         @compileError("Expects component type to have field: call_context: api.CallContext, that holds the call context for a component");
@@ -691,7 +691,7 @@ pub fn AttributeMixin(comptime T: type) type {
 }
 
 pub fn GroupingMixin(comptime T: type) type {
-    if (@typeInfo(T) != .Struct)
+    if (@typeInfo(T) != .@"struct")
         @compileError("Expects component type is a struct.");
     if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
@@ -757,7 +757,7 @@ pub fn GroupingMixin(comptime T: type) type {
 }
 
 pub fn ControlMixin(comptime T: type) type {
-    if (@typeInfo(T) != .Struct)
+    if (@typeInfo(T) != .@"struct")
         @compileError("Expects component type is a struct.");
     if (!@hasDecl(T, api.DECLARATION_NAMES.COMPONENT_MIXIN))
         @compileError("Expects component type to have declaration: const Component = Mixin(T), used to referencing component mixin.");
@@ -851,7 +851,7 @@ pub fn ControlMixin(comptime T: type) type {
 
 pub fn SubTypingMixin(comptime T: type) type {
     comptime {
-        if (@typeInfo(T) != .Struct)
+        if (@typeInfo(T) != .@"struct")
             @compileError("Expects component type is a struct.");
         // if (!@hasDecl(T, "createForSubType"))
         //     @compileError("Expects component type to have function: createForSubType(SubType) *T, used to create Component for Subtype.");

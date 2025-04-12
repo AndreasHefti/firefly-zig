@@ -127,7 +127,7 @@ const RaylibAudioAPI = struct {
         defer api.ALLOC.free(name);
 
         const sound = rl.LoadSound(name);
-        if (!rl.IsSoundReady(sound))
+        if (!rl.IsSoundValid(sound))
             return api.IOErrors.LOAD_SOUND_ERROR;
 
         var sound_binding = api.SoundBinding{ .id = sounds.add(sound) };
@@ -234,7 +234,7 @@ const RaylibAudioAPI = struct {
         defer api.ALLOC.free(name);
 
         const m = rl.LoadMusicStream(name);
-        if (!rl.IsMusicReady(m))
+        if (!rl.IsMusicValid(m))
             return api.IOErrors.LOAD_MUSIC_ERROR;
 
         return music.add(m);

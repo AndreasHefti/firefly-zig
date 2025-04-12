@@ -453,7 +453,7 @@ pub const TileMapping = struct {
 
             // fill grid
             const code_mapping = self.layer_entity_mapping.get(layer_id).?;
-            var code_it = std.mem.split(u8, tile_grid_data.codes, ",");
+            var code_it = std.mem.splitScalar(u8, tile_grid_data.codes, ',');
             for (0..tile_grid.dimensions[1]) |y| {
                 for (0..tile_grid.dimensions[0]) |x| {
                     const code = std.fmt.parseInt(Index, code_it.next().?, 10) catch 0;

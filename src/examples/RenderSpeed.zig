@@ -34,7 +34,7 @@ fn init() void {
 
     var pos = firefly.api.POOL_ALLOC.alloc(Vector2f, 100000) catch |err|
         firefly.api.handleUnknownError(err);
-    var rndx = std.rand.DefaultPrng.init(32);
+    var rndx = std.Random.DefaultPrng.init(32);
     const rx = rndx.random();
     for (0..100000) |i| {
         pos[i][0] = rx.float(Float) * 600;
