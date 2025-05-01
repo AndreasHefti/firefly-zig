@@ -125,8 +125,12 @@ pub const Animation = struct {
                     self._inverted = !self._inverted;
                 if (!self._inverted) {
                     self._loop_count += 1;
-                    if (self.callback) |c|
+                    if (self.callback) |c| {
                         c(self.id, self._loop_count);
+                        // callback can deactivate or dispose self, so we have to check this here
+                        if (!Activation.isActive(self.id) or self.id == UNDEF_INDEX)
+                            return;
+                    }
                 }
             }
         }
