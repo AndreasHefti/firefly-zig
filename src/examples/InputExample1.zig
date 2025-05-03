@@ -40,15 +40,21 @@ fn init() void {
         ESprite{ .sprite_id = sprite_id },
     });
 
-    firefly.api.input.setKeyMapping(KeyboardKey.KEY_UP, InputButtonType.UP);
-    firefly.api.input.setKeyMapping(KeyboardKey.KEY_DOWN, InputButtonType.DOWN);
-    firefly.api.input.setKeyMapping(KeyboardKey.KEY_LEFT, InputButtonType.LEFT);
-    firefly.api.input.setKeyMapping(KeyboardKey.KEY_RIGHT, InputButtonType.RIGHT);
+    firefly.api.input.setKeyMapping(.KEY_UP, .UP);
+    firefly.api.input.setKeyMapping(.KEY_DOWN, .DOWN);
+    firefly.api.input.setKeyMapping(.KEY_LEFT, .LEFT);
+    firefly.api.input.setKeyMapping(.KEY_RIGHT, .RIGHT);
 
-    firefly.api.input.setGamepadButtonMapping(InputDevice.GAME_PAD_1, GamepadAction.GAMEPAD_BUTTON_LEFT_FACE_UP, InputButtonType.UP);
-    firefly.api.input.setGamepadButtonMapping(InputDevice.GAME_PAD_1, GamepadAction.GAMEPAD_BUTTON_LEFT_FACE_DOWN, InputButtonType.DOWN);
-    firefly.api.input.setGamepadButtonMapping(InputDevice.GAME_PAD_1, GamepadAction.GAMEPAD_BUTTON_LEFT_FACE_LEFT, InputButtonType.LEFT);
-    firefly.api.input.setGamepadButtonMapping(InputDevice.GAME_PAD_1, GamepadAction.GAMEPAD_BUTTON_LEFT_FACE_RIGHT, InputButtonType.RIGHT);
+    firefly.api.input.setGamepad1Mapping(.GAME_PAD_1);
+    firefly.api.input.setGamepadButtonMapping(.GAME_PAD_1, .GAMEPAD_BUTTON_LEFT_FACE_UP, .UP);
+    firefly.api.input.setGamepadButtonMapping(.GAME_PAD_1, .GAMEPAD_BUTTON_LEFT_FACE_DOWN, .DOWN);
+    firefly.api.input.setGamepadButtonMapping(.GAME_PAD_1, .GAMEPAD_BUTTON_LEFT_FACE_LEFT, .LEFT);
+    firefly.api.input.setGamepadButtonMapping(.GAME_PAD_1, .GAMEPAD_BUTTON_LEFT_FACE_RIGHT, .RIGHT);
+
+    firefly.api.input.setGamepadAxisButtonMapping(.GAME_PAD_1, .GAMEPAD_AXIS_LEFT_Y, -0.5, .UP);
+    firefly.api.input.setGamepadAxisButtonMapping(.GAME_PAD_1, .GAMEPAD_AXIS_LEFT_Y, 0.5, .DOWN);
+    firefly.api.input.setGamepadAxisButtonMapping(.GAME_PAD_1, .GAMEPAD_AXIS_LEFT_X, -0.5, .LEFT);
+    firefly.api.input.setGamepadAxisButtonMapping(.GAME_PAD_1, .GAMEPAD_AXIS_LEFT_X, 0.5, .RIGHT);
 
     firefly.api.subscribeUpdate(update);
 }

@@ -1443,12 +1443,13 @@ pub fn IInputAPI() type {
         isGamepadAvailable: *const fn (InputDevice) bool = undefined,
         // Get gamepad internal name id
         getGamepadName: *const fn (InputDevice) String = undefined,
-
-        getGamepadAxisMovement: *const fn (InputDevice, GamepadAxis) Float = undefined,
         // gamepad mappings
         setGamepad1Mapping: *const fn (InputDevice) void = undefined,
         setGamepad2Mapping: *const fn (InputDevice) void = undefined,
         setGamepadButtonMapping: *const fn (InputDevice, GamepadAction, InputButtonType) void = undefined,
+        // gamepad axis
+        getGamepadAxisMovement: *const fn (InputDevice, GamepadAxis) Float = undefined,
+        setGamepadAxisButtonMapping: *const fn (InputDevice, GamepadAxis, Float, InputButtonType) void = undefined,
 
         // MOUSE
         getMousePosition: *const fn () PosF = undefined,
