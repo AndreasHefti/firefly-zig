@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const firefly = @import("../../firefly.zig");
 const api = firefly.api;
 const rl = @cImport(@cInclude("raylib.h"));
@@ -80,6 +81,11 @@ const RaylibWindowAPI = struct {
     fn openWindow(data: api.WindowData) void {
         if (!initialized)
             @panic("Not initialized");
+
+        if (comptime builtin.target.os.tag == .macos) {
+            api.Logger.info("Change directory to app directory on MacOS.", .{});
+            rl.ChangeDirectory(rl.GetApplicationDirectory());
+        }
 
         const title = firefly.api.ALLOC.dupeZ(u8, window_data.title) catch |err| firefly.api.handleUnknownError(err);
         defer firefly.api.ALLOC.free(title);
