@@ -84,7 +84,9 @@ const RaylibWindowAPI = struct {
 
         if (comptime builtin.target.os.tag == .macos) {
             api.Logger.info("Change directory to app directory on MacOS.", .{});
-            rl.ChangeDirectory(rl.GetApplicationDirectory());
+            if (rl.ChangeDirectory(rl.GetApplicationDirectory())) {
+                api.Logger.info("Change directory to app directory on MacOS successful", .{});
+            }
         }
 
         const title = firefly.api.ALLOC.dupeZ(u8, window_data.title) catch |err| firefly.api.handleUnknownError(err);
