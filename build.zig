@@ -13,12 +13,13 @@ pub fn build(b: *std.Build) void {
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
-    const optimize = std.builtin.OptimizeMode.ReleaseSmall;
+    const optimize = std.builtin.OptimizeMode.Debug;
 
     // define the raylib dependency
     const raylib_dep = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
+        .linux_display_backend = .X11,
     });
 
     // create firefly library
