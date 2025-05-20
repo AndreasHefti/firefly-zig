@@ -94,6 +94,7 @@ const RaylibRenderAPI = struct {
         interface.endRendering = endRendering;
 
         interface.printDebug = printDebug;
+        interface.clear = clear;
         interface.deinit = deinit;
     }
 
@@ -103,13 +104,25 @@ const RaylibRenderAPI = struct {
             return;
 
         show_fps = false;
+        clear();
+
+        textures.deinit();
+        images.deinit();
+        render_textures.deinit();
+        shader_stack.deinit();
+        shaders.deinit();
+        fonts.deinit();
+
+        singleton = null;
+    }
+
+    fn clear() void {
         var next = textures.slots.nextSetBit(0);
         while (next) |i| {
             disposeTexture(i);
             next = textures.slots.nextSetBit(i + 1);
         }
         textures.clear();
-        textures.deinit();
 
         next = images.slots.nextSetBit(0);
         while (next) |i| {
@@ -117,7 +130,6 @@ const RaylibRenderAPI = struct {
             next = images.slots.nextSetBit(i + 1);
         }
         images.clear();
-        images.deinit();
 
         next = render_textures.slots.nextSetBit(0);
         while (next) |i| {
@@ -125,7 +137,6 @@ const RaylibRenderAPI = struct {
             next = render_textures.slots.nextSetBit(i + 1);
         }
         render_textures.clear();
-        render_textures.deinit();
 
         shader_stack.clear();
         shader_stack.deinit();
@@ -135,7 +146,6 @@ const RaylibRenderAPI = struct {
             next = shaders.slots.nextSetBit(i + 1);
         }
         shaders.clear();
-        shaders.deinit();
 
         next = fonts.slots.nextSetBit(0);
         while (next) |i| {
@@ -143,9 +153,6 @@ const RaylibRenderAPI = struct {
             next = fonts.slots.nextSetBit(i + 1);
         }
         fonts.clear();
-        fonts.deinit();
-
-        singleton = null;
     }
 
     const default_offset = Vector2f{ 0, 0 };

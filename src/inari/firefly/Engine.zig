@@ -126,6 +126,7 @@ pub fn startWindow(
         tick();
 
     if (quit_callback) |q| q();
+    //   firefly.api.rendering.clear();
     firefly.api.window.closeWindow();
 }
 

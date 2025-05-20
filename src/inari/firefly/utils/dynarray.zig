@@ -109,7 +109,8 @@ pub const DynIndexArray = struct {
                 self.items = new_memory;
             }
         }
-        for (self.size_pointer + 1..self.items.len) |i|
+        const needle = if (self.size_pointer > 0) self.size_pointer + 1 else self.size_pointer;
+        for (needle..self.items.len) |i|
             self.items[i] = UNDEF_INDEX;
     }
 };

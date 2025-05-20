@@ -1075,6 +1075,8 @@ pub fn IRenderAPI() type {
 
         printDebug: *const fn (*StringBuffer) void = undefined,
 
+        clear: *const fn () void = undefined,
+
         deinit: DeinitFunction = undefined,
 
         pub fn init(initImpl: *const fn (*IRenderAPI()) void) Self {
