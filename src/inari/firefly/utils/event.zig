@@ -36,7 +36,7 @@ pub fn EventDispatch(comptime E: type) type {
         pub fn unregister(self: *Self, listener: Listener) void {
             for (0..self.listeners.items.len) |i| {
                 if (self.listeners.items[i] == listener) {
-                    _ = self.listeners.swapRemove(i);
+                    _ = self.listeners.orderedRemove(i);
                     return;
                 }
             }
