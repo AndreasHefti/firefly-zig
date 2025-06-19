@@ -10,4 +10,12 @@ pub fn run(init_c: firefly.api.InitContext) !void {
 
     firefly.Engine.reorderSystems(&firefly.Engine.CoreSystems.DEFAULT_SYSTEM_ORDER);
     firefly.Engine.printState();
+
+    // var array: utils.DynIndexArray = utils.DynIndexArray.new(firefly.api.ALLOC, 30);
+    // defer array.deinit();
+
+    // for (0..3500) |i|
+    //     array.set(i, i);
+
+    // std.log.info("**************** array: {any}", .{array});
 }
