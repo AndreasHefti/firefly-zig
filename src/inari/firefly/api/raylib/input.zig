@@ -75,6 +75,8 @@ const RaylibInputAPI = struct {
         interface.setGamepadAxisButtonMapping = setGamepadAxisButtonMapping;
         interface.getMousePosition = getMousePosition;
         interface.getMouseDelta = getMouseDelta;
+        interface.getMouseWheelMove = getMouseWheelMove;
+        interface.getMouseWheelMoveV = getMouseWheelMoveV;
         interface.setMouseButtonMapping = setMouseButtonMapping;
 
         interface.deinit = deinit;
@@ -243,8 +245,17 @@ const RaylibInputAPI = struct {
     fn getMousePosition() PosF {
         return @bitCast(rl.GetMousePosition());
     }
+
     fn getMouseDelta() Vector2f {
         return @bitCast(rl.GetMouseDelta());
+    }
+
+    fn getMouseWheelMove() Float {
+        return rl.GetMouseWheelMove();
+    }
+
+    fn getMouseWheelMoveV() Vector2f {
+        return @bitCast(rl.GetMouseWheelMoveV());
     }
 
     fn setMouseButtonMapping(action: api.MouseAction, button: api.InputButtonType) void {

@@ -1456,6 +1456,8 @@ pub fn IInputAPI() type {
         // MOUSE
         getMousePosition: *const fn () PosF = undefined,
         getMouseDelta: *const fn () Vector2f = undefined,
+        getMouseWheelMove: *const fn () Float = undefined,
+        getMouseWheelMoveV: *const fn () Vector2f = undefined,
         setMouseButtonMapping: *const fn (MouseAction, InputButtonType) void = undefined,
 
         deinit: DeinitFunction = undefined,
