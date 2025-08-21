@@ -62,6 +62,22 @@ pub const NEG_VEC2F = Vector2f{ -1, -1 };
 pub const NEG_VEC3F = Vector3f{ -1, -1, -1 };
 pub const NEG_VEC4F = Vector4f{ -1, -1, -1, -1 };
 
+pub inline fn lerpF(a: Float, b: Float, t: Float) Float {
+    return (1 - t) * a + t * b;
+}
+
+pub inline fn lerpFMonotonic(a: Float, b: Float, t: Float) Float {
+    return if (t <= 0.5) a + (b - a) * t else b + (b - a) * (t - 1.0);
+}
+
+pub inline fn lerpV2F(a: Vector2f, b: Vector2f, t: Float) Vector2f {
+    return @as(Vector2f, @splat(1 - t)) * a + @as(Vector2f, @splat(t)) * b;
+}
+
+pub fn lerp(comptime T: type, a: @TypeOf(T), b: @TypeOf(T), t: Float) @TypeOf(T) {
+    return @as(T, @splat(1 - t)) * a + @as(T, @splat(t)) * b;
+}
+
 pub inline fn posF_usize_RectF(posF: ?PosF, w: usize, h: usize) ?RectF {
     if (posF) |pf| {
         return .{ pf[0], pf[1], utils.usize_f32(w), utils.usize_f32(h) };
