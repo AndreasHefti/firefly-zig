@@ -23,7 +23,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // create firefly library
-    const firefly = b.addStaticLibrary(.{
+    const firefly = b.addLibrary(.{
         .name = "firefly",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/inari/firefly/firefly.zig"),
