@@ -19,11 +19,11 @@ pub fn stringStartsWith(str: ?String, prefix: String) bool {
 }
 
 pub const StringBuffer = struct {
-    buffer: std.ArrayList(u8),
+    buffer: std.array_list.Managed(u8),
 
     pub fn init(allocator: Allocator) StringBuffer {
         return StringBuffer{
-            .buffer = std.ArrayList(u8).init(allocator),
+            .buffer = std.array_list.Managed(u8).init(allocator),
         };
     }
 

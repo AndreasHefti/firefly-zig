@@ -83,7 +83,7 @@ fn convertAndSaveTiledTileSet() !void {
     );
 
     const tile_set = game.json.convertTiledTileSet(tiled_tile_set);
-    const json = std.json.stringifyAlloc(
+    const json = std.json.Stringify.valueAlloc(
         api.LOAD_ALLOC,
         tile_set,
         .{ .emit_null_optional_fields = false, .whitespace = .minified },

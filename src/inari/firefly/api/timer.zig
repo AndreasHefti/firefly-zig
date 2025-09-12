@@ -19,7 +19,7 @@ pub const FrameScheduler = struct {
 };
 
 var initialized = false;
-var scheduler: std.ArrayList(FrameScheduler) = undefined;
+var scheduler: std.array_list.Managed(FrameScheduler) = undefined;
 
 var last_update_time: usize = undefined;
 pub var time: usize = 0;
@@ -31,7 +31,7 @@ pub fn init() void {
     if (initialized)
         return;
 
-    scheduler = std.ArrayList(FrameScheduler).init(firefly.api.ALLOC);
+    scheduler = std.array_list.Managed(FrameScheduler).init(firefly.api.ALLOC);
 }
 
 pub fn deinit() void {

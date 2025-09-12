@@ -658,7 +658,7 @@ fn loadRoom(jsonRoom: JSONRoom, ctx: *api.CallContext) Index {
             ).id,
         );
     } else if (jsonRoom.tile_mapping) |tm| {
-        const tileMappingJSON = std.json.stringifyAlloc(api.LOAD_ALLOC, tm, .{}) catch |err| api.handleUnknownError(err);
+        const tileMappingJSON = std.json.Stringify.valueAlloc(api.LOAD_ALLOC, tm, .{}) catch |err| api.handleUnknownError(err);
         defer api.LOAD_ALLOC.free(tileMappingJSON);
 
         game.Room.Composite.addTaskByName(
@@ -935,7 +935,7 @@ pub fn getPropertyValue(properties: []const TiledProperty, name: String) ?String
 
 pub fn toJSONAttributes(attributes_str: String) []const JSONAttribute {
     var a_it = utils.StringAttributeIterator.new(attributes_str);
-    var a_list = std.ArrayList(JSONAttribute).init(api.LOAD_ALLOC);
+    var a_list = std.array_list.Managed(JSONAttribute).init(api.LOAD_ALLOC);
     while (a_it.next()) |r| {
         var t_attr = a_list.addOne() catch |err| api.handleUnknownError(err);
         t_attr.name = r.name;
@@ -1065,7 +1065,7 @@ pub fn convertTiledTileMapToJSONRoom(tiles_tile_map: TiledTileMap) JSONRoom {
     const attrs = toJSONAttributes(attr_string);
 
     // tasks...
-    var task_list = std.ArrayList(JSONTask).init(api.LOAD_ALLOC);
+    var task_list = std.array_list.Managed(JSONTask).init(api.LOAD_ALLOC);
     if (getPropertyValue(tiles_tile_map.properties, P_NAME_TASKS)) |taks_string| {
         var task_it = utils.StringListIterator.new(taks_string);
         while (task_it.next()) |task_attr_str| {
@@ -1126,8 +1126,8 @@ fn loadTiledRoomTask(ctx: *api.CallContext) void {
 }
 
 fn convertTiledTileMap(tiled_tile_map: TiledTileMap) JSONTileMapping {
-    var grid_list = std.ArrayList(JSONTileGrid).init(api.LOAD_ALLOC);
-    var layer_list = std.ArrayList(TileLayerMapping).init(api.LOAD_ALLOC);
+    var grid_list = std.array_list.Managed(JSONTileGrid).init(api.LOAD_ALLOC);
+    var layer_list = std.array_list.Managed(TileLayerMapping).init(api.LOAD_ALLOC);
     const layers = tiled_tile_map.layers;
 
     for (0..layers.len) |i| {
@@ -1154,7 +1154,7 @@ fn convertTiledTileMap(tiled_tile_map: TiledTileMap) JSONTileMapping {
     }
 
     // tile sets...
-    var tile_set_list = std.ArrayList(TileSetDef).init(api.LOAD_ALLOC);
+    var tile_set_list = std.array_list.Managed(TileSetDef).init(api.LOAD_ALLOC);
     if (getPropertyValue(tiled_tile_map.properties, P_NAME_TILE_SETS)) |tile_sets_string| {
         var tile_set_it = utils.StringListIterator.new(tile_sets_string);
         while (tile_set_it.next()) |tile_set_attr_str| {
@@ -1189,7 +1189,7 @@ fn toCodes(data: ?[]const Index) String {
 }
 
 fn convertTiledObjects(layers: []const TiledMapLayer) ?[]const JSONRoomObject {
-    var list = std.ArrayList(JSONRoomObject).init(api.LOAD_ALLOC);
+    var list = std.array_list.Managed(JSONRoomObject).init(api.LOAD_ALLOC);
     for (0..layers.len) |i| {
         if (utils.stringEquals(layers[i].type, OBJECT_GROUP_NAME)) {
             if (layers[i].objects) |object| {
@@ -1208,7 +1208,7 @@ fn convertTiledObjects(layers: []const TiledMapLayer) ?[]const JSONRoomObject {
 }
 
 fn convertObjectAttributes(object: TiledObject) ?[]const JSONAttribute {
-    var list = std.ArrayList(JSONAttribute).init(api.LOAD_ALLOC);
+    var list = std.array_list.Managed(JSONAttribute).init(api.LOAD_ALLOC);
     var bounds = list.addOne() catch |err| api.handleUnknownError(err);
     bounds.name = P_NAME_BOUNDS;
     bounds.value = api.format("{d},{d},{d},{d}", .{

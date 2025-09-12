@@ -1,6 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const ArrayList = std.ArrayList;
+const ArrayList = std.array_list.Managed;
 
 /// Event dispatcher implemented as type based singleton
 pub fn EventDispatch(comptime E: type) type {

@@ -1,7 +1,7 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 const String = utils.String;
-const ArrayList = std.ArrayList;
+const ArrayList = std.array_list.Managed;
 const Allocator = std.mem.Allocator;
 const Writer = std.io.Writer;
 const StringBuffer = utils.StringBuffer;
@@ -112,7 +112,7 @@ pub fn AspectGroup(comptime group_name: String) type {
         }
 
         pub fn print(sb: *StringBuffer) void {
-            sb.print("AspectGroup({?s})\n", .{_name});
+            sb.print("AspectGroup({s})\n", .{_name});
             var i: u8 = 0;
             while (i < Group._aspect_count) {
                 sb.print("  {d}:{s}\n", .{ Group._aspects[i].id, Group._aspects[i].name });

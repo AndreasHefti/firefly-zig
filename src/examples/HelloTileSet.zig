@@ -157,7 +157,7 @@ pub fn createTile(
     });
 
     if (tile_set.createContactMaskFromImage(tile_template)) |mask| {
-        var vert: std.ArrayList(Float) = std.ArrayList(Float).init(firefly.api.POOL_ALLOC);
+        var vert: std.array_list.Managed(Float) = std.array_list.Managed(Float).init(firefly.api.POOL_ALLOC);
 
         for (0..mask.height) |_y| {
             for (0..mask.width) |_x| {
