@@ -62,7 +62,13 @@ const RaylibInputAPI = struct {
         mouse_code_mapping = utils.DynIndexArray.new(firefly.api.ALLOC, 10);
 
         interface.checkButton = checkButton;
-        interface.clear_mappings = clear_mappings;
+        interface.clearMappings = clearMappings;
+
+        interface.isKeyPressed = isKeyPressed;
+        interface.isKeyPressedRepeat = isKeyPressedRepeat;
+        interface.isKeyDown = isKeyDown;
+        interface.isKeyReleased = isKeyReleased;
+
         interface.getKeyPressed = getKeyPressed;
         interface.getCharPressed = getCharPressed;
         interface.setKeyButtonMapping = setKeyButtonMapping;
@@ -133,7 +139,7 @@ const RaylibInputAPI = struct {
     }
 
     // clears all mappings
-    fn clear_mappings() void {
+    fn clearMappings() void {
         keyboard_on = false;
         gamepad_1_on = false;
         gamepad_2_on = false;
@@ -146,6 +152,23 @@ const RaylibInputAPI = struct {
     }
 
     // KEYBOARD
+
+    fn isKeyPressed(key: api.KeyboardKey) bool {
+        return rl.IsKeyPressed(utils.usize_cint(@intFromEnum(key)));
+    }
+
+    fn isKeyPressedRepeat(key: api.KeyboardKey) bool {
+        return rl.IsKeyPressedRepeat(utils.usize_cint(@intFromEnum(key)));
+    }
+
+    fn isKeyDown(key: api.KeyboardKey) bool {
+        return rl.IsKeyDown(utils.usize_cint(@intFromEnum(key)));
+    }
+
+    fn isKeyReleased(key: api.KeyboardKey) bool {
+        return rl.IsKeyReleased(utils.usize_cint(@intFromEnum(key)));
+    }
+
     // Get key pressed (keycode), call it multiple times for keys queued, returns 0 when the queue is empty
     fn getKeyPressed() usize {
         return @intCast(rl.GetKeyPressed());

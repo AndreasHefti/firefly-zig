@@ -1430,9 +1430,18 @@ pub fn IInputAPI() type {
         // if the action is digital on/off --> 0 <= off, > 0 = on
         getButtonValue: *const fn (InputButtonType, ?InputDevice) Float = undefined,
         // clears all mappings
-        clear_mappings: *const fn () void = undefined,
+        clearMappings: *const fn () void = undefined,
 
         // KEYBOARD
+        // Check if a key has been pressed once
+        isKeyPressed: *const fn (key: KeyboardKey) bool = undefined,
+        // Check if a key has been pressed once
+        isKeyPressedRepeat: *const fn (key: KeyboardKey) bool = undefined,
+        // Check if a key has been pressed again
+        isKeyDown: *const fn (key: KeyboardKey) bool = undefined,
+        // Check if a key is being pressed
+        isKeyReleased: *const fn (key: KeyboardKey) bool = undefined,
+
         // Get key pressed (keycode), call it multiple times for keys queued, returns 0 when the queue is empty
         getKeyPressed: *const fn () usize = undefined,
         // Get char pressed (unicode), call it multiple times for chars queued, returns 0 when the queue is empty

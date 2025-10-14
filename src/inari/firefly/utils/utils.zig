@@ -37,6 +37,7 @@ pub const DynArrayError = dynarray.DynArrayError;
 pub const DynArray = dynarray.DynArray;
 pub const DynIndexArray = dynarray.DynIndexArray;
 pub const DynIndexMap = dynarray.DynIndexMap;
+
 pub const EventDispatch = @import("event.zig").EventDispatch;
 pub const BitSet = @import("bitset.zig").BitSet;
 
@@ -172,10 +173,15 @@ pub fn enumByName(comptime E: type, name: ?String) ?E {
     return null;
 }
 
+//////////////////////////////////////////////////////////////
+//// Geometry Utils functions
+//////////////////////////////////////////////////////////////
+
 pub const HALF_PI: Float = std.math.pi / 2.0;
 pub const TAU: Float = 2 * std.math.pi;
 
-pub const BitOperation = *const fn (bool, bool) callconv(.@"inline") bool;
+pub const BitOperation = *const fn (bool, bool) callconv(.Inline) bool;
+
 pub inline fn bitOpAND(b1: bool, b2: bool) bool {
     return b1 and b2;
 }
