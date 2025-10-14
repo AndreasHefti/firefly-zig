@@ -180,7 +180,7 @@ pub fn enumByName(comptime E: type, name: ?String) ?E {
 pub const HALF_PI: Float = std.math.pi / 2.0;
 pub const TAU: Float = 2 * std.math.pi;
 
-pub const BitOperation = *const fn (bool, bool) callconv(.Inline) bool;
+pub const BitOperation = *const fn (bool, bool) callconv(.@"inline") bool;
 
 pub inline fn bitOpAND(b1: bool, b2: bool) bool {
     return b1 and b2;
