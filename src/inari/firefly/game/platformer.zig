@@ -95,7 +95,7 @@ pub const PlatformerCollisionResolver = struct {
     _ground_scan: BitMask = undefined,
     _terrain_constraint_ref: *physics.ContactConstraint = undefined,
 
-    fn destruct(self: *PlatformerCollisionResolver) void {
+    pub fn destruct(self: *PlatformerCollisionResolver) void {
         defer self._initialized = false;
         if (!self._initialized)
             return;
@@ -158,37 +158,37 @@ pub const PlatformerCollisionResolver = struct {
             .pos1 = .{ 2, 0 },
             .pos2 = .{ x_half, 0 },
             .pos3 = .{ x_full, 0 },
-            .s1 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length),
-            .s2 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length),
-            .s3 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length),
+            .s1 = BitMask.new(api.ALLOC, 1, inst.scan_length),
+            .s2 = BitMask.new(api.ALLOC, 1, inst.scan_length),
+            .s3 = BitMask.new(api.ALLOC, 1, inst.scan_length),
         };
         inst._south = Sensor{
             .pos1 = .{ 2, y_full },
             .pos2 = .{ x_half, y_full },
             .pos3 = .{ x_full, y_full },
-            .s1 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
-            .s2 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
-            .s3 = BitMask.new(api.POOL_ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
+            .s1 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
+            .s2 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
+            .s3 = BitMask.new(api.ALLOC, 1, inst.scan_length + utils.cint_usize(inst.ground_addition)),
         };
         inst._west = Sensor{
             .pos1 = .{ 0, 2 },
             .pos2 = .{ 0, y_half },
             .pos3 = .{ 0, y_full },
-            .s1 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
-            .s2 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
-            .s3 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
+            .s1 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s2 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s3 = BitMask.new(api.ALLOC, inst.scan_length, 1),
         };
         inst._east = Sensor{
             .pos1 = .{ x_full, 2 },
             .pos2 = .{ x_full, y_half },
             .pos3 = .{ x_full, y_full },
-            .s1 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
-            .s2 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
-            .s3 = BitMask.new(api.POOL_ALLOC, inst.scan_length, 1),
+            .s1 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s2 = BitMask.new(api.ALLOC, inst.scan_length, 1),
+            .s3 = BitMask.new(api.ALLOC, inst.scan_length, 1),
         };
         inst._ground_offset = .{ 2, inst.contact_bounds[3] };
         inst._ground_scan = BitMask.new(
-            api.POOL_ALLOC,
+            api.ALLOC,
             utils.cint_usize(inst.contact_bounds[2] - 3),
             1,
         );

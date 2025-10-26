@@ -378,10 +378,12 @@ pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !vo
     try file.writeAll(bytes);
 }
 
+// TODO do not use POOL_ALLOC here
 pub fn allocFloatArray(array: anytype) []Float {
     return firefly.api.POOL_ALLOC.dupe(Float, &array) catch |err| handleUnknownError(err);
 }
 
+// TODO do not use POOL_ALLOC here
 pub fn allocVec2FArray(array: anytype) []const Vector2f {
     return firefly.api.POOL_ALLOC.dupe(Vector2f, &array) catch |err| handleUnknownError(err);
 }
@@ -451,7 +453,7 @@ pub const NamePool = struct {
     var s0_alloc_arena: std.heap.ArenaAllocator = undefined;
 
     fn init() void {
-        names = std.BufSet.init(POOL_ALLOC);
+        names = std.BufSet.init(ALLOC);
         s0_alloc_arena = std.heap.ArenaAllocator.init(ALLOC);
         S0_ALLOC = s0_alloc_arena.allocator();
     }
@@ -491,6 +493,7 @@ pub const NamePool = struct {
 
     pub fn freeNames() void {
         names.deinit();
+        names = std.BufSet.init(ALLOC);
     }
 };
 
