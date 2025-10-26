@@ -484,7 +484,15 @@ pub const NamePool = struct {
     }
 
     pub fn freeS0Pool() void {
-        s0_alloc_arena.reset(.free_all);
+        _ = s0_alloc_arena.reset(.free_all);
+    }
+
+    pub fn sizeS0Bytes() usize {
+        return s0_alloc_arena.queryCapacity();
+    }
+
+    pub fn numOfNames() usize {
+        return names.count();
     }
 
     pub fn freeName(name: String) void {
