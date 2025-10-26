@@ -442,9 +442,9 @@ pub const IndexFrameList = struct {
     _state_pointer: Index = 0,
     _duration: usize = 0,
 
-    pub fn new() IndexFrameList {
+    pub fn new(alloc: std.mem.Allocator) IndexFrameList {
         return IndexFrameList{
-            .frames = utils.DynArray(IndexFrame).newWithRegisterSize(firefly.api.ALLOC, 10),
+            .frames = utils.DynArray(IndexFrame).newWithRegisterSize(alloc, 10),
         };
     }
 
@@ -592,7 +592,6 @@ pub const IndexFrameIntegrator = struct {
         if (self.multiplexer)
             self._component_ids.deinit();
         self._component_ids = undefined;
-        self.timeline.deinit();
     }
 
     fn apply(animation_id: Index, component_id: Index, active: bool) void {

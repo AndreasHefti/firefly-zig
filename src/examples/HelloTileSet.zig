@@ -182,7 +182,7 @@ pub fn createTile(
     }
 
     if (tile_template.animation) |*frames| {
-        var list = IndexFrameList.new();
+        var list = IndexFrameList.new(firefly.api.POOL_ALLOC);
         var next = frames.slots.nextSetBit(0);
         while (next) |i| {
             if (frames.get(i)) |frame|

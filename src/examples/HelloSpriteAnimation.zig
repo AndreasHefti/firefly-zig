@@ -47,7 +47,7 @@ fn init() void {
         .flip_y = true,
     });
 
-    const animation: IndexFrameList = IndexFrameList.new()
+    const animation: IndexFrameList = IndexFrameList.new(firefly.api.POOL_ALLOC)
         .withFrame(sid1, 1000)
         .withFrame(sid2, 1000)
         .withFrame(sid3, 1000)

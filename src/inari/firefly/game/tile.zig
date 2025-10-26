@@ -308,11 +308,15 @@ pub const TileMapping = struct {
     tile_layer_data: utils.DynArray(TileLayerData) = undefined,
     tile_grid_data: utils.DynArray(TileGridData) = undefined,
     layer_entity_mapping: utils.DynArray(utils.DynIndexArray) = undefined,
+    _pool_alloc: std.heap.ArenaAllocator = undefined,
+    _alloc: std.mem.Allocator = undefined,
 
     pub fn construct(self: *TileMapping) void {
         self.tile_layer_data = utils.DynArray(TileLayerData).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
         self.tile_grid_data = utils.DynArray(TileGridData).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
         self.layer_entity_mapping = utils.DynArray(utils.DynIndexArray).newWithRegisterSize(firefly.api.COMPONENT_ALLOC, 10);
+        self._pool_alloc = std.heap.ArenaAllocator.init(api.ALLOC);
+        self._alloc = self._pool_alloc.allocator();
     }
 
     pub fn destruct(self: *TileMapping) void {
@@ -333,6 +337,9 @@ pub const TileMapping = struct {
         }
         self.layer_entity_mapping.deinit();
         self.layer_entity_mapping = undefined;
+
+        _ = self._pool_alloc.reset(.free_all);
+        self._pool_alloc.deinit();
     }
 
     pub fn withTileLayerData(self: *TileMapping, tile_layer: TileLayerData) *TileLayerData {
@@ -418,7 +425,7 @@ pub const TileMapping = struct {
                                     // add contact if needed
                                     addContactData(entity_id, tile_set, tile_template);
                                     // add animation if needed
-                                    addAnimationData(entity_id, tile_template);
+                                    addAnimationData(self, entity_id, tile_template);
                                     // set code -> entity id mapping for layer
                                     entity_mapping.set(code, entity_id);
                                     api.Entity.Activation.activate(entity_id);
@@ -477,9 +484,9 @@ pub const TileMapping = struct {
         });
     }
 
-    fn addAnimationData(entity_id: Index, tile_template: *TileTemplate) void {
+    fn addAnimationData(self: *TileMapping, entity_id: Index, tile_template: *TileTemplate) void {
         if (tile_template.animation) |*frames| {
-            var list = physics.IndexFrameList.new();
+            var list = physics.IndexFrameList.new(self._alloc);
             var next = frames.slots.nextSetBit(0);
             while (next) |i| {
                 if (frames.get(i)) |frame|
