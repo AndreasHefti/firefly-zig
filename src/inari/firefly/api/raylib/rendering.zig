@@ -976,6 +976,7 @@ const RaylibRenderAPI = struct {
                     @intFromEnum(GLBlendMode.GL_ONE),
                     @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
                 );
+                rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
             },
             else => rl.BeginBlendMode(@intFromEnum(mode)),
         }
