@@ -837,10 +837,13 @@ pub const BlendMode = enum(CInt) {
     SUBTRACT_COLORS = 4,
     /// Blend premultiplied textures considering alpha
     ALPHA_PREMULTIPLY = 5,
-    /// Blend textures using custom src/dst factors (use rlSetBlendFactors())
-    CUSTOM = 6,
-    /// Blend textures using custom rgb/alpha separate src/dst factors (use rlSetBlendFactorsSeparate())
-    CUSTOM_SEPARATE = 7,
+    NONE = 6,
+    DEST_OVER_SRC = 7,
+
+    // /// Blend textures using custom src/dst factors (use rlSetBlendFactors())
+    // CUSTOM = 6,
+    // /// Blend textures using custom rgb/alpha separate src/dst factors (use rlSetBlendFactorsSeparate())
+    // CUSTOM_SEPARATE = 7,
 
     pub fn format(
         self: BlendMode,

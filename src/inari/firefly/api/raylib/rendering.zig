@@ -490,7 +490,7 @@ const RaylibRenderAPI = struct {
         if (active_clear_color) |cc|
             rl.ClearBackground(@bitCast(cc));
 
-        rl.BeginBlendMode(@intFromEnum(default_blend_mode));
+        setBlending(default_blend_mode);
     }
 
     fn renderTexture(
@@ -508,7 +508,7 @@ const RaylibRenderAPI = struct {
 
             // set blend mode
             if (blend_mode) |bm|
-                rl.BeginBlendMode(@intFromEnum(bm));
+                setBlending(bm);
 
             rl.DrawTexturePro(
                 tex.texture,
@@ -547,7 +547,7 @@ const RaylibRenderAPI = struct {
 
             // set blend mode
             if (blend_mode) |bm|
-                rl.BeginBlendMode(@intFromEnum(bm));
+                setBlending(bm);
 
             const tint: rl.Color = if (tint_color) |tc| @bitCast(tc) else default_tint_color;
             const _pivot: rl.Vector2 = if (scale) |s|
@@ -617,9 +617,8 @@ const RaylibRenderAPI = struct {
     ) void {
 
         // set blend mode
-        if (blend_mode) |bm| {
-            rl.BeginBlendMode(@intFromEnum(bm));
-        }
+        if (blend_mode) |bm|
+            setBlending(bm);
 
         // apply translation functions if needed
         addOffset(offset * active_camera_zoom_vec);
@@ -666,9 +665,8 @@ const RaylibRenderAPI = struct {
                 font = f.*;
         }
 
-        if (blend_mode) |bm| {
-            rl.BeginBlendMode(@intFromEnum(bm));
-        }
+        if (blend_mode) |bm|
+            setBlending(bm);
 
         if (line_spacing) |ls| {
             rl.SetTextLineSpacing(@as(CInt, @intFromFloat(ls)));
@@ -941,5 +939,45 @@ const RaylibRenderAPI = struct {
         buffer.print("  active_camera: {any}\n", .{active_camera});
         buffer.print("  active_render_texture: {any}\n", .{active_render_texture});
         buffer.print("  active_clear_color: {any}\n", .{active_clear_color});
+    }
+
+    const GLBlendMode = enum(c_int) {
+        GL_ZERO = 0x0,
+        GL_ONE = 0x1,
+        GL_SRC_COLOR = 0x300,
+        GL_ONE_MINUS_SRC_COLOR = 0x301,
+        GL_SRC_ALPHA = 0x302,
+        GL_ONE_MINUS_SRC_ALPHA = 0x303,
+        GL_DST_ALPHA = 0x304,
+        GL_ONE_MINUS_DST_ALPHA = 0x305,
+        GL_DST_COLOR = 0x306,
+        GL_ONE_MINUS_DST_COLOR = 0x307,
+        GL_SRC_ALPHA_SATURATE = 0x308,
+        GL_CONSTANT_COLOR = 0x8001,
+        GL_ONE_MINUS_CONSTANT_COLOR = 0x8002,
+        GL_CONSTANT_ALPHA = 0x8003,
+        GL_ONE_MINUS_CONSTANT_ALPHA = 0x8004,
+    };
+
+    const GLBlendFunc = enum(c_int) {
+        GL_FUNC_ADD = 0x8006,
+        GL_FUNC_REVERSE_SUBTRACT = 0x800B,
+        GL_FUNC_SUBTRACT = 0x800A,
+    };
+
+    inline fn setBlending(mode: BlendMode) void {
+        switch (mode) {
+            .NONE => {
+                rl.EndBlendMode();
+            },
+            .DEST_OVER_SRC => {
+                rlgl.rlSetBlendFactors(
+                    @intFromEnum(GLBlendMode.GL_ONE_MINUS_DST_ALPHA),
+                    @intFromEnum(GLBlendMode.GL_ONE),
+                    @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
+                );
+            },
+            else => rl.BeginBlendMode(@intFromEnum(mode)),
+        }
     }
 };
