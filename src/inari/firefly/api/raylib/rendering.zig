@@ -970,6 +970,22 @@ const RaylibRenderAPI = struct {
             .NONE => {
                 rl.EndBlendMode();
             },
+            .SRC => {
+                rlgl.rlSetBlendFactors(
+                    @intFromEnum(GLBlendMode.GL_ONE),
+                    @intFromEnum(GLBlendMode.GL_ZERO),
+                    @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
+                );
+                rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
+            },
+            .DEST => {
+                rlgl.rlSetBlendFactors(
+                    @intFromEnum(GLBlendMode.GL_ZERO),
+                    @intFromEnum(GLBlendMode.GL_ONE),
+                    @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
+                );
+                rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
+            },
             .DEST_OVER_SRC => {
                 rlgl.rlSetBlendFactors(
                     @intFromEnum(GLBlendMode.GL_ONE_MINUS_DST_ALPHA),
