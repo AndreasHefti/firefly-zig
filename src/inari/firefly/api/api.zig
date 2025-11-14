@@ -839,6 +839,7 @@ pub const BlendMode = enum(CInt) {
     ALPHA_PREMULTIPLY = 5,
     NONE = 6,
     DEST_OVER_SRC = 7,
+    SRC_OVER_DEST = 8,
 
     // /// Blend textures using custom src/dst factors (use rlSetBlendFactors())
     // CUSTOM = 6,

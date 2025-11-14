@@ -978,6 +978,14 @@ const RaylibRenderAPI = struct {
                 );
                 rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
             },
+            .SRC_OVER_DEST => {
+                rlgl.rlSetBlendFactors(
+                    @intFromEnum(GLBlendMode.GL_ONE),
+                    @intFromEnum(GLBlendMode.GL_ONE_MINUS_SRC_ALPHA),
+                    @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
+                );
+                rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
+            },
             else => rl.BeginBlendMode(@intFromEnum(mode)),
         }
     }
