@@ -89,10 +89,8 @@ const RaylibWindowAPI = struct {
             }
         }
 
-        const title = firefly.api.ALLOC.dupeZ(u8, window_data.title) catch |err| firefly.api.handleUnknownError(err);
-        defer firefly.api.ALLOC.free(title);
-
         window_data = data;
+        const title = api.NamePool.alloc0(window_data.title);
         rl.SetTargetFPS(window_data.fps);
         rl.InitWindow(
             window_data.width,
