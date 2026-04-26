@@ -11,7 +11,7 @@ const Allocator = std.mem.Allocator;
 const Vector2f = utils.Vector2f;
 const Float = utils.Float;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

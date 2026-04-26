@@ -37,13 +37,13 @@ pub const StringBuffer = struct {
     }
 
     pub fn append(self: *StringBuffer, s: String) void {
-        self.buffer.writer().writeAll(s) catch |e| {
+        self.buffer.appendSlice(s) catch |e| {
             std.log.err("Failed to write to string buffer .{any}", .{e});
         };
     }
 
     pub fn print(self: *StringBuffer, comptime s: String, args: anytype) void {
-        self.buffer.writer().print(s, args) catch |e| {
+        self.buffer.print(s, args) catch |e| {
             std.log.err("Failed to write to string buffer .{any}", .{e});
         };
     }
@@ -132,13 +132,13 @@ pub const StringAttributeIterator = struct {
 };
 
 pub const StringAttributeMap = struct {
-    map: std.StringArrayHashMap(String) = undefined,
+    map: std.array_hash_map.String(String) = undefined,
 
     pub fn new(s: String, allocator: std.mem.Allocator) StringAttributeMap {
-        var result = StringAttributeMap{ .map = std.StringArrayHashMap(String).init(allocator) };
+        var result = StringAttributeMap{ .map = std.array_hash_map.String(String).init(allocator, &.{}, &.{}) catch unreachable };
         var it = StringAttributeIterator.new(s);
         while (it.next()) |r|
-            result.map.put(r.name, r.value) catch unreachable;
+            result.map.put(allocator, r.name, r.value) catch unreachable;
         return result;
     }
 

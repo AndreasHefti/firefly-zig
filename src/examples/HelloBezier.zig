@@ -16,7 +16,7 @@ const Easing = utils.Easing;
 const EShape = firefly.graphics.EShape;
 const EMultiplier = firefly.api.EMultiplier;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

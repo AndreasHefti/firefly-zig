@@ -12,7 +12,7 @@ const IndexFrameList = firefly.physics.IndexFrameList;
 const IndexFrameIntegrator = firefly.physics.IndexFrameIntegrator;
 const BlendMode = firefly.api.BlendMode;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

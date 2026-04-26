@@ -18,7 +18,7 @@ const view_name: String = "TestView";
 const layer1: String = "Background";
 const layer2: String = "Foreground";
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

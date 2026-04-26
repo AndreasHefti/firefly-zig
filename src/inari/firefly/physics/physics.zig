@@ -80,7 +80,7 @@ pub const ContactMaterialKind = ContactMaterialAspectGroup.Kind;
 
 var initialized = false;
 
-pub fn init(_: firefly.api.InitContext) !void {
+pub fn init() !void {
     defer initialized = true;
     if (initialized)
         return;

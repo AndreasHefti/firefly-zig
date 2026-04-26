@@ -4,8 +4,8 @@ const utils = firefly.utils;
 
 const StringBuffer = utils.StringBuffer;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
-    try firefly.init(init_c);
+pub fn run(init: std.process.Init) !void {
+    try firefly.init(init);
     defer firefly.deinit();
 
     firefly.Engine.reorderSystems(&firefly.Engine.CoreSystems.DEFAULT_SYSTEM_ORDER);

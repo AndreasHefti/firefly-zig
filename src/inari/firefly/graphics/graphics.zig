@@ -60,7 +60,7 @@ pub const WindowResolutionAdaption = view.WindowResolutionAdaption;
 var initialized = false;
 var api_init = false;
 
-pub fn init(_: firefly.api.InitContext) !void {
+pub fn init() !void {
     defer initialized = true;
     if (initialized)
         return;

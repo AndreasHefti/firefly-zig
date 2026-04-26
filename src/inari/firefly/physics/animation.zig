@@ -411,7 +411,7 @@ pub const EasedColorIntegrator = struct {
             return;
 
         const v_normalized: Float = self.easing.f(animation._t_normalized);
-        for (0..4) |slot| {
+        inline for (0..4) |slot| {
             if (self._norm_range[slot] != 0)
                 _integrate(self, v_normalized, animation._inverted, slot);
         }

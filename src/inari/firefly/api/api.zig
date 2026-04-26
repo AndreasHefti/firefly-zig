@@ -36,6 +36,13 @@ fn dummyDeinit() void {}
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
+var threadedIO: std.Io.Threaded = undefined;
+pub var io: std.Io = undefined;
+
+pub fn getTimestamp() usize {
+    return firefly.utils.i64_usize(std.Io.Timestamp.now(firefly.api.io, .real).toMilliseconds());
+}
+
 pub const ERRORS = error{
     NO_ATTRIBUTES,
     ATTRIBUTE_NOT_FOUND,
@@ -58,11 +65,11 @@ pub const IOErrors = error{
 pub const RUN_ON = enum { RAYLIB, TEST };
 pub const RUN_ON_SET: RUN_ON = RUN_ON.RAYLIB;
 
-pub const InitContext = struct {
-    component_allocator: Allocator,
-    entity_allocator: Allocator,
-    allocator: Allocator,
-};
+// pub const InitContext = struct {
+//     component_allocator: Allocator,
+//     entity_allocator: Allocator,
+//     allocator: Allocator,
+// };
 
 pub const BindingId = usize;
 
@@ -183,14 +190,15 @@ pub const CRefCallback = *const fn (CRef, ?*CallContext) void;
 
 var initialized = false;
 
-pub fn init(context: InitContext) !void {
+pub fn init(_init: std.process.Init) !void {
     defer initialized = true;
     if (initialized)
         return;
 
-    COMPONENT_ALLOC = context.component_allocator;
-    ENTITY_ALLOC = context.entity_allocator;
-    ALLOC = context.allocator;
+    COMPONENT_ALLOC = _init.gpa;
+    ENTITY_ALLOC = _init.gpa;
+    ALLOC = _init.gpa;
+    io = _init.io;
 
     Logger.log_buffer = ALLOC.alloc(u8, 1000) catch |err| handleUnknownError(err);
     Logger.info("*** Starting Firefly Engine *** \n", .{});
@@ -336,10 +344,11 @@ pub const FUNCTION_NAMES = struct {
 //////////////////////////////////////////////////////////////
 
 pub fn loadFromFile(file_name: String, decryption_pwd: ?String) !String {
-    const file_content = std.fs.cwd().readFileAlloc(
-        LOAD_ALLOC,
+    const file_content = std.Io.Dir.cwd().readFileAlloc(
+        io,
         file_name,
-        1000000,
+        LOAD_ALLOC,
+        .unlimited,
     ) catch |err| {
         Logger.err("Failed to load file: {s} error: {s}", .{ file_name, @errorName(err) });
         return err;
@@ -355,7 +364,8 @@ pub fn loadFromFile(file_name: String, decryption_pwd: ?String) !String {
 }
 
 pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !void {
-    const file: std.fs.File = std.fs.cwd().createFile(
+    const file: std.Io.File = std.Io.Dir.cwd().createFile(
+        io,
         file_name,
         .{ .read = true },
     ) catch |err| {
@@ -363,7 +373,7 @@ pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !vo
         return err;
     };
 
-    defer file.close();
+    defer file.close(io);
 
     var bytes: String = undefined;
     if (encryption_pwd) |pwd| {
@@ -375,7 +385,7 @@ pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !vo
         bytes = text;
     }
 
-    try file.writeAll(bytes);
+    try file.writeStreamingAll(io, bytes);
 }
 
 // TODO do not use POOL_ALLOC here
