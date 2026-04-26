@@ -46,11 +46,11 @@ pub fn reset() void {
     time = 0;
     d_time = 0;
     ticks = 0;
-    last_update_time = firefly.utils.i64_usize(std.time.milliTimestamp());
+    last_update_time = firefly.api.getTimestamp();
 }
 
 pub fn tick() void {
-    const current_time: usize = firefly.utils.i64_usize(std.time.milliTimestamp());
+    const current_time: usize = firefly.api.getTimestamp();
     time += d_time;
     d_time = current_time - last_update_time;
     last_update_time = current_time;

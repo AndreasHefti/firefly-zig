@@ -36,6 +36,13 @@ fn dummyDeinit() void {}
 //// Public API declarations
 //////////////////////////////////////////////////////////////
 
+var threadedIO: std.Io.Threaded = undefined;
+pub var io: std.Io = undefined;
+
+pub fn getTimestamp() usize {
+    return firefly.utils.i64_usize(std.Io.Timestamp.now(firefly.api.io, .real).toMilliseconds());
+}
+
 pub const ERRORS = error{
     NO_ATTRIBUTES,
     ATTRIBUTE_NOT_FOUND,
@@ -192,6 +199,9 @@ pub fn init(context: InitContext) !void {
     ENTITY_ALLOC = context.entity_allocator;
     ALLOC = context.allocator;
 
+    threadedIO = .init(context.allocator, .{});
+    io = threadedIO.io();
+
     Logger.log_buffer = ALLOC.alloc(u8, 1000) catch |err| handleUnknownError(err);
     Logger.info("*** Starting Firefly Engine *** \n", .{});
 
@@ -262,6 +272,7 @@ pub fn deinit() void {
 
     pool_alloc_arena.deinit();
     load_alloc_arena.deinit();
+    threadedIO.deinit();
 
     Logger.info("*** Firefly Engine stopped *** \n", .{});
     ALLOC.free(Logger.log_buffer);
@@ -336,10 +347,11 @@ pub const FUNCTION_NAMES = struct {
 //////////////////////////////////////////////////////////////
 
 pub fn loadFromFile(file_name: String, decryption_pwd: ?String) !String {
-    const file_content = std.fs.cwd().readFileAlloc(
-        LOAD_ALLOC,
+    const file_content = std.Io.Dir.cwd().readFileAlloc(
+        io,
         file_name,
-        1000000,
+        LOAD_ALLOC,
+        .unlimited,
     ) catch |err| {
         Logger.err("Failed to load file: {s} error: {s}", .{ file_name, @errorName(err) });
         return err;
@@ -355,7 +367,8 @@ pub fn loadFromFile(file_name: String, decryption_pwd: ?String) !String {
 }
 
 pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !void {
-    const file: std.fs.File = std.fs.cwd().createFile(
+    const file: std.Io.File = std.Io.Dir.cwd().createFile(
+        io,
         file_name,
         .{ .read = true },
     ) catch |err| {
@@ -363,7 +376,7 @@ pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !vo
         return err;
     };
 
-    defer file.close();
+    defer file.close(io);
 
     var bytes: String = undefined;
     if (encryption_pwd) |pwd| {
@@ -375,7 +388,7 @@ pub fn writeToFile(file_name: String, text: String, encryption_pwd: ?String) !vo
         bytes = text;
     }
 
-    try file.writeAll(bytes);
+    try file.writeStreamingAll(io, bytes);
 }
 
 // TODO do not use POOL_ALLOC here

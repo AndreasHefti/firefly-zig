@@ -2,7 +2,7 @@ const std = @import("std");
 pub const firefly = @import("inari/firefly/firefly.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    var gpa = std.heap.DebugAllocator(.{}).init;
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 

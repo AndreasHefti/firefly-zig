@@ -844,8 +844,7 @@ const RaylibRenderAPI = struct {
             if (fill) {
                 if (color1) |gc| {
                     rl.DrawCircleGradient(
-                        @intFromFloat(vertices[i]),
-                        @intFromFloat(vertices[i + 1]),
+                        .{ .x = vertices[i], .y = vertices[i + 1] },
                         vertices[i + 2],
                         @bitCast(color),
                         @bitCast(gc),

@@ -54,7 +54,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     //exe.subsystem = .Windows;
-    exe.linkLibrary(raylib_dep.artifact("raylib"));
+    exe.root_module.linkLibrary(raylib_dep.artifact("raylib"));
     b.installArtifact(exe);
 
     // This *creates* a Run step in the build graph, to be executed when another
@@ -91,7 +91,7 @@ pub fn build(b: *std.Build) void {
             .single_threaded = true,
         }),
     });
-    unit_tests.linkLibrary(raylib_dep.artifact("raylib"));
+    unit_tests.root_module.linkLibrary(raylib_dep.artifact("raylib"));
     //unit_tests.addModule("utils", utils);
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
