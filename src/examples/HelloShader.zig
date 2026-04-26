@@ -20,7 +20,7 @@ const ESprite = firefly.graphics.ESprite;
 const EMultiplier = firefly.api.EMultiplier;
 const Engine = firefly.Engine;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

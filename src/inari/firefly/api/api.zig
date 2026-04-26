@@ -65,11 +65,11 @@ pub const IOErrors = error{
 pub const RUN_ON = enum { RAYLIB, TEST };
 pub const RUN_ON_SET: RUN_ON = RUN_ON.RAYLIB;
 
-pub const InitContext = struct {
-    component_allocator: Allocator,
-    entity_allocator: Allocator,
-    allocator: Allocator,
-};
+// pub const InitContext = struct {
+//     component_allocator: Allocator,
+//     entity_allocator: Allocator,
+//     allocator: Allocator,
+// };
 
 pub const BindingId = usize;
 
@@ -190,17 +190,15 @@ pub const CRefCallback = *const fn (CRef, ?*CallContext) void;
 
 var initialized = false;
 
-pub fn init(context: InitContext) !void {
+pub fn init(_init: std.process.Init) !void {
     defer initialized = true;
     if (initialized)
         return;
 
-    COMPONENT_ALLOC = context.component_allocator;
-    ENTITY_ALLOC = context.entity_allocator;
-    ALLOC = context.allocator;
-
-    threadedIO = .init(context.allocator, .{});
-    io = threadedIO.io();
+    COMPONENT_ALLOC = _init.gpa;
+    ENTITY_ALLOC = _init.gpa;
+    ALLOC = _init.gpa;
+    io = _init.io;
 
     Logger.log_buffer = ALLOC.alloc(u8, 1000) catch |err| handleUnknownError(err);
     Logger.info("*** Starting Firefly Engine *** \n", .{});
@@ -272,7 +270,6 @@ pub fn deinit() void {
 
     pool_alloc_arena.deinit();
     load_alloc_arena.deinit();
-    threadedIO.deinit();
 
     Logger.info("*** Firefly Engine stopped *** \n", .{});
     ALLOC.free(Logger.log_buffer);

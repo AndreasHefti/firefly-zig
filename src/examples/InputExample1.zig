@@ -16,7 +16,7 @@ const KeyboardKey = firefly.api.KeyboardKey;
 const GamepadAction = firefly.api.GamepadAction;
 const InputDevice = firefly.api.InputDevice;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

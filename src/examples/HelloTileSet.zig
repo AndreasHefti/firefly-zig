@@ -88,7 +88,7 @@ const JSON_TILE_SET: String =
 /// This loads a tile set from given JSON data and makes an Entity for each defined
 /// tile in the set with contact and animation if defined and draws all to the screen.
 /// If there is a contact mask, the mask is displayed together with the tile in red shape.
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

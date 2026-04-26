@@ -27,7 +27,7 @@ const layer2: String = "Foreground";
 const start_scene_name = "StartScene";
 const end_scene_name = "EndScene";
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

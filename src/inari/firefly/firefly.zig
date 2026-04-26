@@ -3,14 +3,14 @@ const Allocator = std.mem.Allocator;
 
 var initialized = false;
 
-pub fn init(init_c: api.InitContext) !void {
+pub fn init(init_c: std.process.Init) !void {
     defer initialized = true;
     if (initialized)
         return;
 
     try api.init(init_c);
-    try graphics.init(init_c);
-    try physics.init(init_c);
+    try graphics.init();
+    try physics.init();
     try game.init();
 }
 

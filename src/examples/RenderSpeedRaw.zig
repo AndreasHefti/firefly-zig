@@ -5,7 +5,7 @@ const Allocator = std.mem.Allocator;
 
 const count: usize = 100000;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     rl.InitWindow(960, 540, "Render Speed Raw");
     rl.SetTargetFPS(60);
     defer rl.CloseWindow();
@@ -15,12 +15,12 @@ pub fn run(init_c: firefly.api.InitContext) !void {
     const tint_color: rl.Color = .{ .r = 255, .g = 255, .b = 255, .a = 255 };
     const clear_color: rl.Color = .{ .r = 0, .g = 0, .b = 0, .a = 255 };
 
-    var nanos = init_c.allocator.alloc(
+    var nanos = init_c.gpa.alloc(
         @Vector(4, f32),
         count,
     ) catch |err| firefly.api.handleUnknownError(err);
 
-    defer init_c.allocator.free(nanos);
+    defer init_c.gpa.free(nanos);
     var rndx = std.Random.DefaultPrng.init(32);
     const rx = rndx.random();
     for (0..count) |i| {

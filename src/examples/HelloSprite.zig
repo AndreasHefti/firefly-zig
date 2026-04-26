@@ -12,7 +12,7 @@ const EasedValueIntegrator = firefly.physics.EasedValueIntegrator;
 const Allocator = std.mem.Allocator;
 const Easing = utils.Easing;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 

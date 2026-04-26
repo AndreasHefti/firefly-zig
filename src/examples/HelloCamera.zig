@@ -28,7 +28,7 @@ const Vector2f = firefly.utils.Vector2f;
 const Index = utils.Index;
 const WindowFlag = firefly.api.WindowFlag;
 
-pub fn run(init_c: firefly.api.InitContext) !void {
+pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
 
