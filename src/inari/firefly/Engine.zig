@@ -90,7 +90,7 @@ pub fn startWithQuitCallback(
     w: CInt,
     h: CInt,
     fps: CInt,
-    title: CString,
+    title: String,
     init_callback: ?*const fn () void,
     quit_callback: ?*const fn () void,
 ) void {
@@ -126,7 +126,7 @@ pub fn startWindow(
         tick();
 
     if (quit_callback) |q| q();
-    //   firefly.api.rendering.clear();
+    firefly.api.rendering.clear();
     firefly.api.window.closeWindow();
 }
 
