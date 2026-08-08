@@ -25,6 +25,8 @@ const RaylibWindowAPI = struct {
         if (initialized)
             return;
 
+        interface.setLogLevel = setLogLevel;
+
         interface.getCurrentMonitor = getCurrentMonitor;
         interface.getMonitorWidth = getMonitorWidth;
         interface.getMonitorHeight = getMonitorHeight;
@@ -65,6 +67,10 @@ const RaylibWindowAPI = struct {
     }
 
     fn deinit() void {}
+
+    fn setLogLevel(level: api.LogLevel) void {
+        rl.SetTraceLogLevel(@intFromEnum(level));
+    }
 
     fn getCurrentMonitor() CInt {
         return rl.GetCurrentMonitor();

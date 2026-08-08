@@ -1151,6 +1151,17 @@ pub const WindowFlag = enum(CUInt) {
     FLAG_INTERLACED_HINT = 0x00010000, // Set to try enabling interlaced video format (for V3D)
 };
 
+pub const LogLevel = enum(CInt) {
+    LOG_ALL = 0,
+    LOG_TRACE = 1,
+    LOG_DEBUG = 2,
+    LOG_INFO = 3,
+    LOG_WARNING = 4,
+    LOG_ERROR = 5,
+    LOG_FATAL = 6,
+    LOG_NONE = 7,
+};
+
 pub const WindowData = struct {
     width: CInt,
     height: CInt,
@@ -1165,6 +1176,8 @@ pub const WindowData = struct {
 pub fn IWindowAPI() type {
     return struct {
         const Self = @This();
+
+        setLogLevel: *const fn (LogLevel) void = undefined,
 
         getCurrentMonitor: *const fn () CInt = undefined,
         getMonitorWidth: *const fn (CInt) CInt = undefined,

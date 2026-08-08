@@ -10,7 +10,6 @@ const ESprite = firefly.graphics.ESprite;
 pub fn run(init_c: std.process.Init) !void {
     try firefly.init(init_c);
     defer firefly.deinit();
-
     firefly.Engine.start(600, 400, 60, "Hello Sprite Flip", init);
 }
 
