@@ -2,7 +2,7 @@ const std = @import("std");
 const firefly = @import("../../firefly.zig");
 const api = firefly.api;
 const utils = firefly.utils;
-const rl = @cImport(@cInclude("raylib.h"));
+const rl = @import("raylib");
 
 const CInt = firefly.utils.CInt;
 const Vector2f = firefly.utils.Vector2f;
@@ -154,19 +154,19 @@ const RaylibInputAPI = struct {
     // KEYBOARD
 
     fn isKeyPressed(key: api.KeyboardKey) bool {
-        return rl.IsKeyPressed(utils.usize_cint(@intFromEnum(key)));
+        return rl.IsKeyPressed(utils.usize_cint(@backingInt(key)));
     }
 
     fn isKeyPressedRepeat(key: api.KeyboardKey) bool {
-        return rl.IsKeyPressedRepeat(utils.usize_cint(@intFromEnum(key)));
+        return rl.IsKeyPressedRepeat(utils.usize_cint(@backingInt(key)));
     }
 
     fn isKeyDown(key: api.KeyboardKey) bool {
-        return rl.IsKeyDown(utils.usize_cint(@intFromEnum(key)));
+        return rl.IsKeyDown(utils.usize_cint(@backingInt(key)));
     }
 
     fn isKeyReleased(key: api.KeyboardKey) bool {
-        return rl.IsKeyReleased(utils.usize_cint(@intFromEnum(key)));
+        return rl.IsKeyReleased(utils.usize_cint(@backingInt(key)));
     }
 
     // Get key pressed (keycode), call it multiple times for keys queued, returns 0 when the queue is empty
@@ -181,7 +181,7 @@ const RaylibInputAPI = struct {
     fn setKeyButtonMapping(keycode: usize, button: api.InputButtonType) void {
         defer keyboard_on = true;
 
-        const button_code = @intFromEnum(button);
+        const button_code = @backingInt(button);
         if (!keyboard_code_mapping.slots.isSet(button_code))
             _ = keyboard_code_mapping.set(utils.BitSet.new(api.ALLOC), button_code);
         if (keyboard_code_mapping.get(button_code)) |bs|
@@ -208,7 +208,7 @@ const RaylibInputAPI = struct {
         return _name;
     }
     fn getGamepadAxisMovement(device: api.InputDevice, axis: api.GamepadAxis) Float {
-        return rl.GetGamepadAxisMovement(getGamePadId(device), @intCast(@intFromEnum(axis)));
+        return rl.GetGamepadAxisMovement(getGamePadId(device), @intCast(@backingInt(axis)));
     }
     // gamepad mappings
     fn setGamepad1Mapping(device: api.InputDevice) void {
@@ -222,15 +222,15 @@ const RaylibInputAPI = struct {
             .GAME_PAD_1 => {
                 defer gamepad_1_on = true;
                 gamepad_1_code_mapping.set(
-                    @intFromEnum(button),
-                    @intFromEnum(action),
+                    @backingInt(button),
+                    @backingInt(action),
                 );
             },
             .GAME_PAD_2 => {
                 defer gamepad_2_on = true;
                 gamepad_2_code_mapping.set(
-                    @intFromEnum(button),
-                    @intFromEnum(action),
+                    @backingInt(button),
+                    @backingInt(action),
                 );
             },
             else => {},
@@ -244,9 +244,9 @@ const RaylibInputAPI = struct {
                     GamepadAxisMapping{
                         .threshold = threshold,
                         .game_pad = gamepad_1_code,
-                        .axis = @intCast(@intFromEnum(axis)),
+                        .axis = @intCast(@backingInt(axis)),
                     },
-                    @intFromEnum(button),
+                    @backingInt(button),
                 );
             },
             .GAME_PAD_2 => {
@@ -255,9 +255,9 @@ const RaylibInputAPI = struct {
                     GamepadAxisMapping{
                         .threshold = threshold,
                         .game_pad = gamepad_2_code,
-                        .axis = @intCast(@intFromEnum(axis)),
+                        .axis = @intCast(@backingInt(axis)),
                     },
-                    @intFromEnum(button),
+                    @backingInt(button),
                 );
             },
             else => {},
@@ -266,11 +266,11 @@ const RaylibInputAPI = struct {
 
     // MOUSE
     fn getMousePosition() PosF {
-        return @bitCast(rl.GetMousePosition());
+        return @as(*align(1) const PosF, @ptrCast(&rl.GetMousePosition())).*;
     }
 
     fn getMouseDelta() Vector2f {
-        return @bitCast(rl.GetMouseDelta());
+        return @as(*align(1) const PosF, @ptrCast(&rl.GetMouseDelta())).*;
     }
 
     fn getMouseWheelMove() Float {
@@ -278,19 +278,19 @@ const RaylibInputAPI = struct {
     }
 
     fn getMouseWheelMoveV() Vector2f {
-        return @bitCast(rl.GetMouseWheelMoveV());
+        return @as(*align(1) const PosF, @ptrCast(&rl.GetMouseWheelMoveV())).*;
     }
 
     fn setMouseButtonMapping(action: api.MouseAction, button: api.InputButtonType) void {
         defer mouse_on = true;
         mouse_code_mapping.set(
-            @intFromEnum(button),
-            @intFromEnum(action),
+            @backingInt(button),
+            @backingInt(action),
         );
     }
 
     inline fn checkKeyboard(button: api.InputButtonType, action: api.InputActionType) bool {
-        if (keyboard_code_mapping.get(@intFromEnum(button))) |set| {
+        if (keyboard_code_mapping.get(@backingInt(button))) |set| {
             var next = set.nextSetBit(0);
             while (next) |i| {
                 next = set.nextSetBit(i + 1);
@@ -306,11 +306,11 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkPad1(button: api.InputButtonType, action: api.InputActionType) bool {
-        const code = gamepad_1_code_mapping.get(@intFromEnum(button));
+        const code = gamepad_1_code_mapping.get(@backingInt(button));
         if (code != UNDEF_INDEX) {
             return switch (action) {
                 .ON => rl.IsGamepadButtonDown(gamepad_1_code, @intCast(code)) or
-                    if (gamepad_1_axis_mapping.get(@intFromEnum(button))) |bt| bt.check() else false,
+                    if (gamepad_1_axis_mapping.get(@backingInt(button))) |bt| bt.check() else false,
                 .OFF => rl.IsGamepadButtonUp(gamepad_1_code, @intCast(code)),
                 .TYPED => rl.IsGamepadButtonPressed(gamepad_1_code, @intCast(code)),
                 .RELEASED => rl.IsGamepadButtonReleased(gamepad_1_code, @intCast(code)),
@@ -320,11 +320,11 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkPad2(button: api.InputButtonType, action: api.InputActionType) bool {
-        const code = gamepad_2_code_mapping.get(@intFromEnum(button));
+        const code = gamepad_2_code_mapping.get(@backingInt(button));
         if (code != UNDEF_INDEX) {
             return switch (action) {
                 .ON => rl.IsGamepadButtonDown(gamepad_2_code, @intCast(code)) or
-                    if (gamepad_2_axis_mapping.get(@intFromEnum(button))) |bt| bt.check() else false,
+                    if (gamepad_2_axis_mapping.get(@backingInt(button))) |bt| bt.check() else false,
                 .OFF => rl.IsGamepadButtonUp(gamepad_2_code, @intCast(code)),
                 .TYPED => rl.IsGamepadButtonPressed(gamepad_2_code, @intCast(code)),
                 .RELEASED => rl.IsGamepadButtonReleased(gamepad_2_code, @intCast(code)),
@@ -334,7 +334,7 @@ const RaylibInputAPI = struct {
     }
 
     inline fn checkMouse(button: api.InputButtonType, action: api.InputActionType) bool {
-        const code = mouse_code_mapping.get(@intFromEnum(button));
+        const code = mouse_code_mapping.get(@backingInt(button));
         if (code != UNDEF_INDEX) {
             return switch (action) {
                 .ON => rl.IsMouseButtonDown(@intCast(code)),

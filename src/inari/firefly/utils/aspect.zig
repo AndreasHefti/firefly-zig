@@ -25,7 +25,7 @@ pub fn AspectGroup(comptime group_name: String) type {
         const Group = @This();
         const _name: String = group_name;
         var _aspect_count: u8 = 0;
-        var _aspects: [MaxIndex]Aspect = [_]Aspect{undefined} ** MaxIndex;
+        var _aspects: [MaxIndex]Aspect = @splat(undefined);
 
         pub fn name() String {
             return _name;
@@ -83,12 +83,12 @@ pub fn AspectGroup(comptime group_name: String) type {
             if (args_type_info != .@"struct") {
                 @compileError("expected struct argument, found " ++ @typeName(@TypeOf(aspects)));
             }
-            const fields_info = args_type_info.@"struct".fields;
+            const fields_names = args_type_info.@"struct".field_names;
 
             var kind = Kind{};
             comptime var i = 0;
-            inline while (i < fields_info.len) {
-                if (getAspectFromAnytype(@field(aspects, fields_info[i].name))) |a| {
+            inline while (i < fields_names.len) {
+                if (getAspectFromAnytype(@field(aspects, fields_names[i]))) |a| {
                     kind.with(a.id);
                 }
                 i = i + 1;

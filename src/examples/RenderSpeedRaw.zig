@@ -1,5 +1,5 @@
 const std = @import("std");
-const rl = @cImport(@cInclude("raylib.h"));
+const rl = @import("raylib");
 const firefly = @import("../inari/firefly/firefly.zig");
 const Allocator = std.mem.Allocator;
 

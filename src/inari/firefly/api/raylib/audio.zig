@@ -2,7 +2,7 @@ const std = @import("std");
 const firefly = @import("../../firefly.zig");
 const api = firefly.api;
 const utils = firefly.utils;
-const rl = @cImport(@cInclude("raylib.h"));
+const rl = @import("raylib");
 
 const Float = firefly.utils.Float;
 const String = firefly.utils.String;
@@ -123,7 +123,7 @@ const RaylibAudioAPI = struct {
     }
 
     fn loadSound(file: String, channels: utils.IntBitMask) api.IOErrors!api.SoundBinding {
-        const name = api.ALLOC.dupeZ(u8, file) catch |err| api.handleUnknownError(err);
+        const name = api.ALLOC.dupeSentinel(u8, file, 0) catch |err| api.handleUnknownError(err);
         defer api.ALLOC.free(name);
 
         const sound = rl.LoadSound(name);
@@ -230,7 +230,7 @@ const RaylibAudioAPI = struct {
     }
 
     fn loadMusic(file: String) api.IOErrors!BindingId {
-        const name = api.ALLOC.dupeZ(u8, file) catch |err| api.handleUnknownError(err);
+        const name = api.ALLOC.dupeSentinel(u8, file, 0) catch |err| api.handleUnknownError(err);
         defer api.ALLOC.free(name);
 
         const m = rl.LoadMusicStream(name);

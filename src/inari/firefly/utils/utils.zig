@@ -576,18 +576,9 @@ pub const Orientation = enum {
     SOUTH,
     WEST,
 
-    pub fn byName(name: ?String) Orientation {
-        if (name) |n| {
-            if (stringEquals("NORTH", n)) {
-                return .NORTH;
-            } else if (stringEquals("EAST", n)) {
-                return .EAST;
-            } else if (stringEquals("SOUTH", n)) {
-                return .SOUTH;
-            } else if (stringEquals("WEST", n)) {
-                return .WEST;
-            }
-        }
+    pub fn byName(name: ?String) ?Orientation {
+        if (name) |n|
+            return std.meta.stringToEnum(Orientation, n);
         return .NONE;
     }
 };

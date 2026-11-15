@@ -28,7 +28,7 @@ const Vector4f = utils.Vector4f;
 const StringBuffer = utils.StringBuffer;
 
 const Aes256Gcm = std.crypto.aead.aes_gcm.Aes256Gcm;
-const nonce: [Aes256Gcm.nonce_length]u8 = [_]u8{0x42} ** Aes256Gcm.nonce_length;
+const nonce: [Aes256Gcm.nonce_length]u8 = @splat(0x42);
 
 fn dummyDeinit() void {}
 
@@ -486,7 +486,7 @@ pub const NamePool = struct {
     }
 
     pub fn alloc0(name: String) String0 {
-        return S0_ALLOC.dupeZ(u8, name) catch |err| handleUnknownError(err);
+        return S0_ALLOC.dupeSentinel(u8, name, 0) catch |err| handleUnknownError(err);
     }
 
     pub fn free0(name: String0) void {
@@ -1461,7 +1461,7 @@ pub fn IInputAPI() type {
         }
 
         pub fn setKeyMapping(self: Self, key: KeyboardKey, button: InputButtonType) void {
-            self.setKeyButtonMapping(@intFromEnum(key), button);
+            self.setKeyButtonMapping(@backingInt(key), button);
         }
 
         // check the button type for specified action. Button type must have been mapped on one or many devices

@@ -4,6 +4,7 @@ const std = @import("std");
 // declaratively construct a build graph that will be executed by an external
 // runner.
 pub fn build(b: *std.Build) void {
+
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -21,6 +22,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .linux_display_backend = .X11,
     });
+    const raylib = raylib_dep.module("raylib");
+    const rlgl_module = raylib_dep.module("rlgl");
+    //const raylib_artifact = raylib_dep.artifact("raylib");
+    // Access the translated rlgl module
 
     //create firefly library
     const firefly = b.addLibrary(
@@ -54,7 +59,10 @@ pub fn build(b: *std.Build) void {
         }),
     });
     //exe.subsystem = .Windows;
-    exe.root_module.linkLibrary(raylib_dep.artifact("raylib"));
+    //exe.root_module.linkLibrary(raylib_dep.artifact("raylib"));
+    //exe.root_module.linkLibrary(raylib_artifact);
+    exe.root_module.addImport("raylib", raylib);
+    exe.root_module.addImport("rlgl", rlgl_module);
     b.installArtifact(exe);
 
     // This *creates* a Run step in the build graph, to be executed when another
@@ -70,9 +78,9 @@ pub fn build(b: *std.Build) void {
 
     // This allows the user to pass arguments to the application in the build
     // command itself, like this: `zig build run -- arg1 arg2 etc`
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    // if (b.args) |args| {
+    //     run_cmd.addArgs(args);
+    // }
 
     // This creates a build step. It will be visible in the `zig build --help` menu,
     // and can be selected like this: `zig build run`

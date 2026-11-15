@@ -1,7 +1,7 @@
 const std = @import("std");
 const firefly = @import("../../firefly.zig");
-const rl = @cImport(@cInclude("raylib.h"));
-const rlgl = @cImport(@cInclude("rlgl.h"));
+const rl = @import("raylib");
+const rlgl = @import("rlgl");
 
 const NamePool = firefly.api.NamePool;
 const Texture2D = rl.Texture2D;
@@ -204,17 +204,23 @@ const RaylibRenderAPI = struct {
     }
 
     fn setOffset(offset: PosF) void {
-        active_camera.offset = @bitCast(offset);
+        //active_camera.offset = @bitCast(offset);
+        active_camera.offset.x = offset[0];
+        active_camera.offset.y = offset[1];
         rl.BeginMode2D(active_camera);
     }
 
     fn addOffset(offset: Vector2f) void {
-        active_camera.offset = @bitCast(@as(Vector2f, @bitCast(active_camera.offset)) + offset);
+        //active_camera.offset = @bitCast(@as(Vector2f, @bitCast(active_camera.offset)) + offset);
+        active_camera.offset.x = active_camera.offset.x + offset[0];
+        active_camera.offset.y = active_camera.offset.y + offset[1];
         rl.BeginMode2D(active_camera);
     }
 
     fn minusOffset(offset: Vector2f) void {
-        active_camera.offset = @bitCast(@as(Vector2f, @bitCast(active_camera.offset)) - offset);
+        //active_camera.offset = @bitCast(@as(Vector2f, @bitCast(active_camera.offset)) - offset);
+        active_camera.offset.x = active_camera.offset.x - offset[0];
+        active_camera.offset.y = active_camera.offset.y - offset[1];
         rl.BeginMode2D(active_camera);
     }
 
@@ -224,7 +230,7 @@ const RaylibRenderAPI = struct {
         filter: TextureFilter,
         wrap: TextureWrap,
     ) firefly.api.IOErrors!TextureBinding {
-        const res = firefly.api.ALLOC.dupeZ(u8, resource) catch |err| firefly.api.handleUnknownError(err);
+        const res = firefly.api.ALLOC.dupeSentinel(u8, resource, 0) catch |err| firefly.api.handleUnknownError(err);
         defer firefly.api.ALLOC.free(res);
 
         var tex = rl.LoadTexture(res);
@@ -235,8 +241,8 @@ const RaylibRenderAPI = struct {
             rl.GenTextureMipmaps(&tex);
         }
 
-        rl.SetTextureFilter(tex, @intFromEnum(filter));
-        rl.SetTextureWrap(tex, @intFromEnum(wrap));
+        rl.SetTextureFilter(tex, @backingInt(filter));
+        rl.SetTextureWrap(tex, @backingInt(wrap));
 
         return TextureBinding{
             .width = @bitCast(tex.width),
@@ -310,7 +316,7 @@ const RaylibRenderAPI = struct {
     }
 
     fn loadImageFromFile(resource: String) firefly.api.IOErrors!ImageBinding {
-        const res = firefly.api.ALLOC.dupeZ(u8, resource) catch |err| firefly.api.handleUnknownError(err);
+        const res = firefly.api.ALLOC.dupeSentinel(u8, resource, 0) catch |err| firefly.api.handleUnknownError(err);
         defer firefly.api.ALLOC.free(res);
         const img: Image = rl.LoadImage(res);
 
@@ -338,19 +344,19 @@ const RaylibRenderAPI = struct {
 
     fn getImageColorAt(image_id: BindingId, x: CInt, y: CInt) ?Color {
         if (images.get(image_id)) |img| {
-            return @bitCast(rl.GetImageColor(img.*, x, y));
+            return @as(*align(1) const Color, @ptrCast(&rl.GetImageColor(img.*, x, y))).*;
         }
         return null;
     }
 
     fn setImageColorAt(image_id: BindingId, x: CInt, y: CInt, color: Color) void {
         if (images.get(image_id)) |img| {
-            rl.ImageDrawPixel(img, x, y, @bitCast(color));
+            rl.ImageDrawPixel(img, x, y, @as(*align(1) const rl.Color, @ptrCast(&color)).*);
         }
     }
 
     fn loadFont(resource: String, size: ?CInt, char_num: ?CInt, code_points: ?CInt) firefly.api.IOErrors!BindingId {
-        const res = firefly.api.ALLOC.dupeZ(u8, resource) catch |err| firefly.api.handleUnknownError(err);
+        const res = firefly.api.ALLOC.dupeSentinel(u8, resource, 0) catch |err| firefly.api.handleUnknownError(err);
         defer firefly.api.ALLOC.free(res);
 
         const font = if (size == null and char_num == null and code_points == null)
@@ -402,9 +408,9 @@ const RaylibRenderAPI = struct {
     }
 
     fn createShader(vertex_shader: ?String, fragment_shade: ?String, file: bool) firefly.api.IOErrors!ShaderBinding {
-        const vert = firefly.api.ALLOC.dupeZ(u8, vertex_shader orelse EMPTY_STRING) catch |err| firefly.api.handleUnknownError(err);
+        const vert = firefly.api.ALLOC.dupeSentinel(u8, vertex_shader orelse EMPTY_STRING, 0) catch |err| firefly.api.handleUnknownError(err);
         defer firefly.api.ALLOC.free(vert);
-        const frag = firefly.api.ALLOC.dupeZ(u8, fragment_shade orelse EMPTY_STRING) catch |err| firefly.api.handleUnknownError(err);
+        const frag = firefly.api.ALLOC.dupeSentinel(u8, fragment_shade orelse EMPTY_STRING, 0) catch |err| firefly.api.handleUnknownError(err);
         defer firefly.api.ALLOC.free(frag);
 
         var shader: Shader = undefined;
@@ -467,13 +473,13 @@ const RaylibRenderAPI = struct {
 
     fn startRendering(binding_id: ?BindingId, projection: *Projection) void {
         active_render_texture = binding_id;
-        active_camera.offset = @bitCast(-projection.position);
-        active_camera.target = @bitCast(projection.pivot);
+        active_camera.offset = @as(*align(1) const rl.Vector2, @ptrCast(&-projection.position)).*;
+        active_camera.target = @as(*align(1) const rl.Vector2, @ptrCast(&projection.pivot)).*;
         active_camera.rotation = projection.rotation;
         active_camera.zoom = projection.zoom;
         active_camera_zoom_vec[0] = projection.zoom;
         active_camera_zoom_vec[1] = projection.zoom;
-        active_clear_color = if (projection.clear_color != null) @bitCast(projection.clear_color.?) else null;
+        active_clear_color = if (projection.clear_color != null) @as(*align(1) const rl.Color, @ptrCast(&projection.clear_color.?)).* else null;
 
         if (active_render_texture) |tex_id| {
             if (render_textures.get(tex_id)) |tex| {
@@ -488,7 +494,7 @@ const RaylibRenderAPI = struct {
         rl.BeginMode2D(active_camera);
 
         if (active_clear_color) |cc|
-            rl.ClearBackground(@bitCast(cc));
+            rl.ClearBackground(@as(*align(1) const rl.Color, @ptrCast(&cc)).*);
 
         setBlending(default_blend_mode);
     }
@@ -524,9 +530,9 @@ const RaylibRenderAPI = struct {
                     .width = scale[0] * @as(Float, @floatFromInt(tex.texture.width)),
                     .height = scale[1] * @as(Float, @floatFromInt(tex.texture.height)),
                 },
-                @bitCast(pivot * scale),
+                @as(*align(1) const rl.Vector2, @ptrCast(&(pivot * scale))).*,
                 rotation,
-                if (tint_color) |tc| @bitCast(tc) else default_tint_color,
+                if (tint_color) |tc| @as(*align(1) const rl.Color, @ptrCast(&tc)).* else default_tint_color,
             );
         }
         rl.EndShaderMode();
@@ -549,11 +555,11 @@ const RaylibRenderAPI = struct {
             if (blend_mode) |bm|
                 setBlending(bm);
 
-            const tint: rl.Color = if (tint_color) |tc| @bitCast(tc) else default_tint_color;
+            const tint: rl.Color = if (tint_color) |tc| @as(*align(1) const rl.Color, @ptrCast(&tc)).* else default_tint_color;
             const _pivot: rl.Vector2 = if (scale) |s|
-                @bitCast((pivot orelse default_pivot) * s)
+                @as(*align(1) const rl.Vector2, @ptrCast(&((pivot orelse default_pivot) * s))).*
             else
-                @bitCast(pivot orelse default_pivot);
+                @as(*align(1) const rl.Vector2, @ptrCast(&(pivot orelse default_pivot))).*;
 
             var dest_rect = if (scale) |s|
                 rl.Rectangle{
@@ -577,7 +583,7 @@ const RaylibRenderAPI = struct {
                     dest_rect.y = m[i][1];
                     rl.DrawTexturePro(
                         tex.*,
-                        @bitCast(texture_bounds),
+                        @as(*align(1) const rl.Rectangle, @ptrCast(&texture_bounds)).*,
                         dest_rect,
                         _pivot,
                         rotation orelse 0,
@@ -590,7 +596,7 @@ const RaylibRenderAPI = struct {
                 dest_rect.y = position[1];
                 rl.DrawTexturePro(
                     tex.*,
-                    @bitCast(texture_bounds),
+                    @as(*align(1) const rl.Rectangle, @ptrCast(&texture_bounds)).*,
                     dest_rect,
                     _pivot,
                     rotation orelse 0,
@@ -676,11 +682,11 @@ const RaylibRenderAPI = struct {
             font,
             @ptrCast(text),
             rl.Vector2{ .x = position[0], .y = position[1] },
-            @bitCast(pivot orelse default_pivot),
+            @as(*align(1) const rl.Vector2, @ptrCast(&(pivot orelse default_pivot))).*,
             rotation orelse 0,
             size orelse 8,
             char_spacing orelse 10,
-            if (tint_color) |tc| @bitCast(tc) else default_tint_color,
+            if (tint_color) |tc| @as(*align(1) const rl.Color, @ptrCast(&tc)).* else default_tint_color,
         );
     }
 
@@ -717,7 +723,7 @@ const RaylibRenderAPI = struct {
 
     fn setShaderValue(shader_id: BindingId, name: String, val: anytype, v_type: CInt) bool {
         if (shaders.get(shader_id)) |shader| {
-            const n = firefly.api.ALLOC.dupeZ(u8, name) catch |err| firefly.api.handleUnknownError(err);
+            const n = firefly.api.ALLOC.dupeSentinel(u8, name, 0) catch |err| firefly.api.handleUnknownError(err);
             defer firefly.api.ALLOC.free(n);
 
             const location = rl.GetShaderLocation(
@@ -744,7 +750,7 @@ const RaylibRenderAPI = struct {
             rl.DrawPixel(
                 @intFromFloat(vertices[i]),
                 @intFromFloat(vertices[i + 1]),
-                @bitCast(color),
+                @as(*align(1) const rl.Color, @ptrCast(&color)).*,
             );
             i += 2;
         }
@@ -761,7 +767,7 @@ const RaylibRenderAPI = struct {
                 @intFromFloat(vertices[i + 1]),
                 @intFromFloat(vertices[i + 2]),
                 @intFromFloat(vertices[i + 3]),
-                @bitCast(color),
+                @as(*align(1) const rl.Color, @ptrCast(&color)).*,
             );
             i += 4;
         }
@@ -786,10 +792,10 @@ const RaylibRenderAPI = struct {
                         .width = vertices[i + 2],
                         .height = vertices[i + 3],
                     },
-                    @bitCast(color),
-                    @bitCast(color1 orelse color),
-                    @bitCast(color2 orelse color),
-                    @bitCast(color3 orelse color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
+                    @as(*align(1) const rl.Color, @ptrCast(&(color1 orelse color))).*,
+                    @as(*align(1) const rl.Color, @ptrCast(&(color2 orelse color))).*,
+                    @as(*align(1) const rl.Color, @ptrCast(&(color3 orelse color))).*,
                 );
             } else {
                 rl.DrawRectangleLinesEx(
@@ -800,7 +806,7 @@ const RaylibRenderAPI = struct {
                         .height = vertices[i + 3],
                     },
                     thickness orelse 1.0,
-                    @bitCast(color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                 );
             }
             i += 4;
@@ -819,14 +825,14 @@ const RaylibRenderAPI = struct {
                     .{ .x = vertices[i], .y = vertices[i + 1] },
                     .{ .x = vertices[i + 2], .y = vertices[i + 3] },
                     .{ .x = vertices[i + 4], .y = vertices[i + 5] },
-                    @bitCast(color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                 );
             } else {
                 rl.DrawTriangleLines(
                     .{ .x = vertices[i], .y = vertices[i + 1] },
                     .{ .x = vertices[i + 2], .y = vertices[i + 3] },
                     .{ .x = vertices[i + 4], .y = vertices[i + 5] },
-                    @bitCast(color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                 );
             }
             i += 6;
@@ -846,21 +852,21 @@ const RaylibRenderAPI = struct {
                     rl.DrawCircleGradient(
                         .{ .x = vertices[i], .y = vertices[i + 1] },
                         vertices[i + 2],
-                        @bitCast(color),
-                        @bitCast(gc),
+                        @as(*align(1) const rl.Color, @ptrCast(&color)).*,
+                        @as(*align(1) const rl.Color, @ptrCast(&gc)).*,
                     );
                 } else {
                     rl.DrawCircleV(
                         .{ .x = vertices[i], .y = vertices[i + 1] },
                         vertices[2],
-                        @bitCast(color),
+                        @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                     );
                 }
             } else {
                 rl.DrawCircleLinesV(
                     .{ .x = vertices[i], .y = vertices[i + 1] },
                     vertices[i + 2],
-                    @bitCast(color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                 );
             }
             i += 3;
@@ -881,7 +887,7 @@ const RaylibRenderAPI = struct {
                     vertices[i + 3],
                     vertices[i + 4],
                     @intFromFloat(vertices[i + 5]),
-                    @bitCast(color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                 );
             } else {
                 rl.DrawCircleSectorLines(
@@ -890,7 +896,7 @@ const RaylibRenderAPI = struct {
                     vertices[i + 3],
                     vertices[i + 4],
                     @intFromFloat(vertices[i + 5]),
-                    @bitCast(color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                 );
             }
             i += 5;
@@ -910,7 +916,7 @@ const RaylibRenderAPI = struct {
                     @intFromFloat(vertices[i + 1]),
                     vertices[i + 2],
                     vertices[i + 3],
-                    @bitCast(color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                 );
             } else {
                 rl.DrawEllipseLines(
@@ -918,7 +924,7 @@ const RaylibRenderAPI = struct {
                     @intFromFloat(vertices[i + 1]),
                     vertices[i + 2],
                     vertices[i + 3],
-                    @bitCast(color),
+                    @as(*align(1) const rl.Color, @ptrCast(&color)).*,
                 );
             }
             i += 4;
@@ -971,37 +977,37 @@ const RaylibRenderAPI = struct {
             },
             .SRC => {
                 rlgl.rlSetBlendFactors(
-                    @intFromEnum(GLBlendMode.GL_ONE),
-                    @intFromEnum(GLBlendMode.GL_ZERO),
-                    @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
+                    @backingInt(GLBlendMode.GL_ONE),
+                    @backingInt(GLBlendMode.GL_ZERO),
+                    @backingInt(GLBlendFunc.GL_FUNC_ADD),
                 );
                 rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
             },
             .DEST => {
                 rlgl.rlSetBlendFactors(
-                    @intFromEnum(GLBlendMode.GL_ZERO),
-                    @intFromEnum(GLBlendMode.GL_ONE),
-                    @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
+                    @backingInt(GLBlendMode.GL_ZERO),
+                    @backingInt(GLBlendMode.GL_ONE),
+                    @backingInt(GLBlendFunc.GL_FUNC_ADD),
                 );
                 rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
             },
             .DEST_OVER_SRC => {
                 rlgl.rlSetBlendFactors(
-                    @intFromEnum(GLBlendMode.GL_ONE_MINUS_DST_ALPHA),
-                    @intFromEnum(GLBlendMode.GL_ONE),
-                    @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
+                    @backingInt(GLBlendMode.GL_ONE_MINUS_DST_ALPHA),
+                    @backingInt(GLBlendMode.GL_ONE),
+                    @backingInt(GLBlendFunc.GL_FUNC_ADD),
                 );
                 rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
             },
             .SRC_OVER_DEST => {
                 rlgl.rlSetBlendFactors(
-                    @intFromEnum(GLBlendMode.GL_ONE),
-                    @intFromEnum(GLBlendMode.GL_ONE_MINUS_SRC_ALPHA),
-                    @intFromEnum(GLBlendFunc.GL_FUNC_ADD),
+                    @backingInt(GLBlendMode.GL_ONE),
+                    @backingInt(GLBlendMode.GL_ONE_MINUS_SRC_ALPHA),
+                    @backingInt(GLBlendFunc.GL_FUNC_ADD),
                 );
                 rl.BeginBlendMode(rlgl.RL_BLEND_CUSTOM);
             },
-            else => rl.BeginBlendMode(@intFromEnum(mode)),
+            else => rl.BeginBlendMode(@backingInt(mode)),
         }
     }
 };

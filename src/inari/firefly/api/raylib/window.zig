@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const firefly = @import("../../firefly.zig");
 const api = firefly.api;
-const rl = @cImport(@cInclude("raylib.h"));
+const rl = @import("raylib");
 
 const Float = firefly.utils.Float;
 const CInt = firefly.utils.CInt;
@@ -69,7 +69,7 @@ const RaylibWindowAPI = struct {
     fn deinit() void {}
 
     fn setLogLevel(level: api.LogLevel) void {
-        rl.SetTraceLogLevel(@intFromEnum(level));
+        rl.SetTraceLogLevel(@backingInt(level));
     }
 
     fn getCurrentMonitor() CInt {
@@ -104,7 +104,7 @@ const RaylibWindowAPI = struct {
             title,
         );
         if (data.icon) |icon| {
-            const ic = firefly.api.ALLOC.dupeZ(u8, icon) catch |err| firefly.api.handleUnknownError(err);
+            const ic = firefly.api.ALLOC.dupeSentinel(u8, icon, 0) catch |err| firefly.api.handleUnknownError(err);
             defer firefly.api.ALLOC.free(ic);
             rl.SetWindowIcon(rl.LoadImage(ic));
         }
@@ -113,7 +113,7 @@ const RaylibWindowAPI = struct {
             setWindowFlags(wf);
 
         const pos = rl.GetWindowPosition();
-        window_data.position = @bitCast(pos);
+        window_data.position = @as(*align(1) const firefly.utils.Vector2f, @ptrCast(&pos)).*;
     }
 
     fn isWindowReady() bool {
@@ -183,11 +183,11 @@ const RaylibWindowAPI = struct {
     }
 
     fn getWindowPosition() firefly.utils.Vector2f {
-        return @bitCast(rl.GetWindowPosition());
+        return @as(*align(1) const firefly.utils.Vector2f, @ptrCast(&rl.GetWindowPosition())).*;
     }
 
     fn getWindowScaleDPI() firefly.utils.Vector2f {
-        return @bitCast(rl.GetWindowScaleDPI());
+        return @as(*align(1) const firefly.utils.Vector2f, @ptrCast(&rl.GetWindowScaleDPI())).*;
     }
 
     fn showFPS(x: CInt, y: CInt) void {
@@ -211,13 +211,13 @@ const RaylibWindowAPI = struct {
     }
 
     fn setExitKey(key: api.KeyboardKey) void {
-        rl.SetExitKey(firefly.utils.usize_cint(@intFromEnum(key)));
+        rl.SetExitKey(firefly.utils.usize_cint(@backingInt(key)));
     }
 
     fn setWindowFlags(flags: []const api.WindowFlag) void {
         var flag: CUInt = 0;
         for (flags) |f|
-            flag |= @intFromEnum(f);
+            flag |= @backingInt(f);
         rl.SetWindowState(flag);
     }
 
@@ -234,7 +234,7 @@ const RaylibWindowAPI = struct {
         if (window_data.position) |pos| {
             rl.SetWindowPosition(firefly.utils.f32_cint(pos[0]), firefly.utils.f32_cint(pos[1]));
         }
-        if (rl.IsWindowState(@intFromEnum(api.WindowFlag.FLAG_BORDERLESS_WINDOWED_MODE))) {
+        if (rl.IsWindowState(@backingInt(api.WindowFlag.FLAG_BORDERLESS_WINDOWED_MODE))) {
             rl.ToggleBorderlessWindowed();
         }
     }

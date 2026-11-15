@@ -12,7 +12,6 @@ const WindowData = firefly.api.WindowData;
 const Timer = firefly.api.Timer;
 const View = firefly.graphics.View;
 const String = firefly.utils.String;
-const CString = firefly.utils.CString;
 const CInt = firefly.utils.CInt;
 
 var UPDATE_EVENT = UpdateEvent{};
